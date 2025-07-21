@@ -1540,46 +1540,60 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
   );
 
   return (
-    <div className="contact-table-container space-y-4">
+    <div className="contact-table-container h-full">
       {/* Table unique avec en-tête sticky pour alignement correct */}
-      <div className="border rounded-lg overflow-hidden relative">
-        <motion.div
-          ref={(node) => {
-            dropzoneRef.current = node;
-            scrollContainerRef.current = node;
-          }}
-          className={cn(
-            "h-[800px] overflow-auto scrollbar-hidden relative bg-background transition-all duration-300",
-            isDragActive && "ring-2 ring-blue-500 ring-offset-2"
-          )}
-          onDragEnter={handleFileDragEnter}
-          onDragLeave={handleFileDragLeave}
-          onDragOver={handleFileDragOver}
-          onDrop={handleFileDrop}
-          animate={{
-            scale: isDragActive ? 1.02 : 1
-          }}
-          transition={{ 
-            type: "spring", 
-            stiffness: 300, 
-            damping: 30 
-          }}
-        >
-          {/* État vide ou table */}
-          <AnimatePresence mode="wait">
-            {contacts.length === 0 ? (
-              <EmptyState key="empty" />
-            ) : (
-              <motion.div
-                key="table"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Table className="relative w-full table-auto" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+      <div 
+        ref={(node) => {
+          dropzoneRef.current = node;
+          scrollContainerRef.current = node;
+        }}
+        className={cn(
+          "border rounded-lg scrollbar-hidden relative bg-background transition-all duration-300 h-full",
+          isDragActive && "ring-2 ring-blue-500 ring-offset-2"
+        )}
+        style={{
+          // CRITICAL: Configuration pour sticky header
+          position: 'relative',
+          height: '100%',
+          overflow: 'auto',
+          display: 'block' // Force block display pour sticky
+        }}
+        onDragEnter={handleFileDragEnter}
+        onDragLeave={handleFileDragLeave}
+        onDragOver={handleFileDragOver}
+        onDrop={handleFileDrop}
+      >
+        {/* État vide ou table */}
+        <AnimatePresence mode="wait">
+          {contacts.length === 0 ? (
+            <EmptyState key="empty" />
+          ) : (
+            <Table 
+              key="table"
+              className="relative w-full table-auto" 
+              style={{ 
+                borderCollapse: 'separate', 
+                borderSpacing: 0,
+                position: 'relative',
+                height: 'fit-content' // Important pour sticky
+              }}
+            >
                   {/* En-tête sticky */}
-                  <TableHeader className="sticky top-0 z-[101] bg-background">
+                  <TableHeader 
+                    className="[&_tr]:border-b sticky-header"
+                    style={{
+                      position: 'sticky',
+                      top: 0,
+                      zIndex: 101,
+                      backgroundColor: 'hsl(var(--background))',
+                      backdropFilter: 'blur(4px)',
+                      WebkitBackdropFilter: 'blur(4px)',
+                      borderBottom: '1px solid hsl(var(--border))',
+                      // Force sticky avec des propriétés supplémentaires
+                      willChange: 'transform',
+                      transform: 'translateZ(0)', // Force hardware acceleration
+                    }}
+                  >
                     <TableRow className="hover:bg-transparent border-b">
                        {visibleOrderedColumns.map((column, index) => (
                           <TableHead
@@ -1601,10 +1615,17 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                             style={{ 
                               width: column.width,
                               minWidth: column.minWidth,
-                              background: 'hsl(var(--background))',
+                              position: 'sticky',
+                              top: 0,
+                              backgroundColor: 'hsl(var(--background))',
                               backdropFilter: 'blur(8px)',
+                              WebkitBackdropFilter: 'blur(8px)',
                               boxShadow: 'rgba(0, 0, 0, 0.1) 0px 2px 8px 0px, rgba(0, 0, 0, 0.1) 0px 1px 4px -1px',
-                              borderBottom: '1px solid hsl(var(--border))'
+                              borderBottom: '1px solid hsl(var(--border))',
+                              zIndex: 101,
+                              // Force sticky avec des propriétés supplémentaires
+                              willChange: 'transform',
+                              transform: 'translateZ(0)', // Force hardware acceleration
                             }}
                             onClick={(e) => {
                               // Empêcher le tri si on est en train de drag
@@ -1693,15 +1714,13 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                     })}
                   </TableBody>
                 </Table>
-              </motion.div>
             )}
           </AnimatePresence>
           
           {/* Overlay de drag & drop */}
           <DragOverlay isDragOver={isDragOver} />
-        </motion.div>
+        </div>
       </div>
-    </div>
   );
 });
 

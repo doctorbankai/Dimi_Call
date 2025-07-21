@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Theme, Contact, CallState, CallStates, ContactStatus, Civility, EmailType } from './types';
 import { APP_NAME, COLUMN_HEADERS, CONTACT_DATA_KEYS, headerIcons } from './constants';
 import { ContactTable, ContactTableRef } from './components/ContactTable';
+import { PaginatedContactTable } from './components/PaginatedContactTable';
 import { EmailDialog, RappelDialog, RendezVousDialog, QualificationDialog, GenericInfoDialog } from './components/Dialogs';
 
 
@@ -2061,7 +2062,7 @@ Dimitri MOREL - Arcanis Conseil`;
           {/* Contact table */}
           <div className="flex-1 flex flex-col overflow-hidden min-h-0">
             <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-hidden">
-              <ContactTable
+              <PaginatedContactTable
                 ref={contactTableRef}
                 contacts={filteredContacts}
                 callStates={callStates}
@@ -2077,6 +2078,8 @@ Dimitri MOREL - Arcanis Conseil`;
                 onToggleColumnVisibility={toggleColumnVisibility}
                 availableColumns={availableColumns}
                 onFileImport={handleSingleFileImport}
+                initialItemsPerPage={25}
+                pageSizeOptions={[25, 50]}
               />
             </div>
           </div>

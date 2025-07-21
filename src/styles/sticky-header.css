@@ -1,0 +1,72 @@
+/* Styles CSS pour forcer le sticky header dans ContactTable */
+
+/* Force le conteneur de la table à supporter sticky */
+.contact-table-container {
+  position: relative !important;
+  height: 100% !important;
+}
+
+/* Force le conteneur de scroll à supporter sticky */
+.contact-table-container > div {
+  position: relative !important;
+  overflow: auto !important;
+  height: 100% !important;
+}
+
+/* Force le header à être sticky */
+.contact-table-container thead {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 101 !important;
+  background-color: hsl(var(--background) / 0.95) !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+/* Force chaque cellule du header à être sticky */
+.contact-table-container thead th {
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 101 !important;
+  background-color: hsl(var(--background) / 0.95) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+/* Assure que la table elle-même ne bloque pas le sticky */
+.contact-table-container table {
+  position: relative !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+}
+
+/* Fix pour les navigateurs WebKit */
+@supports (-webkit-backdrop-filter: blur(1px)) {
+  .contact-table-container thead {
+    -webkit-backdrop-filter: blur(4px) !important;
+  }
+  
+  .contact-table-container thead th {
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+}
+
+/* Fix pour Firefox */
+@-moz-document url-prefix() {
+  .contact-table-container thead {
+    background-color: hsl(var(--background)) !important;
+  }
+  
+  .contact-table-container thead th {
+    background-color: hsl(var(--background)) !important;
+  }
+}
+
+/* Debug: Ajouter une bordure rouge temporaire pour vérifier le sticky */
+.debug-sticky .contact-table-container thead {
+  border: 2px solid red !important;
+}
+
+.debug-sticky .contact-table-container thead th {
+  border: 1px solid blue !important;
+}
