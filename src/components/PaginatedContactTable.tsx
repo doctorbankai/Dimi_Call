@@ -40,7 +40,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
   availableColumns = [],
   onFileImport,
   initialItemsPerPage = 25,
-  pageSizeOptions = [25, 50],
+  pageSizeOptions = [25, 50, 100],
   className = '',
 }, ref) => {
   // Utiliser le hook de pagination

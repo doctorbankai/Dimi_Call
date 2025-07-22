@@ -1,27 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-
-interface UpdateInfo {
-  version: string
-  releaseDate?: string
-  releaseName?: string
-  releaseNotes?: string
-}
-
-interface UpdateState {
-  checking: boolean
-  available: boolean
-  downloading: boolean
-  downloaded: boolean
-  error: string | null
-  progress: number
-  updateInfo: UpdateInfo | null
-}
-
-interface UseAutoUpdateResult {
-  updateState: UpdateState
-  checkForUpdates: () => Promise<void>
-  installUpdate: () => Promise<void>
-}
+import { UpdateInfo, UpdateState, UseAutoUpdateResult } from '../types/update'
 
 export const useAutoUpdate = (): UseAutoUpdateResult => {
   const [updateState, setUpdateState] = useState<UpdateState>({
@@ -54,6 +32,8 @@ export const useAutoUpdate = (): UseAutoUpdateResult => {
 
     initializeUpdateState()
   }, [])
+
+
 
   // Configurer les listeners pour les événements de mise à jour
   useEffect(() => {

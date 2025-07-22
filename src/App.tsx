@@ -8,6 +8,7 @@ import { EmailDialog, RappelDialog, RendezVousDialog, QualificationDialog, Gener
 
 
 import { TitleBar } from './components/TitleBar';
+import { UpdateConfirmationDialog } from './components/UpdateConfirmationDialog';
 import { 
   loadContacts, 
   saveContacts, 
@@ -110,6 +111,8 @@ const App: React.FC = () => {
   // Auto-update hook
   const { updateState, installUpdate } = useAutoUpdate();
   
+
+  
   // Authentication states
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   
@@ -127,6 +130,7 @@ const App: React.FC = () => {
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isRappelDialogOpen, setIsRappelDialogOpen] = useState(false);
   const [isRendezVousDialogOpen, setIsRendezVousDialogOpen] = useState(false);
+  const [isUpdateConfirmationOpen, setIsUpdateConfirmationOpen] = useState(false);
   const [isQualificationDialogOpen, setIsQualificationDialogOpen] = useState(false);
   const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
   const [isFnKeysInfoOpen, setIsFnKeysInfoOpen] = useState(false);
@@ -1564,6 +1568,7 @@ Dimitri MOREL - Arcanis Conseil`;
             }}
             updateState={updateState}
             onUpdateClick={installUpdate}
+            onUpdateConfirmationOpen={() => setIsUpdateConfirmationOpen(true)}
           />
 
 
@@ -2079,7 +2084,7 @@ Dimitri MOREL - Arcanis Conseil`;
                 availableColumns={availableColumns}
                 onFileImport={handleSingleFileImport}
                 initialItemsPerPage={25}
-                pageSizeOptions={[25, 50]}
+                pageSizeOptions={[25, 50, 100]}
               />
             </div>
           </div>
@@ -2395,6 +2400,16 @@ Dimitri MOREL - Arcanis Conseil`;
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
         />
+
+      {/* Dialog de confirmation de mise à jour */}
+      <UpdateConfirmationDialog
+        isOpen={isUpdateConfirmationOpen}
+        onClose={() => setIsUpdateConfirmationOpen(false)}
+        onConfirm={installUpdate}
+        updateInfo={updateState.updateInfo}
+      />
+
+
         </main>
       </div>
   );

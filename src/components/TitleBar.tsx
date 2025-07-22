@@ -31,6 +31,7 @@ interface CustomMenuBarProps {
     updateInfo?: { version: string } | null;
   };
   onUpdateClick?: () => void;
+  onUpdateConfirmationOpen?: () => void;
 }
 
 export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({ 
@@ -46,7 +47,8 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
   activeCallContactId,
   onAdbClick,
   updateState,
-  onUpdateClick
+  onUpdateClick,
+  onUpdateConfirmationOpen
 }) => {
   const auth = useSupabaseAuth();
   const [isMaximized, setIsMaximized] = useState(false);
@@ -162,6 +164,28 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
     `)}`;
   };
 
+  // Fonction pour gérer le clic sur le badge de mise à jour
+  const handleUpdateBadgeClick = () => {
+    try {
+      if (updateState?.downloaded && onUpdateConfirmationOpen) {
+        console.log('🔄 Ouverture du dialog de confirmation de mise à jour');
+        onUpdateConfirmationOpen();
+      } else if (onUpdateClick) {
+        console.log('🔄 Installation directe de la mise à jour (fallback)');
+        onUpdateClick();
+      } else {
+        console.warn('⚠️ Aucune action de mise à jour disponible');
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors du clic sur le badge de mise à jour:', error);
+      // Fallback: essayer l'installation directe si le dialog échoue
+      if (onUpdateClick) {
+        console.log('🔄 Tentative d\'installation directe après erreur');
+        onUpdateClick();
+      }
+    }
+  };
+
   return (
     <div 
       className={cn(
@@ -188,19 +212,19 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             {/* Badge de mise à jour */}
-            {updateState && (updateState.downloaded || updateState.downloading || updateState.checking) && onUpdateClick && (
+            {updateState && (updateState.downloaded || updateState.downloading || updateState.checking) && (onUpdateClick || onUpdateConfirmationOpen) && (
               <Badge 
                 variant={updateState.downloaded ? 'default' : 'outline'} 
                 className={cn(
                   "flex items-center gap-1 px-2 py-0.5 cursor-pointer transition-all duration-200 hover:scale-105 text-xs h-6",
-                  updateState.downloaded && "bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20 animate-pulse",
+                  updateState.downloaded && "bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20",
                   updateState.downloading && "bg-orange-500/10 text-orange-600 border-orange-500/20 hover:bg-orange-500/20",
                   updateState.checking && "bg-gray-500/10 text-gray-600 border-gray-500/20 hover:bg-gray-500/20"
                 )}
-                onClick={onUpdateClick}
+                onClick={handleUpdateBadgeClick}
                 title={
                   updateState.downloaded 
-                    ? `Mise à jour ${updateState.updateInfo?.version} prête - Clic pour redémarrer`
+                    ? `Mise à jour ${updateState.updateInfo?.version} prête - Cliquer pour installer la mise à jour`
                     : updateState.downloading 
                     ? `Téléchargement en cours: ${updateState.progress}%`
                     : 'Vérification des mises à jour...'
@@ -214,7 +238,7 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
                   <Loader2 className="w-2.5 h-2.5 animate-spin" />
                 )}
                 <span className="font-medium">
-                  {updateState.downloaded ? 'MAJ' : 
+                  {updateState.downloaded ? 'Mettre à jour' : 
                    updateState.downloading ? `${updateState.progress}%` : 
                    'MAJ...'}
                 </span>
@@ -332,19 +356,19 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             {/* Badge de mise à jour */}
-            {updateState && (updateState.downloaded || updateState.downloading || updateState.checking) && onUpdateClick && (
+            {updateState && (updateState.downloaded || updateState.downloading || updateState.checking) && (onUpdateClick || onUpdateConfirmationOpen) && (
               <Badge 
                 variant={updateState.downloaded ? 'default' : 'outline'} 
                 className={cn(
                   "flex items-center gap-1 px-2 py-0.5 cursor-pointer transition-all duration-200 hover:scale-105 text-xs h-6",
-                  updateState.downloaded && "bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20 animate-pulse",
+                  updateState.downloaded && "bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20",
                   updateState.downloading && "bg-orange-500/10 text-orange-600 border-orange-500/20 hover:bg-orange-500/20",
                   updateState.checking && "bg-gray-500/10 text-gray-600 border-gray-500/20 hover:bg-gray-500/20"
                 )}
-                onClick={onUpdateClick}
+                onClick={handleUpdateBadgeClick}
                 title={
                   updateState.downloaded 
-                    ? `Mise à jour ${updateState.updateInfo?.version} prête - Clic pour redémarrer`
+                    ? `Mise à jour ${updateState.updateInfo?.version} prête - Cliquer pour installer la mise à jour`
                     : updateState.downloading 
                     ? `Téléchargement en cours: ${updateState.progress}%`
                     : 'Vérification des mises à jour...'
@@ -358,7 +382,7 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
                   <Loader2 className="w-2.5 h-2.5 animate-spin" />
                 )}
                 <span className="font-medium">
-                  {updateState.downloaded ? 'MAJ' : 
+                  {updateState.downloaded ? 'Mettre à jour' : 
                    updateState.downloading ? `${updateState.progress}%` : 
                    'MAJ...'}
                 </span>
@@ -526,4 +550,4 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
 };
 
 // Composant de compatibilité pour maintenir l'ancien nom
-export const TitleBar = CustomMenuBar; 
+export const TitleBar = CustomMenuBar;

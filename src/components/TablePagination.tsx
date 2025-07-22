@@ -36,7 +36,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
     itemsPerPage,
     onPageChange,
     onItemsPerPageChange,
-    pageSizeOptions = [25, 50],
+    pageSizeOptions = [25, 50, 100],
     showFirstLast = true,
     showPageInfo = true,
     className = '',
