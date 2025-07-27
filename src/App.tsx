@@ -48,7 +48,7 @@ import {
 import {
   Phone, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck, Linkedin, Globe, 
   Download, Keyboard, RefreshCw, Sun, Moon, Columns, X, Filter, Infinity, 
-  Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye
+  Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -144,7 +144,7 @@ const App: React.FC = () => {
   }>({ isVisible: false, key: '', label: '' });
 
   const [isAdbLogsDialogOpen, setIsAdbLogsDialogOpen] = useState(false);
-
+  const [isClearDataDialogOpen, setIsClearDataDialogOpen] = useState(false);
 
   const [importProgress, setImportProgress] = useState<{ percentage: number; message: string } | null>(null);
   
@@ -575,7 +575,139 @@ Dimitri MOREL - Arcanis Conseil`;
     }
   }, [selectedContact, showNotification, adbConnectionState.isConnected, sendSms, smsTemplate]);
 
+  // Clear data handlers
+  const clearAllData = useCallback(() => {
+    try {
+      // 1. Vider la liste des contacts
+      setContacts([]);
+      
+      // 2. Vider les états d'appel
+      setCallStates({});
+      
+      // 3. Désélectionner le contact actuel
+      setSelectedContact(null);
+      
+      // 4. Réinitialiser l'appel actif si nécessaire
+      if (activeCallContactId) {
+        setActiveCallContactId(null);
+        setCallStartTime(null);
+      }
+      
+      // 5. Nettoyer le localStorage
+      saveContacts([]);
+      saveCallStates({});
+      clearImportedTable();
+      
+      // 6. Notification de succès
+      showNotification('success', 'Toutes les données ont été supprimées avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la suppression des données:', error);
+      showNotification('error', 'Erreur lors de la suppression des données');
+    }
+  }, [activeCallContactId, showNotification]);
 
+  const handleClearData = useCallback(() => {
+    setIsClearDataDialogOpen(true);
+  }, []);
+
+  const confirmClearData = useCallback(() => {
+    clearAllData();
+    setIsClearDataDialogOpen(false);
+  }, [clearAllData]);
+
+  // Import/Export handlers
+  const handleSingleFileImport = useCallback(async (file: File) => {
+    const fileSizeMB = file.size / (1024 * 1024);
+    
+    setImportProgress({ 
+      message: `Importation de "${file.name}" (${fileSizeMB.toFixed(1)} MB)...`, 
+      percentage: 0 
+    });
+    
+    try {
+      // Analyse de la taille du fichier
+      if (fileSizeMB > 50) {
+        setImportProgress({ 
+          message: `⚠️ Fichier volumineux détecté (${fileSizeMB.toFixed(1)} MB). Traitement optimisé...`, 
+          percentage: 5 
+        });
+        await new Promise(res => setTimeout(res, 1000));
+      }
+      
+      setImportProgress({ message: `📖 Lecture du fichier...`, percentage: 10 });
+      await new Promise(res => setTimeout(res, 200));
+      
+      setImportProgress({ message: `⚙️ Traitement par chunks...`, percentage: 20 });
+      
+      // Import optimisé
+      const newContacts = await importContactsFromFile(file);
+      
+      setImportProgress({ message: `📝 Préparation des données...`, percentage: 80 });
+      await new Promise(res => setTimeout(res, 100));
+      
+      const updatedContacts = newContacts.map((c, idx) => ({ 
+        ...c, 
+        numeroLigne: idx + 1, 
+        id: c.id || uuidv4() 
+      }));
+      
+      setImportProgress({ message: `💾 Sauvegarde...`, percentage: 90 });
+      
+      // Sauvegarder la table importée pour persistance
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      const source = fileExtension === 'csv' ? 'csv' : 'xlsx';
+      saveImportedTable(updatedContacts, {
+        fileName: file.name,
+        source: source as 'csv' | 'xlsx',
+        totalRows: updatedContacts.length
+      });
+      
+      setContacts(updatedContacts);
+      setCallStates({});
+      setSelectedContact(null);
+      
+      setImportProgress({ message: `✅ Finalisation...`, percentage: 100 });
+      await new Promise(res => setTimeout(res, 500)); 
+      setImportProgress(null);
+      
+      const message = fileSizeMB > 10 
+        ? `🎉 ${updatedContacts.length} contacts importés avec succès depuis un fichier de ${fileSizeMB.toFixed(1)} MB !`
+        : `✅ ${updatedContacts.length} contacts importés avec succès !`;
+        
+      showNotification('success', message);
+      
+    } catch (error) {
+      console.error("Import error:", error);
+      setImportProgress(null);
+      showNotification('error', `❌ Erreur d'importation: ${error instanceof Error ? error.message : "Erreur inconnue"}. Vérifiez le format de votre fichier.`);
+    }
+  }, [showNotification]);
+
+  const handleImportFile = useCallback(async (files: FileList) => {
+    const file = files[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    try {
+      await handleSingleFileImport(file);
+    } finally {
+      setIsImporting(false);
+    }
+  }, [handleSingleFileImport]);
+
+  const handleExport = useCallback((format: 'csv' | 'xlsx') => {
+    if (contacts.length === 0) {
+      showNotification('info', 'Aucun contact à exporter');
+      return;
+    }
+    
+    try {
+      exportContactsToFile(contacts, format);
+      showNotification('success', `Export ${format.toUpperCase()} réussi`);
+    } catch (error) {
+      showNotification('error', `Erreur lors de l'export: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    }
+  }, [contacts, showNotification]);
 
   const makePhoneCall = useCallback(async (contactToCall?: Contact) => {
     console.log('🔍 [MAKEPHONECALL] Début makePhoneCall, contactToCall:', contactToCall);
@@ -1170,92 +1302,9 @@ Dimitri MOREL - Arcanis Conseil`;
      }
    }, [adbEndCall, endActiveCall, updateContact, showNotification]); // Retiré makePhoneCall car on utilise maintenant makePhoneCallRef
 
-  // Other handlers - version optimisée pour gros fichiers
-  const handleImportFile = async (droppedFiles: FileList) => {
-    if (droppedFiles && droppedFiles[0]) {
-      const file = droppedFiles[0];
-      await handleSingleFileImport(file);
-    }
-  };
+  // Other handlers - version optimisée pour gros fichiers (supprimé car en conflit avec la version useCallback)
 
-  // Nouvelle fonction pour gérer l'import d'un seul fichier (utilisée par le drag & drop)
-  const handleSingleFileImport = async (file: File) => {
-    const fileSizeMB = file.size / (1024 * 1024);
-    
-    setImportProgress({ 
-      message: `Importation de "${file.name}" (${fileSizeMB.toFixed(1)} MB)...`, 
-      percentage: 0 
-    });
-    
-    try {
-      // Analyse de la taille du fichier
-      if (fileSizeMB > 50) {
-        setImportProgress({ 
-          message: `⚠️ Fichier volumineux détecté (${fileSizeMB.toFixed(1)} MB). Traitement optimisé...`, 
-          percentage: 5 
-        });
-        await new Promise(res => setTimeout(res, 1000));
-      }
-      
-      setImportProgress({ message: `📖 Lecture du fichier...`, percentage: 10 });
-      await new Promise(res => setTimeout(res, 200));
-      
-      setImportProgress({ message: `⚙️ Traitement par chunks...`, percentage: 20 });
-      
-      // Import optimisé
-      const newContacts = await importContactsFromFile(file);
-      
-      setImportProgress({ message: `📝 Préparation des données...`, percentage: 80 });
-      await new Promise(res => setTimeout(res, 100));
-      
-      const updatedContacts = newContacts.map((c, idx) => ({ 
-        ...c, 
-        numeroLigne: idx + 1, 
-        id: c.id || uuidv4() 
-      }));
-      
-      setImportProgress({ message: `💾 Sauvegarde...`, percentage: 90 });
-      
-      // Sauvegarder la table importée pour persistance
-      const fileExtension = file.name.split('.').pop()?.toLowerCase();
-      const source = fileExtension === 'csv' ? 'csv' : 'xlsx';
-      saveImportedTable(updatedContacts, {
-        fileName: file.name,
-        source: source as 'csv' | 'xlsx',
-        totalRows: updatedContacts.length
-      });
-      
-      setContacts(updatedContacts);
-      setCallStates({});
-      setSelectedContact(null);
-      
-      setImportProgress({ message: `✅ Finalisation...`, percentage: 100 });
-      await new Promise(res => setTimeout(res, 500)); 
-      setImportProgress(null);
-      
-      const message = fileSizeMB > 10 
-        ? `🎉 ${updatedContacts.length} contacts importés avec succès depuis un fichier de ${fileSizeMB.toFixed(1)} MB !`
-        : `✅ ${updatedContacts.length} contacts importés avec succès !`;
-        
-      showNotification('success', message);
-      
-    } catch (error) {
-      console.error("Import error:", error);
-      setImportProgress(null);
-      showNotification('error', `❌ Erreur d'importation: ${error instanceof Error ? error.message : "Erreur inconnue"}. Vérifiez le format de votre fichier.`);
-    }
-  };
-  
-  // handleSupabaseImport supprimé pour libérer de l'espace
-
-  const handleExport = (format: 'csv' | 'xlsx') => {
-    if (contacts.length === 0) {
-      showNotification('info', "Aucun contact à exporter.");
-      return;
-    }
-    exportContactsToFile(contacts, format);
-    showNotification('success', `Contacts exportés au format ${format.toUpperCase()}.`);
-  };
+  // Fonctions handleSingleFileImport et handleExport supprimées car en conflit avec les versions useCallback
 
 
 
@@ -1848,12 +1897,37 @@ Dimitri MOREL - Arcanis Conseil`;
             {/* Données Group */}
             <div className="flex flex-col items-center">
               <div className="flex gap-2 p-2 justify-center items-center">
-                                <RibbonButton 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => document.getElementById('fileImporter')?.click()}
-                  icon={<Upload />} 
-                  label="Importer"
-                  className="min-w-[80px] max-w-[80px] h-12"
-                />
+                  className={cn(
+                    "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 ribbon-button-modern",
+                    "relative overflow-hidden transition-all duration-300 ease-out",
+                    "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
+                    "group cursor-pointer",
+                    "border border-transparent hover:bg-gradient-to-br hover:from-primary/10 hover:to-accent/10 hover:border-primary/30",
+                    "hover:transform hover:rotate-1"
+                  )}
+                >
+                  {/* Shimmer effect */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
+                  </div>
+                  
+                  {/* Glow effect */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-radial from-primary/20 via-transparent to-transparent blur-xl" />
+                  
+                  {/* Content */}
+                  <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
+                    <div className="w-4 h-4 mb-1 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
+                      <Upload />
+                    </div>
+                    <span className="text-[10px] leading-tight w-full transition-all duration-300 group-hover:font-semibold text-center">
+                      Importer
+                    </span>
+                  </div>
+                </Button>
               <input type="file" id="fileImporter" accept=".csv, .tsv, .xlsx, .xls" className="hidden" onChange={(e) => e.target.files && handleImportFile(e.target.files)} />
               
               {/* Bouton Export avec menu déroulant */}
@@ -1921,6 +1995,40 @@ Dimitri MOREL - Arcanis Conseil`;
                   </DropdownMenuGroup>
                 </DropdownMenuContent>
               </DropdownMenu>
+              
+              {/* Bouton Supprimer */}
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={contacts.length === 0}
+                onClick={handleClearData}
+                className={cn(
+                  "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 ribbon-button-modern",
+                  "relative overflow-hidden transition-all duration-300 ease-out",
+                  "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
+                  "group cursor-pointer",
+                  "border border-transparent hover:bg-gradient-to-br hover:from-primary/10 hover:to-accent/10 hover:border-primary/30",
+                  contacts.length > 0 && "hover:transform hover:rotate-1"
+                )}
+              >
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
+                </div>
+                
+                {/* Glow effect */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-radial from-primary/20 via-transparent to-transparent blur-xl" />
+                
+                {/* Content */}
+                <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
+                  <div className="w-4 h-4 mb-1 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
+                    <Trash2 />
+                  </div>
+                  <span className="text-[10px] leading-tight w-full transition-all duration-300 group-hover:font-semibold text-center">
+                    Supprimer
+                  </span>
+                </div>
+              </Button>
             </div>
               <span className="text-[9px] text-muted-foreground mt-1 font-medium tracking-wider text-center w-full">Données</span>
             </div>
@@ -2408,6 +2516,27 @@ Dimitri MOREL - Arcanis Conseil`;
         onConfirm={installUpdate}
         updateInfo={updateState.updateInfo}
       />
+
+      {/* Dialog de confirmation de suppression des données */}
+      <Dialog open={isClearDataDialogOpen} onOpenChange={setIsClearDataDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Supprimer toutes les données</DialogTitle>
+            <DialogDescription>
+              Cette action supprimera définitivement tous les contacts importés dans la table. 
+              Cette action ne peut pas être annulée.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsClearDataDialogOpen(false)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={confirmClearData}>
+              Supprimer tout
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
 
         </main>
