@@ -1,8 +1,8 @@
 import { Contact, ContactStatus, ClientFile, EmailType, Civility } from '../types';
+import { isValidUrl } from '../src/lib/utils';
 import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs
 import Papa from 'papaparse'; // For CSV parsing
 import * as XLSX from 'xlsx'; // For Excel parsing and writing
-import { MOCK_SUPABASE_CONTACTS_COUNT } from '../constants';
 
 
 const LOCAL_STORAGE_KEY = 'dimiCallContacts';
@@ -74,24 +74,191 @@ export const saveCallStates = (states: Record<string, { isCalling?: boolean; has
   }
 };
 
-// Normalize header names for CSV import
+// Fonction utilitaire pour supprimer les accents et normaliser les chaînes
+const removeAccents = (str: string): string => {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+};
+
+// Fonction utilitaire pour normaliser complètement un header
+const normalizeString = (str: string): string => {
+  return removeAccents(str.trim().toLowerCase())
+    .replace(/[^a-z0-9]/g, '') // Supprimer tous les caractères spéciaux, espaces, ponctuation
+    .replace(/\s+/g, ''); // Supprimer les espaces multiples
+};
+
+// Normalize header names for CSV import with flexible detection
 const normalizeHeader = (header: string): string => {
+  // Nettoyage initial : supprimer espaces de début/fin, convertir en minuscules, supprimer accents
+  const cleaned = normalizeString(header);
+  
+  // Mapping exhaustif avec toutes les variantes possibles
   const mapping: Record<string, string> = {
+    // PRÉNOM - toutes variantes
+    'prenom': 'prenom',
     'prénom': 'prenom',
+    'firstname': 'prenom',
+    'firstname': 'prenom',
+    'firstnme': 'prenom',
+    'fname': 'prenom',
+    
+    // NOM - toutes variantes  
     'nom': 'nom',
+    'lastname': 'nom',
+    'lastname': 'nom',
+    'lastnam': 'nom',
+    'lname': 'nom',
+    'surname': 'nom',
+    'familyname': 'nom',
+    
+    // TÉLÉPHONE/NUMÉRO - toutes variantes (très flexible)
+    'telephone': 'telephone',
     'téléphone': 'telephone',
     'phone': 'telephone',
-    'mail': 'email',
+    'numero': 'telephone',
+    'numéro': 'telephone',
+    'number': 'telephone',
+    'tel': 'telephone',
+    'tél': 'telephone',
+    'mobile': 'telephone',
+    'gsm': 'telephone',
+    'portable': 'telephone',
+    'cellulaire': 'telephone',
+    'cell': 'telephone',
+    
+    // EMAIL - toutes variantes
     'email': 'email',
-    'école': 'ecole',
-    'ecole': 'ecole',
-    'source': 'ecole',
+    'mail': 'email',
+    'mél': 'email',
+    'mel': 'email',
+    'courriel': 'email',
+    'adressemail': 'email',
+    'emailaddress': 'email',
+    
+    // SOURCE/ÉCOLE - toutes variantes (mapping vers 'source')
+    'source': 'source',
+    'école': 'source',
+    'ecole': 'source',
+    'origin': 'source',
+    'origine': 'source',
+    'etablissement': 'source',
+    'établissement': 'source',
+    'institution': 'source',
+    'university': 'source',
+    'universite': 'source',
+    'université': 'source',
+    'school': 'source',
+    'ecolesource': 'source',
+    'provenance': 'source',
+    
+    // STATUT - toutes variantes (mapping vers 'statut')
     'statut': 'statut',
+    'statutappel': 'statut',
     'status': 'statut',
+    'callstatus': 'statut',
+    'état': 'statut',
+    'etat': 'statut',
+    'state': 'statut',
+    
+    // COMMENTAIRE - toutes variantes (mapping vers 'commentaire')
     'commentaire': 'commentaire',
+    'commentaires': 'commentaire',
+    'commentairesappel': 'commentaire',
     'comment': 'commentaire',
+    'comments': 'commentaire',
+    'note': 'commentaire',
+    'notes': 'commentaire',
+    'remarque': 'commentaire',
+    'remarques': 'commentaire',
+    'observation': 'commentaire',
+    'observations': 'commentaire',
+    
+    // SEXE - toutes variantes
+    'sexe': 'sexe',
+    'genre': 'sexe',
+    'gender': 'sexe',
+    'civilité': 'sexe',
+    'civilite': 'sexe',
+    'civility': 'sexe',
+    
+    // TYPE - toutes variantes
+    'type': 'type',
+    'catégorie': 'type',
+    'categorie': 'type',
+    'category': 'type',
+    'typologie': 'type',
+    
+    // QUALITÉ - toutes variantes
+    'qualité': 'qualite',
+    'qualite': 'qualite',
+    'quality': 'qualite',
+    'niveau': 'qualite',
+    'grade': 'qualite',
+    
+    // DATE RAPPEL - toutes variantes
+    'daterappel': 'dateRappel',
+    'datederappel': 'dateRappel',
+    'rappeldate': 'dateRappel',
+    'callbackdate': 'dateRappel',
+    
+    // HEURE RAPPEL - toutes variantes
+    'heurerappel': 'heureRappel',
+    'heurederappel': 'heureRappel',
+    'rappelheure': 'heureRappel',
+    'callbacktime': 'heureRappel',
+    
+    // DATE APPEL - toutes variantes
+    'dateappel': 'dateAppel',
+    'datedappel': 'dateAppel',
+    'appeldate': 'dateAppel',
+    'calldate': 'dateAppel',
+    
+    // DATE RDV - toutes variantes
+    'daterdv': 'dateRDV',
+    'daterendezous': 'dateRDV',
+    'rdvdate': 'dateRDV',
+    'appointmentdate': 'dateRDV',
+    
+    // HEURE RDV - toutes variantes
+    'heurerdv': 'heureRDV',
+    'heurerendezous': 'heureRDV',
+    'rdvheure': 'heureRDV',
+    'appointmenttime': 'heureRDV',
+    
+    // DURÉE APPEL - toutes variantes
+    'dureeappel': 'dureeAppel',
+    'dureedappel': 'dureeAppel',
+    'callduration': 'dureeAppel',
+    'duration': 'dureeAppel',
+    'duree': 'dureeAppel',
+    
+    // LIEN - toutes variantes
+    'lien': 'lien',
+    'link': 'lien',
+    'url': 'lien',
+    'site': 'lien',
+    'website': 'lien',
+    'siteweb': 'lien',
+    'siteinternet': 'lien',
+    'webpage': 'lien',
+    'weblink': 'lien'
   };
-  return mapping[header.toLowerCase()] || header.toLowerCase();
+  
+  // Recherche directe avec le header normalisé
+  if (mapping[cleaned]) {
+    return mapping[cleaned];
+  }
+  
+  // Recherche par correspondance partielle pour plus de flexibilité
+  for (const [key, value] of Object.entries(mapping)) {
+    if (cleaned.includes(key) || key.includes(cleaned)) {
+      console.log(`🔍 Correspondance partielle trouvée: "${header}" → "${key}" → "${value}"`);
+      return value;
+    }
+  }
+  
+  // Si aucun mapping trouvé, retourner le header nettoyé
+  console.warn(`⚠️ En-tête non reconnu: "${header}" → "${cleaned}"`);
+  return cleaned;
 };
 
 // Import contacts from file (CSV or Excel)
@@ -106,24 +273,37 @@ export const importContactsFromFile = async (file: File): Promise<Contact[]> => 
         transformHeader: (header: string) => normalizeHeader(header.trim()),
         complete: (results) => {
           try {
-            const contacts: Contact[] = results.data.map((row: any, index: number) => ({
-              id: uuidv4(),
-              numeroLigne: index + 1,
-              prenom: row.prenom || '',
-              nom: row.nom || '',
-              telephone: formatPhoneNumber(row.telephone || ''),
-              email: row.email || '',
-              ecole: row.ecole || '',
-              statut: Object.values(ContactStatus).includes(row.statut) ? row.statut : ContactStatus.NonDefini,
-              commentaire: row.commentaire || '',
-              dateRappel: row.dateRappel || '',
-              heureRappel: row.heureRappel || '',
-              dateRDV: row.dateRDV || '',
-              heureRDV: row.heureRDV || '',
-              dateAppel: row.dateAppel || '',
-              heureAppel: row.heureAppel || '',
-              dureeAppel: row.dureeAppel || '',
-            }));
+            const contacts: Contact[] = results.data.map((row: any, index: number) => {
+              // Validation de l'URL si présente
+              const lienValue = row.lien || '';
+              if (lienValue && !isValidUrl(lienValue)) {
+                console.warn(`⚠️ URL invalide pour le contact ligne ${index + 1}: "${lienValue}"`);
+              }
+              
+              return {
+                id: uuidv4(),
+                numeroLigne: index + 1,
+                prenom: row.prenom || '',
+                nom: row.nom || '',
+                telephone: formatPhoneNumber(row.telephone || ''),
+                email: row.email || '',
+                source: row.source || '', // Changé de 'ecole' vers 'source'
+                statut: Object.values(ContactStatus).includes(row.statut) ? row.statut : ContactStatus.NonDefini,
+                commentaire: row.commentaire || '',
+                dateRappel: row.dateRappel || '',
+                heureRappel: row.heureRappel || '',
+                dateRDV: row.dateRDV || '',
+                heureRDV: row.heureRDV || '',
+                dateAppel: row.dateAppel || '',
+                heureAppel: row.heureAppel || '',
+                dureeAppel: row.dureeAppel || '',
+                // Ajouter les nouveaux champs optionnels
+                sexe: row.sexe || '',
+                type: row.type || '',
+                qualite: row.qualite || '',
+                lien: lienValue
+              };
+            });
             resolve(contacts);
           } catch (error) {
             reject(error);
@@ -162,7 +342,7 @@ export const importContactsFromFile = async (file: File): Promise<Contact[]> => 
               nom: '',
               telephone: '',
               email: '',
-              ecole: '',
+              source: '', // Changé de 'ecole' vers 'source'
               statut: ContactStatus.NonDefini,
               commentaire: '',
               dateRappel: '',
@@ -172,6 +352,11 @@ export const importContactsFromFile = async (file: File): Promise<Contact[]> => 
               dateAppel: '',
               heureAppel: '',
               dureeAppel: '',
+              // Ajouter les nouveaux champs optionnels
+              sexe: '',
+              type: '',
+              qualite: '',
+              lien: ''
             };
             
             headers.forEach((header, index) => {
@@ -189,8 +374,24 @@ export const importContactsFromFile = async (file: File): Promise<Contact[]> => 
                 case 'email':
                   contact.email = value;
                   break;
-                case 'ecole':
-                  contact.ecole = value;
+                case 'source':
+                  contact.source = value;
+                  break;
+                case 'sexe':
+                  contact.sexe = value;
+                  break;
+                case 'type':
+                  contact.type = value;
+                  break;
+                case 'qualite':
+                  contact.qualite = value;
+                  break;
+                case 'lien':
+                  // Validation de l'URL lors de l'importation
+                  if (value && !isValidUrl(value)) {
+                    console.warn(`⚠️ URL invalide pour le contact ligne ${i}: "${value}"`);
+                  }
+                  contact.lien = value;
                   break;
                 case 'statut':
                   contact.statut = Object.values(ContactStatus).includes(value as ContactStatus) ? value as ContactStatus : ContactStatus.NonDefini;
@@ -219,27 +420,38 @@ export const importContactsFromFile = async (file: File): Promise<Contact[]> => 
 
 // Export contacts to file
 export const exportContactsToFile = (contacts: Contact[], format: 'csv' | 'xlsx'): void => {
+  // Nouvel ordre des colonnes selon les spécifications
   const headers = [
-    'Prénom', 'Nom', 'Téléphone', 'Mail', 'École/Source', 'Statut',
-    'Commentaire', 'Date Rappel', 'Heure Rappel', 'Date RDV', 'Heure RDV',
-    'Date Appel', 'Heure Appel', 'Durée Appel'
+    'Date Rappel',      // 1
+    'Heure Rappel',     // 2
+    'Sexe',             // 3
+    'Prénom',           // 4
+    'Nom',              // 5
+    'Numéro',           // 6 (renommé de "Téléphone")
+    'Mail',             // 7
+    'Source',           // 8 (renommé de "École/Source")
+    'Type',             // 9
+    'Qualité',          // 10
+    'Date Appel',       // 11
+    'Statut Appel',     // 12 (renommé de "Statut")
+    'Commentaires Appel' // 13 (renommé de "Commentaire")
   ];
 
+  // Mapping des données selon le nouvel ordre
   const data = contacts.map(contact => [
-    contact.prenom,
-    contact.nom,
-    contact.telephone,
-    contact.email,
-    contact.ecole,
-    contact.statut,
-    contact.commentaire,
-    contact.dateRappel,
-    contact.heureRappel,
-    contact.dateRDV,
-    contact.heureRDV,
-    contact.dateAppel,
-    contact.heureAppel,
-    contact.dureeAppel
+    contact.dateRappel || '',      // Date Rappel
+    contact.heureRappel || '',     // Heure Rappel
+    contact.sexe || '',            // Sexe
+    contact.prenom || '',          // Prénom
+    contact.nom || '',             // Nom
+    contact.telephone || '',       // Numéro (anciennement Téléphone)
+    contact.email || '',           // Mail
+    contact.source || '',          // Source (anciennement École/Source)
+    contact.type || '',            // Type
+    contact.qualite || '',         // Qualité
+    contact.dateAppel || '',       // Date Appel
+    contact.statut || '',          // Statut Appel (anciennement Statut)
+    contact.commentaire || ''      // Commentaires Appel (anciennement Commentaire)
   ]);
 
   if (format === 'csv') {
@@ -259,6 +471,85 @@ export const exportContactsToFile = (contacts: Contact[], format: 'csv' | 'xlsx'
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Contacts');
     XLSX.writeFile(workbook, `contacts_${new Date().toISOString().split('T')[0]}.xlsx`);
   }
+};
+
+// Fonction auxiliaire pour construire le champ Notes pour Google Contacts
+const buildNotesField = (contact: Contact): string => {
+  const notes = [];
+  
+  if (contact.commentaire) {
+    notes.push(`Commentaire: ${contact.commentaire}`);
+  }
+  
+  if (contact.source) {
+    notes.push(`Source: ${contact.source}`);
+  }
+  
+  if (contact.dateRappel) {
+    notes.push(`Date rappel: ${contact.dateRappel}`);
+    if (contact.heureRappel) {
+      notes.push(`Heure rappel: ${contact.heureRappel}`);
+    }
+  }
+  
+  if (contact.dateRDV) {
+    notes.push(`Date RDV: ${contact.dateRDV}`);
+    if (contact.heureRDV) {
+      notes.push(`Heure RDV: ${contact.heureRDV}`);
+    }
+  }
+  
+  if (contact.dateAppel) {
+    notes.push(`Date appel: ${contact.dateAppel}`);
+    if (contact.heureAppel) {
+      notes.push(`Heure appel: ${contact.heureAppel}`);
+    }
+  }
+  
+  notes.push(`Statut: ${contact.statut}`);
+  
+  return notes.join(' | ');
+};
+
+// Export contacts to Google Contacts CSV format
+export const exportGoogleContactsCSV = (contacts: Contact[]): void => {
+  // Filtrer les contacts par statut (À rappeler, DO, RO)
+  const filteredContacts = contacts.filter(contact => 
+    contact.statut === ContactStatus.ARappeler ||
+    contact.statut === ContactStatus.DO ||
+    contact.statut === ContactStatus.RO
+  );
+
+  if (filteredContacts.length === 0) {
+    throw new Error('Aucun contact à exporter avec les statuts sélectionnés');
+  }
+
+  // Mapping vers le format Google Contacts
+  const googleContactsData = filteredContacts.map(contact => ({
+    'Given Name': contact.prenom || '',
+    'Family Name': contact.nom || '',
+    'Phone 1 - Value': contact.telephone || '',
+    'E-mail 1 - Value': contact.email || '',
+    'Notes': buildNotesField(contact)
+  }));
+
+  // Génération du CSV avec encodage UTF-8 BOM
+  const csvContent = Papa.unparse(googleContactsData);
+  const bom = '\uFEFF'; // UTF-8 BOM pour la compatibilité Google Contacts
+  const blob = new Blob([bom + csvContent], { 
+    type: 'text/csv;charset=utf-8;' 
+  });
+  
+  // Téléchargement du fichier
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `google-contacts-export-${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 
 export const generateGmailComposeUrl = (

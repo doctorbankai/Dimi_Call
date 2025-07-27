@@ -34,6 +34,7 @@ export interface Contact {
   dateAppel: string; // YYYY-MM-DD
   heureAppel: string; // HH:mm
   dureeAppel: string; // mm:ss
+  lien?: string; // URL du lien internet associé au contact
   sexe?: string;
   don?: string;
   qualite?: string;

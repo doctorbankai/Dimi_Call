@@ -21,6 +21,7 @@ export const filterAndJoin = (...values: (string | null | undefined)[]): string 
 // Variables globales pour garder les références des fenêtres de recherche
 let linkedInWindowRef: Window | null = null;
 let googleWindowRef: Window | null = null;
+let linkWindowRef: Window | null = null;
 
 /**
  * Ouvre une URL LinkedIn dans une fenêtre dédiée qui sera réutilisée pour tous les liens LinkedIn
@@ -98,4 +99,55 @@ export const searchGoogle = (prenom: string, nom: string): void => {
   }
   const url = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
   openGoogleWindow(url);
+};
+
+/**
+ * Ouvre un lien direct dans une fenêtre dédiée qui sera réutilisée pour tous les liens
+ * Si la fenêtre existe déjà, elle sera réutilisée et rechargée avec la nouvelle URL
+ * @param url - L'URL à ouvrir
+ */
+export const openDirectLink = (url: string): void => {
+  if (!isValidUrl(url)) {
+    console.warn('URL invalide:', url);
+    return;
+  }
+
+  // Assurer que l'URL a un protocole
+  const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+
+  // Vérifier si la fenêtre existe déjà et n'est pas fermée
+  if (linkWindowRef && !linkWindowRef.closed) {
+    try {
+      // Naviguer vers la nouvelle URL dans la fenêtre existante (recharge la page)
+      linkWindowRef.location.href = fullUrl;
+      // Donner le focus à la fenêtre
+      linkWindowRef.focus();
+    } catch (error) {
+      // En cas d'erreur (ex: fenêtre fermée), créer une nouvelle fenêtre
+      console.log('Erreur lors du rechargement de la fenêtre Lien, création d\'une nouvelle fenêtre');
+      linkWindowRef = window.open(fullUrl, 'dimicall-link-window', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+    }
+  } else {
+    // Créer une nouvelle fenêtre et garder la référence
+    linkWindowRef = window.open(fullUrl, 'dimicall-link-window', 'width=1200,height=800,scrollbars=yes,resizable=yes');
+  }
+};
+
+/**
+ * Valide si une chaîne est une URL valide
+ * @param url - L'URL à valider
+ * @returns true si l'URL est valide, false sinon
+ */
+export const isValidUrl = (url: string): boolean => {
+  if (!url || typeof url !== 'string' || url.trim() === '') {
+    return false;
+  }
+
+  try {
+    // Essayer de créer un objet URL pour valider
+    new URL(url.startsWith('http') ? url : `https://${url}`);
+    return true;
+  } catch {
+    return false;
+  }
 };

@@ -31,7 +31,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { cn, searchLinkedIn, searchGoogle } from './lib/utils';
+import { cn, searchLinkedIn, searchGoogle, openDirectLink } from './lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -46,9 +46,9 @@ import {
   DropdownMenuCheckboxItem
 } from "@/components/ui/dropdown-menu";
 import {
-  Phone, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck, Linkedin, Globe, 
+  Phone, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck, Linkedin, Globe, ExternalLink,
   Download, Keyboard, RefreshCw, Sun, Moon, Columns, X, Filter, Infinity, 
-  Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2
+  Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2, Users
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -148,15 +148,15 @@ const App: React.FC = () => {
 
   const [importProgress, setImportProgress] = useState<{ percentage: number; message: string } | null>(null);
   
-  const [autoSearchMode, setAutoSearchMode] = useState<'disabled' | 'linkedin' | 'google'>(() => {
+  const [autoSearchMode, setAutoSearchMode] = useState<'disabled' | 'linkedin' | 'google' | 'link'>(() => {
     try {
       const saved = localStorage.getItem('auto-search-mode');
       console.log('🔄 [AUTO-SEARCH] Chargement du mode depuis localStorage:', saved);
       
       // Validation de la valeur chargée
-      if (saved && ['disabled', 'linkedin', 'google'].includes(saved)) {
+      if (saved && ['disabled', 'linkedin', 'google', 'link'].includes(saved)) {
         console.log('✅ [AUTO-SEARCH] Mode valide trouvé:', saved);
-        return saved as 'disabled' | 'linkedin' | 'google';
+        return saved as 'disabled' | 'linkedin' | 'google' | 'link';
       }
       
       console.log('🔄 [AUTO-SEARCH] Aucun mode valide trouvé, utilisation par défaut: linkedin');
@@ -527,6 +527,26 @@ Dimitri MOREL - Arcanis Conseil`;
     searchGoogle(target.prenom, target.nom);
   }, [selectedContact, showNotification]);
 
+  const handleDirectLink = useCallback((contact?: Contact) => {
+    const target = contact || selectedContact;
+    if (!target) {
+      showNotification('info', "Sélectionnez un contact pour ouvrir le lien.");
+      return;
+    }
+    
+    if (!target.lien) {
+      showNotification('warning', "Ce contact n'a pas de lien associé.");
+      return;
+    }
+
+    try {
+      openDirectLink(target.lien);
+      showNotification('success', 'Lien ouvert avec succès', 2000);
+    } catch (error) {
+      showNotification('error', 'Erreur lors de l\'ouverture du lien');
+    }
+  }, [selectedContact, showNotification]);
+
   const handleSms = useCallback(async (civilite?: string, contact?: Contact) => {
     const target = contact || selectedContact;
     if (!target) {
@@ -709,6 +729,105 @@ Dimitri MOREL - Arcanis Conseil`;
     }
   }, [contacts, showNotification]);
 
+  // Calcul du nombre de contacts filtrés pour Google Contacts
+  const googleContactsCount = useMemo(() => {
+    return contacts.filter(contact => 
+      contact.statut === ContactStatus.ARappeler ||
+      contact.statut === ContactStatus.DO ||
+      contact.statut === ContactStatus.RO
+    ).length;
+  }, [contacts]);
+
+  // Fonction auxiliaire pour construire le champ Notes pour Google Contacts
+  const buildNotesField = useCallback((contact: Contact): string => {
+    const notes = [];
+    
+    if (contact.commentaire) {
+      notes.push(`Commentaire: ${contact.commentaire}`);
+    }
+    
+    if (contact.source) {
+      notes.push(`Source: ${contact.source}`);
+    }
+    
+    if (contact.dateRappel) {
+      notes.push(`Date rappel: ${contact.dateRappel}`);
+      if (contact.heureRappel) {
+        notes.push(`Heure rappel: ${contact.heureRappel}`);
+      }
+    }
+    
+    if (contact.dateRDV) {
+      notes.push(`Date RDV: ${contact.dateRDV}`);
+      if (contact.heureRDV) {
+        notes.push(`Heure RDV: ${contact.heureRDV}`);
+      }
+    }
+    
+    if (contact.dateAppel) {
+      notes.push(`Date appel: ${contact.dateAppel}`);
+      if (contact.heureAppel) {
+        notes.push(`Heure appel: ${contact.heureAppel}`);
+      }
+    }
+    
+    notes.push(`Statut: ${contact.statut}`);
+    
+    return notes.join(' | ');
+  }, []);
+
+  // Export contacts to Google Contacts CSV format
+  const exportGoogleContactsCSV = useCallback((contacts: Contact[]): void => {
+    // Filtrer les contacts par statut (À rappeler, DO, RO)
+    const filteredContacts = contacts.filter(contact => 
+      contact.statut === ContactStatus.ARappeler ||
+      contact.statut === ContactStatus.DO ||
+      contact.statut === ContactStatus.RO
+    );
+
+    if (filteredContacts.length === 0) {
+      throw new Error('Aucun contact à exporter avec les statuts sélectionnés');
+    }
+
+    // Mapping vers le format Google Contacts
+    const googleContactsData = filteredContacts.map(contact => ({
+      'Given Name': contact.prenom || '',
+      'Family Name': contact.nom || '',
+      'Phone 1 - Value': contact.telephone || '',
+      'E-mail 1 - Value': contact.email || '',
+      'Notes': buildNotesField(contact)
+    }));
+
+    // Génération du CSV avec encodage UTF-8 BOM
+    const Papa = require('papaparse');
+    const csvContent = Papa.unparse(googleContactsData);
+    const bom = '\uFEFF'; // UTF-8 BOM pour la compatibilité Google Contacts
+    const blob = new Blob([bom + csvContent], { 
+      type: 'text/csv;charset=utf-8;' 
+    });
+    
+    // Téléchargement du fichier
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `google-contacts-export-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, [buildNotesField]);
+
+  // Handler pour l'export Google Contacts
+  const handleGoogleContactsExport = useCallback(() => {
+    try {
+      exportGoogleContactsCSV(contacts);
+      showNotification('success', `${googleContactsCount} contacts exportés vers Google Contacts`);
+    } catch (error) {
+      showNotification('error', error instanceof Error ? error.message : 'Erreur lors de l\'export');
+    }
+  }, [contacts, googleContactsCount, showNotification, exportGoogleContactsCSV]);
+
   const makePhoneCall = useCallback(async (contactToCall?: Contact) => {
     console.log('🔍 [MAKEPHONECALL] Début makePhoneCall, contactToCall:', contactToCall);
     console.log('🔍 [MAKEPHONECALL] selectedContact:', selectedContact);
@@ -775,6 +894,9 @@ Dimitri MOREL - Arcanis Conseil`;
         } else if (autoSearchMode === 'google') {
           handleGoogleSearch(targetContact);
           showNotification('info', 'Ouverture automatique Google', 2000);
+        } else if (autoSearchMode === 'link') {
+          handleDirectLink(targetContact);
+          showNotification('info', 'Ouverture automatique Lien', 2000);
         }
         // Si 'disabled', ne rien faire
       } else {
@@ -785,7 +907,7 @@ Dimitri MOREL - Arcanis Conseil`;
       showNotification('error', `Erreur lors de l'appel: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
   }, [selectedContact, activeCallContactId, endActiveCall, updateCallState, updateContact, autoSearchMode, 
-      showNotification, handleLinkedInSearch, handleGoogleSearch, adbConnectionState.isConnected, makeAdbCall]);
+      showNotification, handleLinkedInSearch, handleGoogleSearch, handleDirectLink, adbConnectionState.isConnected, makeAdbCall]);
 
   // Surveillance robuste des fins d'appel via événements ADB
   useEffect(() => {
@@ -1805,6 +1927,13 @@ Dimitri MOREL - Arcanis Conseil`;
                   disabled={!selectedContact}
                   className="min-w-[80px] max-w-[80px] h-12"
                 />
+                <RibbonButton 
+                  onClick={() => handleDirectLink()} 
+                  icon={<ExternalLink />} 
+                  label="Lien" 
+                  disabled={!selectedContact || !selectedContact.lien}
+                  className="min-w-[80px] max-w-[80px] h-12"
+                />
               
               {/* Dropdown Auto-Search */}
               <DropdownMenu>
@@ -1834,12 +1963,14 @@ Dimitri MOREL - Arcanis Conseil`;
                       <div className="w-4 h-4 mb-1 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
                         {autoSearchMode === 'disabled' ? <X /> :
                          autoSearchMode === 'linkedin' ? <Linkedin /> :
-                         <Globe />}
+                         autoSearchMode === 'google' ? <Globe /> :
+                         <ExternalLink />}
                       </div>
                       <span className="text-[10px] leading-tight w-full transition-all duration-300 group-hover:font-semibold text-center">
                         {autoSearchMode === 'disabled' ? 'Désactivé' :
                          autoSearchMode === 'linkedin' ? 'Auto-LinkedIn' :
-                         'Auto-Google'}
+                         autoSearchMode === 'google' ? 'Auto-Google' :
+                         'Auto-Lien'}
                       </span>
                     </div>
                   </Button>
@@ -1886,6 +2017,17 @@ Dimitri MOREL - Arcanis Conseil`;
                       <Globe className="mr-2 h-4 w-4 text-green-500" />
                       <span>Auto-Google</span>
                       {autoSearchMode === 'google' && <span className="ml-auto text-xs opacity-70">Actuel</span>}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => {
+                        setAutoSearchMode('link');
+                        console.log('🔧 [AUTO-SEARCH] Mode changé vers: Auto-Lien');
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <ExternalLink className="mr-2 h-4 w-4 text-purple-500" />
+                      <span>Auto-Lien</span>
+                      {autoSearchMode === 'link' && <span className="ml-auto text-xs opacity-70">Actuel</span>}
                     </DropdownMenuItem>
                   </DropdownMenuGroup>
                 </DropdownMenuContent>
@@ -2027,6 +2169,46 @@ Dimitri MOREL - Arcanis Conseil`;
                   <span className="text-[10px] leading-tight w-full transition-all duration-300 group-hover:font-semibold text-center">
                     Supprimer
                   </span>
+                </div>
+              </Button>
+
+              {/* Bouton Google Contacts */}
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={googleContactsCount === 0}
+                onClick={handleGoogleContactsExport}
+                title={`Exporter ${googleContactsCount} contacts (À rappeler, DO, RO) vers Google Contacts`}
+                className={cn(
+                  "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 ribbon-button-modern",
+                  "relative overflow-hidden transition-all duration-300 ease-out",
+                  "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
+                  "group cursor-pointer",
+                  "border border-transparent hover:bg-gradient-to-br hover:from-primary/10 hover:to-accent/10 hover:border-primary/30",
+                  googleContactsCount > 0 && "hover:transform hover:rotate-1"
+                )}
+              >
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
+                </div>
+                
+                {/* Glow effect */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-radial from-primary/20 via-transparent to-transparent blur-xl" />
+                
+                {/* Content */}
+                <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
+                  <div className="w-4 h-4 mb-1 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
+                    <Users />
+                  </div>
+                  <span className="text-[10px] leading-tight w-full transition-all duration-300 group-hover:font-semibold text-center">
+                    Google
+                  </span>
+                  {googleContactsCount > 0 && (
+                    <Badge variant="secondary" className="absolute -top-1 -right-1 text-[8px] h-4 w-4 p-0 flex items-center justify-center">
+                      {googleContactsCount}
+                    </Badge>
+                  )}
                 </div>
               </Button>
             </div>
