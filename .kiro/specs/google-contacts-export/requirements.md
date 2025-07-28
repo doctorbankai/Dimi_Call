@@ -15,7 +15,7 @@ Cette fonctionnalité permet d'exporter les contacts avec des statuts spécifiqu
 1. WHEN l'utilisateur clique sur le bouton "Export Google Contacts" THEN le système SHALL filtrer automatiquement les contacts ayant les statuts "À rappeler", "DO", ou "RO"
 2. WHEN le filtrage est effectué THEN le système SHALL générer un fichier CSV avec les colonnes requises par Google Contacts
 3. WHEN le fichier CSV est généré THEN le système SHALL inclure les champs : Given Name, Family Name, Phone 1 - Value, E-mail 1 - Value, Notes
-4. WHEN le fichier est téléchargé THEN le nom du fichier SHALL suivre le format "google-contacts-export-YYYY-MM-DD.csv"
+4. WHEN le fichier est téléchargé THEN le nom du fichier SHALL suivre le format "google-contacts-export-YYYY-MM-DD-HH-MM-SS.csv"
 
 ### Requirement 2
 

@@ -615,9 +615,9 @@ Jean,Dupont,0123456789,jean@test.com,École Test,À rappeler,Test comment`;
 
       exportGoogleContactsCSV(mockContacts);
 
-      // Vérifier que le fichier est créé avec le bon nom
+      // Vérifier que le fichier est créé avec le bon nom (format: google-contacts-export-YYYY-MM-DD-HH-MM-SS.csv)
       expect(mockLink.setAttribute).toHaveBeenCalledWith('download', 
-        expect.stringMatching(/^google-contacts-export-\d{4}-\d{2}-\d{2}\.csv$/));
+        expect.stringMatching(/^google-contacts-export-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.csv$/));
 
       // Vérifier que le BOM UTF-8 est ajouté
       expect(global.Blob).toHaveBeenCalledWith(

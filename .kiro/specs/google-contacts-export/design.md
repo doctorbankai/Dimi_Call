@@ -100,7 +100,7 @@ export const exportGoogleContactsCSV = (contacts: Contact[]): void => {
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
   link.setAttribute('href', url);
-  link.setAttribute('download', `google-contacts-export-${new Date().toISOString().split('T')[0]}.csv`);
+  link.setAttribute('download', `google-contacts-export-${timestamp}.csv`);
   link.style.visibility = 'hidden';
   document.body.appendChild(link);
   link.click();

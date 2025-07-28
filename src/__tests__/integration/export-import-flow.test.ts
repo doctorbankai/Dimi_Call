@@ -468,9 +468,10 @@ describe('Export/Import Integration Flow', () => {
       exportGoogleContactsCSV(mixedStatusContacts);
 
       // Vérifier le nom du fichier
+      // Vérifier le format du nom de fichier avec timestamp complet
       expect(mockLink.setAttribute).toHaveBeenCalledWith(
         'download', 
-        'google-contacts-export-2024-01-15.csv'
+        expect.stringMatching(/^google-contacts-export-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.csv$/)
       );
 
       // Restaurer Date
