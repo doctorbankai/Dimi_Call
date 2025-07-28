@@ -744,10 +744,31 @@ Dimitri MOREL - Arcanis Conseil`;
   // Handler pour l'export Google Contacts
   const handleGoogleContactsExport = useCallback(() => {
     try {
+      // Vérification préalable du nombre de contacts
+      if (googleContactsCount === 0) {
+        showNotification('warning', 'Aucun contact à exporter avec les statuts sélectionnés (À rappeler, DO, RO)');
+        return;
+      }
+      
       exportGoogleContactsCSV(contacts);
       showNotification('success', `${googleContactsCount} contacts exportés vers Google Contacts`);
     } catch (error) {
-      showNotification('error', error instanceof Error ? error.message : 'Erreur lors de l\'export');
+      console.error('Erreur lors de l\'export Google Contacts:', error);
+      
+      // Messages d'erreur spécifiques
+      if (error instanceof Error) {
+        if (error.message.includes('Aucun contact à exporter')) {
+          showNotification('warning', 'Aucun contact à exporter avec les statuts sélectionnés');
+        } else if (error.message.includes('CSV')) {
+          showNotification('error', 'Erreur lors de la génération du fichier CSV');
+        } else if (error.message.includes('téléchargement')) {
+          showNotification('error', 'Erreur lors du téléchargement du fichier');
+        } else {
+          showNotification('error', `Erreur lors de l'export: ${error.message}`);
+        }
+      } else {
+        showNotification('error', 'Erreur inconnue lors de l\'export');
+      }
     }
   }, [contacts, googleContactsCount, showNotification]);
 
@@ -2101,7 +2122,10 @@ Dimitri MOREL - Arcanis Conseil`;
                 size="sm"
                 disabled={googleContactsCount === 0}
                 onClick={handleGoogleContactsExport}
-                title={`Exporter ${googleContactsCount} contacts (À rappeler, DO, RO) vers Google Contacts`}
+                title={googleContactsCount > 0 
+                  ? `Exporter ${googleContactsCount} contacts (À rappeler, DO, RO) vers Google Contacts` 
+                  : 'Aucun contact à exporter - Seuls les contacts avec les statuts "À rappeler", "DO" ou "RO" sont exportés'
+                }
                 className={cn(
                   "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 ribbon-button-modern",
                   "relative overflow-hidden transition-all duration-300 ease-out",

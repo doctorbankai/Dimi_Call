@@ -25,6 +25,8 @@
   - _Requirements: 2.1, 2.2_
 
 
+
+
 - [ ] 3. Implémenter la logique de comptage et d'état du bouton
   - Créer un `useMemo` pour calculer le nombre de contacts filtrés en temps réel
 
@@ -33,6 +35,9 @@
   - Ajouter la gestion de l'état du badge de comptage
   - Créer le handler `handleGoogleContactsExport` avec gestion d'erreurs
   - _Requirements: 2.3, 3.1, 3.2, 3.3_
+
+
+
 
 
 

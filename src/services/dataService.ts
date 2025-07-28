@@ -754,36 +754,105 @@ export const generateGmailComposeUrl = (
 const buildNotesField = (contact: Contact): string => {
   const notes = [];
   
-  if (contact.commentaire) {
-    notes.push(`Commentaire: ${contact.commentaire}`);
+  // Informations de base
+  if (contact.numeroLigne) {
+    notes.push(`Ligne: ${contact.numeroLigne}`);
   }
   
   if (contact.source) {
     notes.push(`Source: ${contact.source}`);
   }
   
-  if (contact.dateRappel) {
-    notes.push(`Date rappel: ${contact.dateRappel}`);
-    if (contact.heureRappel) {
-      notes.push(`Heure rappel: ${contact.heureRappel}`);
-    }
-  }
-  
-  if (contact.dateRDV) {
-    notes.push(`Date RDV: ${contact.dateRDV}`);
-    if (contact.heureRDV) {
-      notes.push(`Heure RDV: ${contact.heureRDV}`);
-    }
-  }
-  
-  if (contact.dateAppel) {
-    notes.push(`Date appel: ${contact.dateAppel}`);
-    if (contact.heureAppel) {
-      notes.push(`Heure appel: ${contact.heureAppel}`);
-    }
-  }
-  
+  // Statut (toujours inclus)
   notes.push(`Statut: ${contact.statut}`);
+  
+  // Commentaires
+  if (contact.commentaire) {
+    notes.push(`Commentaire: ${contact.commentaire}`);
+  }
+  
+  // Dates et heures de rappel
+  if (contact.dateRappel) {
+    const rappelInfo = [`Date rappel: ${contact.dateRappel}`];
+    if (contact.heureRappel) {
+      rappelInfo.push(`Heure rappel: ${contact.heureRappel}`);
+    }
+    notes.push(rappelInfo.join(' - '));
+  }
+  
+  // Dates et heures de RDV
+  if (contact.dateRDV) {
+    const rdvInfo = [`Date RDV: ${contact.dateRDV}`];
+    if (contact.heureRDV) {
+      rdvInfo.push(`Heure RDV: ${contact.heureRDV}`);
+    }
+    notes.push(rdvInfo.join(' - '));
+  }
+  
+  // Dates et heures d'appel
+  if (contact.dateAppel) {
+    const appelInfo = [`Date appel: ${contact.dateAppel}`];
+    if (contact.heureAppel) {
+      appelInfo.push(`Heure appel: ${contact.heureAppel}`);
+    }
+    if (contact.dureeAppel) {
+      appelInfo.push(`Durée: ${contact.dureeAppel}`);
+    }
+    notes.push(appelInfo.join(' - '));
+  }
+  
+  // Lien internet
+  if (contact.lien) {
+    notes.push(`Lien: ${contact.lien}`);
+  }
+  
+  // Informations personnelles supplémentaires
+  if (contact.sexe) {
+    notes.push(`Sexe: ${contact.sexe}`);
+  }
+  
+  if (contact.don) {
+    notes.push(`Don: ${contact.don}`);
+  }
+  
+  if (contact.qualite) {
+    notes.push(`Qualité: ${contact.qualite}`);
+  }
+  
+  if (contact.type) {
+    notes.push(`Type: ${contact.type}`);
+  }
+  
+  if (contact.date) {
+    notes.push(`Date générale: ${contact.date}`);
+  }
+  
+  // Informations utilisateur
+  if (contact.utilisateur) {
+    notes.push(`Utilisateur: ${contact.utilisateur}`);
+  }
+  
+  // Statuts spécialisés
+  if (contact.statutAppel) {
+    notes.push(`Statut appel: ${contact.statutAppel}`);
+  }
+  
+  if (contact.statutRDV) {
+    notes.push(`Statut RDV: ${contact.statutRDV}`);
+  }
+  
+  if (contact.commentaireRDV) {
+    notes.push(`Commentaire RDV: ${contact.commentaireRDV}`);
+  }
+  
+  // Identifiants techniques (optionnels, pour le debug)
+  if (contact.uid) {
+    notes.push(`UID: ${contact.uid}`);
+  }
+  
+  if (contact.uid_supabase) {
+    notes.push(`UID Supabase: ${contact.uid_supabase}`);
+  }
   
   return notes.join(' | ');
 };
