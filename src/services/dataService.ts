@@ -12,65 +12,142 @@ const IMPORTED_TABLE_METADATA_KEY = 'dimicall_imported_table_metadata';
 
 // Utility function to format phone numbers
 export const formatPhoneNumber = (phoneStr: string): string => {
-  if (!phoneStr) return '';
+  // Handle null, undefined, or empty inputs
+  if (!phoneStr || typeof phoneStr !== 'string') return '';
   
-  // Nettoyer tous les caractères sauf les chiffres et le +
+  // Clean all characters except digits and +
   let cleaned = phoneStr.replace(/[^\d+]/g, "");
+  
+  // Early return for empty cleaned string
+  if (!cleaned) return phoneStr;
 
-  // Cas spécial: +33(0) - supprimer le 0 après +33
+  // Pattern 1: Malformed +033 prefix (high priority)
+  const matchMalformed033 = cleaned.match(/^\+033(\d{9,10})$/);
+  if (matchMalformed033) {
+    const digits = matchMalformed033[1];
+    // If 10 digits, take first 9; if 9 digits, use as is
+    const num = digits.length === 10 ? digits.slice(0, 9) : digits;
+    if (num.length === 9) {
+      return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7,9)}`;
+    }
+  }
+
+  // Pattern 2: Malformed +0 prefix
+  const matchMalformedPlus0 = cleaned.match(/^\+0([67]\d{7,9})$/);
+  if (matchMalformedPlus0) {
+    const digits = matchMalformedPlus0[1];
+    // Handle both truncated (8 digits) and normal (9 digits) and extra (10+ digits)
+    if (digits.length >= 8) {
+      const num = digits.length === 8 ? digits : digits.slice(0, 9);
+      if (num.length === 8) {
+        // Truncated mobile number
+        return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7)}`;
+      } else {
+        // Standard 9-digit mobile
+        return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7,9)}`;
+      }
+    }
+  }
+
+  // Pattern 3: Numbers with extra digits (11 digits starting with 0)
+  const matchExtraDigits = cleaned.match(/^0([67]\d{9})$/);
+  if (matchExtraDigits) {
+    const digits = matchExtraDigits[1];
+    // Take first 9 digits
+    const num = digits.slice(0, 9);
+    return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7,9)}`;
+  }
+
+  // Pattern 4: Truncated numbers (9 digits starting with 0, mobile/landline)
+  const matchTruncated = cleaned.match(/^0([67]\d{7})$/);
+  if (matchTruncated) {
+    const num = matchTruncated[1];
+    // Format as truncated with last digit isolated
+    return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7)}`;
+  }
+
+  // Pattern 4b: Special case for numbers like '0069540063' (10 digits but should be truncated)
+  // This handles cases where the number starts with 00 followed by mobile prefix
+  const matchSpecialTruncated = cleaned.match(/^00([67]\d{7})$/);
+  if (matchSpecialTruncated) {
+    const num = matchSpecialTruncated[1];
+    // Format as truncated with last digit isolated
+    return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7)}`;
+  }
+
+  // Pattern 5: Standard +33(0) format - remove the 0 after +33
   if (cleaned.match(/^\+330/)) {
     cleaned = cleaned.replace(/^\+330/, '+33');
   }
 
-  // Cas spécial: numéro sans + devant 33
+  // Pattern 6: Number without + before 33
   if (cleaned.match(/^33\d{9}$/)) {
     cleaned = '+' + cleaned;
   }
 
-  // Si déjà au bon format +33 avec 9 chiffres après
-  const matchPlus = cleaned.match(/^\+33(\d{9})$/);
-  if (matchPlus) {
-    const num = matchPlus[1];
+  // Pattern 7: Already correct +33 format with 9 digits
+  const matchCorrectPlus33 = cleaned.match(/^\+33(\d{9})$/);
+  if (matchCorrectPlus33) {
+    const num = matchCorrectPlus33[1];
     return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7,9)}`;
   }
 
-  // Si commence par 0 et contient 10 chiffres => on convertit vers +33
-  const matchZero = cleaned.match(/^0(\d{9})$/);
-  if (matchZero) {
-    const num = matchZero[1];
+  // Pattern 8: Standard 10-digit number starting with 0
+  const matchStandard10 = cleaned.match(/^0(\d{9})$/);
+  if (matchStandard10) {
+    const num = matchStandard10[1];
     return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7,9)}`;
   }
 
-  // Si c'est déjà 9 chiffres sans +33 et commence par 6 ou 7 (mobile)
-  const matchMobile = cleaned.match(/^([67]\d{8})$/);
-  if (matchMobile) {
-    const num = matchMobile[1];
+  // Pattern 9: 9-digit mobile numbers (6 or 7 prefix)
+  const matchMobile9 = cleaned.match(/^([67]\d{8})$/);
+  if (matchMobile9) {
+    const num = matchMobile9[1];
     return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7,9)}`;
   }
 
-  // Si c'est 9 chiffres commençant par 1-5 (fixe)
-  const matchFixe = cleaned.match(/^([1-5]\d{8})$/);
-  if (matchFixe) {
-    const num = matchFixe[1];
+  // Pattern 10: 9-digit landline numbers (1-5 prefix)
+  const matchLandline9 = cleaned.match(/^([1-5]\d{8})$/);
+  if (matchLandline9) {
+    const num = matchLandline9[1];
     return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7,9)}`;
   }
 
-  // Si commence déjà par +33 mais mal formaté (avec 0 supplémentaire)
-  const matchPlusVariant = cleaned.match(/^\+33(.+)$/);
-  if (matchPlusVariant) {
-    let numPart = matchPlusVariant[1];
+  // Pattern 11: 8-digit mobile numbers (truncated, no leading 0)
+  const matchTruncatedMobile = cleaned.match(/^([67]\d{7})$/);
+  if (matchTruncatedMobile) {
+    const num = matchTruncatedMobile[1];
+    return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7)}`;
+  }
+
+  // Pattern 12: +33 with malformed digits (handle extra 0s or irregular lengths)
+  const matchPlus33Variant = cleaned.match(/^\+33(.+)$/);
+  if (matchPlus33Variant) {
+    let numPart = matchPlus33Variant[1];
     
-    // Si le numéro commence par 0, le supprimer
-    if (numPart.startsWith('0')) {
+    // Remove leading 0s
+    while (numPart.startsWith('0') && numPart.length > 9) {
       numPart = numPart.substring(1);
     }
     
+    // If exactly 9 digits, format normally
     if (numPart.length === 9) {
       return `+33 ${numPart[0]} ${numPart.slice(1,3)} ${numPart.slice(3,5)} ${numPart.slice(5,7)} ${numPart.slice(7,9)}`;
     }
+    
+    // If 8 digits and starts with 6/7, format as truncated mobile
+    if (numPart.length === 8 && /^[67]/.test(numPart)) {
+      return `+33 ${numPart[0]} ${numPart.slice(1,3)} ${numPart.slice(3,5)} ${numPart.slice(5,7)} ${numPart.slice(7)}`;
+    }
+    
+    // If more than 9 digits, take first 9
+    if (numPart.length > 9) {
+      const truncated = numPart.slice(0, 9);
+      return `+33 ${truncated[0]} ${truncated.slice(1,3)} ${truncated.slice(3,5)} ${truncated.slice(5,7)} ${truncated.slice(7,9)}`;
+    }
   }
 
-  // Sinon retourner tel quel
+  // If no pattern matches, return original input
   return phoneStr;
 };
 
@@ -671,6 +748,116 @@ export const generateGmailComposeUrl = (
   params.set('body', finalBody);
 
   return `https://mail.google.com/mail/?view=cm&fs=1&${params.toString()}`;
+};
+
+// Fonction auxiliaire pour construire le champ Notes pour Google Contacts
+const buildNotesField = (contact: Contact): string => {
+  const notes = [];
+  
+  if (contact.commentaire) {
+    notes.push(`Commentaire: ${contact.commentaire}`);
+  }
+  
+  if (contact.source) {
+    notes.push(`Source: ${contact.source}`);
+  }
+  
+  if (contact.dateRappel) {
+    notes.push(`Date rappel: ${contact.dateRappel}`);
+    if (contact.heureRappel) {
+      notes.push(`Heure rappel: ${contact.heureRappel}`);
+    }
+  }
+  
+  if (contact.dateRDV) {
+    notes.push(`Date RDV: ${contact.dateRDV}`);
+    if (contact.heureRDV) {
+      notes.push(`Heure RDV: ${contact.heureRDV}`);
+    }
+  }
+  
+  if (contact.dateAppel) {
+    notes.push(`Date appel: ${contact.dateAppel}`);
+    if (contact.heureAppel) {
+      notes.push(`Heure appel: ${contact.heureAppel}`);
+    }
+  }
+  
+  notes.push(`Statut: ${contact.statut}`);
+  
+  return notes.join(' | ');
+};
+
+// Export contacts to Google Contacts CSV format
+export const exportGoogleContactsCSV = (contacts: Contact[]): void => {
+  // Filtrer les contacts par statut (À rappeler, DO, RO)
+  const filteredContacts = contacts.filter(contact => 
+    contact.statut === ContactStatus.ARappeler ||
+    contact.statut === ContactStatus.DO ||
+    contact.statut === ContactStatus.RO
+  );
+
+  if (filteredContacts.length === 0) {
+    throw new Error('Aucun contact à exporter avec les statuts sélectionnés');
+  }
+
+  // Mapping vers le format Google Contacts officiel
+  const googleContactsData = filteredContacts.map(contact => ({
+    'Name Prefix': '',
+    'First Name': contact.prenom || '',
+    'Middle Name': '',
+    'Last Name': contact.nom || '',
+    'Name Suffix': '',
+    'Phonetic First Name': '',
+    'Phonetic Middle Name': '',
+    'Phonetic Last Name': '',
+    'Nickname': '',
+    'File As': '',
+    'E-mail 1 - Label': contact.email ? 'Home' : '',
+    'E-mail 1 - Value': contact.email || '',
+    'Phone 1 - Label': contact.telephone ? 'Mobile' : '',
+    'Phone 1 - Value': contact.telephone || '',
+    'Address 1 - Label': '',
+    'Address 1 - Country': '',
+    'Address 1 - Street': '',
+    'Address 1 - Extended Address': '',
+    'Address 1 - City': '',
+    'Address 1 - Region': '',
+    'Address 1 - Postal Code': '',
+    'Address 1 - PO Box': '',
+    'Organization Name': '',
+    'Organization Title': '',
+    'Organization Department': '',
+    'Birthday': '',
+    'Event 1 - Label': '',
+    'Event 1 - Value': '',
+    'Relation 1 - Label': '',
+    'Relation 1 - Value': '',
+    'Website 1 - Label': contact.lien ? 'Profile' : '',
+    'Website 1 - Value': contact.lien || '',
+    'Custom Field 1 - Label': 'Statut',
+    'Custom Field 1 - Value': contact.statut || '',
+    'Notes': buildNotesField(contact),
+    'Labels': ''
+  }));
+
+  // Génération du CSV avec encodage UTF-8 BOM
+  const csvContent = Papa.unparse(googleContactsData);
+  const bom = '\uFEFF'; // UTF-8 BOM pour la compatibilité Google Contacts
+  const blob = new Blob([bom + csvContent], { 
+    type: 'text/csv;charset=utf-8;' 
+  });
+  
+  // Téléchargement du fichier
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `google-contacts-export-${new Date().toISOString().split('T')[0]}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 
 /**

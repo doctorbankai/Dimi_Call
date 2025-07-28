@@ -22,7 +22,8 @@ import {
   hasImportedTable,
   getImportedTableMetadata,
   formatPhoneNumber,
-  generateGmailComposeUrl
+  generateGmailComposeUrl,
+  exportGoogleContactsCSV
 } from './services/dataService';
 
 import { useAdb } from './hooks/useAdb';
@@ -738,85 +739,7 @@ Dimitri MOREL - Arcanis Conseil`;
     ).length;
   }, [contacts]);
 
-  // Fonction auxiliaire pour construire le champ Notes pour Google Contacts
-  const buildNotesField = useCallback((contact: Contact): string => {
-    const notes = [];
-    
-    if (contact.commentaire) {
-      notes.push(`Commentaire: ${contact.commentaire}`);
-    }
-    
-    if (contact.source) {
-      notes.push(`Source: ${contact.source}`);
-    }
-    
-    if (contact.dateRappel) {
-      notes.push(`Date rappel: ${contact.dateRappel}`);
-      if (contact.heureRappel) {
-        notes.push(`Heure rappel: ${contact.heureRappel}`);
-      }
-    }
-    
-    if (contact.dateRDV) {
-      notes.push(`Date RDV: ${contact.dateRDV}`);
-      if (contact.heureRDV) {
-        notes.push(`Heure RDV: ${contact.heureRDV}`);
-      }
-    }
-    
-    if (contact.dateAppel) {
-      notes.push(`Date appel: ${contact.dateAppel}`);
-      if (contact.heureAppel) {
-        notes.push(`Heure appel: ${contact.heureAppel}`);
-      }
-    }
-    
-    notes.push(`Statut: ${contact.statut}`);
-    
-    return notes.join(' | ');
-  }, []);
 
-  // Export contacts to Google Contacts CSV format
-  const exportGoogleContactsCSV = useCallback((contacts: Contact[]): void => {
-    // Filtrer les contacts par statut (À rappeler, DO, RO)
-    const filteredContacts = contacts.filter(contact => 
-      contact.statut === ContactStatus.ARappeler ||
-      contact.statut === ContactStatus.DO ||
-      contact.statut === ContactStatus.RO
-    );
-
-    if (filteredContacts.length === 0) {
-      throw new Error('Aucun contact à exporter avec les statuts sélectionnés');
-    }
-
-    // Mapping vers le format Google Contacts
-    const googleContactsData = filteredContacts.map(contact => ({
-      'Given Name': contact.prenom || '',
-      'Family Name': contact.nom || '',
-      'Phone 1 - Value': contact.telephone || '',
-      'E-mail 1 - Value': contact.email || '',
-      'Notes': buildNotesField(contact)
-    }));
-
-    // Génération du CSV avec encodage UTF-8 BOM
-    const Papa = require('papaparse');
-    const csvContent = Papa.unparse(googleContactsData);
-    const bom = '\uFEFF'; // UTF-8 BOM pour la compatibilité Google Contacts
-    const blob = new Blob([bom + csvContent], { 
-      type: 'text/csv;charset=utf-8;' 
-    });
-    
-    // Téléchargement du fichier
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `google-contacts-export-${new Date().toISOString().split('T')[0]}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, [buildNotesField]);
 
   // Handler pour l'export Google Contacts
   const handleGoogleContactsExport = useCallback(() => {
@@ -826,7 +749,7 @@ Dimitri MOREL - Arcanis Conseil`;
     } catch (error) {
       showNotification('error', error instanceof Error ? error.message : 'Erreur lors de l\'export');
     }
-  }, [contacts, googleContactsCount, showNotification, exportGoogleContactsCSV]);
+  }, [contacts, googleContactsCount, showNotification]);
 
   const makePhoneCall = useCallback(async (contactToCall?: Contact) => {
     console.log('🔍 [MAKEPHONECALL] Début makePhoneCall, contactToCall:', contactToCall);
@@ -2202,7 +2125,7 @@ Dimitri MOREL - Arcanis Conseil`;
                     <Users />
                   </div>
                   <span className="text-[10px] leading-tight w-full transition-all duration-300 group-hover:font-semibold text-center">
-                    Google
+                    Contacts
                   </span>
                   {googleContactsCount > 0 && (
                     <Badge variant="secondary" className="absolute -top-1 -right-1 text-[8px] h-4 w-4 p-0 flex items-center justify-center">

@@ -1,0 +1,23 @@
+{
+  "timestamp": "2025-07-28T11:37:35.677Z",
+  "summary": {
+    "totalTests": 48,
+    "passed": 48,
+    "failed": 0,
+    "successRate": "100.0%"
+  },
+  "failedTests": [],
+  "supportedFormats": [
+    "Standard 10-digit numbers (0XXXXXXXXX)",
+    "Already formatted +33 numbers",
+    "+33(0) format",
+    "9-digit mobile/landline numbers",
+    "Numbers with spaces, dots, dashes",
+    "Truncated numbers (9 digits starting with 0)",
+    "Numbers with 00 prefix (0069540063)",
+    "Malformed +033 prefix",
+    "Numbers with extra digits",
+    "Malformed +0 prefix",
+    "Numbers without + before 33"
+  ]
+}
