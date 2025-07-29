@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Minus, Square, X, Maximize, Settings, User, Smartphone, WifiOff, Loader2, MailQuestion, Download, RefreshCw } from 'lucide-react';
+import { Minus, Square, X, Maximize, Settings, User, Smartphone, WifiOff, Loader2, MailQuestion, Download, RefreshCw, Beaker } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Theme } from '../types';
+import { BetaPreferencesService } from '../services/betaPreferencesService';
 
 import { UserProfileDialog } from './UserProfileDialog';
 import { useSupabaseAuth } from '../lib/auth-client';
@@ -56,6 +57,7 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
   const [isMacOS, setIsMacOS] = useState(false);
   const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
   const [isTicketFormOpen, setIsTicketFormOpen] = useState(false);
+  const [isBetaVersion, setIsBetaVersion] = useState(false);
   const appVersion = packageJson.version;
 
   useEffect(() => {
@@ -70,6 +72,15 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
     };
     
     checkElectron();
+
+    // Vérifier si c'est une version bêta
+    const checkBetaVersion = () => {
+      const betaPrefs = BetaPreferencesService.getBetaPreferences();
+      const isCurrentBeta = BetaPreferencesService.isCurrentVersionBeta();
+      setIsBetaVersion(betaPrefs.enabled || isCurrentBeta);
+    };
+
+    checkBetaVersion();
 
     // Écouter les événements de redimensionnement pour mettre à jour l'état maximisé
     const handleResize = async () => {
@@ -203,7 +214,18 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
           
           {/* Titre centré */}
           <div className="flex-1 flex justify-center items-center">
-            <span className={cn("text-sm font-semibold", textColor)}>DimiCall</span>
+            <div className="flex items-center gap-2">
+              <span className={cn("text-sm font-semibold", textColor)}>DimiCall</span>
+              {isBetaVersion && (
+                <Badge 
+                  variant="outline" 
+                  className="bg-orange-500/10 text-orange-600 border-orange-500/20 text-xs px-1.5 py-0.5 h-5"
+                >
+                  <Beaker className="w-2.5 h-2.5 mr-1" />
+                  BETA
+                </Badge>
+              )}
+            </div>
           </div>
           
           {/* Badge mise à jour et Badge ADB et Badge utilisateur */}
@@ -344,6 +366,15 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
             {/* Logo et nom DimiCall */}
             <div className="flex items-center px-3 py-1 gap-2">
               <span className={cn("text-sm font-semibold", textColor)}>DimiCall</span>
+              {isBetaVersion && (
+                <Badge 
+                  variant="outline" 
+                  className="bg-orange-500/10 text-orange-600 border-orange-500/20 text-xs px-1.5 py-0.5 h-5"
+                >
+                  <Beaker className="w-2.5 h-2.5 mr-1" />
+                  BETA
+                </Badge>
+              )}
             </div>
           </div>
 

@@ -98,7 +98,19 @@ export enum QualificationSituationPro {
 
 export interface ElectronAPI {
   getAppVersion: () => Promise<string>;
-  checkForUpdates: () => void;
+  checkForUpdates: (includeBeta?: boolean) => Promise<{ status: string; message?: string }>;
+  getUpdateStatus: () => Promise<{ updateAvailable: boolean; updateDownloaded: boolean; updateInfo: any }>;
+  installUpdate: () => Promise<{ success: boolean; message?: string }>;
+  revertToStable: () => Promise<{ success: boolean; message?: string }>;
+  enableDevTools: () => void;
+  disableDevTools: () => void;
+  isDevToolsEnabled: () => boolean;
+  onUpdateChecking: (callback: () => void) => void;
+  onUpdateAvailable: (callback: (updateInfo: any) => void) => void;
+  onUpdateNotAvailable: (callback: () => void) => void;
+  onUpdateError: (callback: (error: string) => void) => void;
+  onUpdateDownloadProgress: (callback: (progress: { percent: number }) => void) => void;
+  onUpdateDownloaded: (callback: (updateInfo: any) => void) => void;
 }
 
 export interface Window {

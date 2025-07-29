@@ -64,9 +64,16 @@ export const UpdateConfirmationDialog: React.FC<UpdateConfirmationDialogProps> =
                 Mise à jour disponible
               </DialogTitle>
               {updateInfo?.version && (
-                <Badge variant="outline" className="mt-1">
-                  Version {updateInfo.version}
-                </Badge>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant="outline">
+                    Version {updateInfo.version}
+                  </Badge>
+                  {updateInfo.isBeta && (
+                    <Badge variant="outline" className="bg-orange-500/10 text-orange-600 border-orange-500/20">
+                      BETA
+                    </Badge>
+                  )}
+                </div>
               )}
             </div>
           </div>

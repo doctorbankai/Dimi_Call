@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { UpdateInfo, UpdateState, UseAutoUpdateResult } from '../types/update'
+import { UpdateInfo, UpdateState, UseAutoUpdateResult, BetaPreferences } from '../types/update'
+import { BetaPreferencesService } from '../services/betaPreferencesService'
 
 export const useAutoUpdate = (): UseAutoUpdateResult => {
   const [updateState, setUpdateState] = useState<UpdateState>({
@@ -11,6 +12,10 @@ export const useAutoUpdate = (): UseAutoUpdateResult => {
     progress: 0,
     updateInfo: null
   })
+
+  const [betaPreferences, setBetaPreferencesState] = useState<BetaPreferences>(() => 
+    BetaPreferencesService.getBetaPreferences()
+  )
 
   // Initialiser l'état depuis le main process
   useEffect(() => {
@@ -114,7 +119,8 @@ export const useAutoUpdate = (): UseAutoUpdateResult => {
     }
 
     try {
-      const result = await window.electronAPI.checkForUpdates()
+      // Passer les préférences bêta à l'API Electron
+      const result = await window.electronAPI.checkForUpdates(betaPreferences.enabled)
       if (result.status === 'error') {
         setUpdateState(prev => ({ ...prev, error: result.message }))
       }
@@ -125,7 +131,7 @@ export const useAutoUpdate = (): UseAutoUpdateResult => {
         error: error instanceof Error ? error.message : 'Erreur inconnue' 
       }))
     }
-  }, [])
+  }, [betaPreferences.enabled])
 
   const installUpdate = useCallback(async () => {
     if (!window.electronAPI?.installUpdate) {
@@ -155,9 +161,52 @@ export const useAutoUpdate = (): UseAutoUpdateResult => {
     }
   }, [updateState.downloaded])
 
+  const setBetaPreferences = useCallback((preferences: BetaPreferences) => {
+    setBetaPreferencesState(preferences)
+    BetaPreferencesService.setBetaPreferences(preferences)
+    
+    // Nettoyer les données obsolètes lors de la mise à jour des préférences
+    BetaPreferencesService.cleanupObsoleteData()
+  }, [betaPreferences])
+
+  const revertToStable = useCallback(async () => {
+    if (!window.electronAPI?.revertToStable) {
+      console.warn('API de retour à la version stable non disponible')
+      return
+    }
+
+    try {
+      // Désactiver les préférences bêta
+      const newPreferences: BetaPreferences = {
+        ...betaPreferences,
+        enabled: false,
+        lastModified: Date.now(),
+      }
+      setBetaPreferences(newPreferences)
+      
+      // Appeler l'API Electron pour revenir à la version stable
+      const result = await window.electronAPI.revertToStable()
+      if (!result.success) {
+        setUpdateState(prev => ({ 
+          ...prev, 
+          error: result.message || 'Erreur lors du retour à la version stable' 
+        }))
+      }
+    } catch (error) {
+      console.error('Erreur lors du retour à la version stable:', error)
+      setUpdateState(prev => ({ 
+        ...prev, 
+        error: error instanceof Error ? error.message : 'Erreur inconnue' 
+      }))
+    }
+  }, [betaPreferences, setBetaPreferences])
+
   return {
     updateState,
     checkForUpdates,
-    installUpdate
+    installUpdate,
+    betaPreferences,
+    setBetaPreferences,
+    revertToStable
   }
 } 

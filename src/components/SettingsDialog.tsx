@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Mail, X, Save, Undo, ChevronDown, Palette, Calendar, MessageSquare, Sun, Moon, Monitor, Keyboard, RotateCcw, DownloadCloud, Info, CheckCircle, ExternalLink, Columns } from 'lucide-react';
+import { BetaOptInSettings } from './BetaOptInSettings';
+import { useAutoUpdate } from '../hooks/useAutoUpdate';
+import { DevToolsService } from '../services/devToolsService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -174,6 +177,18 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   // Configuration des colonnes
   const [columnConfig, setColumnConfig] = useState<Record<string, boolean>>({});
   const [columnConfigChanged, setColumnConfigChanged] = useState(false);
+
+  // Hooks pour les paramètres de mise à jour (déplacés ici pour éviter les erreurs de hooks conditionnels)
+  const { betaPreferences, setBetaPreferences, revertToStable } = useAutoUpdate();
+  const [isRevertingToStable, setIsRevertingToStable] = useState(false);
+  const [devToolsEnabled, setDevToolsEnabled] = useState(() => {
+    try {
+      return DevToolsService.isEnabled();
+    } catch (error) {
+      console.error('Erreur lors du chargement de l\'état des DevTools:', error);
+      return false;
+    }
+  });
 
   // Charger les templates sauvegardés
   useEffect(() => {
@@ -426,38 +441,82 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     }
   };
 
-  const renderUpdateSettings = () => (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
-            <Info className="w-4 h-4 text-muted-foreground" />
-          </div>
-          <div>
-            <CardTitle className="text-base">Version actuelle</CardTitle>
-            <CardDescription>DimiCall {appVersion}</CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <Button 
-          onClick={handleCheckForUpdates} 
-          className="gap-1.5" 
-          disabled={isCheckingUpdates}
-        >
-          <DownloadCloud className={`w-4 h-4 ${isCheckingUpdates ? 'animate-spin' : ''}`} />
-          {isCheckingUpdates ? 'Vérification en cours...' : 'Rechercher une mise à jour'}
-        </Button>
-        
-        <p className="text-xs text-muted-foreground">
-          {typeof window !== 'undefined' && window.electronAPI ? 
-            'Les mises à jour se font automatiquement au démarrage et toutes les 10 minutes.' :
-            'Vérification des mises à jour disponible uniquement dans l\'application installée.'
-          }
-        </p>
-      </CardContent>
-    </Card>
-  );
+  // Handlers pour les paramètres de mise à jour
+  const handleRevertToStable = async () => {
+    setIsRevertingToStable(true);
+    try {
+      await revertToStable();
+    } catch (error) {
+      console.error('Erreur lors du retour à la version stable:', error);
+    } finally {
+      setIsRevertingToStable(false);
+    }
+  };
+
+  const handleDevToolsToggle = (enabled: boolean) => {
+    try {
+      if (enabled) {
+        DevToolsService.enableDevTools();
+      } else {
+        DevToolsService.disableDevTools();
+      }
+      setDevToolsEnabled(enabled);
+    } catch (error) {
+      console.error('Erreur lors du toggle des DevTools:', error);
+    }
+  };
+
+  const renderUpdateSettings = () => {
+
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
+                <Info className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Version actuelle</CardTitle>
+                <CardDescription>DimiCall {appVersion}</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <Button 
+              onClick={handleCheckForUpdates} 
+              className="gap-1.5" 
+              disabled={isCheckingUpdates}
+            >
+              <DownloadCloud className={`w-4 h-4 ${isCheckingUpdates ? 'animate-spin' : ''}`} />
+              {isCheckingUpdates ? 'Vérification en cours...' : 'Rechercher une mise à jour'}
+            </Button>
+            
+            <p className="text-xs text-muted-foreground">
+              {typeof window !== 'undefined' && window.electronAPI ? 
+                'Les mises à jour se font automatiquement au démarrage et toutes les 10 minutes.' :
+                'Vérification des mises à jour disponible uniquement dans l\'application installée.'
+              }
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="pt-6">
+            <BetaOptInSettings
+              betaPreferences={betaPreferences}
+              onPreferencesChange={setBetaPreferences}
+              isCurrentVersionBeta={betaPreferences.enabled}
+              onRevertToStable={handleRevertToStable}
+              isRevertingToStable={isRevertingToStable}
+              devToolsEnabled={devToolsEnabled}
+              onDevToolsToggle={handleDevToolsToggle}
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
 
   const renderEmailSettings = () => {
     const currentTemplate = templates[selectedEmailType];

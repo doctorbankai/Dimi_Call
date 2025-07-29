@@ -3,6 +3,18 @@
  */
 
 /**
+ * Préférences utilisateur pour les versions bêta
+ */
+export interface BetaPreferences {
+  /** Indique si l'utilisateur a opté pour les versions bêta */
+  enabled: boolean;
+  /** Timestamp de la dernière modification des préférences */
+  lastModified: number;
+  /** Indique si l'utilisateur a été averti des risques */
+  hasBeenWarned: boolean;
+}
+
+/**
  * Informations sur une mise à jour disponible
  */
 export interface UpdateInfo {
@@ -14,6 +26,10 @@ export interface UpdateInfo {
   releaseName?: string;
   /** Notes de version */
   releaseNotes?: string;
+  /** Indique si c'est une version bêta */
+  isBeta?: boolean;
+  /** Indique si c'est une pre-release GitHub */
+  isPrerelease?: boolean;
 }
 
 /**
@@ -60,4 +76,10 @@ export interface UseAutoUpdateResult {
   checkForUpdates: () => Promise<void>;
   /** Fonction pour installer une mise à jour téléchargée */
   installUpdate: () => Promise<void>;
+  /** Préférences bêta de l'utilisateur */
+  betaPreferences: BetaPreferences;
+  /** Fonction pour mettre à jour les préférences bêta */
+  setBetaPreferences: (preferences: BetaPreferences) => void;
+  /** Fonction pour revenir à la version stable */
+  revertToStable: () => Promise<void>;
 }

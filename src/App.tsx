@@ -28,6 +28,7 @@ import {
 
 import { useAdb } from './hooks/useAdb';
 import { useAutoUpdate } from './hooks/useAutoUpdate';
+import { DevToolsService } from './services/devToolsService';
 import { v4 as uuidv4 } from 'uuid';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -369,6 +370,15 @@ Dimitri MOREL - Arcanis Conseil`;
       setIsAuthModalOpen(false);
     }
   }, [auth.isAuthenticated]);
+
+  // Effect pour synchroniser les DevTools au démarrage
+  useEffect(() => {
+    // Synchroniser l'état des DevTools avec les préférences utilisateur
+    const devToolsEnabled = DevToolsService.isEnabled();
+    if (devToolsEnabled && window.electronAPI?.enableDevTools) {
+      window.electronAPI.enableDevTools();
+    }
+  }, []);
 
 
 
