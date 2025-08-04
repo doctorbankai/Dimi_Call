@@ -18,6 +18,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { ReminderDialog } from './ReminderDialog';
 import { CalendarIcon, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -229,29 +230,16 @@ interface RappelDialogProps {
 }
 
 const RappelDialog: React.FC<RappelDialogProps> = ({ isOpen, onClose, contact, onSave }) => {
-  const [date, setDate] = useState(contact?.dateRappel || '');
-  const [time, setTime] = useState(contact?.heureRappel || '');
-
-  const handleSave = () => {
-    onSave(date, time);
-  };
-
+  // Utiliser notre nouveau ReminderDialog avec les sélecteurs relatifs
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Programmer un Rappel" size="sm">
-      <div className="space-y-4">
-        <p className="text-sm text-muted-foreground">
-          Contact: <strong>{contact?.prenom} {contact?.nom}</strong>
-        </p>
-        <div className="grid grid-cols-2 gap-4">
-          <Input value={date} onChange={(e) => setDate(e.target.value)} placeholder="YYYY-MM-DD" type="date" />
-          <Input value={time} onChange={(e) => setTime(e.target.value)} placeholder="HH:mm" type="time" />
-        </div>
-        <div className="flex justify-end space-x-3 pt-4">
-          <Button variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button variant="primary" onClick={handleSave}>Sauvegarder</Button>
-        </div>
-      </div>
-    </Modal>
+    <ReminderDialog
+      isOpen={isOpen}
+      onClose={onClose}
+      contact={contact}
+      initialDate={contact?.dateRappel || ''}
+      initialTime={contact?.heureRappel || ''}
+      onSave={onSave}
+    />
   );
 };
 

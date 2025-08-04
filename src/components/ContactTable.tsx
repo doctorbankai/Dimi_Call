@@ -23,10 +23,11 @@ import {
 import { 
   Phone, User, Mail, MessageCircle, Clock, Calendar as CalendarIcon, FileText, ArrowUpDown, 
   ArrowUp, ArrowDown, Trash2, Zap, Timer, Eye, EyeOff, Settings2, GripVertical, Move, X,
-  Hash, FolderOpen, Upload, FileSpreadsheet, Users, CloudUpload
+  Hash, FolderOpen, Upload, FileSpreadsheet, Users, CloudUpload, Bell
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatPhoneNumber } from '../services/dataService';
+import { ReminderDialog } from './ReminderDialog';
 
 type SortDirection = 'asc' | 'desc' | null;
 
@@ -777,6 +778,15 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
   const [isProcessing, setIsProcessing] = useState(false);
   const dropzoneRef = useRef<HTMLDivElement>(null);
 
+  // État pour le dialog de rappel
+  const [reminderDialog, setReminderDialog] = useState<{
+    isOpen: boolean;
+    contact: Contact | null;
+  }>({
+    isOpen: false,
+    contact: null
+  });
+
   // Gestion du tri
   const handleSort = useCallback((key: keyof Contact) => {
     setSortConfig(current => {
@@ -915,6 +925,31 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
     }
   };
 
+  // Gestion du dialog de rappel
+  const handleOpenReminderDialog = (contact: Contact) => {
+    setReminderDialog({
+      isOpen: true,
+      contact: contact
+    });
+  };
+
+  const handleCloseReminderDialog = () => {
+    setReminderDialog({
+      isOpen: false,
+      contact: null
+    });
+  };
+
+  const handleSaveReminder = (date: string, time: string) => {
+    if (reminderDialog.contact) {
+      onUpdateContact({
+        id: reminderDialog.contact.id,
+        dateRappel: date,
+        heureRappel: time
+      });
+    }
+  };
+
   // Rendu du contenu des cellules
   const renderCellContent = (contact: Contact, column: ColumnConfig) => {
     const columnKey = column.key as keyof Contact;
@@ -931,9 +966,25 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
     
     if (column.id === 'actions') {
       return (
-        <div className="flex items-center justify-center gap-1 text-muted-foreground">
-          <Phone className="w-4 h-4 hover:text-primary transition-colors cursor-pointer" />
-          {/* Placeholders pour d'éventuelles autres actions */}
+        <div className="flex items-center justify-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+            onClick={() => handleOpenReminderDialog(contact)}
+            title="Programmer un rappel"
+          >
+            <Bell className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
+            onClick={() => {/* TODO: Implémenter l'action d'appel */}}
+            title="Appeler"
+          >
+            <Phone className="h-4 w-4" />
+          </Button>
         </div>
       );
     }
@@ -1540,7 +1591,8 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
   );
 
   return (
-    <div className="contact-table-container h-full">
+    <>
+      <div className="contact-table-container h-full">
       {/* Table unique avec en-tête sticky pour alignement correct */}
       <div 
         ref={(node) => {
@@ -1721,6 +1773,19 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
           <DragOverlay isDragOver={isDragOver} />
         </div>
       </div>
+
+      {/* Dialog de rappel */}
+      {reminderDialog.contact && (
+        <ReminderDialog
+          isOpen={reminderDialog.isOpen}
+          onClose={handleCloseReminderDialog}
+          contact={reminderDialog.contact}
+          initialDate={reminderDialog.contact.dateRappel}
+          initialTime={reminderDialog.contact.heureRappel}
+          onSave={handleSaveReminder}
+        />
+      )}
+    </>
   );
 });
 
