@@ -23,7 +23,8 @@ import {
   getImportedTableMetadata,
   formatPhoneNumber,
   generateGmailComposeUrl,
-  exportGoogleContactsCSV
+  exportGoogleContactsCSV,
+  exportGoogleCalendarCSV
 } from './services/dataService';
 
 import { useAdb } from './hooks/useAdb';
@@ -749,7 +750,12 @@ Dimitri MOREL - Arcanis Conseil`;
     ).length;
   }, [contacts]);
 
-
+  // Calcul du nombre de contacts avec rappels pour Google Calendar
+  const calendarRemindersCount = useMemo(() => {
+    return contacts.filter(contact => 
+      contact.dateRappel && contact.dateRappel.trim() !== ''
+    ).length;
+  }, [contacts]);
 
   // Handler pour l'export Google Contacts
   const handleGoogleContactsExport = useCallback(() => {
@@ -781,6 +787,37 @@ Dimitri MOREL - Arcanis Conseil`;
       }
     }
   }, [contacts, googleContactsCount, showNotification]);
+
+  // Handler pour l'export Google Calendar
+  const handleGoogleCalendarExport = useCallback(() => {
+    try {
+      // Vérification préalable du nombre de rappels
+      if (calendarRemindersCount === 0) {
+        showNotification('warning', 'Aucun rappel à exporter');
+        return;
+      }
+      
+      exportGoogleCalendarCSV(contacts);
+      showNotification('success', `${calendarRemindersCount} rappels exportés vers Google Agenda`);
+    } catch (error) {
+      console.error('Erreur lors de l\'export Google Calendar:', error);
+      
+      // Messages d'erreur spécifiques
+      if (error instanceof Error) {
+        if (error.message.includes('Aucun rappel à exporter')) {
+          showNotification('warning', 'Aucun rappel à exporter');
+        } else if (error.message.includes('CSV')) {
+          showNotification('error', 'Erreur lors de la génération du fichier CSV');
+        } else if (error.message.includes('téléchargement')) {
+          showNotification('error', 'Erreur lors du téléchargement du fichier');
+        } else {
+          showNotification('error', `Erreur lors de l'export: ${error.message}`);
+        }
+      } else {
+        showNotification('error', 'Erreur inconnue lors de l\'export');
+      }
+    }
+  }, [contacts, calendarRemindersCount, showNotification]);
 
   const makePhoneCall = useCallback(async (contactToCall?: Contact) => {
     console.log('🔍 [MAKEPHONECALL] Début makePhoneCall, contactToCall:', contactToCall);
@@ -2164,6 +2201,49 @@ Dimitri MOREL - Arcanis Conseil`;
                   {googleContactsCount > 0 && (
                     <Badge variant="secondary" className="absolute -top-1 -right-1 text-[8px] h-4 w-4 p-0 flex items-center justify-center">
                       {googleContactsCount}
+                    </Badge>
+                  )}
+                </div>
+              </Button>
+
+              {/* Bouton Google Calendar */}
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={calendarRemindersCount === 0}
+                onClick={handleGoogleCalendarExport}
+                title={calendarRemindersCount > 0 
+                  ? `Exporter ${calendarRemindersCount} rappels vers Google Agenda` 
+                  : 'Aucun rappel à exporter - Seuls les contacts avec date de rappel sont exportés'
+                }
+                className={cn(
+                  "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 ribbon-button-modern",
+                  "relative overflow-hidden transition-all duration-300 ease-out",
+                  "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
+                  "group cursor-pointer",
+                  "border border-transparent hover:bg-gradient-to-br hover:from-primary/10 hover:to-accent/10 hover:border-primary/30",
+                  calendarRemindersCount > 0 && "hover:transform hover:rotate-1"
+                )}
+              >
+                {/* Shimmer effect */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
+                </div>
+                
+                {/* Glow effect */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-radial from-primary/20 via-transparent to-transparent blur-xl" />
+                
+                {/* Content */}
+                <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
+                  <div className="w-4 h-4 mb-1 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
+                    <Calendar />
+                  </div>
+                  <span className="text-[10px] leading-tight w-full transition-all duration-300 group-hover:font-semibold text-center">
+                    Agenda
+                  </span>
+                  {calendarRemindersCount > 0 && (
+                    <Badge variant="secondary" className="absolute -top-1 -right-1 text-[8px] h-4 w-4 p-0 flex items-center justify-center">
+                      {calendarRemindersCount}
                     </Badge>
                   )}
                 </div>

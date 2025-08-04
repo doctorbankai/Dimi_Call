@@ -1180,3 +1180,155 @@ export const getImportedTableMetadata = (): {
   }
 };
 
+// ===== GOOGLE CALENDAR EXPORT UTILITIES =====
+
+/**
+ * Convertit une date du format YYYY-MM-DD vers MM/DD/YYYY pour Google Calendar
+ */
+export const formatDateForGoogleCalendar = (dateStr: string): string => {
+  if (!dateStr || dateStr.trim() === '') {
+    throw new Error('Date invalide pour le formatage Google Calendar');
+  }
+  
+  const [year, month, day] = dateStr.split('-');
+  if (!year || !month || !day) {
+    throw new Error(`Format de date invalide: ${dateStr}. Attendu: YYYY-MM-DD`);
+  }
+  
+  return `${month}/${day}/${year}`;
+};
+
+/**
+ * Convertit une heure du format HH:mm vers HH:MM AM/PM pour Google Calendar
+ */
+export const formatTimeForGoogleCalendar = (timeStr: string): string => {
+  if (!timeStr || timeStr.trim() === '') {
+    return '';
+  }
+  
+  const [hours, minutes] = timeStr.split(':');
+  if (!hours || !minutes) {
+    throw new Error(`Format d'heure invalide: ${timeStr}. Attendu: HH:mm`);
+  }
+  
+  const hour24 = parseInt(hours, 10);
+  const mins = parseInt(minutes, 10);
+  
+  if (isNaN(hour24) || isNaN(mins) || hour24 < 0 || hour24 > 23 || mins < 0 || mins > 59) {
+    throw new Error(`Heure invalide: ${timeStr}`);
+  }
+  
+  const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
+  const ampm = hour24 >= 12 ? 'PM' : 'AM';
+  
+  return `${hour12}:${minutes.padStart(2, '0')} ${ampm}`;
+};
+
+/**
+ * Calcule l'heure de fin en ajoutant 30 minutes à l'heure de début
+ */
+export const calculateEndTime = (startTime: string): string => {
+  if (!startTime || startTime.trim() === '') {
+    return '';
+  }
+  
+  const [hours, minutes] = startTime.split(':');
+  if (!hours || !minutes) {
+    throw new Error(`Format d'heure invalide: ${startTime}. Attendu: HH:mm`);
+  }
+  
+  const startMinutes = parseInt(hours, 10) * 60 + parseInt(minutes, 10);
+  const endMinutes = startMinutes + 30; // Ajouter 30 minutes
+  const endHours = Math.floor(endMinutes / 60) % 24;
+  const endMins = endMinutes % 60;
+  
+  const endTimeStr = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
+  return formatTimeForGoogleCalendar(endTimeStr);
+};
+
+/**
+ * Construit la description de l'événement de rappel avec les informations du contact
+ */
+export const buildReminderDescription = (contact: Contact): string => {
+  const details = [];
+  
+  if (contact.telephone) details.push(`Téléphone: ${contact.telephone}`);
+  if (contact.email) details.push(`Email: ${contact.email}`);
+  if (contact.statut) details.push(`Statut: ${contact.statut}`);
+  if (contact.source) details.push(`Source: ${contact.source}`);
+  if (contact.commentaire) details.push(`Commentaire: ${contact.commentaire}`);
+  
+  return details.join('\n');
+};
+
+// ===== GOOGLE CALENDAR EXPORT MAIN FUNCTION =====
+
+/**
+ * Exporte les rappels de contacts vers un fichier CSV compatible Google Calendar
+ */
+export const exportGoogleCalendarCSV = (contacts: Contact[]): void => {
+  // Filtrer les contacts ayant des dates de rappel définies
+  const contactsWithReminders = contacts.filter(contact => 
+    contact.dateRappel && contact.dateRappel.trim() !== ''
+  );
+
+  if (contactsWithReminders.length === 0) {
+    throw new Error('Aucun rappel à exporter');
+  }
+
+  // Mapping vers le format Google Calendar
+  const calendarEvents = contactsWithReminders.map(contact => {
+    try {
+      const startDate = formatDateForGoogleCalendar(contact.dateRappel);
+      const startTime = contact.heureRappel ? formatTimeForGoogleCalendar(contact.heureRappel) : '';
+      const endTime = contact.heureRappel ? calculateEndTime(contact.heureRappel) : '';
+      const isAllDay = !contact.heureRappel || contact.heureRappel.trim() === '';
+
+      return {
+        'Subject': `Rappel: ${contact.prenom} ${contact.nom}`,
+        'Start Date': startDate,
+        'Start Time': startTime,
+        'End Date': startDate,
+        'End Time': endTime,
+        'All Day Event': isAllDay ? 'True' : 'False',
+        'Description': buildReminderDescription(contact),
+        'Location': '',
+        'Private': 'False'
+      };
+    } catch (error) {
+      console.error(`Erreur lors du formatage du contact ${contact.prenom} ${contact.nom}:`, error);
+      throw new Error(`Erreur de formatage pour le contact ${contact.prenom} ${contact.nom}: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+    }
+  });
+
+  // Génération du CSV avec encodage UTF-8 BOM
+  const csvContent = Papa.unparse(calendarEvents);
+  const bom = '\uFEFF'; // UTF-8 BOM pour la compatibilité Google Calendar
+  const blob = new Blob([bom + csvContent], { 
+    type: 'text/csv;charset=utf-8;' 
+  });
+  
+  // Generate filename with format: google-calendar-export-YYYY-MM-DD-HH-MM-SS
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const timestamp = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`;
+  const filename = `google-calendar-export-${timestamp}.csv`;
+  
+  // Téléchargement automatique du fichier
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  // Nettoyer l'URL pour libérer la mémoire
+  URL.revokeObjectURL(url);
+};
