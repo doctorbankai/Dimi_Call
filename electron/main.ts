@@ -32,7 +32,28 @@ autoUpdater.autoInstallOnAppQuit = false
 // Laisser le téléchargement automatique en arrière-plan
 autoUpdater.autoDownload = true
 
+// Fonction pour lire les préférences bêta depuis le localStorage
+const getBetaPreferences = () => {
+  try {
+    // En mode développement, on peut simuler les préférences
+    if (is.dev) {
+      return { enabled: false }
+    }
+    
+    // En production, les préférences sont stockées dans le localStorage du renderer
+    // On va les lire via IPC quand la fenêtre sera prête
+    return { enabled: false } // Par défaut, pas de bêta
+  } catch (error) {
+    console.error('Erreur lors de la lecture des préférences bêta:', error)
+    return { enabled: false }
+  }
+}
+
 if (!is.dev) {
+  // Configuration initiale des préférences (sera mise à jour quand la fenêtre sera prête)
+  const initialPrefs = getBetaPreferences()
+  autoUpdater.allowPrerelease = initialPrefs.enabled
+  
   // Vérifier et télécharger les mises à jour en arrière-plan (pas d'installation auto)
   autoUpdater.checkForUpdates()
   
@@ -272,7 +293,7 @@ app.whenReady().then(() => {
   })
 
   // Vérification manuelle des mises à jour avec retour d'état
-  ipcMain.handle('check-for-updates', async () => {
+  ipcMain.handle('check-for-updates', async (event, betaEnabled = false) => {
     try {
       if (is.dev) {
         log.warn('Mise à jour ignorée car l\'application est en mode développement.')
@@ -281,7 +302,11 @@ app.whenReady().then(() => {
           message: 'La vérification des mises à jour est désactivée en mode développement.'
         }
       }
-      log.info('Vérification manuelle des mises à jour initiée par l\'utilisateur...')
+      
+      // Configurer les pre-releases selon les préférences utilisateur
+      autoUpdater.allowPrerelease = betaEnabled
+      log.info(`Vérification manuelle des mises à jour initiée par l'utilisateur (beta: ${betaEnabled})...`)
+      
       autoUpdater.checkForUpdatesAndNotify()
       return { status: 'checking', message: 'Vérification des mises à jour lancée.' }
     } catch (error) {
@@ -311,6 +336,33 @@ app.whenReady().then(() => {
     } else {
       console.log('⚠️ Aucune mise à jour téléchargée disponible')
       return { success: false, message: 'Aucune mise à jour disponible' }
+    }
+  })
+
+  // Revenir à la version stable
+  ipcMain.handle('revert-to-stable', async () => {
+    try {
+      if (is.dev) {
+        log.warn('Retour à la version stable ignoré car l\'application est en mode développement.')
+        return {
+          success: false,
+          message: 'Le retour à la version stable est désactivé en mode développement.'
+        }
+      }
+      
+      // Désactiver les pre-releases
+      autoUpdater.allowPrerelease = false
+      log.info('Retour à la version stable initié par l\'utilisateur...')
+      
+      // Vérifier s'il y a une version stable disponible
+      autoUpdater.checkForUpdatesAndNotify()
+      return { success: true, message: 'Recherche de version stable lancée.' }
+    } catch (error) {
+      log.error("Erreur lors du retour à la version stable:", error)
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : 'Une erreur inconnue est survenue.'
+      }
     }
   })
 

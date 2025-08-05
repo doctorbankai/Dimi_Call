@@ -3,6 +3,7 @@ import { Settings, Mail, X, Save, Undo, ChevronDown, Palette, Calendar, MessageS
 import { BetaOptInSettings } from './BetaOptInSettings';
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
 import { DevToolsService } from '../services/devToolsService';
+import { BetaPreferences } from '../types/update';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -461,9 +462,15 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         DevToolsService.disableDevTools();
       }
       setDevToolsEnabled(enabled);
+      setHasChanges(true);
     } catch (error) {
       console.error('Erreur lors du toggle des DevTools:', error);
     }
+  };
+
+  const handleBetaPreferencesChange = (preferences: BetaPreferences) => {
+    setBetaPreferences(preferences);
+    setHasChanges(true);
   };
 
   const renderUpdateSettings = () => {
@@ -505,7 +512,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           <CardContent className="pt-6">
             <BetaOptInSettings
               betaPreferences={betaPreferences}
-              onPreferencesChange={setBetaPreferences}
+              onPreferencesChange={handleBetaPreferencesChange}
               isCurrentVersionBeta={betaPreferences.enabled}
               onRevertToStable={handleRevertToStable}
               isRevertingToStable={isRevertingToStable}
