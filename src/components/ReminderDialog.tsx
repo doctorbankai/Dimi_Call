@@ -121,9 +121,10 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
     
     // Validation supplémentaire des formats
     const isValidDateFormat = hasDate ? DateCalculationService.isValidDateFormat(state.selectedDate) : false;
-    const isValidTimeFormat = hasTime ? DateCalculationService.isValidTimeFormat(state.selectedTime) : false;
+    const isValidTimeFormat = hasTime ? DateCalculationService.isValidTimeFormat(state.selectedTime) : true; // L'heure est optionnelle
     
-    return hasDate && hasTime && hasNoErrors && isValidDateFormat && isValidTimeFormat;
+    // Seule la date est obligatoire, l'heure est optionnelle
+    return hasDate && hasNoErrors && isValidDateFormat && isValidTimeFormat;
   };
 
   // Gérer la sauvegarde
@@ -138,9 +139,8 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
         newErrors.date = 'Format de date invalide';
       }
       
-      if (!state.selectedTime.trim()) {
-        newErrors.time = 'L\'heure est obligatoire';
-      } else if (!DateCalculationService.isValidTimeFormat(state.selectedTime)) {
+      // L'heure est optionnelle, on ne valide que si elle est renseignée
+      if (state.selectedTime.trim() && !DateCalculationService.isValidTimeFormat(state.selectedTime)) {
         newErrors.time = 'Format d\'heure invalide (HH:mm)';
       }
       
@@ -226,19 +226,24 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
 
               {/* Champ heure */}
               <div className="space-y-1">
-                <Input
-                  type="time"
-                  value={state.selectedTime}
-                  onChange={handleManualTimeChange}
-                  placeholder="HH:mm"
-                  className={cn(
-                    "transition-all duration-200",
-                    errors.time && "border-destructive focus:border-destructive"
-                  )}
-                  aria-label="Heure du rappel"
-                  aria-describedby={errors.time ? "time-error" : undefined}
-                  aria-invalid={!!errors.time}
-                />
+                <div className="relative">
+                  <Input
+                    type="time"
+                    value={state.selectedTime}
+                    onChange={handleManualTimeChange}
+                    placeholder="HH:mm"
+                    className={cn(
+                      "transition-all duration-200",
+                      errors.time && "border-destructive focus:border-destructive"
+                    )}
+                    aria-label="Heure du rappel (optionnelle)"
+                    aria-describedby={errors.time ? "time-error" : "time-help"}
+                    aria-invalid={!!errors.time}
+                  />
+                  <span className="absolute -top-2 right-2 text-xs text-muted-foreground bg-background px-1">
+                    optionnelle
+                  </span>
+                </div>
                 {errors.time && (
                   <p 
                     id="time-error"
@@ -247,6 +252,14 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
                     aria-live="polite"
                   >
                     {errors.time}
+                  </p>
+                )}
+                {!errors.time && (
+                  <p 
+                    id="time-help"
+                    className="text-xs text-muted-foreground"
+                  >
+                    Laissez vide pour un rappel "toute la journée"
                   </p>
                 )}
               </div>

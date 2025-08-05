@@ -157,19 +157,19 @@ describe('ReminderDialog', () => {
     });
   });
 
-  it('should disable save button when form is invalid', () => {
+  it('should disable save button when form is invalid (no date)', () => {
     render(<ReminderDialog {...defaultProps} />);
     
     const saveButton = screen.getByText('Sauvegarder');
-    expect(saveButton).toBeDisabled();
+    expect(saveButton).toBeDisabled(); // Pas de date = invalide
   });
 
-  it('should enable save button when form is valid', async () => {
+  it('should enable save button when form is valid (date + time)', async () => {
     const user = userEvent.setup();
     render(<ReminderDialog {...defaultProps} />);
     
     const dateInput = screen.getByLabelText('Date du rappel');
-    const timeInput = screen.getByLabelText('Heure du rappel');
+    const timeInput = screen.getByLabelText('Heure du rappel (optionnelle)');
     
     await user.type(dateInput, '2024-01-20');
     await user.type(timeInput, '14:30');
@@ -178,14 +178,25 @@ describe('ReminderDialog', () => {
     expect(saveButton).not.toBeDisabled();
   });
 
-  it('should call onSave with correct values when save is clicked', async () => {
+  it('should enable save button with only date (time optional)', async () => {
+    const user = userEvent.setup();
+    render(<ReminderDialog {...defaultProps} />);
+    
+    const dateInput = screen.getByLabelText('Date du rappel');
+    await user.type(dateInput, '2024-01-20');
+    
+    const saveButton = screen.getByText('Sauvegarder');
+    expect(saveButton).not.toBeDisabled(); // Date seule suffit
+  });
+
+  it('should call onSave with correct values when save is clicked (with time)', async () => {
     const user = userEvent.setup();
     const mockOnSave = jest.fn();
     
     render(<ReminderDialog {...defaultProps} onSave={mockOnSave} />);
     
     const dateInput = screen.getByLabelText('Date du rappel');
-    const timeInput = screen.getByLabelText('Heure du rappel');
+    const timeInput = screen.getByLabelText('Heure du rappel (optionnelle)');
     
     await user.type(dateInput, '2024-01-20');
     await user.type(timeInput, '14:30');
@@ -194,6 +205,21 @@ describe('ReminderDialog', () => {
     await user.click(saveButton);
     
     expect(mockOnSave).toHaveBeenCalledWith('2024-01-20', '14:30');
+  });
+
+  it('should call onSave with empty time when only date is provided', async () => {
+    const user = userEvent.setup();
+    const mockOnSave = jest.fn();
+    
+    render(<ReminderDialog {...defaultProps} onSave={mockOnSave} />);
+    
+    const dateInput = screen.getByLabelText('Date du rappel');
+    await user.type(dateInput, '2024-01-20');
+    
+    const saveButton = screen.getByText('Sauvegarder');
+    await user.click(saveButton);
+    
+    expect(mockOnSave).toHaveBeenCalledWith('2024-01-20', ''); // Heure vide
   });
 
   it('should call onClose when cancel is clicked', async () => {
