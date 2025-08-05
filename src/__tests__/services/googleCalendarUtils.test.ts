@@ -53,15 +53,15 @@ describe('Google Calendar Utilities', () => {
   });
 
   describe('calculateEndTime', () => {
-    test('should add 30 minutes to start time', () => {
-      expect(calculateEndTime('09:30')).toBe('10:00 AM');
-      expect(calculateEndTime('14:45')).toBe('3:15 PM');
-      expect(calculateEndTime('23:45')).toBe('12:15 AM'); // Next day
+    test('should return same time as start time (0 minutes duration)', () => {
+      expect(calculateEndTime('09:30')).toBe('9:30 AM');
+      expect(calculateEndTime('14:45')).toBe('2:45 PM');
+      expect(calculateEndTime('23:45')).toBe('11:45 PM');
     });
 
     test('should handle midnight and noon correctly', () => {
-      expect(calculateEndTime('23:30')).toBe('12:00 AM');
-      expect(calculateEndTime('11:30')).toBe('12:00 PM');
+      expect(calculateEndTime('00:00')).toBe('12:00 AM');
+      expect(calculateEndTime('12:00')).toBe('12:00 PM');
     });
 
     test('should return empty string for empty input', () => {

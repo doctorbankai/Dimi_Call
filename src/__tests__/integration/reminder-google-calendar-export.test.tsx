@@ -89,7 +89,7 @@ describe('Reminder Google Calendar Export with Optional Time', () => {
       'Start Date': '01/20/2024',
       'Start Time': '2:30 PM',
       'End Date': '01/20/2024',
-      'End Time': '3:00 PM', // 30 minutes plus tard
+      'End Time': '2:30 PM', // Même heure (créneau de 0 minutes)
       'All Day Event': 'False', // Événement avec heure
       'Description': expect.stringContaining('Jean Dupont'),
       'Location': '',
@@ -127,7 +127,7 @@ describe('Reminder Google Calendar Export with Optional Time', () => {
     const timedEvent = calledData[0];
     expect(timedEvent['All Day Event']).toBe('False');
     expect(timedEvent['Start Time']).toBe('2:30 PM');
-    expect(timedEvent['End Time']).toBe('3:00 PM');
+    expect(timedEvent['End Time']).toBe('2:30 PM');
     
     // Deuxième événement sans heure (toute la journée)
     const allDayEvent = calledData[1];

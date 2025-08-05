@@ -124,7 +124,7 @@ describe('exportGoogleCalendarCSV', () => {
     expect(jeanEvent).toBeDefined();
     expect(jeanEvent['Start Date']).toBe('01/15/2024');
     expect(jeanEvent['Start Time']).toBe('2:30 PM');
-    expect(jeanEvent['End Time']).toBe('3:00 PM');
+    expect(jeanEvent['End Time']).toBe('2:30 PM');
     expect(jeanEvent['All Day Event']).toBe('False');
     expect(jeanEvent.Description).toContain('Téléphone: +33 6 12 34 56 78');
     

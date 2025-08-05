@@ -1225,7 +1225,7 @@ export const formatTimeForGoogleCalendar = (timeStr: string): string => {
 };
 
 /**
- * Calcule l'heure de fin en ajoutant 30 minutes à l'heure de début
+ * Retourne la même heure que l'heure de début (créneau de 0 minutes)
  */
 export const calculateEndTime = (startTime: string): string => {
   if (!startTime || startTime.trim() === '') {
@@ -1237,13 +1237,8 @@ export const calculateEndTime = (startTime: string): string => {
     throw new Error(`Format d'heure invalide: ${startTime}. Attendu: HH:mm`);
   }
   
-  const startMinutes = parseInt(hours, 10) * 60 + parseInt(minutes, 10);
-  const endMinutes = startMinutes + 30; // Ajouter 30 minutes
-  const endHours = Math.floor(endMinutes / 60) % 24;
-  const endMins = endMinutes % 60;
-  
-  const endTimeStr = `${endHours.toString().padStart(2, '0')}:${endMins.toString().padStart(2, '0')}`;
-  return formatTimeForGoogleCalendar(endTimeStr);
+  // Retourner la même heure (créneau de 0 minutes)
+  return formatTimeForGoogleCalendar(startTime);
 };
 
 /**
