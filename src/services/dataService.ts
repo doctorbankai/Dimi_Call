@@ -2,6 +2,7 @@ import { Contact, ContactStatus, ClientFile, EmailType, Civility } from '../type
 import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs
 import Papa from 'papaparse'; // For CSV parsing
 import * as XLSX from 'xlsx'; // For Excel parsing and writing
+import { ExportColumnService } from './exportColumnService';
 
 const LOCAL_STORAGE_KEY = 'dimiCallContacts';
 const CALL_STATES_KEY = 'dimiCallCallStates';
@@ -606,6 +607,88 @@ export const importContactsFromFile = async (file: File): Promise<Contact[]> => 
 
 // Export contacts to file
 export const exportContactsToFile = (contacts: Contact[], format: 'csv' | 'xlsx'): void => {
+  try {
+    console.log(`📤 Export de ${contacts.length} contacts au format ${format.toUpperCase()}`);
+    
+    // Valider la configuration avant l'export
+    if (!ExportColumnService.validateColumnConfiguration()) {
+      throw new Error('Configuration des colonnes d\'export invalide');
+    }
+    
+    // Réorganiser les données selon le nouvel ordre
+    const reorderedData = ExportColumnService.reorderDataForExport(contacts);
+    
+    if (reorderedData.length === 0) {
+      console.warn('Aucune donnée à exporter');
+      return;
+    }
+    
+    // Obtenir les en-têtes dans le bon ordre
+    const headers = ExportColumnService.getExportHeaders(contacts[0]);
+    
+    // Convertir les objets réorganisés en tableaux pour Papa.unparse et XLSX
+    const data = reorderedData.map(row => 
+      headers.map(header => {
+        const value = row[header];
+        return value !== undefined ? value : '';
+      })
+    );
+
+    // Generate filename with format: DimiCall_YYYY-MM-DD-HH-MM-SS
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    const timestamp = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`;
+    
+    if (format === 'csv') {
+      const csvContent = Papa.unparse([headers, ...data]);
+      const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `DimiCall_${timestamp}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      console.log(`✅ Export CSV réussi avec le nouvel ordre de colonnes: ${headers.length} colonnes`);
+    } else if (format === 'xlsx') {
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Contacts');
+      XLSX.writeFile(workbook, `DimiCall_${timestamp}.xlsx`);
+      
+      console.log(`✅ Export XLSX réussi avec le nouvel ordre de colonnes: ${headers.length} colonnes`);
+    }
+    
+    // Afficher les statistiques de l'export
+    const stats = ExportColumnService.getConfigurationStats();
+    console.log(`📊 Statistiques: ${stats.totalColumns} colonnes configurées (${stats.virtualColumns} virtuelles)`);
+    
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'export:', error);
+    
+    // Fallback vers l'ancien format en cas d'erreur
+    console.log('🔄 Tentative de fallback vers l\'ancien format...');
+    try {
+      exportContactsToFileLegacy(contacts, format);
+      console.log('✅ Fallback réussi avec l\'ancien format');
+    } catch (fallbackError) {
+      console.error('❌ Échec du fallback:', fallbackError);
+      throw new Error(`Export impossible: ${error.message}`);
+    }
+  }
+};
+
+/**
+ * Version legacy de l'export (fallback)
+ */
+const exportContactsToFileLegacy = (contacts: Contact[], format: 'csv' | 'xlsx'): void => {
   const headers = [
     'Prénom', 'Nom', 'Téléphone', 'Mail', 'École/Source', 'Statut',
     'Commentaire', 'Date Rappel', 'Heure Rappel', 'Date RDV', 'Heure RDV',
@@ -641,7 +724,7 @@ export const exportContactsToFile = (contacts: Contact[], format: 'csv' | 'xlsx'
   
   if (format === 'csv') {
     const csvContent = Papa.unparse([headers, ...data]);
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);

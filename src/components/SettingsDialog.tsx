@@ -3,7 +3,7 @@ import { Settings, Mail, X, Save, Undo, ChevronDown, Palette, Calendar, MessageS
 import { BetaOptInSettings } from './BetaOptInSettings';
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
 import { DevToolsService } from '../services/devToolsService';
-import { BetaPreferences } from '../types/update';
+import { BetaPreferencesService, BetaPreferences } from '../services/betaPreferencesService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -191,6 +191,13 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     }
   });
 
+  // NOUVEAU : État pour la gestion d'erreurs
+  const [error, setError] = useState<{
+    message: string;
+    type: 'beta' | 'devtools' | 'general';
+    timestamp?: number;
+  } | null>(null);
+
   // Charger les templates sauvegardés
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -365,48 +372,86 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   };
 
   const handleSave = () => {
-    const data = {
-      templates,
-      signature,
-      lastModified: new Date().toISOString()
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    
-    // Sauvegarder l'URL Cal.com si elle a changé
-    if (onCalcomUrlChange && localCalcomUrl !== calcomUrl) {
-      onCalcomUrlChange(localCalcomUrl);
+    try {
+      // Sauvegarde des templates et signature existants
+      const data = {
+        templates,
+        signature,
+        lastModified: new Date().toISOString()
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      
+      // Sauvegarder l'URL Cal.com si elle a changé
+      if (onCalcomUrlChange && localCalcomUrl !== calcomUrl) {
+        onCalcomUrlChange(localCalcomUrl);
+      }
+      
+      // Sauvegarder le template SMS si il a changé
+      if (onSmsTemplateChange && localSmsTemplate !== smsTemplate) {
+        onSmsTemplateChange(localSmsTemplate);
+      }
+      
+      // Sauvegarder les raccourcis si ils ont changé
+      if (shortcutsChanged) {
+        shortcutService.updateAllShortcuts(shortcuts);
+        setShortcutsChanged(false);
+      }
+      
+      // Sauvegarder la configuration des colonnes si elle a changé
+      if (columnConfigChanged) {
+        localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(columnConfig));
+        setColumnConfigChanged(false);
+      }
+      
+      // NOUVEAU : Sauvegarder les préférences bêta
+      console.log('💾 Sauvegarde des préférences bêta:', betaPreferences);
+      BetaPreferencesService.setBetaPreferences(betaPreferences);
+      
+      // NOUVEAU : Sauvegarder l'état des DevTools
+      console.log('💾 Sauvegarde de l\'état DevTools:', devToolsEnabled);
+      DevToolsService.setEnabled(devToolsEnabled);
+      
+      console.log('✅ Sauvegarde des paramètres réussie');
+      setHasChanges(false);
+      onSave();
+      onClose();
+    } catch (error) {
+      console.error('❌ Erreur lors de la sauvegarde des paramètres:', error);
+      // TODO: Afficher un message d'erreur à l'utilisateur (sera implémenté dans la tâche 3)
     }
-    
-    // Sauvegarder le template SMS si il a changé
-    if (onSmsTemplateChange && localSmsTemplate !== smsTemplate) {
-      onSmsTemplateChange(localSmsTemplate);
-    }
-    
-    // Sauvegarder les raccourcis si ils ont changé
-    if (shortcutsChanged) {
-      shortcutService.updateAllShortcuts(shortcuts);
-      setShortcutsChanged(false);
-    }
-    
-    // Sauvegarder la configuration des colonnes si elle a changé
-    if (columnConfigChanged) {
-      localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(columnConfig));
-      setColumnConfigChanged(false);
-    }
-    
-    setHasChanges(false);
-    onSave();
-    onClose();
   };
 
   const handleReset = () => {
-    setTemplates(defaultTemplates);
-    setSignature('');
-    setLocalCalcomUrl('https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true');
-    setLocalSmsTemplate(DEFAULT_SMS_TEMPLATE);
-    handleShortcutsReset();
-    handleColumnConfigReset();
-    setHasChanges(true);
+    try {
+      // Réinitialisation existante
+      setTemplates(defaultTemplates);
+      setSignature('');
+      setLocalCalcomUrl('https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true');
+      setLocalSmsTemplate(DEFAULT_SMS_TEMPLATE);
+      handleShortcutsReset();
+      handleColumnConfigReset();
+      
+      // NOUVEAU : Réinitialisation des préférences bêta
+      const defaultBetaPrefs = {
+        enabled: false,
+        lastModified: Date.now(),
+        hasBeenWarned: false,
+      };
+      console.log('🔄 Réinitialisation des préférences bêta:', defaultBetaPrefs);
+      setBetaPreferences(defaultBetaPrefs);
+      BetaPreferencesService.setBetaPreferences(defaultBetaPrefs);
+      
+      // NOUVEAU : Réinitialisation des DevTools
+      console.log('🔄 Réinitialisation des DevTools: false');
+      setDevToolsEnabled(false);
+      DevToolsService.disableDevTools();
+      
+      console.log('✅ Réinitialisation des paramètres réussie');
+      setHasChanges(true);
+    } catch (error) {
+      console.error('❌ Erreur lors de la réinitialisation des paramètres:', error);
+      // TODO: Afficher un message d'erreur à l'utilisateur (sera implémenté dans la tâche 3)
+    }
   };
 
   const handleCheckForUpdates = async () => {
@@ -463,14 +508,34 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       }
       setDevToolsEnabled(enabled);
       setHasChanges(true);
+      setError(null); // Effacer les erreurs précédentes
+      console.log(`🔧 DevTools ${enabled ? 'activés' : 'désactivés'} avec succès`);
     } catch (error) {
-      console.error('Erreur lors du toggle des DevTools:', error);
+      console.error('❌ Erreur lors du toggle des DevTools:', error);
+      setError({
+        message: 'Erreur lors de la modification des outils de développement',
+        type: 'devtools',
+        timestamp: Date.now()
+      });
     }
   };
 
   const handleBetaPreferencesChange = (preferences: BetaPreferences) => {
-    setBetaPreferences(preferences);
-    setHasChanges(true);
+    try {
+      setBetaPreferences(preferences);
+      // Application immédiate maintenue pour le feedback utilisateur
+      BetaPreferencesService.setBetaPreferences(preferences);
+      setHasChanges(true);
+      setError(null); // Effacer les erreurs précédentes
+      console.log('🔧 Préférences bêta modifiées avec succès:', preferences);
+    } catch (error) {
+      console.error('❌ Erreur lors de la modification des préférences bêta:', error);
+      setError({
+        message: 'Erreur lors de la sauvegarde des préférences bêta',
+        type: 'beta',
+        timestamp: Date.now()
+      });
+    }
   };
 
   const renderUpdateSettings = () => {
