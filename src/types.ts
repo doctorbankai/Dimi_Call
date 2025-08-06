@@ -15,6 +15,7 @@ export enum ContactStatus {
   RO = "RO",
   ListeNoire = "Liste noire",
   Premature = "Prématuré",
+  A0 = "A0",
 }
 
 export interface Contact {

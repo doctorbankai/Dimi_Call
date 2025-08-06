@@ -9,6 +9,7 @@ import { useSupabaseAuth } from '../lib/auth-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { TicketForm } from './TicketForm';
+import HelpTutorialButton from './HelpTutorialButton';
 import packageJson from '../../package.json';
 
 interface CustomMenuBarProps {
@@ -341,6 +342,13 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
               >
                 <MailQuestion className="w-4 h-4" />
               </button>
+              <HelpTutorialButton
+                theme={theme}
+                className={cn(
+                  buttonHoverBg,
+                  textColor
+                )}
+              />
               <button
                 onClick={onSettingsClick}
                 className={cn(
@@ -494,6 +502,13 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
               >
                 <MailQuestion className="w-4 h-4" />
               </button>
+              <HelpTutorialButton
+                theme={theme}
+                className={cn(
+                  buttonHoverBg,
+                  textColor
+                )}
+              />
               <button
                 onClick={onSettingsClick}
                 className={cn(

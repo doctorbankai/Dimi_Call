@@ -20,7 +20,7 @@ const TIME_UNITS: { value: TimeUnit; label: string }[] = [
   { value: 'days', label: 'jour(s)' },
   { value: 'weeks', label: 'semaine(s)' },
   { value: 'months', label: 'mois' },
-  { value: 'years', label: 'année(s)' }
+  { value: 'years', label: 'an(s)' }
 ];
 
 export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
@@ -114,14 +114,14 @@ export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
       try {
         const calculatedDate = DateCalculationService.calculateFutureDate(state.quantity, state.unit);
         if (calculatedDate !== currentDate) {
-          // Réinitialiser complètement les sélecteurs
-          setState({ quantity: '', unit: 'days' });
+          // Réinitialiser seulement la quantité, préserver l'unité
+          setState(prev => ({ ...prev, quantity: '' }));
           setPreviewText('');
           setError('');
         }
       } catch {
-        // En cas d'erreur de calcul, réinitialiser aussi
-        setState({ quantity: '', unit: 'days' });
+        // En cas d'erreur de calcul, réinitialiser seulement la quantité
+        setState(prev => ({ ...prev, quantity: '' }));
         setPreviewText('');
         setError('');
       }
@@ -136,20 +136,20 @@ export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
       try {
         const expectedDate = DateCalculationService.calculateFutureDate(state.quantity, state.unit);
         if (expectedDate !== currentDate) {
-          // La date externe ne correspond pas à notre calcul, réinitialiser
-          setState({ quantity: '', unit: 'days' });
+          // La date externe ne correspond pas à notre calcul, réinitialiser seulement la quantité
+          setState(prev => ({ ...prev, quantity: '' }));
           setPreviewText('');
           setError('');
         }
       } catch {
-        // Erreur de calcul, réinitialiser
-        setState({ quantity: '', unit: 'days' });
+        // Erreur de calcul, réinitialiser seulement la quantité
+        setState(prev => ({ ...prev, quantity: '' }));
         setPreviewText('');
         setError('');
       }
     } else if (!currentDate) {
-      // Si la date externe est effacée, réinitialiser aussi
-      setState({ quantity: '', unit: 'days' });
+      // Si la date externe est effacée, réinitialiser seulement la quantité (garder l'unité)
+      setState(prev => ({ ...prev, quantity: '' }));
       setPreviewText('');
       setError('');
     }

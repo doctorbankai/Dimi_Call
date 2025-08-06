@@ -371,6 +371,7 @@ export const STATUS_COLORS: Record<ContactStatus, { bg: string; text: string; da
   [ContactStatus.RO]: { bg: "bg-emerald-200", text: "text-emerald-700", darkBg: "dark:bg-emerald-700", darkText: "dark:text-emerald-100" },
   [ContactStatus.ListeNoire]: { bg: "bg-zinc-800", text: "text-zinc-200", darkBg: "dark:bg-black", darkText: "dark:text-gray-400" },
   [ContactStatus.Premature]: { bg: "bg-pink-200", text: "text-pink-700", darkBg: "dark:bg-pink-600", darkText: "dark:text-pink-100" },
+  [ContactStatus.A0]: { bg: "bg-purple-200", text: "text-purple-700", darkBg: "dark:bg-purple-600", darkText: "dark:text-purple-100" },
 };
 
 export const QUICK_COMMENTS = ["Accompagné", "Du métier", "Prospection", "Non exploitable", "Bloqué ?"];

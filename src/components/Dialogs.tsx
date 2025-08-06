@@ -19,6 +19,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ReminderDialog } from './ReminderDialog';
+import { TimePicker } from '@/components/ui/time-picker';
+import { TimePickerSimple } from '@/components/ui/time-picker-simple';
 import { CalendarIcon, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -182,16 +184,12 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
                 <Label htmlFor="time-picker" className="text-sm">
                   Heure du rendez-vous
                 </Label>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-muted-foreground" />
-                  <ShadcnInput
-                    type="time"
-                    id="time-picker"
-                    value={selectedTime}
-                    onChange={(e) => handleTimeChange(e.target.value)}
-                    className="bg-background"
-                  />
-                </div>
+                <TimePicker
+                  id="time-picker"
+                  value={selectedTime}
+                  onChange={handleTimeChange}
+                  placeholder="HH:mm"
+                />
               </div>
             </div>
           </div>
@@ -266,7 +264,7 @@ const RendezVousDialog: React.FC<RendezVousDialogProps> = ({ isOpen, onClose, co
         </p>
         <div className="grid grid-cols-2 gap-4">
           <Input value={date} onChange={(e) => setDate(e.target.value)} placeholder="YYYY-MM-DD" type="date" />
-          <Input value={time} onChange={(e) => setTime(e.target.value)} placeholder="HH:mm" type="time" />
+          <TimePickerSimple value={time} onChange={setTime} placeholder="HH:mm" />
         </div>
         <div className="flex justify-end space-x-3 pt-4">
           <Button variant="ghost" onClick={onClose}>Annuler</Button>

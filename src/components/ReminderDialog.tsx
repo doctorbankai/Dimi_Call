@@ -5,6 +5,7 @@ import { RelativeDateSelector } from './RelativeDateSelector';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { TimePicker } from '@/components/ui/time-picker';
 import { X } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -227,10 +228,9 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
               {/* Champ heure */}
               <div className="space-y-1">
                 <div className="relative">
-                  <Input
-                    type="time"
+                  <TimePicker
                     value={state.selectedTime}
-                    onChange={handleManualTimeChange}
+                    onChange={(time) => setState(prev => ({ ...prev, selectedTime: time, hasUnsavedChanges: true }))}
                     placeholder="HH:mm"
                     className={cn(
                       "transition-all duration-200",
@@ -238,7 +238,6 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
                     )}
                     aria-label="Heure du rappel (optionnelle)"
                     aria-describedby={errors.time ? "time-error" : "time-help"}
-                    aria-invalid={!!errors.time}
                   />
                   <span className="absolute -top-2 right-2 text-xs text-muted-foreground bg-background px-1">
                     optionnelle

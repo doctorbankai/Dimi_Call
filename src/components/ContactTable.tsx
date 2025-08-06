@@ -271,6 +271,11 @@ const StatusComboBox: React.FC<StatusComboBoxProps> = ({ value, onChange, theme 
           color: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-200', 
           dot: 'bg-purple-500' 
         };
+      case ContactStatus.A0: 
+        return { 
+          color: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-200', 
+          dot: 'bg-indigo-500' 
+        };
       default: 
         return { 
           color: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200', 
