@@ -59,8 +59,13 @@ export const BetaOptInSettings: React.FC<BetaOptInSettingsProps> = ({
         enabled: checked,
         lastModified: Date.now(),
       });
+      
+      // Activer automatiquement les DevTools si les versions bêta sont activées
+      if (checked && !devToolsEnabled) {
+        onDevToolsToggle(true);
+      }
     }
-  }, [betaPreferences, onPreferencesChange]);
+  }, [betaPreferences, onPreferencesChange, devToolsEnabled, onDevToolsToggle]);
 
   const handleWarningConfirm = useCallback(() => {
     // Marquer comme averti et activer les versions bêta
@@ -71,7 +76,12 @@ export const BetaOptInSettings: React.FC<BetaOptInSettingsProps> = ({
       lastModified: Date.now(),
     });
     setShowWarningDialog(false);
-  }, [betaPreferences, onPreferencesChange]);
+    
+    // Activer automatiquement les DevTools si pas déjà activés
+    if (!devToolsEnabled) {
+      onDevToolsToggle(true);
+    }
+  }, [betaPreferences, onPreferencesChange, devToolsEnabled, onDevToolsToggle]);
 
   const handleWarningCancel = useCallback(() => {
     setShowWarningDialog(false);

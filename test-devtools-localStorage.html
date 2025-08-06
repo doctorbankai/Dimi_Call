@@ -1,0 +1,43 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test DevTools localStorage</title>
+</head>
+<body>
+    <h1>Test DevTools localStorage</h1>
+    <button onclick="enableDevTools()">Activer DevTools</button>
+    <button onclick="disableDevTools()">Désactiver DevTools</button>
+    <button onclick="checkDevTools()">Vérifier État</button>
+    <div id="result"></div>
+    
+    <script>
+        const DEVTOOLS_STORAGE_KEY = 'dimicall-devtools-enabled';
+        
+        function enableDevTools() {
+            localStorage.setItem(DEVTOOLS_STORAGE_KEY, 'true');
+            console.log('DevTools activés');
+            checkDevTools();
+        }
+        
+        function disableDevTools() {
+            localStorage.setItem(DEVTOOLS_STORAGE_KEY, 'false');
+            console.log('DevTools désactivés');
+            checkDevTools();
+        }
+        
+        function checkDevTools() {
+            const stored = localStorage.getItem(DEVTOOLS_STORAGE_KEY);
+            const enabled = stored === 'true';
+            document.getElementById('result').innerHTML = 
+                'localStorage value: ' + stored + '<br>' +
+                'Enabled: ' + enabled;
+            console.log('localStorage value:', stored);
+            console.log('Enabled:', enabled);
+        }
+        
+        // Test initial
+        checkDevTools();
+    </script>
+</body>
+</html>

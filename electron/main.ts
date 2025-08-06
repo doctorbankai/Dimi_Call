@@ -26,6 +26,63 @@ let updateInfo: any = null
 let updateDownloaded = false
 let mainWindow: BrowserWindow | null = null
 
+// État des DevTools
+let devToolsEnabled = false
+
+// Fonction pour lire les préférences DevTools depuis le renderer
+const getDevToolsPreferences = async (): Promise<boolean> => {
+  try {
+    if (mainWindow && mainWindow.webContents) {
+      // Exécuter du code dans le renderer pour lire localStorage
+      const result = await mainWindow.webContents.executeJavaScript(`
+        try {
+          const stored = localStorage.getItem('dimicall-devtools-enabled');
+          console.log('[DEVTOOLS-MAIN] localStorage value:', stored);
+          const enabled = stored === 'true';
+          console.log('[DEVTOOLS-MAIN] Parsed enabled:', enabled);
+          enabled;
+        } catch (error) {
+          console.error('[DEVTOOLS-MAIN] Erreur lecture localStorage:', error);
+          false;
+        }
+      `)
+      console.log(`🔧 [DEVTOOLS] Préférences lues depuis localStorage: ${result}`)
+      return result || false
+    }
+    console.log('🔧 [DEVTOOLS] ⚠️ Fenêtre principale non disponible')
+    return false
+  } catch (error) {
+    console.error('🔧 [DEVTOOLS] ❌ Erreur lors de la lecture des préférences:', error)
+    return false
+  }
+}
+
+// ☢️ FONCTION NUCLÉAIRE : Contrôle total des DevTools
+const enableDevToolsBasedOnPreferences = async (): Promise<void> => {
+  try {
+    if (!mainWindow) {
+      console.log('🔧 [NUCLEAR] ⚠️ Fenêtre principale non disponible')
+      return
+    }
+    
+    const devToolsEnabled = await getDevToolsPreferences()
+    console.log(`🔧 [NUCLEAR] Configuration DevTools: ${devToolsEnabled ? 'ACTIVÉS' : 'DÉSACTIVÉS'}`)
+    
+    if (devToolsEnabled) {
+      console.log('🔧 [NUCLEAR] ✅ DevTools autorisés - Ctrl+Shift+I disponible')
+    } else {
+      // Fermer les DevTools s'ils sont ouverts
+      if (mainWindow.webContents.isDevToolsOpened()) {
+        mainWindow.webContents.closeDevTools()
+        console.log('🔧 [NUCLEAR] 🔒 DevTools fermés automatiquement')
+      }
+      console.log('🔧 [NUCLEAR] ❌ DevTools bloqués - Ctrl+Shift+I désactivé')
+    }
+  } catch (error) {
+    console.error('🔧 [NUCLEAR] ❌ Erreur configuration DevTools:', error)
+  }
+}
+
 // Configuration de l'auto-updater
 // Désactiver l'installation automatique ; l'utilisateur doit confirmer l'installation
 autoUpdater.autoInstallOnAppQuit = false
@@ -147,7 +204,7 @@ function createWindow(): BrowserWindow {
       sandbox: false,
       contextIsolation: true,
       nodeIntegration: false,
-      devTools: is.dev // DevTools seulement en mode développement
+      devTools: true // ☢️ NUCLEAR: DevTools disponibles mais contrôlés par gestionnaire d'événements
     }
   })
 
@@ -175,16 +232,28 @@ function createWindow(): BrowserWindow {
     console.log('🎪 ready-to-show événement déclenché')
     mainWindow.show()
     
-    // Ouvrir les DevTools automatiquement pour déboguer
-    if (is.dev) {
-      console.log('🔧 Ouverture des DevTools en mode développement')
-      mainWindow.webContents.openDevTools()
-    }
+    // Les DevTools ne s'ouvrent plus automatiquement, même en développement
+    // L'utilisateur doit explicitement les activer via les paramètres
+    console.log('🔧 DevTools disponibles via Ctrl+Shift+I (si activés dans les paramètres)')
     
     // Optionnel : fade in pour une transition plus douce
     if (mainWindow.isVisible()) {
       mainWindow.focus()
       console.log('🔍 Fenêtre affichée et focus donné')
+    }
+  })
+
+  // ☢️ NUCLEAR: Restaurer l'état des DevTools après que la page soit chargée
+  mainWindow.webContents.once('did-finish-load', async () => {
+    try {
+      // Attendre que localStorage soit disponible
+      setTimeout(async () => {
+        console.log('🔧 [NUCLEAR] Démarrage de la configuration DevTools...')
+        await enableDevToolsBasedOnPreferences()
+        console.log('🔧 [NUCLEAR] Configuration DevTools terminée')
+      }, 1000) // Plus de temps pour être sûr
+    } catch (error) {
+      console.error('🔧 [NUCLEAR] ❌ Erreur lors de la restauration DevTools:', error)
     }
   })
 
@@ -212,10 +281,8 @@ function createWindow(): BrowserWindow {
     if (mainWindow && !mainWindow.isVisible()) {
       console.log('⚠️ Forçage de l\'affichage de la fenêtre après délai')
       mainWindow.show()
-      // Ouvrir les DevTools en cas de problème seulement en développement
-      if (is.dev) {
-        mainWindow.webContents.openDevTools()
-      }
+      // En cas de problème, suggérer d'activer les DevTools via les paramètres
+      console.log('⚠️ Si vous rencontrez des problèmes, activez les DevTools via les paramètres')
     }
   }, 5000) // 5 secondes de délai maximum
 
@@ -422,16 +489,40 @@ app.whenReady().then(() => {
   // enregistré lors du développement pour aider
   // au débogage avec DevTools.
   app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
+    // ☢️ NUCLEAR ULTIME: NE PAS utiliser optimizer.watchWindowShortcuts
+    // car il active les raccourcis par défaut d'Electron qui interfèrent
+    console.log('🔧 [NUCLEAR] ⚠️ optimizer.watchWindowShortcuts DÉSACTIVÉ pour contrôler les DevTools')
     
-    // Ajouter des raccourcis personnalisés pour déboguer
-    window.webContents.on('before-input-event', (event, input) => {
-      // Ctrl+Shift+I ou F12 pour ouvrir les DevTools
+    // Gestionnaire d'événements PRIORITAIRE
+    window.webContents.on('before-input-event', async (event, input) => {
+      // Intercepter Ctrl+Shift+I et F12
       if ((input.control && input.shift && input.key.toLowerCase() === 'i') || input.key === 'F12') {
-        console.log('🔧 Ouverture forcée des DevTools via raccourci')
-        window.webContents.openDevTools()
+        console.log('🔧 [NUCLEAR] 🚨 Raccourci DevTools intercepté')
+        
+        const devToolsEnabled = await getDevToolsPreferences()
+        console.log(`🔧 [NUCLEAR] État des préférences: ${devToolsEnabled}`)
+        
+        if (!devToolsEnabled) {
+          console.log('🔧 [NUCLEAR] ❌ BLOCAGE TOTAL du raccourci - DevTools désactivés')
+          event.preventDefault() // Bloquer l'événement
+          return false // Empêcher la propagation
+        } else {
+          console.log('🔧 [NUCLEAR] ✅ Raccourci autorisé - DevTools activés')
+          // Laisser l'événement continuer normalement
+        }
       }
     })
+    
+    // Surveillance continue pour fermer les DevTools si ouverts sans autorisation
+    setInterval(async () => {
+      if (window.webContents.isDevToolsOpened()) {
+        const devToolsEnabled = await getDevToolsPreferences()
+        if (!devToolsEnabled) {
+          console.log('🔧 [NUCLEAR] 🔒 DevTools détectés ouverts sans autorisation - fermeture forcée')
+          window.webContents.closeDevTools()
+        }
+      }
+    }, 1000) // Vérifier toutes les secondes
   })
 
   // Gestionnaires IPC
@@ -460,6 +551,54 @@ app.whenReady().then(() => {
   ipcMain.handle('app:is-maximized', () => {
     const window = BrowserWindow.getFocusedWindow()
     return window ? window.isMaximized() : false
+  })
+
+  // ☢️ NUCLEAR: Gestionnaires IPC pour DevTools
+  ipcMain.handle('devtools:enable', async () => {
+    try {
+      if (mainWindow) {
+        console.log('🔧 [NUCLEAR] Activation des DevTools par l\'utilisateur')
+        // Réappliquer la configuration après changement des préférences
+        setTimeout(async () => {
+          await enableDevToolsBasedOnPreferences()
+        }, 100)
+        return { success: true }
+      }
+      return { success: false, error: 'Fenêtre principale non disponible' }
+    } catch (error) {
+      console.error('🔧 [NUCLEAR] ❌ Erreur lors de l\'activation des DevTools:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Erreur inconnue' }
+    }
+  })
+
+  ipcMain.handle('devtools:disable', async () => {
+    try {
+      if (mainWindow) {
+        console.log('🔧 [NUCLEAR] Désactivation des DevTools par l\'utilisateur')
+        // Réappliquer la configuration après changement des préférences
+        setTimeout(async () => {
+          await enableDevToolsBasedOnPreferences()
+        }, 100)
+        return { success: true }
+      }
+      return { success: false, error: 'Fenêtre principale non disponible' }
+    } catch (error) {
+      console.error('🔧 [NUCLEAR] ❌ Erreur lors de la désactivation des DevTools:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Erreur inconnue' }
+    }
+  })
+
+  ipcMain.handle('devtools:is-enabled', () => {
+    try {
+      if (mainWindow) {
+        // En production et développement, on se base sur les préférences utilisateur
+        return { enabled: true } // L'état réel sera géré par le DevToolsService
+      }
+      return { enabled: false }
+    } catch (error) {
+      console.error('❌ Erreur lors de la vérification de l\'état des DevTools:', error)
+      return { enabled: false }
+    }
   })
 
   // Gestionnaires IPC pour ADB

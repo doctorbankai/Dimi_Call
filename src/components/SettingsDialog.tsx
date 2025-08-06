@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Mail, X, Save, Undo, ChevronDown, Palette, Calendar, MessageSquare, Sun, Moon, Monitor, Keyboard, RotateCcw, DownloadCloud, Info, CheckCircle, ExternalLink, Columns } from 'lucide-react';
+import { Settings, Mail, X, Save, Undo, ChevronDown, Palette, Calendar, MessageSquare, Sun, Moon, Monitor, Keyboard, RotateCcw, DownloadCloud, Info, CheckCircle, ExternalLink, Columns, FileText } from 'lucide-react';
 import { BetaOptInSettings } from './BetaOptInSettings';
+import { LogsViewer } from './LogsViewer';
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
 import { DevToolsService } from '../services/devToolsService';
 import { BetaPreferencesService, BetaPreferences } from '../services/betaPreferencesService';
@@ -83,7 +84,7 @@ const DEFAULT_COLUMN_CONFIG = {
   'Source': { isEssential: false, label: 'Source du contact' }
 };
 
-type SettingsCategory = 'email' | 'sms' | 'calcom' | 'appearance' | 'shortcuts' | 'update' | 'columns';
+type SettingsCategory = 'email' | 'sms' | 'calcom' | 'appearance' | 'shortcuts' | 'update' | 'columns' | 'logs';
 
 const categories = [
   { 
@@ -127,6 +128,12 @@ const categories = [
     label: 'Mises à jour',
     icon: DownloadCloud,
     description: 'Système de mise à jour automatique'
+  },
+  {
+    id: 'logs' as SettingsCategory,
+    label: 'Logs',
+    icon: FileText,
+    description: 'Consulter et copier les logs système'
   }
 ] as const;
 
@@ -499,12 +506,12 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     }
   };
 
-  const handleDevToolsToggle = (enabled: boolean) => {
+  const handleDevToolsToggle = async (enabled: boolean) => {
     try {
       if (enabled) {
-        DevToolsService.enableDevTools();
+        await DevToolsService.enableDevTools();
       } else {
-        DevToolsService.disableDevTools();
+        await DevToolsService.disableDevTools();
       }
       setDevToolsEnabled(enabled);
       setHasChanges(true);
@@ -588,6 +595,10 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         </Card>
       </div>
     );
+  };
+
+  const renderLogsSettings = () => {
+    return <LogsViewer />;
   };
 
   const renderEmailSettings = () => {
@@ -1098,6 +1109,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         return renderUpdateSettings();
       case 'columns':
         return renderColumnSettings();
+      case 'logs':
+        return renderLogsSettings();
       default:
         return renderEmailSettings();
     }

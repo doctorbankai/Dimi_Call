@@ -35,6 +35,13 @@ interface ElectronAPI {
     cleanAuthKeys: () => Promise<{ success: boolean; message?: string; error?: string; deletedFiles?: string[] }>
   }
   
+  // APIs DevTools
+  devTools: {
+    enable: () => Promise<{ success: boolean; error?: string }>
+    disable: () => Promise<{ success: boolean; error?: string }>
+    isEnabled: () => Promise<{ enabled: boolean }>
+  }
+  
   // API pour obtenir la version de l'app
   getAppVersion: () => Promise<string>
   // API pour forcer la vérification manuelle des mises à jour
@@ -106,6 +113,13 @@ const electronAPI: ElectronAPI = {
     killServer: () => ipcRenderer.invoke('adb:kill-server'),
     startServer: () => ipcRenderer.invoke('adb:start-server'),
     cleanAuthKeys: () => ipcRenderer.invoke('adb:clean-auth-keys')
+  },
+  
+  // APIs DevTools
+  devTools: {
+    enable: () => ipcRenderer.invoke('devtools:enable'),
+    disable: () => ipcRenderer.invoke('devtools:disable'),
+    isEnabled: () => ipcRenderer.invoke('devtools:is-enabled')
   },
   
   // API pour obtenir la version de l'app
