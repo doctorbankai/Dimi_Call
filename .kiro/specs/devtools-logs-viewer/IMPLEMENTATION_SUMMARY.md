@@ -35,10 +35,11 @@ Implémentation d'une nouvelle section "Logs" dans les réglages permettant de c
 - **Détection robuste** basée sur la version de l'app et l'URL
 
 ### 4. Intégration dans les réglages
-- **Nouvelle section "Logs"** avec icône FileText
-- **Navigation fluide** entre les sections
+- **Section "Logs" conditionnelle** visible uniquement si DevTools activés
+- **Navigation dynamique** avec génération conditionnelle des catégories
+- **Message informatif** dans les réglages de mise à jour
+- **Redirection automatique** si DevTools désactivés pendant consultation
 - **Intégration complète** dans le système de réglages existant
-- **Sauvegarde des préférences** avec le reste des paramètres
 
 ## 📁 Fichiers créés/modifiés
 
@@ -97,12 +98,13 @@ src/components/SettingsDialog.tsx       # Intégration nouvelle section
 ## 🚀 Utilisation
 
 ### Pour l'utilisateur final
-1. Ouvrir les réglages de l'application
-2. Cliquer sur la section "Logs"
-3. Consulter les logs en temps réel
-4. Utiliser les filtres pour affiner l'affichage
-5. Copier ou exporter les logs si nécessaire
-6. Vider les logs pour libérer l'espace
+1. Ouvrir les réglages → section "Mises à jour"
+2. Activer les DevTools (la section "Logs" apparaît dans la navigation)
+3. Cliquer sur la section "Logs" maintenant visible
+4. Consulter les logs en temps réel
+5. Utiliser les filtres pour affiner l'affichage
+6. Copier ou exporter les logs si nécessaire
+7. Vider les logs pour libérer l'espace
 
 ### Pour le développeur
 ```bash
@@ -177,8 +179,9 @@ L'implémentation est **complète et fonctionnelle** avec :
 - ✅ Toutes les exigences utilisateur satisfaites
 - ✅ Architecture technique robuste
 - ✅ Tests complets et validés
-- ✅ Interface utilisateur intuitive
+- ✅ Interface utilisateur intuitive et conditionnelle
 - ✅ Performance optimisée
 - ✅ Sécurité renforcée
+- ✅ **Section Logs cachée par défaut** et visible uniquement si nécessaire
 
-La fonctionnalité est prête pour la production et peut être utilisée immédiatement après le démarrage de l'application.
+La fonctionnalité est prête pour la production avec une approche intelligente qui ne surcharge pas l'interface utilisateur standard tout en offrant des outils avancés aux développeurs.

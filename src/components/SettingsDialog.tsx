@@ -86,7 +86,7 @@ const DEFAULT_COLUMN_CONFIG = {
 
 type SettingsCategory = 'email' | 'sms' | 'calcom' | 'appearance' | 'shortcuts' | 'update' | 'columns' | 'logs';
 
-const categories = [
+const getCategories = (devToolsEnabled: boolean) => [
   { 
     id: 'email' as SettingsCategory, 
     label: 'Templates Email', 
@@ -129,12 +129,13 @@ const categories = [
     icon: DownloadCloud,
     description: 'Système de mise à jour automatique'
   },
-  {
+  // Section Logs visible uniquement si DevTools activés
+  ...(devToolsEnabled ? [{
     id: 'logs' as SettingsCategory,
     label: 'Logs',
     icon: FileText,
     description: 'Consulter et copier les logs système'
-  }
+  }] : [])
 ] as const;
 
 const emailTypeLabels = {
@@ -512,6 +513,11 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         await DevToolsService.enableDevTools();
       } else {
         await DevToolsService.disableDevTools();
+        // Si l'utilisateur désactive les DevTools alors qu'il est sur la section Logs,
+        // le rediriger vers la section Email
+        if (activeCategory === 'logs') {
+          setActiveCategory('email');
+        }
       }
       setDevToolsEnabled(enabled);
       setHasChanges(true);
@@ -591,6 +597,26 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               devToolsEnabled={devToolsEnabled}
               onDevToolsToggle={handleDevToolsToggle}
             />
+            
+            {/* Afficher un message informatif quand les DevTools sont activés */}
+            {devToolsEnabled && (
+              <div className="space-y-4 pt-4 border-t">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 rounded-md bg-blue-500/10 flex items-center justify-center">
+                    <FileText className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <h4 className="font-medium text-sm">Section Logs disponible</h4>
+                      <p className="text-xs text-muted-foreground">
+                        Les DevTools sont activés. Vous pouvez maintenant accéder à la section "Logs" 
+                        pour consulter et analyser les logs système de l'application.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -1141,7 +1167,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               </div>
             </div>
             <nav className="space-y-1">
-              {categories.map((category) => (
+              {getCategories(devToolsEnabled).map((category) => (
                 <button
                   key={category.id}
                   onClick={() => setActiveCategory(category.id)}
