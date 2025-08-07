@@ -559,6 +559,49 @@ describe('Export/Import Integration Flow', () => {
       }).toThrow('Aucun contact à exporter avec les statuts sélectionnés');
     });
 
+    test('should include A0 status contacts in integration flow', () => {
+      const Papa = require('papaparse');
+      Papa.unparse = jest.fn(() => 'mocked-csv-content');
+
+      const contactsWithA0: Contact[] = [
+        ...testContacts.slice(0, 1), // Jean (À rappeler)
+        {
+          id: uuidv4(),
+          numeroLigne: 5,
+          prenom: 'Lucas',
+          nom: 'A0Test',
+          telephone: '+33 6 11 22 33 44',
+          email: 'lucas.a0@example.com',
+          source: 'Test A0',
+          statut: ContactStatus.A0,
+          commentaire: 'Contact avec statut A0',
+          dateRappel: '',
+          heureRappel: '',
+          dateRDV: '',
+          heureRDV: '',
+          dateAppel: '',
+          heureAppel: '',
+          dureeAppel: '',
+          sexe: 'M',
+          type: 'Prospect',
+          qualite: 'B'
+        }
+      ];
+
+      exportGoogleContactsCSV(contactsWithA0);
+      
+      expect(Papa.unparse).toHaveBeenCalled();
+      const csvData = Papa.unparse.mock.calls[0][0];
+      
+      // Vérifier que tous les contacts éligibles sont inclus (À rappeler, A0)
+      expect(csvData).toHaveLength(2);
+      
+      // Vérifier que le contact A0 est bien présent
+      const a0Contact = csvData.find((contact: any) => contact['First Name'] === 'Lucas');
+      expect(a0Contact).toBeDefined();
+      expect(a0Contact['Last Name']).toBe('A0Test');
+    });
+
     test('should handle contacts with no target statuses', () => {
       const nonTargetContacts: Contact[] = [
         {

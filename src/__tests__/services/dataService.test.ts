@@ -584,6 +584,59 @@ Jean,Dupont,0123456789,jean@test.com,École Test,À rappeler,Test comment`;
       expect(Papa.unparse).toHaveBeenCalled();
     });
 
+    test('should include contacts with A0 status in export', () => {
+      const Papa = require('papaparse');
+      Papa.unparse = jest.fn(() => 'mocked-csv-content');
+
+      const contactsWithA0: Contact[] = [
+        {
+          ...mockContacts[0],
+          statut: ContactStatus.A0
+        },
+        {
+          ...mockContacts[1],
+          statut: ContactStatus.DO
+        },
+        {
+          ...mockContacts[2],
+          statut: ContactStatus.PasInteresse // Ce contact ne devrait pas être inclus
+        }
+      ];
+
+      exportGoogleContactsCSV(contactsWithA0);
+      
+      expect(Papa.unparse).toHaveBeenCalled();
+      const csvData = Papa.unparse.mock.calls[0][0];
+      
+      // Vérifier que seuls les contacts avec statuts éligibles sont inclus (A0 et DO)
+      expect(csvData).toHaveLength(2);
+      expect(csvData[0]['First Name']).toBe('Jean');
+      expect(csvData[1]['First Name']).toBe('Marie');
+    });
+
+    test('should export only A0 contacts when only A0 status exists', () => {
+      const Papa = require('papaparse');
+      Papa.unparse = jest.fn(() => 'mocked-csv-content');
+
+      const onlyA0Contacts: Contact[] = [
+        {
+          ...mockContacts[0],
+          statut: ContactStatus.A0,
+          prenom: 'TestA0',
+          nom: 'Contact'
+        }
+      ];
+
+      exportGoogleContactsCSV(onlyA0Contacts);
+      
+      expect(Papa.unparse).toHaveBeenCalled();
+      const csvData = Papa.unparse.mock.calls[0][0];
+      
+      // Vérifier qu'un seul contact A0 est exporté
+      expect(csvData).toHaveLength(1);
+      expect(csvData[0]['First Name']).toBe('TestA0');
+    });
+
     test('should throw error when no contacts match criteria', () => {
       const contactsWithoutTargetStatuses: Contact[] = [
         {

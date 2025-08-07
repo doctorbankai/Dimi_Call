@@ -746,7 +746,8 @@ Dimitri MOREL - Arcanis Conseil`;
     return contacts.filter(contact => 
       contact.statut === ContactStatus.ARappeler ||
       contact.statut === ContactStatus.DO ||
-      contact.statut === ContactStatus.RO
+      contact.statut === ContactStatus.RO ||
+      contact.statut === ContactStatus.A0
     ).length;
   }, [contacts]);
 
@@ -2170,8 +2171,8 @@ Dimitri MOREL - Arcanis Conseil`;
                 disabled={googleContactsCount === 0}
                 onClick={handleGoogleContactsExport}
                 title={googleContactsCount > 0 
-                  ? `Exporter ${googleContactsCount} contacts (À rappeler, DO, RO) vers Google Contacts` 
-                  : 'Aucun contact à exporter - Seuls les contacts avec les statuts "À rappeler", "DO" ou "RO" sont exportés'
+                  ? `Exporter ${googleContactsCount} contacts (À rappeler, DO, RO, A0) vers Google Contacts` 
+                  : 'Aucun contact à exporter - Seuls les contacts avec les statuts "À rappeler", "DO", "RO" ou "A0" sont exportés'
                 }
                 className={cn(
                   "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 ribbon-button-modern",

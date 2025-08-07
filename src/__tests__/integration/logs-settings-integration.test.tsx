@@ -4,6 +4,21 @@ import userEvent from '@testing-library/user-event';
 import { SettingsDialog } from '../../components/SettingsDialog';
 import { LogsService } from '../../services/logsService';
 import { DevToolsService } from '../../services/devToolsService';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { it } from 'date-fns/locale';
+import { beforeEach } from 'node:test';
+import { describe } from 'node:test';
 
 // Mock services
 jest.mock('../../services/logsService', () => ({
