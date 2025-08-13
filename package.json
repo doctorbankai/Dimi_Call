@@ -117,6 +117,7 @@
     "asarUnpack": [
       "dist/renderer/**/*"
     ],
+    "afterPack": "scripts/fix-macos-permissions.js",
     "mac": {
       "icon": "build/icon.icns",
       "target": [
@@ -144,8 +145,7 @@
             "**/*"
           ]
         }
-      ],
-      "afterPack": "scripts/fix-macos-permissions.js"
+      ]
     },
     "win": {
       "icon": "build/icon.ico",
