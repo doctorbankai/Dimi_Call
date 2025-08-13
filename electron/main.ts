@@ -157,6 +157,16 @@ process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Promise rejetée non gérée:', reason, 'at:', promise)
 })
 
+// Import des services de validation des permissions
+import { AdbPermissionChecker } from './services/adb-permission-checker'
+import { PlatformToolsValidator } from './utils/platform-tools-validator'
+import { AdbErrorHandler } from './utils/adb-error-handler'
+
+// Cache pour éviter de re-vérifier les permissions à chaque appel
+let adbPathCache: string | null = null
+let lastPermissionCheck: number = 0
+const PERMISSION_CHECK_INTERVAL = 5 * 60 * 1000 // 5 minutes
+
 // Fonction pour obtenir le chemin de l'exécutable ADB
 function getAdbPath(): string {
   const platform = process.platform
@@ -176,6 +186,107 @@ function getAdbPath(): string {
 
   // En production (application packagée), les platform-tools sont copiés dans resourcesPath
   return join(process.resourcesPath, 'platform-tools', adbFile)
+}
+
+// Fonction améliorée pour obtenir le chemin ADB avec validation des permissions
+async function getValidatedAdbPath(): Promise<string> {
+  const adbPath = getAdbPath()
+  const now = Date.now()
+  
+  // Utiliser le cache si disponible et récent (sauf sur macOS où on vérifie plus souvent)
+  if (adbPathCache === adbPath && 
+      (now - lastPermissionCheck) < PERMISSION_CHECK_INTERVAL &&
+      process.platform !== 'darwin') {
+    return adbPath
+  }
+
+  console.log(`🔍 Validation du chemin ADB: ${adbPath}`)
+
+  try {
+    // Sur macOS, vérifier et corriger les permissions si nécessaire
+    if (process.platform === 'darwin') {
+      const permissionResult = await AdbPermissionChecker.checkAndFixPermissions(adbPath)
+      
+      if (!permissionResult.success) {
+        console.error(`❌ Impossible de valider/corriger les permissions ADB: ${permissionResult.error}`)
+        
+        // Générer des instructions pour l'utilisateur
+        const instructions = PlatformToolsValidator.generateManualFixInstructions(
+          path.dirname(adbPath),
+          [adbPath]
+        )
+        
+        console.log('📋 Instructions de correction manuelle:')
+        instructions.forEach(instruction => console.log(`   ${instruction}`))
+        
+        // Retourner le chemin même si les permissions sont incorrectes
+        // L'erreur sera gérée lors de l'exécution
+        return adbPath
+      }
+
+      if (permissionResult.wasFixed) {
+        console.log(`✅ Permissions ADB corrigées automatiquement: ${adbPath}`)
+      }
+    }
+
+    // Mettre à jour le cache
+    adbPathCache = adbPath
+    lastPermissionCheck = now
+
+    return adbPath
+
+  } catch (error) {
+    console.error(`❌ Erreur lors de la validation du chemin ADB: ${adbPath}`, error)
+    return adbPath // Retourner le chemin même en cas d'erreur
+  }
+}
+
+// Fonction pour valider tout le dossier platform-tools au démarrage
+async function validatePlatformToolsOnStartup(): Promise<void> {
+  if (process.platform !== 'darwin') {
+    console.log('ℹ️ Validation des platform-tools ignorée (pas sur macOS)')
+    return
+  }
+
+  try {
+    const adbPath = getAdbPath()
+    const platformToolsPath = path.dirname(adbPath)
+    
+    console.log(`🚀 Validation complète des platform-tools au démarrage: ${platformToolsPath}`)
+    
+    const result = await PlatformToolsValidator.validateAndFixPlatformTools(platformToolsPath)
+    
+    if (result.readyForUse) {
+      console.log('✅ Platform-tools validé et prêt à l\'utilisation')
+    } else {
+      console.log('⚠️ Platform-tools nécessite une attention')
+      
+      if (result.fixSummary && !result.fixSummary.allFixesSuccessful) {
+        const failedBinaries = result.fixSummary.fixResults
+          .filter(r => !r.success)
+          .map(r => r.filePath)
+        
+        const instructions = PlatformToolsValidator.generateManualFixInstructions(
+          platformToolsPath,
+          failedBinaries
+        )
+        
+        console.log('📋 Instructions de correction manuelle nécessaires:')
+        instructions.forEach(instruction => console.log(`   ${instruction}`))
+        
+        // Optionnel: Envoyer une notification à l'interface utilisateur
+        if (mainWindow) {
+          mainWindow.webContents.send('adb-permission-warning', {
+            message: 'Les permissions ADB nécessitent une correction manuelle',
+            instructions: instructions
+          })
+        }
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Erreur lors de la validation des platform-tools au démarrage:', error)
+  }
 }
 
 function createWindow(): BrowserWindow {
@@ -345,12 +456,18 @@ function createWindow(): BrowserWindow {
 // Cette méthode sera appelée quand Electron aura fini
 // de s'initialiser et est prête à créer des fenêtres de navigateur.
 // Certaines APIs peuvent seulement être utilisées après que cet événement se produit.
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   console.log('🚀 Electron est prêt, initialisation de l\'application...')
   
   // Définir l'id de l'app pour les notifications Windows 10+
   electronApp.setAppUserModelId('com.dimultra.dimicall')
   console.log('🏷️ App ID défini: com.dimultra.dimicall')
+
+  // Valider les permissions ADB sur macOS avant de créer la fenêtre
+  if (process.platform === 'darwin') {
+    console.log('🔍 Validation des permissions ADB au démarrage (macOS)...')
+    await validatePlatformToolsOnStartup()
+  }
 
   mainWindow = createWindow()
 
@@ -604,7 +721,8 @@ app.whenReady().then(() => {
   // Gestionnaires IPC pour ADB
   ipcMain.handle('adb:devices', async () => {
     try {
-      const adbCommand = `"${getAdbPath()}" devices`
+      const adbPath = await getValidatedAdbPath()
+      const adbCommand = `"${adbPath}" devices`
       const { stdout, stderr } = await execAsync(adbCommand)
       if (stderr && !stderr.includes('daemon not running')) {
         throw new Error(stderr)
@@ -626,54 +744,82 @@ app.whenReady().then(() => {
       
       return { success: true, devices }
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) }
+      const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:devices')
+      return { 
+        success: false, 
+        error: adbError.message,
+        errorCode: adbError.code,
+        suggestions: adbError.suggestions
+      }
     }
   })
 
   ipcMain.handle('adb:shell', async (event, command) => {
     try {
-      const adbCommand = `"${getAdbPath()}" shell "${command}"`
+      const adbPath = await getValidatedAdbPath()
+      const adbCommand = `"${adbPath}" shell "${command}"`
       const { stdout, stderr } = await execAsync(adbCommand)
       if (stderr) {
         throw new Error(stderr)
       }
       return { success: true, output: stdout.trim() }
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) }
+      const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:shell')
+      return { 
+        success: false, 
+        error: adbError.message,
+        errorCode: adbError.code,
+        suggestions: adbError.suggestions
+      }
     }
   })
 
   ipcMain.handle('adb:call', async (event, phoneNumber) => {
     try {
-      const adbCommand = `"${getAdbPath()}" shell am start -a android.intent.action.CALL -d tel:${phoneNumber}`
+      const adbPath = await getValidatedAdbPath()
+      const adbCommand = `"${adbPath}" shell am start -a android.intent.action.CALL -d tel:${phoneNumber}`
       const { stdout, stderr } = await execAsync(adbCommand)
       if (stderr) {
         throw new Error(stderr)
       }
       return { success: true, message: `Appel initié vers ${phoneNumber}` }
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) }
+      const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:call')
+      return { 
+        success: false, 
+        error: adbError.message,
+        errorCode: adbError.code,
+        suggestions: adbError.suggestions
+      }
     }
   })
 
   ipcMain.handle('adb:sms', async (event, phoneNumber, message) => {
     try {
+      const adbPath = await getValidatedAdbPath()
       // Échapper les guillemets dans le message
       const escapedMessage = message.replace(/"/g, '\\"')
-      const adbCommand = `"${getAdbPath()}" shell am start -a android.intent.action.SENDTO -d sms:${phoneNumber} --es sms_body "${escapedMessage}"`
+      const adbCommand = `"${adbPath}" shell am start -a android.intent.action.SENDTO -d sms:${phoneNumber} --es sms_body "${escapedMessage}"`
       const { stdout, stderr } = await execAsync(adbCommand)
       if (stderr) {
         throw new Error(stderr)
       }
       return { success: true, message: `SMS préparé pour ${phoneNumber}` }
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) }
+      const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:sms')
+      return { 
+        success: false, 
+        error: adbError.message,
+        errorCode: adbError.code,
+        suggestions: adbError.suggestions
+      }
     }
   })
 
   ipcMain.handle('adb:battery', async () => {
     try {
-      const adbCommand = `"${getAdbPath()}" shell dumpsys battery`
+      const adbPath = await getValidatedAdbPath()
+      const adbCommand = `"${adbPath}" shell dumpsys battery`
       const { stdout, stderr } = await execAsync(adbCommand)
       if (stderr) {
         throw new Error(stderr)
@@ -698,18 +844,31 @@ app.whenReady().then(() => {
       
       return { success: true, level, isCharging }
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) }
+      const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:battery')
+      return { 
+        success: false, 
+        error: adbError.message,
+        errorCode: adbError.code,
+        suggestions: adbError.suggestions
+      }
     }
   })
 
   ipcMain.handle('adb:restart-server', async () => {
     try {
-      await execAsync(`"${getAdbPath()}" kill-server`)
+      const adbPath = await getValidatedAdbPath()
+      await execAsync(`"${adbPath}" kill-server`)
       await new Promise(resolve => setTimeout(resolve, 1000)) // Attendre 1 seconde
-      await execAsync(`"${getAdbPath()}" start-server`)
+      await execAsync(`"${adbPath}" start-server`)
       return { success: true, message: 'Serveur ADB redémarré' }
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) }
+      const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:restart-server')
+      return { 
+        success: false, 
+        error: adbError.message,
+        errorCode: adbError.code,
+        suggestions: adbError.suggestions
+      }
     }
   })
 
@@ -717,10 +876,17 @@ app.whenReady().then(() => {
   ipcMain.handle('adb:kill-server', async () => {
     try {
       console.log('🔄 Arrêt du serveur ADB...')
-      await execAsync(`"${getAdbPath()}" kill-server`)
+      const adbPath = await getValidatedAdbPath()
+      await execAsync(`"${adbPath}" kill-server`)
       return { success: true, message: 'Serveur ADB arrêté' }
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) }
+      const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:kill-server')
+      return { 
+        success: false, 
+        error: adbError.message,
+        errorCode: adbError.code,
+        suggestions: adbError.suggestions
+      }
     }
   })
 
@@ -728,10 +894,17 @@ app.whenReady().then(() => {
   ipcMain.handle('adb:start-server', async () => {
     try {
       console.log('🚀 Démarrage du serveur ADB...')
-      await execAsync(`"${getAdbPath()}" start-server`)
+      const adbPath = await getValidatedAdbPath()
+      await execAsync(`"${adbPath}" start-server`)
       return { success: true, message: 'Serveur ADB démarré' }
     } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : String(error) }
+      const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:start-server')
+      return { 
+        success: false, 
+        error: adbError.message,
+        errorCode: adbError.code,
+        suggestions: adbError.suggestions
+      }
     }
   })
 
@@ -789,16 +962,167 @@ app.whenReady().then(() => {
       }
       
     } catch (error) {
-      console.error('❌ Erreur lors du nettoyage des clés:', error)
+      const adbError = AdbErrorHandler.handleError(error, mainWindow, undefined, 'adb:clean-auth-keys')
       return { 
         success: false, 
-        error: error instanceof Error ? error.message : String(error) 
+        error: adbError.message,
+        errorCode: adbError.code,
+        suggestions: adbError.suggestions
+      }
+    }
+  })
+
+  // Handler pour vérifier l'état des permissions ADB
+  ipcMain.handle('adb:check-permissions', async () => {
+    try {
+      const adbPath = getAdbPath()
+      const platformToolsPath = path.dirname(adbPath)
+      
+      console.log('🔍 Vérification des permissions ADB demandée par l\'interface utilisateur')
+      
+      const result = await PlatformToolsValidator.validateAndFixPlatformTools(platformToolsPath)
+      
+      return {
+        success: true,
+        isValid: result.isValid,
+        readyForUse: result.readyForUse,
+        validationSummary: result.validationSummary,
+        fixSummary: result.fixSummary,
+        adbPath: adbPath,
+        platformToolsPath: platformToolsPath
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la vérification des permissions ADB:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Erreur inconnue',
+        adbPath: getAdbPath()
+      }
+    }
+  })
+
+  // Handler pour forcer la correction des permissions ADB
+  ipcMain.handle('adb:fix-permissions', async () => {
+    try {
+      const adbPath = getAdbPath()
+      const platformToolsPath = path.dirname(adbPath)
+      
+      console.log('🔧 Correction forcée des permissions ADB demandée par l\'interface utilisateur')
+      
+      const result = await PlatformToolsValidator.validateAndFixPlatformTools(platformToolsPath)
+      
+      if (result.readyForUse) {
+        return {
+          success: true,
+          message: 'Permissions ADB corrigées avec succès',
+          fixSummary: result.fixSummary
+        }
+      } else {
+        const failedBinaries = result.fixSummary?.fixResults
+          .filter(r => !r.success)
+          .map(r => r.filePath) || []
+        
+        const instructions = PlatformToolsValidator.generateManualFixInstructions(
+          platformToolsPath,
+          failedBinaries
+        )
+        
+        return {
+          success: false,
+          message: 'Correction automatique échouée, intervention manuelle requise',
+          instructions: instructions,
+          failedBinaries: failedBinaries
+        }
+      }
+    } catch (error) {
+      const adbError = AdbErrorHandler.handleError(error, mainWindow, getAdbPath(), 'adb:fix-permissions')
+      return {
+        success: false,
+        error: adbError.message,
+        errorCode: adbError.code,
+        suggestions: adbError.suggestions
+      }
+    }
+  })
+
+  // Handler pour obtenir un rapport de diagnostic ADB complet
+  ipcMain.handle('adb:get-diagnostic-report', async () => {
+    try {
+      const adbPath = getAdbPath()
+      const platformToolsPath = path.dirname(adbPath)
+      
+      console.log('📋 Génération du rapport de diagnostic ADB...')
+      
+      // Générer le rapport de base
+      let report = AdbErrorHandler.generateDiagnosticReport(adbPath, platformToolsPath)
+      
+      // Ajouter les informations de validation
+      const validationResult = await PlatformToolsValidator.validateAndFixPlatformTools(platformToolsPath)
+      
+      report += '\n\n--- Validation des binaires ---\n'
+      report += `Dossier valide: ${validationResult.isValid}\n`
+      report += `Prêt à l'utilisation: ${validationResult.readyForUse}\n`
+      report += `Total binaires: ${validationResult.validationSummary.totalBinaries}\n`
+      report += `Binaires exécutables: ${validationResult.validationSummary.executableBinaries}\n`
+      report += `Binaires critiques manquants: ${validationResult.validationSummary.criticalBinariesMissing.join(', ') || 'Aucun'}\n`
+      
+      if (validationResult.validationSummary.validationDetails.length > 0) {
+        report += '\n--- Détails des binaires ---\n'
+        validationResult.validationSummary.validationDetails.forEach(binary => {
+          report += `${binary.binaryName}: ${binary.exists ? 'Existe' : 'Manquant'}, `
+          report += `${binary.isExecutable ? 'Exécutable' : 'Non-exécutable'}, `
+          report += `Permissions: ${binary.permissions}\n`
+        })
+      }
+      
+      if (validationResult.fixSummary) {
+        report += '\n--- Résultats des corrections ---\n'
+        report += `Corrections tentées: ${validationResult.fixSummary.totalAttempted}\n`
+        report += `Corrections réussies: ${validationResult.fixSummary.successfulFixes}\n`
+        report += `Corrections échouées: ${validationResult.fixSummary.failedFixes}\n`
+        
+        if (validationResult.fixSummary.fixResults.length > 0) {
+          report += '\n--- Détails des corrections ---\n'
+          validationResult.fixSummary.fixResults.forEach(fix => {
+            report += `${fix.filePath}: ${fix.success ? 'Succès' : 'Échec'}`
+            if (fix.error) {
+              report += ` (${fix.error})`
+            }
+            report += '\n'
+          })
+        }
+      }
+      
+      // Test de connectivité ADB
+      report += '\n--- Test de connectivité ADB ---\n'
+      try {
+        const testResult = await execAsync(`"${adbPath}" version`)
+        report += `Version ADB: ${testResult.stdout.split('\n')[0]}\n`
+        report += 'Test de connectivité: Succès\n'
+      } catch (error) {
+        report += `Test de connectivité: Échec (${error instanceof Error ? error.message : String(error)})\n`
+      }
+      
+      return {
+        success: true,
+        report: report,
+        timestamp: new Date().toISOString()
+      }
+      
+    } catch (error) {
+      const adbError = AdbErrorHandler.handleError(error, mainWindow, getAdbPath(), 'adb:get-diagnostic-report')
+      return {
+        success: false,
+        error: adbError.message,
+        errorCode: adbError.code,
+        suggestions: adbError.suggestions
       }
     }
   })
 
   ipcMain.handle('adb:send-sms', async (event, phoneNumber, messageBody) => {
     try {
+      const adbPath = await getValidatedAdbPath()
       // Normaliser le numéro de téléphone pour plus de compatibilité
       let internationalNumber = phoneNumber
       if (phoneNumber.startsWith('0') && phoneNumber.length === 10) {

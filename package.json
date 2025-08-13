@@ -20,6 +20,8 @@
     "test:sim": "node scripts/test-sim-selection.js",
     "test:update": "node scripts/test-update.cjs",
     "analyze:xml": "node scripts/test-xml-analysis.cjs",
+    "test:adb-permissions": "node scripts/test-adb-permissions.js",
+    "validate:adb-solution": "node scripts/validate-adb-solution.js",
     "generate-icons": "node scripts/generate-icons-robust.cjs",
     "generate-icons-alt": "electron-icon-maker --input=DDD.png --output=build",
     "generate-icons-old": "electron-icon-builder --input=DDD.png --output=build --flatten",
@@ -142,7 +144,8 @@
             "**/*"
           ]
         }
-      ]
+      ],
+      "afterPack": "scripts/fix-macos-permissions.js"
     },
     "win": {
       "icon": "build/icon.ico",
