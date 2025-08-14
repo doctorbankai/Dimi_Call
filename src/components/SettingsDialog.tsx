@@ -86,7 +86,7 @@ const DEFAULT_COLUMN_CONFIG = {
 
 type SettingsCategory = 'email' | 'sms' | 'calcom' | 'appearance' | 'shortcuts' | 'update' | 'columns' | 'logs';
 
-const getCategories = (devToolsEnabled: boolean) => [
+const getCategories = (devToolsEnabled: boolean, updateEnabled: boolean = true) => [
   { 
     id: 'email' as SettingsCategory, 
     label: 'Templates Email', 
@@ -123,12 +123,13 @@ const getCategories = (devToolsEnabled: boolean) => [
     icon: Columns,
     description: 'Configuration de la visibilité des colonnes'
   },
-  {
+  // Section Mise à jour visible uniquement si les mises à jour sont activées
+  ...(updateEnabled ? [{
     id: 'update' as SettingsCategory,
     label: 'Mises à jour',
     icon: DownloadCloud,
     description: 'Système de mise à jour automatique'
-  },
+  }] : []),
   // Section Diagnostic visible uniquement si DevTools activés
   ...(devToolsEnabled ? [{
     id: 'diagnostic' as SettingsCategory,
@@ -210,7 +211,15 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   const [columnConfigChanged, setColumnConfigChanged] = useState(false);
 
   // Hooks pour les paramètres de mise à jour (déplacés ici pour éviter les erreurs de hooks conditionnels)
-  const { betaPreferences, setBetaPreferences, revertToStable } = useAutoUpdate();
+  const { betaPreferences, setBetaPreferences, revertToStable, isUpdateEnabled, manualUpdateInfo } = useAutoUpdate();
+
+  // Log pour debug des mises à jour
+  useEffect(() => {
+    console.log(`[SettingsDialog] Update enabled: ${isUpdateEnabled}`);
+    if (!isUpdateEnabled && manualUpdateInfo) {
+      console.log(`[SettingsDialog] Manual update info:`, manualUpdateInfo);
+    }
+  }, [isUpdateEnabled, manualUpdateInfo]);
   const [isRevertingToStable, setIsRevertingToStable] = useState(false);
   const [devToolsEnabled, setDevToolsEnabled] = useState(() => {
     try {
@@ -616,7 +625,63 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   };
 
   const renderUpdateSettings = () => {
+    // Si les mises à jour sont désactivées, afficher les informations de mise à jour manuelle
+    if (!isUpdateEnabled && manualUpdateInfo) {
+      return (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
+                  <Info className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Version actuelle</CardTitle>
+                  <CardDescription>DimiCall {appVersion}</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <Info className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                      Mises à jour manuelles
+                    </p>
+                    <p className="text-sm text-blue-700 dark:text-blue-300">
+                      {manualUpdateInfo.message}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  if (typeof window !== 'undefined' && window.electronAPI?.openExternal) {
+                    window.electronAPI.openExternal(manualUpdateInfo.url);
+                  } else {
+                    window.open(manualUpdateInfo.url, '_blank');
+                  }
+                }}
+                className="w-full gap-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                Télécharger la dernière version
+              </Button>
+              
+              <p className="text-xs text-muted-foreground">
+                Les mises à jour automatiques ne sont pas disponibles sur cette plateforme.
+                Visitez la page GitHub pour télécharger manuellement les nouvelles versions.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
 
+    // Affichage normal pour les plateformes avec mises à jour automatiques
     return (
       <div className="space-y-6">
         <Card>
@@ -1339,7 +1404,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               </div>
             </div>
             <nav className="space-y-1">
-              {getCategories(devToolsEnabled).map((category) => (
+              {getCategories(devToolsEnabled, isUpdateEnabled).map((category) => (
                 <button
                   key={category.id}
                   onClick={() => setActiveCategory(category.id)}

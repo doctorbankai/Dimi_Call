@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { UpdateInfo, UpdateState, UseAutoUpdateResult, BetaPreferences } from '../types/update'
 import { BetaPreferencesService } from '../services/betaPreferencesService'
+import { ManualUpdateInfo } from '../services/PlatformUpdateService'
 
 export const useAutoUpdate = (): UseAutoUpdateResult => {
   const [updateState, setUpdateState] = useState<UpdateState>({
@@ -10,8 +11,12 @@ export const useAutoUpdate = (): UseAutoUpdateResult => {
     downloaded: false,
     error: null,
     progress: 0,
-    updateInfo: null
+    updateInfo: null,
+    enabled: true // Default to enabled, will be updated from main process
   })
+
+  const [isUpdateEnabled, setIsUpdateEnabled] = useState<boolean>(true)
+  const [manualUpdateInfo, setManualUpdateInfo] = useState<ManualUpdateInfo | null>(null)
 
   const [betaPreferences, setBetaPreferencesState] = useState<BetaPreferences>(() => 
     BetaPreferencesService.getBetaPreferences()
@@ -20,18 +25,41 @@ export const useAutoUpdate = (): UseAutoUpdateResult => {
   // Initialiser l'état depuis le main process
   useEffect(() => {
     const initializeUpdateState = async () => {
-      if (window.electronAPI?.getUpdateStatus) {
-        try {
-          const status = await window.electronAPI.getUpdateStatus()
-          setUpdateState(prev => ({
-            ...prev,
-            available: status.updateAvailable,
-            downloaded: status.updateDownloaded,
-            updateInfo: status.updateInfo
-          }))
-        } catch (error) {
-          console.error('Erreur lors de l\'initialisation de l\'état de mise à jour:', error)
+      if (!window.electronAPI?.getUpdateStatus) {
+        console.warn('[useAutoUpdate] electronAPI.getUpdateStatus not available, using defaults')
+        setIsUpdateEnabled(true) // Default to enabled in non-Electron environments
+        return
+      }
+
+      try {
+        const status = await window.electronAPI.getUpdateStatus()
+        const enabled = status.updateEnabled !== false // Default to true if not specified
+        
+        setIsUpdateEnabled(enabled)
+        setManualUpdateInfo(status.manualUpdateInfo || null)
+        
+        setUpdateState(prev => ({
+          ...prev,
+          available: enabled ? status.updateAvailable : false,
+          downloaded: enabled ? status.updateDownloaded : false,
+          updateInfo: enabled ? status.updateInfo : null,
+          enabled
+        }))
+        
+        console.log(`[useAutoUpdate] Updates enabled: ${enabled}`)
+        if (!enabled && status.manualUpdateInfo) {
+          console.log(`[useAutoUpdate] Manual update info:`, status.manualUpdateInfo)
         }
+      } catch (error) {
+        console.error('[useAutoUpdate] Error initializing update state:', error)
+        
+        // Set safe defaults on error
+        setIsUpdateEnabled(false) // Disable updates on error for safety
+        setUpdateState(prev => ({
+          ...prev,
+          error: error instanceof Error ? error.message : 'Initialization error',
+          enabled: false
+        }))
       }
     }
 
@@ -40,9 +68,19 @@ export const useAutoUpdate = (): UseAutoUpdateResult => {
 
 
 
-  // Configurer les listeners pour les événements de mise à jour
+  // Configurer les listeners pour les événements de mise à jour (only if updates are enabled)
   useEffect(() => {
-    if (!window.electronAPI) return
+    if (!window.electronAPI) {
+      console.warn('[useAutoUpdate] electronAPI not available, skipping event listeners setup')
+      return
+    }
+    
+    if (!isUpdateEnabled) {
+      console.log('[useAutoUpdate] Skipping event listeners setup (updates disabled for this platform)')
+      return
+    }
+
+    try {
 
     const handleUpdateChecking = () => {
       setUpdateState(prev => ({
@@ -107,12 +145,24 @@ export const useAutoUpdate = (): UseAutoUpdateResult => {
     window.electronAPI.onUpdateDownloadProgress(handleDownloadProgress)
     window.electronAPI.onUpdateDownloaded(handleUpdateDownloaded)
 
-    // Note: Les listeners electron ne sont pas nettoyés ici car electron-preload
-    // ne fournit pas de méthode pour les supprimer facilement
-    // et ils seront nettoyés automatiquement lors du rechargement de la page
-  }, [])
+      // Note: Les listeners electron ne sont pas nettoyés ici car electron-preload
+      // ne fournit pas de méthode pour les supprimer facilement
+      // et ils seront nettoyés automatiquement lors du rechargement de la page
+    } catch (error) {
+      console.error('[useAutoUpdate] Error setting up event listeners:', error)
+      setUpdateState(prev => ({
+        ...prev,
+        error: error instanceof Error ? error.message : 'Event listener setup error'
+      }))
+    }
+  }, [isUpdateEnabled])
 
   const checkForUpdates = useCallback(async () => {
+    if (!isUpdateEnabled) {
+      console.warn('[useAutoUpdate] Update check blocked (updates disabled for this platform)')
+      return
+    }
+    
     if (!window.electronAPI?.checkForUpdates) {
       console.warn('API de mise à jour non disponible')
       return
@@ -131,9 +181,14 @@ export const useAutoUpdate = (): UseAutoUpdateResult => {
         error: error instanceof Error ? error.message : 'Erreur inconnue' 
       }))
     }
-  }, [betaPreferences.enabled])
+  }, [betaPreferences.enabled, isUpdateEnabled])
 
   const installUpdate = useCallback(async () => {
+    if (!isUpdateEnabled) {
+      console.warn('[useAutoUpdate] Update installation blocked (updates disabled for this platform)')
+      return
+    }
+    
     if (!window.electronAPI?.installUpdate) {
       console.warn('API d\'installation de mise à jour non disponible')
       return
@@ -159,7 +214,7 @@ export const useAutoUpdate = (): UseAutoUpdateResult => {
         error: error instanceof Error ? error.message : 'Erreur inconnue' 
       }))
     }
-  }, [updateState.downloaded])
+  }, [updateState.downloaded, isUpdateEnabled])
 
   const setBetaPreferences = useCallback((preferences: BetaPreferences) => {
     setBetaPreferencesState(preferences)
@@ -207,6 +262,8 @@ export const useAutoUpdate = (): UseAutoUpdateResult => {
     installUpdate,
     betaPreferences,
     setBetaPreferences,
-    revertToStable
+    revertToStable,
+    isUpdateEnabled,
+    manualUpdateInfo
   }
 } 

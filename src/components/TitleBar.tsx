@@ -31,7 +31,9 @@ interface CustomMenuBarProps {
     downloaded: boolean;
     progress: number;
     updateInfo?: { version: string } | null;
+    enabled?: boolean;
   };
+  isUpdateEnabled?: boolean;
   onUpdateClick?: () => void;
   onUpdateConfirmationOpen?: () => void;
 }
@@ -49,6 +51,7 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
   activeCallContactId,
   onAdbClick,
   updateState,
+  isUpdateEnabled = true,
   onUpdateClick,
   onUpdateConfirmationOpen
 }) => {
@@ -82,6 +85,11 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
     };
 
     checkBetaVersion();
+
+    // Log pour debug des mises à jour
+    if (!isUpdateEnabled) {
+      console.log('[TitleBar] Update badge hidden (updates disabled for this platform)');
+    }
 
     // Écouter les événements de redimensionnement pour mettre à jour l'état maximisé
     const handleResize = async () => {
@@ -235,7 +243,7 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             {/* Badge de mise à jour */}
-            {updateState && (updateState.downloaded || updateState.downloading || updateState.checking) && (onUpdateClick || onUpdateConfirmationOpen) && (
+            {isUpdateEnabled && updateState && (updateState.downloaded || updateState.downloading || updateState.checking) && (onUpdateClick || onUpdateConfirmationOpen) && (
               <Badge 
                 variant={updateState.downloaded ? 'default' : 'outline'} 
                 className={cn(
@@ -395,7 +403,7 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             {/* Badge de mise à jour */}
-            {updateState && (updateState.downloaded || updateState.downloading || updateState.checking) && (onUpdateClick || onUpdateConfirmationOpen) && (
+            {isUpdateEnabled && updateState && (updateState.downloaded || updateState.downloading || updateState.checking) && (onUpdateClick || onUpdateConfirmationOpen) && (
               <Badge 
                 variant={updateState.downloaded ? 'default' : 'outline'} 
                 className={cn(

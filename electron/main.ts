@@ -8,13 +8,25 @@ import { promisify } from 'util'
 import * as fs from 'fs'
 import electronUpdater from 'electron-updater'
 import log from 'electron-log'
+import { PlatformUpdateService } from '../src/services/PlatformUpdateService'
 
 // Extraction de autoUpdater depuis le module CommonJS
 const { autoUpdater } = electronUpdater
 
-// Configuration du logger pour electron-updater
-log.transports.file.level = 'info'
-autoUpdater.logger = log
+// Get update configuration for current platform
+const updateConfig = PlatformUpdateService.getUpdateConfiguration()
+console.log(`🔧 [UPDATE-CONFIG] Platform: ${updateConfig.platform}, Updates enabled: ${updateConfig.enabled}`)
+if (updateConfig.reason) {
+  console.log(`🔧 [UPDATE-CONFIG] Reason: ${updateConfig.reason}`)
+}
+
+// Configuration du logger pour electron-updater (only if updates are enabled)
+if (updateConfig.enabled) {
+  log.transports.file.level = 'info'
+  autoUpdater.logger = log
+} else {
+  console.log('🔧 [UPDATE-CONFIG] Skipping electron-updater logger configuration (updates disabled)')
+}
 
 // Load environment variables from .env file at the very start
 dotenv.config({ path: path.resolve(app.getAppPath(), '..', '.env') })
@@ -83,11 +95,16 @@ const enableDevToolsBasedOnPreferences = async (): Promise<void> => {
   }
 }
 
-// Configuration de l'auto-updater
-// Désactiver l'installation automatique ; l'utilisateur doit confirmer l'installation
-autoUpdater.autoInstallOnAppQuit = false
-// Laisser le téléchargement automatique en arrière-plan
-autoUpdater.autoDownload = true
+// Configuration de l'auto-updater (only if updates are enabled)
+if (updateConfig.enabled) {
+  // Désactiver l'installation automatique ; l'utilisateur doit confirmer l'installation
+  autoUpdater.autoInstallOnAppQuit = false
+  // Laisser le téléchargement automatique en arrière-plan
+  autoUpdater.autoDownload = true
+  console.log('🔧 [UPDATE-CONFIG] electron-updater configured for automatic updates')
+} else {
+  console.log('🔧 [UPDATE-CONFIG] Skipping electron-updater configuration (updates disabled)')
+}
 
 // Fonction pour lire les préférences bêta depuis un fichier persistant
 const getBetaPreferences = () => {
@@ -194,7 +211,7 @@ const syncBetaPreferences = async () => {
   }
 }
 
-if (!is.dev) {
+if (!is.dev && updateConfig.enabled) {
   // Configuration initiale des préférences
   const initialPrefs = getBetaPreferences()
   autoUpdater.allowPrerelease = initialPrefs.enabled
@@ -227,6 +244,8 @@ if (!is.dev) {
     log.info(`🔍 [AUTO] Vérification automatique avec allowPrerelease: ${autoUpdater.allowPrerelease}`)
     autoUpdater.checkForUpdates()
   }, 10 * 60 * 1000)
+} else if (!updateConfig.enabled) {
+  console.log('🔧 [UPDATE-CONFIG] Automatic update checks disabled for this platform')
 }
 
 // Initialisation ICU forcée avant toute autre chose
@@ -596,6 +615,14 @@ app.whenReady().then(async () => {
         }
       }
       
+      if (!updateConfig.enabled) {
+        console.log('🔧 [UPDATE-CONFIG] Manual update check blocked (updates disabled for this platform)')
+        return {
+          status: 'disabled',
+          message: 'Les mises à jour automatiques sont désactivées sur cette plateforme.'
+        }
+      }
+      
       // Configurer les pre-releases selon les préférences utilisateur
       const previousAllowPrerelease = autoUpdater.allowPrerelease
       autoUpdater.allowPrerelease = betaEnabled
@@ -643,14 +670,21 @@ app.whenReady().then(async () => {
   // Obtenir l'état actuel de mise à jour
   ipcMain.handle('get-update-status', () => {
     return {
-      updateAvailable: !!updateInfo,
-      updateDownloaded,
-      updateInfo
+      updateAvailable: updateConfig.enabled ? !!updateInfo : false,
+      updateDownloaded: updateConfig.enabled ? updateDownloaded : false,
+      updateInfo: updateConfig.enabled ? updateInfo : null,
+      updateEnabled: updateConfig.enabled,
+      manualUpdateInfo: updateConfig.enabled ? null : PlatformUpdateService.getManualUpdateInfo()
     }
   })
 
   // Installer et redémarrer avec la mise à jour
   ipcMain.handle('install-update', () => {
+    if (!updateConfig.enabled) {
+      console.log('🔧 [UPDATE-CONFIG] Install update blocked (updates disabled for this platform)')
+      return { success: false, message: 'Les mises à jour automatiques sont désactivées sur cette plateforme.' }
+    }
+    
     if (updateDownloaded) {
       console.log('🔄 Installation de la mise à jour et redémarrage...')
       autoUpdater.quitAndInstall()
@@ -720,8 +754,9 @@ app.whenReady().then(async () => {
     }
   })
 
-  // Événements de l'auto-updater
-  autoUpdater.on('checking-for-update', () => {
+  // Événements de l'auto-updater (only if updates are enabled)
+  if (updateConfig.enabled) {
+    autoUpdater.on('checking-for-update', () => {
     const allowPrerelease = autoUpdater.allowPrerelease
     console.log('🔍 Vérification des mises à jour...')
     log.info(`🔍 [UPDATE] Vérification des mises à jour démarrée`)
@@ -794,7 +829,10 @@ app.whenReady().then(async () => {
     }
   })
 
-  console.log('🚀 electron-updater configuré pour les mises à jour automatiques')
+    console.log('🚀 electron-updater configuré pour les mises à jour automatiques')
+  } else {
+    console.log('🔧 [UPDATE-CONFIG] electron-updater event handlers skipped (updates disabled)')
+  }
 
   // Le raccourci de développement par défaut de 'CommandOrControl + R' est
   // enregistré lors du développement pour aider

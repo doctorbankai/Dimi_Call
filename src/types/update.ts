@@ -1,5 +1,6 @@
 /**
  * Types pour le système de mise à jour automatique
+ * Includes platform-specific update configuration and manual update information
  */
 
 /**
@@ -50,6 +51,8 @@ export interface UpdateState {
   progress: number;
   /** Informations détaillées sur la mise à jour */
   updateInfo: UpdateInfo | null;
+  /** Indique si les mises à jour sont activées pour cette plateforme */
+  enabled: boolean;
 }
 
 /**
@@ -64,6 +67,20 @@ export interface UpdateConfirmationDialogProps {
   onConfirm: () => void;
   /** Informations sur la mise à jour à afficher */
   updateInfo?: UpdateInfo | null;
+}
+
+/**
+ * Informations pour les mises à jour manuelles (quand les mises à jour automatiques sont désactivées)
+ */
+export interface ManualUpdateInfo {
+  /** URL pour télécharger la mise à jour manuellement */
+  url: string;
+  /** Message informatif pour l'utilisateur */
+  message: string;
+  /** Plateforme concernée */
+  platform: string;
+  /** Version actuelle de l'application */
+  version: string;
 }
 
 /**
@@ -82,4 +99,8 @@ export interface UseAutoUpdateResult {
   setBetaPreferences: (preferences: BetaPreferences) => void;
   /** Fonction pour revenir à la version stable */
   revertToStable: () => Promise<void>;
+  /** Indique si les mises à jour sont activées pour cette plateforme */
+  isUpdateEnabled: boolean;
+  /** Informations pour les mises à jour manuelles (si les mises à jour automatiques sont désactivées) */
+  manualUpdateInfo: ManualUpdateInfo | null;
 }

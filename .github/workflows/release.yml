@@ -182,6 +182,8 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NODE_ENV: production
+          DISABLE_AUTO_UPDATES: "true"
+          MANUAL_UPDATE_URL: "https://github.com/${{ github.repository }}/releases"
 
       - name: Debug - Lister les fichiers générés
         if: always()

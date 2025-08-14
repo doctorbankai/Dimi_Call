@@ -112,7 +112,7 @@ const App: React.FC = () => {
   const auth = useSupabaseAuth();
   
   // Auto-update hook
-  const { updateState, installUpdate } = useAutoUpdate();
+  const { updateState, installUpdate, isUpdateEnabled } = useAutoUpdate();
   
 
   
@@ -1730,6 +1730,7 @@ Dimitri MOREL - Arcanis Conseil`;
               }
             }}
             updateState={updateState}
+            isUpdateEnabled={isUpdateEnabled}
             onUpdateClick={installUpdate}
             onUpdateConfirmationOpen={() => setIsUpdateConfirmationOpen(true)}
           />
