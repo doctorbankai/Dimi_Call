@@ -45,11 +45,15 @@ interface ElectronAPI {
   // API pour obtenir la version de l'app
   getAppVersion: () => Promise<string>
   // API pour forcer la vérification manuelle des mises à jour
-  checkForUpdates: () => Promise<{ status: string; message: string }>
+  checkForUpdates: (betaEnabled?: boolean, forceRefresh?: boolean) => Promise<{ status: string; message: string }>
   
   // APIs pour la gestion des mises à jour
   getUpdateStatus: () => Promise<{ updateAvailable: boolean; updateDownloaded: boolean; updateInfo: any }>
   installUpdate: () => Promise<{ success: boolean; message?: string }>
+  revertToStable: () => Promise<{ success: boolean; message?: string }>
+  
+  // API pour synchroniser les préférences beta
+  syncBetaPreferences: (preferences: any) => Promise<{ success: boolean; message?: string }>
   
   // Écouter les événements de mise à jour
   onUpdateChecking: (callback: () => void) => void
@@ -125,11 +129,15 @@ const electronAPI: ElectronAPI = {
   // API pour obtenir la version de l'app
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   // Vérification manuelle
-  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  checkForUpdates: (betaEnabled?: boolean, forceRefresh?: boolean) => ipcRenderer.invoke('check-for-updates', betaEnabled, forceRefresh),
   
   // APIs pour la gestion des mises à jour
   getUpdateStatus: () => ipcRenderer.invoke('get-update-status'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
+  revertToStable: () => ipcRenderer.invoke('revert-to-stable'),
+  
+  // API pour synchroniser les préférences beta
+  syncBetaPreferences: (preferences: any) => ipcRenderer.invoke('sync-beta-preferences', preferences),
   
   // Écouter les événements de mise à jour
   onUpdateChecking: (callback: () => void) => {

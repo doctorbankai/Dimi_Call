@@ -89,33 +89,142 @@ autoUpdater.autoInstallOnAppQuit = false
 // Laisser le téléchargement automatique en arrière-plan
 autoUpdater.autoDownload = true
 
-// Fonction pour lire les préférences bêta depuis le localStorage
+// Fonction pour lire les préférences bêta depuis un fichier persistant
 const getBetaPreferences = () => {
   try {
-    // En mode développement, on peut simuler les préférences
-    if (is.dev) {
-      return { enabled: false }
+    const userDataPath = app.getPath('userData')
+    const prefsPath = path.join(userDataPath, 'beta-preferences.json')
+    
+    log.info(`🔧 [PREFS] Lecture des préférences depuis: ${prefsPath}`)
+    
+    if (fs.existsSync(prefsPath)) {
+      const data = fs.readFileSync(prefsPath, 'utf8')
+      const prefs = JSON.parse(data)
+      log.info(`🔧 [PREFS] Préférences trouvées: ${JSON.stringify(prefs)}`)
+      
+      // Validation des données
+      if (typeof prefs.enabled === 'boolean') {
+        return prefs
+      } else {
+        log.warn(`🔧 [PREFS] Préférences invalides, utilisation des valeurs par défaut`)
+        return { enabled: false, lastModified: Date.now(), hasBeenWarned: false }
+      }
+    } else {
+      log.info(`🔧 [PREFS] Aucun fichier de préférences trouvé, utilisation des valeurs par défaut`)
+      return { enabled: false, lastModified: Date.now(), hasBeenWarned: false }
+    }
+  } catch (error) {
+    log.error(`🔧 [PREFS] Erreur lors de la lecture des préférences: ${error.message}`)
+    return { enabled: false, lastModified: Date.now(), hasBeenWarned: false }
+  }
+}
+
+// Fonction pour sauvegarder les préférences bêta dans un fichier persistant
+const saveBetaPreferences = (preferences) => {
+  try {
+    const userDataPath = app.getPath('userData')
+    const prefsPath = path.join(userDataPath, 'beta-preferences.json')
+    
+    const toSave = {
+      ...preferences,
+      lastModified: Date.now()
     }
     
-    // En production, les préférences sont stockées dans le localStorage du renderer
-    // On va les lire via IPC quand la fenêtre sera prête
-    return { enabled: false } // Par défaut, pas de bêta
+    fs.writeFileSync(prefsPath, JSON.stringify(toSave, null, 2), 'utf8')
+    log.info(`🔧 [PREFS] Préférences sauvegardées: ${JSON.stringify(toSave)}`)
+    
+    return true
   } catch (error) {
-    console.error('Erreur lors de la lecture des préférences bêta:', error)
-    return { enabled: false }
+    log.error(`🔧 [PREFS] Erreur lors de la sauvegarde: ${error.message}`)
+    return false
+  }
+}
+
+// Fonction pour synchroniser les préférences entre localStorage et fichier
+const syncBetaPreferences = async () => {
+  if (!mainWindow || !mainWindow.webContents) {
+    log.warn(`🔧 [PREFS] Impossible de synchroniser: fenêtre non disponible`)
+    return null
+  }
+  
+  try {
+    // Lire depuis localStorage du renderer
+    const localStoragePrefs = await mainWindow.webContents.executeJavaScript(`
+      try {
+        const stored = localStorage.getItem('dimicall-beta-preferences');
+        stored ? JSON.parse(stored) : null;
+      } catch (error) {
+        console.error('Erreur lecture localStorage:', error);
+        null;
+      }
+    `)
+    
+    // Lire depuis le fichier
+    const filePrefs = getBetaPreferences()
+    
+    log.info(`🔧 [PREFS] localStorage: ${JSON.stringify(localStoragePrefs)}`)
+    log.info(`🔧 [PREFS] fichier: ${JSON.stringify(filePrefs)}`)
+    
+    // Déterminer quelle source est la plus récente
+    let finalPrefs = filePrefs
+    
+    if (localStoragePrefs && localStoragePrefs.lastModified) {
+      if (!filePrefs.lastModified || localStoragePrefs.lastModified > filePrefs.lastModified) {
+        finalPrefs = localStoragePrefs
+        saveBetaPreferences(finalPrefs) // Sauvegarder dans le fichier
+        log.info(`🔧 [PREFS] localStorage plus récent, synchronisation vers fichier`)
+      } else {
+        // Synchroniser vers localStorage
+        await mainWindow.webContents.executeJavaScript(`
+          try {
+            localStorage.setItem('dimicall-beta-preferences', '${JSON.stringify(finalPrefs)}');
+            console.log('Préférences synchronisées vers localStorage');
+          } catch (error) {
+            console.error('Erreur sync localStorage:', error);
+          }
+        `)
+        log.info(`🔧 [PREFS] Fichier plus récent, synchronisation vers localStorage`)
+      }
+    }
+    
+    return finalPrefs
+  } catch (error) {
+    log.error(`🔧 [PREFS] Erreur lors de la synchronisation: ${error.message}`)
+    return getBetaPreferences() // Fallback sur le fichier
   }
 }
 
 if (!is.dev) {
-  // Configuration initiale des préférences (sera mise à jour quand la fenêtre sera prête)
+  // Configuration initiale des préférences
   const initialPrefs = getBetaPreferences()
   autoUpdater.allowPrerelease = initialPrefs.enabled
   
-  // Vérifier et télécharger les mises à jour en arrière-plan (pas d'installation auto)
-  autoUpdater.checkForUpdates()
+  log.info(`🚀 [STARTUP] Configuration initiale autoUpdater.allowPrerelease: ${autoUpdater.allowPrerelease}`)
+  
+  // Attendre que la fenêtre soit prête avant la première vérification
+  setTimeout(async () => {
+    // Synchroniser les préférences une fois la fenêtre prête
+    const syncedPrefs = await syncBetaPreferences()
+    if (syncedPrefs && syncedPrefs.enabled !== autoUpdater.allowPrerelease) {
+      autoUpdater.allowPrerelease = syncedPrefs.enabled
+      log.info(`🔄 [STARTUP] allowPrerelease mis à jour après sync: ${autoUpdater.allowPrerelease}`)
+    }
+    
+    // Première vérification des mises à jour
+    log.info(`🔍 [STARTUP] Première vérification des mises à jour avec allowPrerelease: ${autoUpdater.allowPrerelease}`)
+    autoUpdater.checkForUpdates()
+  }, 3000) // Attendre 3 secondes que la fenêtre soit complètement chargée
   
   // Vérifier les mises à jour toutes les 10 minutes
-  setInterval(() => {
+  setInterval(async () => {
+    // Re-synchroniser les préférences avant chaque vérification automatique
+    const syncedPrefs = await syncBetaPreferences()
+    if (syncedPrefs && syncedPrefs.enabled !== autoUpdater.allowPrerelease) {
+      autoUpdater.allowPrerelease = syncedPrefs.enabled
+      log.info(`🔄 [AUTO] allowPrerelease mis à jour: ${autoUpdater.allowPrerelease}`)
+    }
+    
+    log.info(`🔍 [AUTO] Vérification automatique avec allowPrerelease: ${autoUpdater.allowPrerelease}`)
     autoUpdater.checkForUpdates()
   }, 10 * 60 * 1000)
 }
@@ -477,7 +586,7 @@ app.whenReady().then(async () => {
   })
 
   // Vérification manuelle des mises à jour avec retour d'état
-  ipcMain.handle('check-for-updates', async (event, betaEnabled = false) => {
+  ipcMain.handle('check-for-updates', async (event, betaEnabled = false, forceRefresh = false) => {
     try {
       if (is.dev) {
         log.warn('Mise à jour ignorée car l\'application est en mode développement.')
@@ -488,10 +597,39 @@ app.whenReady().then(async () => {
       }
       
       // Configurer les pre-releases selon les préférences utilisateur
+      const previousAllowPrerelease = autoUpdater.allowPrerelease
       autoUpdater.allowPrerelease = betaEnabled
-      log.info(`Vérification manuelle des mises à jour initiée par l'utilisateur (beta: ${betaEnabled})...`)
       
-      autoUpdater.checkForUpdatesAndNotify()
+      log.info(`🔄 [UPDATE] Vérification manuelle initiée par l'utilisateur`)
+      log.info(`🔄 [UPDATE] betaEnabled paramètre: ${betaEnabled}`)
+      log.info(`🔄 [UPDATE] forceRefresh paramètre: ${forceRefresh}`)
+      log.info(`🔄 [UPDATE] allowPrerelease avant: ${previousAllowPrerelease}`)
+      log.info(`🔄 [UPDATE] allowPrerelease après: ${autoUpdater.allowPrerelease}`)
+      log.info(`🔄 [UPDATE] Version actuelle: ${app.getVersion()}`)
+      
+      // Cache-busting: forcer une nouvelle configuration si nécessaire
+      if (forceRefresh || previousAllowPrerelease !== betaEnabled) {
+        log.info(`🔄 [UPDATE] Cache-busting: reconfiguration d'electron-updater`)
+        
+        // Réinitialiser la configuration feed
+        autoUpdater.setFeedURL({
+          provider: 'github',
+          owner: 'doctorbankai',
+          repo: 'Dimi_Call',
+          private: false,
+          // Ajouter un timestamp pour forcer le refresh
+          requestHeaders: {
+            'Cache-Control': 'no-cache',
+            'X-Timestamp': Date.now().toString()
+          }
+        })
+        
+        log.info(`🔄 [UPDATE] Feed URL reconfigurée avec cache-busting`)
+      }
+      
+      const result = await autoUpdater.checkForUpdatesAndNotify()
+      log.info(`🔄 [UPDATE] Résultat checkForUpdatesAndNotify: ${JSON.stringify(result)}`)
+      
       return { status: 'checking', message: 'Vérification des mises à jour lancée.' }
     } catch (error) {
       log.error("Erreur lors de l'initiation de la vérification manuelle des mises à jour:", error)
@@ -523,6 +661,31 @@ app.whenReady().then(async () => {
     }
   })
 
+  // Synchroniser les préférences beta
+  ipcMain.handle('sync-beta-preferences', async (event, preferences) => {
+    try {
+      log.info(`🔄 [IPC] Synchronisation des préférences reçue: ${JSON.stringify(preferences)}`)
+      
+      // Sauvegarder dans le fichier
+      const saved = saveBetaPreferences(preferences)
+      
+      if (saved) {
+        // Mettre à jour autoUpdater immédiatement
+        const previousAllowPrerelease = autoUpdater.allowPrerelease
+        autoUpdater.allowPrerelease = preferences.enabled
+        
+        log.info(`🔄 [IPC] allowPrerelease mis à jour: ${previousAllowPrerelease} -> ${autoUpdater.allowPrerelease}`)
+        
+        return { success: true, message: 'Préférences synchronisées' }
+      } else {
+        return { success: false, message: 'Erreur lors de la sauvegarde' }
+      }
+    } catch (error) {
+      log.error(`🔄 [IPC] Erreur sync préférences: ${error.message}`)
+      return { success: false, message: error.message }
+    }
+  })
+
   // Revenir à la version stable
   ipcMain.handle('revert-to-stable', async () => {
     try {
@@ -535,11 +698,18 @@ app.whenReady().then(async () => {
       }
       
       // Désactiver les pre-releases
+      const previousAllowPrerelease = autoUpdater.allowPrerelease
       autoUpdater.allowPrerelease = false
-      log.info('Retour à la version stable initié par l\'utilisateur...')
+      
+      log.info(`🔄 [UPDATE] Retour à la version stable initié par l'utilisateur`)
+      log.info(`🔄 [UPDATE] allowPrerelease avant: ${previousAllowPrerelease}`)
+      log.info(`🔄 [UPDATE] allowPrerelease après: ${autoUpdater.allowPrerelease}`)
+      log.info(`🔄 [UPDATE] Version actuelle: ${app.getVersion()}`)
       
       // Vérifier s'il y a une version stable disponible
-      autoUpdater.checkForUpdatesAndNotify()
+      const result = await autoUpdater.checkForUpdatesAndNotify()
+      log.info(`🔄 [UPDATE] Résultat checkForUpdatesAndNotify: ${JSON.stringify(result)}`)
+      
       return { success: true, message: 'Recherche de version stable lancée.' }
     } catch (error) {
       log.error("Erreur lors du retour à la version stable:", error)
@@ -552,7 +722,13 @@ app.whenReady().then(async () => {
 
   // Événements de l'auto-updater
   autoUpdater.on('checking-for-update', () => {
+    const allowPrerelease = autoUpdater.allowPrerelease
     console.log('🔍 Vérification des mises à jour...')
+    log.info(`🔍 [UPDATE] Vérification des mises à jour démarrée`)
+    log.info(`🔍 [UPDATE] allowPrerelease: ${allowPrerelease}`)
+    log.info(`🔍 [UPDATE] Version actuelle: ${app.getVersion()}`)
+    log.info(`🔍 [UPDATE] Repository: doctorbankai/Dimi_Call`)
+    
     if (mainWindow) {
       mainWindow.webContents.send('update-checking')
     }
@@ -560,6 +736,13 @@ app.whenReady().then(async () => {
 
   autoUpdater.on('update-available', (info) => {
     console.log('📦 Mise à jour disponible:', info.version)
+    log.info(`📦 [UPDATE] Mise à jour disponible: ${info.version}`)
+    log.info(`📦 [UPDATE] Release date: ${info.releaseDate || 'non définie'}`)
+    log.info(`📦 [UPDATE] Pre-release: ${info.prerelease || 'non défini'}`)
+    log.info(`📦 [UPDATE] Release notes: ${info.releaseNotes ? 'présentes' : 'absentes'}`)
+    log.info(`📦 [UPDATE] Files: ${info.files ? info.files.length : 0} fichiers`)
+    log.info(`📦 [UPDATE] allowPrerelease était: ${autoUpdater.allowPrerelease}`)
+    
     updateInfo = info
     if (mainWindow) {
       mainWindow.webContents.send('update-available', info)
@@ -568,6 +751,12 @@ app.whenReady().then(async () => {
 
   autoUpdater.on('update-not-available', (info) => {
     console.log('✅ Application à jour:', info.version)
+    log.info(`✅ [UPDATE] Aucune mise à jour disponible`)
+    log.info(`✅ [UPDATE] Version actuelle: ${app.getVersion()}`)
+    log.info(`✅ [UPDATE] Dernière version vérifiée: ${info.version}`)
+    log.info(`✅ [UPDATE] allowPrerelease était: ${autoUpdater.allowPrerelease}`)
+    log.info(`✅ [UPDATE] Si pre-release activé, vérifiez que GitHub a bien des pre-releases plus récentes`)
+    
     if (mainWindow) {
       mainWindow.webContents.send('update-not-available', info)
     }
@@ -575,6 +764,11 @@ app.whenReady().then(async () => {
 
   autoUpdater.on('error', (err) => {
     console.error('❌ Erreur lors de la mise à jour:', err)
+    log.error(`❌ [UPDATE] Erreur lors de la mise à jour: ${err.message}`)
+    log.error(`❌ [UPDATE] Stack trace: ${err.stack}`)
+    log.error(`❌ [UPDATE] allowPrerelease était: ${autoUpdater.allowPrerelease}`)
+    log.error(`❌ [UPDATE] Version actuelle: ${app.getVersion()}`)
+    
     if (mainWindow) {
       mainWindow.webContents.send('update-error', err.message)
     }

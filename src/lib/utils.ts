@@ -18,6 +18,26 @@ export const filterAndJoin = (...values: (string | null | undefined)[]): string 
     .trim();
 };
 
+/**
+ * Supprime les accents d'une chaîne de caractères
+ * @param str - La chaîne à normaliser
+ * @returns La chaîne sans accents
+ */
+export const removeAccents = (str: string): string => {
+  if (!str || typeof str !== 'string') {
+    return '';
+  }
+  
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    // Gérer les ligatures spéciales qui ne sont pas normalisées par NFD
+    .replace(/œ/g, 'oe')
+    .replace(/Œ/g, 'OE')
+    .replace(/æ/g, 'ae')
+    .replace(/Æ/g, 'AE');
+};
+
 // Variables globales pour garder les références des fenêtres de recherche
 let linkedInWindowRef: Window | null = null;
 let googleWindowRef: Window | null = null;
@@ -73,11 +93,15 @@ export const openGoogleWindow = (url: string): void => {
 
 /**
  * Génère une URL de recherche LinkedIn et l'ouvre dans la fenêtre dédiée
- * @param prenom - Prénom de la personne à rechercher
- * @param nom - Nom de la personne à rechercher
+ * @param prenom - Prénom de la personne à rechercher (peut contenir des accents)
+ * @param nom - Nom de la personne à rechercher (peut contenir des accents)
  */
 export const searchLinkedIn = (prenom: string, nom: string): void => {
-  const query = filterAndJoin(prenom, nom);
+  // Normaliser les accents avant de créer la requête
+  const normalizedPrenom = removeAccents(prenom);
+  const normalizedNom = removeAccents(nom);
+  
+  const query = filterAndJoin(normalizedPrenom, normalizedNom);
   if (!query) {
     console.warn('Aucune valeur valide pour la recherche LinkedIn');
     return;

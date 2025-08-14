@@ -129,6 +129,13 @@ const getCategories = (devToolsEnabled: boolean) => [
     icon: DownloadCloud,
     description: 'Système de mise à jour automatique'
   },
+  // Section Diagnostic visible uniquement si DevTools activés
+  ...(devToolsEnabled ? [{
+    id: 'diagnostic' as SettingsCategory,
+    label: 'Diagnostic',
+    icon: Info,
+    description: 'Diagnostic du système de mise à jour'
+  }] : []),
   // Section Logs visible uniquement si DevTools activés
   ...(devToolsEnabled ? [{
     id: 'logs' as SettingsCategory,
@@ -182,6 +189,21 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   const [shortcutsChanged, setShortcutsChanged] = useState(false);
   const [appVersion, setAppVersion] = useState<string>('Chargement...');
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+
+  // État pour le diagnostic
+  const [diagnosticInfo, setDiagnosticInfo] = useState<{
+    allowPrerelease: boolean | null;
+    lastCheck: string | null;
+    currentVersion: string | null;
+    betaPreferences: BetaPreferences | null;
+    updateStatus: any;
+  }>({
+    allowPrerelease: null,
+    lastCheck: null,
+    currentVersion: null,
+    betaPreferences: null,
+    updateStatus: null
+  });
   
   // Configuration des colonnes
   const [columnConfig, setColumnConfig] = useState<Record<string, boolean>>({});
@@ -276,6 +298,13 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         });
     }
   }, [isOpen]);
+
+  // Charger les informations de diagnostic quand la section diagnostic est ouverte
+  useEffect(() => {
+    if (isOpen && activeCategory === 'diagnostic') {
+      loadDiagnosticInfo();
+    }
+  }, [isOpen, activeCategory]);
 
   const handleTemplateChange = (field: 'subject' | 'body', value: string) => {
     setTemplates(prev => ({
@@ -507,6 +536,41 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     }
   };
 
+  // Fonction pour charger les informations de diagnostic
+  const loadDiagnosticInfo = async () => {
+    try {
+      const betaPrefs = BetaPreferencesService.getBetaPreferences();
+      const updateStatus = window.electronAPI?.getUpdateStatus ? await window.electronAPI.getUpdateStatus() : null;
+      const currentVersion = window.electronAPI?.getAppVersion ? await window.electronAPI.getAppVersion() : null;
+
+      setDiagnosticInfo({
+        allowPrerelease: betaPrefs.enabled,
+        lastCheck: new Date().toLocaleString(),
+        currentVersion,
+        betaPreferences: betaPrefs,
+        updateStatus
+      });
+    } catch (error) {
+      console.error('Erreur lors du chargement des infos de diagnostic:', error);
+    }
+  };
+
+  // Fonction pour forcer la vérification avec cache-busting
+  const handleForceCheck = async () => {
+    setIsCheckingUpdates(true);
+    try {
+      const betaPrefs = BetaPreferencesService.getBetaPreferences();
+      if (window.electronAPI?.checkForUpdates) {
+        await window.electronAPI.checkForUpdates(betaPrefs.enabled, true); // forceRefresh = true
+      }
+      await loadDiagnosticInfo();
+    } catch (error) {
+      console.error('Erreur lors de la vérification forcée:', error);
+    } finally {
+      setIsCheckingUpdates(false);
+    }
+  };
+
   const handleDevToolsToggle = async (enabled: boolean) => {
     try {
       if (enabled) {
@@ -617,6 +681,112 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  const renderDiagnosticSettings = () => {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
+                <Info className="w-4 h-4 text-muted-foreground" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Diagnostic du système de mise à jour</CardTitle>
+                <CardDescription>Informations détaillées sur l'état du système</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Version actuelle</Label>
+                <div className="text-sm text-muted-foreground">
+                  {diagnosticInfo.currentVersion || 'Chargement...'}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Pre-releases activées</Label>
+                <div className="flex items-center gap-2">
+                  <Badge variant={diagnosticInfo.allowPrerelease ? "default" : "secondary"}>
+                    {diagnosticInfo.allowPrerelease ? "Oui" : "Non"}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Dernière vérification</Label>
+                <div className="text-sm text-muted-foreground">
+                  {diagnosticInfo.lastCheck || 'Jamais'}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">État des mises à jour</Label>
+                <div className="text-sm text-muted-foreground">
+                  {diagnosticInfo.updateStatus?.updateAvailable ? (
+                    <Badge variant="default">Mise à jour disponible</Badge>
+                  ) : (
+                    <Badge variant="secondary">À jour</Badge>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <Separator />
+            
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Préférences Beta</Label>
+              {diagnosticInfo.betaPreferences && (
+                <div className="bg-muted/50 p-3 rounded-md text-sm font-mono">
+                  <pre>{JSON.stringify(diagnosticInfo.betaPreferences, null, 2)}</pre>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">État des mises à jour</Label>
+              {diagnosticInfo.updateStatus && (
+                <div className="bg-muted/50 p-3 rounded-md text-sm font-mono">
+                  <pre>{JSON.stringify(diagnosticInfo.updateStatus, null, 2)}</pre>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex gap-2">
+              <Button 
+                onClick={loadDiagnosticInfo} 
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Actualiser
+              </Button>
+              
+              <Button 
+                onClick={handleForceCheck} 
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                disabled={isCheckingUpdates}
+              >
+                <DownloadCloud className={`w-4 h-4 ${isCheckingUpdates ? 'animate-spin' : ''}`} />
+                {isCheckingUpdates ? 'Vérification...' : 'Forcer la vérification'}
+              </Button>
+            </div>
+            
+            <div className="text-xs text-muted-foreground space-y-1">
+              <p>• La vérification forcée ignore le cache et refait une requête à GitHub</p>
+              <p>• Les logs détaillés sont disponibles dans la console Electron (F12)</p>
+              <p>• Les préférences sont synchronisées entre localStorage et le fichier système</p>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -1133,6 +1303,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         return renderShortcutSettings();
       case 'update':
         return renderUpdateSettings();
+      case 'diagnostic':
+        return renderDiagnosticSettings();
       case 'columns':
         return renderColumnSettings();
       case 'logs':

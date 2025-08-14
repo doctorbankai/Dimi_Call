@@ -69,16 +69,40 @@ export class BetaPreferencesService {
       this.setCurrentVersionType(preferences.enabled ? 'beta' : 'stable');
       
       console.log('Préférences bêta sauvegardées:', toSave);
+      
+      // Synchroniser avec Electron
+      this.syncWithElectron(toSave);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde des préférences bêta:', error);
       
       // Retry une fois en cas d'erreur
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(preferences));
+        this.syncWithElectron(preferences);
       } catch (retryError) {
         console.error('Échec du retry de sauvegarde:', retryError);
         throw new Error('Impossible de sauvegarder les préférences bêta');
       }
+    }
+  }
+
+  /**
+   * Synchronise les préférences avec le processus Electron
+   */
+  static async syncWithElectron(preferences: BetaPreferences): Promise<void> {
+    try {
+      if (window.electronAPI?.syncBetaPreferences) {
+        const result = await window.electronAPI.syncBetaPreferences(preferences);
+        if (result.success) {
+          console.log('✅ Préférences synchronisées avec Electron');
+        } else {
+          console.error('❌ Erreur sync Electron:', result.message);
+        }
+      } else {
+        console.warn('⚠️ API Electron non disponible pour la synchronisation');
+      }
+    } catch (error) {
+      console.error('❌ Erreur lors de la synchronisation avec Electron:', error);
     }
   }
 
