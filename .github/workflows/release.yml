@@ -46,16 +46,15 @@ jobs:
         id: set_version
         shell: bash
         run: |
-          if [[ -n "${{ github.event.inputs.tag }}" ]]; then
+          if [[ -n "$INPUT_TAG" ]]; then
             # Supprimer le préfixe 'v' si présent (ex: v1.0.0 -> 1.0.0)
-            INPUT_TAG="${{ github.event.inputs.tag }}"
             VERSION="${INPUT_TAG#v}"
             echo "🏷️ Version spécifiée via input: $VERSION"
-            
+
             # Vérifier la version actuelle
             CURRENT_VERSION=$(node -p "require('./package.json').version")
             echo "📦 Version actuelle: $CURRENT_VERSION"
-            
+
             if [[ "$VERSION" != "$CURRENT_VERSION" ]]; then
               # Mettre à jour le package.json et package-lock.json seulement si différent
               npm version "$VERSION" --no-git-tag-version
@@ -69,6 +68,8 @@ jobs:
             echo "📦 Utilisation de la version existante du package.json: $VERSION"
           fi
           echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
 
       - name: Install dependencies
         run: npm ci
