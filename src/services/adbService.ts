@@ -286,6 +286,16 @@ class AdbService {
     try {
       this.log(`📞 Initiation d'appel vers ${phoneNumber}...`);
       
+      // 🔧 AMÉLIORATION: Vérifier l'état actuel avant d'initier l'appel
+      const currentState = this.connectionState.currentCallState;
+      if (currentState !== 'idle') {
+        this.log(`📞 ⚠️ État d'appel non-idle détecté: ${currentState}. Attendre la fin de l'appel en cours...`);
+        return {
+          success: false,
+          message: `Un appel est déjà en cours (état: ${currentState}). Terminez-le d'abord.`
+        };
+      }
+      
       const result = await window.electronAPI.adb.makeCall(phoneNumber);
       
       if (result.success) {
@@ -296,8 +306,14 @@ class AdbService {
         this.wasInCall = false; // Reset du flag
         this.notifyListeners();
         
-        // Démarrer la surveillance de l'appel
-        this.startCallMonitoring();
+        // 🔧 AMÉLIORATION: Attendre un peu avant de démarrer la surveillance
+        // pour laisser le temps à l'appel de s'établir
+        setTimeout(() => {
+          // Démarrer la surveillance de l'appel seulement si l'état est toujours 'ringing'
+          if (this.connectionState.currentCallState === 'ringing') {
+            this.startCallMonitoring();
+          }
+        }, 1000); // Attendre 1 seconde
         
         return {
           success: true,
@@ -395,7 +411,7 @@ class AdbService {
 
     this.callMonitorInterval = setInterval(async () => {
       await this.checkCallState();
-    }, 1000); // Vérifier l'état d'appel toutes les secondes
+    }, 500); // 🔧 AMÉLIORATION: Vérifier l'état d'appel toutes les 500ms pour plus de réactivité
 
     this.log('📞 Surveillance d\'appel démarrée');
   }
@@ -450,11 +466,19 @@ class AdbService {
 
             // Si l'appel passe de 'offhook' ou 'ringing' à 'idle', l'appel est terminé
             if ((previousState === 'offhook' || previousState === 'ringing') && newState === 'idle') {
-              this.log('📞 Appel terminé détecté');
-              
-              // Calculer la durée de l'appel
+              // 🔧 AMÉLIORATION: Ajouter un délai de sécurité pour éviter les terminaisons prématurées
+              const minCallDuration = 2000; // 2 secondes minimum
+              const currentTime = new Date().getTime();
               const callDuration = this.callStartTime ? 
-                new Date().getTime() - this.callStartTime.getTime() : 0;
+                currentTime - this.callStartTime.getTime() : 0;
+              
+              if (callDuration < minCallDuration) {
+                this.log(`📞 ⚠️ Appel terminé trop rapidement (${Math.round(callDuration)}ms < ${minCallDuration}ms). Ignoré.`);
+                // Ne pas terminer l'appel, continuer la surveillance
+                return;
+              }
+              
+              this.log('📞 Appel terminé détecté');
               
               // Créer l'événement de fin d'appel
               const callEndEvent: CallEndEvent = {

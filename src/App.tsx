@@ -51,7 +51,7 @@ import {
 import {
   Phone, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck, Linkedin, Globe, ExternalLink,
   Download, Keyboard, RefreshCw, Sun, Moon, Columns, X, Filter, Infinity, 
-  Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2, Users
+  Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2, Users, Timer
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -1738,6 +1738,34 @@ Dimitri MOREL - Arcanis Conseil`;
 
       
       {/* Notifications */}
+      
+             {/* 🔧 Indicateur d'appel en cours avec chronométrage en temps réel - DÉSACTIVÉ */}
+       {/* {activeCallContactId && callStartTime && (
+         <div className="fixed top-4 left-4 z-50">
+           <div className="flex items-center gap-3 px-4 py-3 bg-green-500/10 border border-green-300 dark:border-green-700 rounded-lg animate-pulse shadow-lg">
+             <div className="flex items-center gap-2">
+               <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse"></div>
+               <Phone className="h-5 w-5 text-green-600 dark:text-green-400" />
+               <span className="text-sm font-medium text-green-700 dark:text-green-300">
+                 Appel en cours
+               </span>
+             </div>
+             <div className="flex items-center gap-2 bg-green-100 dark:bg-green-900/50 px-3 py-2 rounded-md border border-green-300 dark:border-green-700">
+               <Timer className="h-4 w-4 text-green-600 dark:text-green-400" />
+               <span className="text-xl font-mono font-bold text-green-800 dark:text-green-200 min-w-[4rem] text-center">
+                 {(() => {
+                   if (!callStartTime) return '00:00';
+                   const now = new Date();
+                   const durationMs = now.getTime() - callStartTime.getTime();
+                   const seconds = Math.floor((durationMs / 1000) % 60);
+                   const minutes = Math.floor((durationMs / (1000 * 60)) % 60);
+                   return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                 })()}
+               </span>
+             </div>
+           </div>
+         </div>
+       )} */}
 
 
       {/* Modal de progression */}

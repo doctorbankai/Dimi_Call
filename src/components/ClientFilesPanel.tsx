@@ -20,19 +20,26 @@ interface ContactInfoCardProps {
 const ContactInfoCard: React.FC<ContactInfoCardProps> = ({ contact, theme, activeCallContactId, callStartTime }) => {
   const [currentCallDuration, setCurrentCallDuration] = useState('00:00');
   
-  // 🔄 Timer pour l'appel en cours
+  // 🔄 Timer pour l'appel en cours - AMÉLIORÉ
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     
     if (contact && activeCallContactId === (contact.UID || contact.id) && callStartTime) {
-      interval = setInterval(() => {
+      // Démarrer immédiatement le timer
+      const updateDuration = () => {
         const now = new Date();
         const durationMs = now.getTime() - callStartTime.getTime();
         const seconds = Math.floor((durationMs / 1000) % 60);
         const minutes = Math.floor((durationMs / (1000 * 60)) % 60);
         const durationStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         setCurrentCallDuration(durationStr);
-      }, 1000);
+      };
+      
+      // Mettre à jour immédiatement
+      updateDuration();
+      
+      // Puis toutes les secondes
+      interval = setInterval(updateDuration, 1000);
     } else {
       setCurrentCallDuration('00:00');
     }
@@ -174,9 +181,9 @@ const ContactInfoCard: React.FC<ContactInfoCardProps> = ({ contact, theme, activ
                   <Phone className="h-3 w-3" />
                 </div>
                 <span>Appel en cours</span>
-                <div className="flex items-center gap-1 bg-green-100 dark:bg-green-900/50 px-1.5 py-0.5 rounded text-xs font-mono">
-                  <Timer className="h-2.5 w-2.5" />
-                  <span>{currentCallDuration}</span>
+                <div className="flex items-center gap-1 bg-green-100 dark:bg-green-900/50 px-2 py-1 rounded-md text-sm font-mono font-bold text-green-800 dark:text-green-200 border border-green-300 dark:border-green-700">
+                  <Timer className="h-3 w-3" />
+                  <span className="min-w-[3rem] text-center">{currentCallDuration}</span>
                 </div>
               </div>
             </div>

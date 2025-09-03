@@ -88,9 +88,14 @@ export class ExportColumnService {
       EXPORT_COLUMN_ORDER.map(config => config.exportName)
     );
 
-    // Ajouter les propriétés non configurées
+    // Colonnes à exclure explicitement de l'export
+    const excludedColumns = new Set(['id', 'numeroLigne']);
+
+    // Ajouter les propriétés non configurées (en excluant les colonnes interdites)
     Object.keys(originalRow).forEach(key => {
-      if (!configuredProperties.has(key) && !usedExportNames.has(key)) {
+      if (!configuredProperties.has(key) && 
+          !usedExportNames.has(key) && 
+          !excludedColumns.has(key)) {
         reorderedRow[key] = originalRow[key];
       }
     });
@@ -124,8 +129,13 @@ export class ExportColumnService {
     const usedExportNames = new Set(configuredHeaders);
     const remainingHeaders: string[] = [];
 
+    // Colonnes à exclure explicitement de l'export
+    const excludedColumns = new Set(['id', 'numeroLigne']);
+
     Object.keys(sampleData).forEach(key => {
-      if (!configuredProperties.has(key) && !usedExportNames.has(key)) {
+      if (!configuredProperties.has(key) && 
+          !usedExportNames.has(key) && 
+          !excludedColumns.has(key)) {
         remainingHeaders.push(key);
       }
     });

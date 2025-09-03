@@ -28,6 +28,8 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatPhoneNumber } from '../services/dataService';
 import { ReminderDialog } from './ReminderDialog';
+import { ColumnTypeSelector } from './ColumnTypeSelector';
+import { useColumnTypes } from '../hooks/useColumnTypes';
 
 type SortDirection = 'asc' | 'desc' | null;
 
@@ -686,6 +688,8 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
   availableColumns = [],
   onFileImport,
 }, ref) => {
+  // Hook pour gérer les types de colonnes
+  const { getColumnType, updateColumnType } = useColumnTypes();
   const [editingCell, setEditingCell] = useState<{ contactId: string; field: keyof Contact } | null>(null);
   const [editValue, setEditValue] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: keyof Contact | null; direction: SortDirection }>({
@@ -1121,6 +1125,8 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
         );
     }
   };
+
+
 
   // Colonnes visibles basées sur les props du parent
   const visibleOrderedColumns = useMemo(() => {
@@ -1663,7 +1669,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                             onDrop={(e) => handleDrop(e, column.id)}
                             onDragEnd={handleDragEnd}
                             className={cn(
-                              "text-foreground h-10 align-middle whitespace-nowrap px-2 py-1.5 text-center font-medium text-xs select-none transition-all duration-200",
+                              "text-foreground h-16 align-middle whitespace-nowrap px-2 py-1.5 text-center font-medium text-xs select-none transition-all duration-200",
                               column.canSort ? "cursor-pointer hover:bg-muted" : "",
                               draggedColumn === column.id && "opacity-50 scale-95",
                               dragOverColumn === column.id && "border-l-4 border-l-primary bg-primary/10",
@@ -1691,19 +1697,33 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                               }
                             }}
                           >
-                            <div className="flex items-center justify-center gap-1">
-                              <GripVertical className="w-3 h-3 text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
-                              <span className="truncate flex-1 text-center">{column.label}</span>
-                              {column.canSort && sortConfig.key === column.key && (
-                                <>
-                                  {sortConfig.direction === 'asc' && <ArrowUp className="w-3 h-3 text-muted-foreground/50" />}
-                                  {sortConfig.direction === 'desc' && <ArrowDown className="w-3 h-3 text-muted-foreground/50" />}
-                                  {!sortConfig.direction && <ArrowUpDown className="w-3 h-3 text-muted-foreground/50" />}
-                                </>
-                              )}
-                              {column.canSort && sortConfig.key !== column.key && (
-                                <ArrowUpDown className="w-3 h-3 text-muted-foreground/50" />
-                              )}
+                            <div className="flex flex-col items-center justify-center gap-1 min-h-[40px]">
+                              {/* Ligne supérieure : Grip + Label + Indicateurs de tri */}
+                              <div className="flex items-center justify-center gap-1 w-full">
+                                <GripVertical className="w-3 h-3 text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
+                                <span className="truncate flex-1 text-center text-xs font-medium">{column.label}</span>
+                                {column.canSort && sortConfig.key === column.key && (
+                                  <>
+                                    {sortConfig.direction === 'asc' && <ArrowUp className="w-3 h-3 text-muted-foreground/50" />}
+                                    {sortConfig.direction === 'desc' && <ArrowDown className="w-3 h-3 text-muted-foreground/50" />}
+                                    {!sortConfig.direction && <ArrowUpDown className="w-3 h-3 text-muted-foreground/50" />}
+                                  </>
+                                )}
+                                {column.canSort && sortConfig.key !== column.key && (
+                                  <ArrowUpDown className="w-3 h-3 text-muted-foreground/50" />
+                                )}
+                              </div>
+                              
+                              {/* Ligne inférieure : Sélecteur de type */}
+                              <div className="flex items-center justify-center">
+                                <ColumnTypeSelector
+                                  columnId={column.id}
+                                  columnLabel={column.label}
+                                  currentType={getColumnType(column.id, column.label)}
+                                  onTypeChange={updateColumnType}
+                                  className="h-5 px-1.5 text-xs"
+                                />
+                              </div>
                             </div>
                           </TableHead>
                        ))}

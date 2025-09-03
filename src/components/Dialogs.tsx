@@ -196,8 +196,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
         )}
         
         <div className="bg-muted text-muted-foreground p-3 rounded text-sm">
-          <strong>Aperçu:</strong> Email {emailTypeOptions.find(opt => opt.value === emailType)?.label} 
-          pour {civilityOptions.find(opt => opt.value === civility)?.label} {contact.prenom} {contact.nom}
+          <strong>Aperçu:</strong> Email {emailTypeOptions.find(opt => opt.value === emailType)?.label} pour {civilityOptions.find(opt => opt.value === civility)?.label} {contact.prenom} {contact.nom}
           {needsDateTime && selectedDate && selectedTime && (
             <div className="mt-1">
               <strong>Rendez-vous:</strong> {format(selectedDate, 'PPPP', { locale: fr })} à {selectedTime}
