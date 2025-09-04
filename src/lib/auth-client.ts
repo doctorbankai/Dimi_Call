@@ -9,6 +9,32 @@ export const useSupabaseAuth = () => {
   const [user, setUser] = useState<AuthUser>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Fonction pour vérifier si l'utilisateur existe encore dans Supabase
+  const verifyUserStillExists = async (currentUser: AuthUser): Promise<boolean> => {
+    if (!currentUser) return false;
+    
+    try {
+      // Tenter de récupérer les informations utilisateur depuis Supabase
+      const { data, error } = await supabase.auth.getUser();
+      
+      if (error) {
+        console.log('[Auth] Erreur lors de la vérification utilisateur:', error);
+        return false;
+      }
+      
+      // Si pas d'utilisateur retourné, l'utilisateur a été supprimé
+      if (!data.user) {
+        console.log('[Auth] ⚠️ Utilisateur supprimé détecté - session invalide');
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('[Auth] Erreur lors de la vérification utilisateur:', error);
+      return false;
+    }
+  };
+
   useEffect(() => {
     setIsLoading(true);
     // 1. Récupérer la session initiale
@@ -43,8 +69,26 @@ export const useSupabaseAuth = () => {
       }
     );
 
+    // 3. Vérification périodique de l'existence de l'utilisateur (toutes les 30 secondes)
+    const userVerificationInterval = setInterval(async () => {
+      const currentSession = await supabase.auth.getSession();
+      const currentUser = currentSession.data.session?.user ?? null;
+      
+      if (currentUser) {
+        const userStillExists = await verifyUserStillExists(currentUser);
+        if (!userStillExists) {
+          console.log('[Auth] 🚨 Utilisateur supprimé - déconnexion forcée');
+          // Forcer la déconnexion
+          await supabase.auth.signOut();
+          // Rediriger vers la page de login
+          window.location.reload();
+        }
+      }
+    }, 30000); // Vérification toutes les 30 secondes
+
     return () => {
       authListener.subscription.unsubscribe();
+      clearInterval(userVerificationInterval);
     };
   }, []);
 
