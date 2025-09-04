@@ -1447,12 +1447,6 @@ Dimitri MOREL - Arcanis Conseil`;
   };
 
   const toggleColumnVisibility = (header: string) => {
-    // Empêcher la modification des colonnes essentielles
-    if (essentialColumns.includes(header)) {
-      showNotification('info', `La colonne "${header}" ne peut pas être masquée car elle est essentielle.`);
-      return;
-    }
-    
     // Vérifier que la colonne est disponible
     if (!availableColumns.includes(header)) {
       showNotification('error', `La colonne "${header}" n'est pas disponible dans les données actuelles.`);
@@ -2335,14 +2329,10 @@ Dimitri MOREL - Arcanis Conseil`;
                     return (
                       <DropdownMenuCheckboxItem
                         key={header}
-                        className={cn(
-                          "flex items-center gap-2",
-                          isEssential && "opacity-60 cursor-not-allowed"
-                        )}
+                        className="flex items-center gap-2"
                         checked={visibleColumns[header] || false}
                         onCheckedChange={() => toggleColumnVisibility(header)}
                         onSelect={(e) => e.preventDefault()} // Empêche la fermeture du menu
-                        disabled={isEssential}
                       >
                         <span className="flex-1">{header}</span>
                         {isEssential && (
