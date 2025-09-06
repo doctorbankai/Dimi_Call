@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { DateCalculationService, TimeUnit } from '../services/dateCalculationService';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +17,8 @@ interface RelativeDateSelectorState {
 }
 
 const TIME_UNITS: { value: TimeUnit; label: string }[] = [
+  { value: 'minutes', label: 'minute(s)' },
+  { value: 'hours', label: 'heure(s)' },
   { value: 'days', label: 'jour(s)' },
   { value: 'weeks', label: 'semaine(s)' },
   { value: 'months', label: 'mois' },
@@ -31,12 +33,21 @@ export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
 }) => {
   const [state, setState] = useState<RelativeDateSelectorState>({
     quantity: '',
-    unit: 'days'
+    unit: 'hours'
   });
   const [previewText, setPreviewText] = useState<string>('');
   const [error, setError] = useState<string>('');
+  
+  // Référence pour éviter les boucles infinies
+  const isInternalChange = useRef(false);
+  const lastCalculatedDate = useRef<string>('');
 
   // Calculer et mettre à jour la date quand quantity ou unit change
+  const onDateChangeRef = useRef(onDateChange);
+  useEffect(() => {
+    onDateChangeRef.current = onDateChange;
+  }, [onDateChange]);
+
   const calculateAndUpdateDate = useCallback((quantity: number, unit: TimeUnit) => {
     try {
       setError('');
@@ -61,8 +72,11 @@ export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
       const displayDate = DateCalculationService.formatDateForDisplay(calculatedDate);
       setPreviewText(`${preview} (${displayDate})`);
       
-      // Notifier le parent du changement de date
-      onDateChange(calculatedDate);
+      // Marquer comme changement interne et notifier le parent
+      isInternalChange.current = true;
+      lastCalculatedDate.current = calculatedDate;
+      // Notifier le parent via une ref stable pour éviter de re-créer la callback
+      onDateChangeRef.current(calculatedDate);
 
       // Afficher un avertissement si nécessaire
       if (validation.warningMessage) {
@@ -72,7 +86,7 @@ export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
       setError('Erreur lors du calcul de la date');
       setPreviewText('');
     }
-  }, [onDateChange]);
+  }, []);
 
   // Gérer le changement de quantité
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,65 +104,41 @@ export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
       return; // Ignorer les valeurs non numériques
     }
 
+    // Mettre à jour l'état uniquement; le calcul est déclenché par un useEffect
     setState(prev => ({ ...prev, quantity: numValue }));
-    
-    if (numValue > 0) {
-      calculateAndUpdateDate(numValue, state.unit);
-    }
   };
 
   // Gérer le changement d'unité
   const handleUnitChange = (newUnit: TimeUnit) => {
+    // Mettre à jour l'état uniquement; le calcul est déclenché par un useEffect
     setState(prev => ({ ...prev, unit: newUnit }));
-    
-    if (typeof state.quantity === 'number' && state.quantity > 0) {
-      calculateAndUpdateDate(state.quantity, newUnit);
-    }
   };
 
-  // Réinitialiser quand currentDate change de l'extérieur (sélection manuelle)
+  // Déclencher le calcul et la notification parent quand quantity/unit changent
   useEffect(() => {
-    // Si la date actuelle ne correspond pas à ce qui serait calculé,
-    // réinitialiser les sélecteurs relatifs
     if (typeof state.quantity === 'number' && state.quantity > 0) {
-      try {
-        const calculatedDate = DateCalculationService.calculateFutureDate(state.quantity, state.unit);
-        if (calculatedDate !== currentDate) {
-          // Réinitialiser seulement la quantité, préserver l'unité
-          setState(prev => ({ ...prev, quantity: '' }));
-          setPreviewText('');
-          setError('');
-        }
-      } catch {
-        // En cas d'erreur de calcul, réinitialiser seulement la quantité
-        setState(prev => ({ ...prev, quantity: '' }));
-        setPreviewText('');
-        setError('');
-      }
+      calculateAndUpdateDate(state.quantity, state.unit);
     }
-  }, [currentDate, state.quantity, state.unit]);
+    // calculateAndUpdateDate est stable (dépendance vide), pas besoin de l'ajouter
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.quantity, state.unit]);
 
   // Effet pour détecter les changements externes de date (sélection manuelle)
   useEffect(() => {
-    // Si currentDate change et qu'on a des valeurs dans les sélecteurs,
-    // vérifier si c'est cohérent
-    if (currentDate && typeof state.quantity === 'number' && state.quantity > 0) {
-      try {
-        const expectedDate = DateCalculationService.calculateFutureDate(state.quantity, state.unit);
-        if (expectedDate !== currentDate) {
-          // La date externe ne correspond pas à notre calcul, réinitialiser seulement la quantité
-          setState(prev => ({ ...prev, quantity: '' }));
-          setPreviewText('');
-          setError('');
-        }
-      } catch {
-        // Erreur de calcul, réinitialiser seulement la quantité
-        setState(prev => ({ ...prev, quantity: '' }));
-        setPreviewText('');
-        setError('');
-      }
+    // Ignorer les changements que nous avons nous-mêmes causés
+    if (isInternalChange.current) {
+      isInternalChange.current = false;
+      return;
+    }
+
+    // Si la date externe change et qu'elle ne correspond pas à notre calcul,
+    // réinitialiser seulement la quantité (préserver l'unité)
+    if (currentDate && currentDate !== lastCalculatedDate.current) {
+      setState(prev => ({ ...prev, quantity: '' }));
+      setPreviewText('');
+      setError('');
     } else if (!currentDate) {
-      // Si la date externe est effacée, réinitialiser seulement la quantité (garder l'unité)
+      // Si la date externe est effacée, réinitialiser seulement la quantité
       setState(prev => ({ ...prev, quantity: '' }));
       setPreviewText('');
       setError('');
@@ -242,7 +232,7 @@ export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
         Saisissez un nombre entre 1 et 999 et sélectionnez l'unité pour calculer automatiquement la date
       </div>
       <div id="unit-help" className="sr-only">
-        Choisissez l'unité de temps : jours, semaines, mois ou années
+        Choisissez l'unité de temps : minutes, heures, jours, semaines, mois ou années
       </div>
     </div>
   );

@@ -37,6 +37,8 @@ export const EXPORT_COLUMN_ORDER: ExportColumnConfig[] = [
   { exportName: 'Heure Appel', dataProperty: 'heureAppel', order: 13, isVirtual: false },
   { exportName: 'Statut', dataProperty: 'statut', order: 14, isVirtual: false },
   { exportName: 'Commentaire', dataProperty: 'commentaire', order: 15, isVirtual: false },
+  { exportName: 'Date RDV', dataProperty: 'dateRDV', order: 16, isVirtual: false },
+  { exportName: 'Heure RDV', dataProperty: 'heureRDV', order: 17, isVirtual: false },
 ];
 
 /**

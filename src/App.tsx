@@ -66,6 +66,9 @@ import { ShortcutIndicator } from './components/ShortcutIndicator';
 import { shortcutService } from './services/shortcutService';
 import { SettingsDialog, getSavedColumnConfig } from './components/SettingsDialog';
 
+// Clé de stockage pour la visibilité des colonnes
+const VISIBLE_COLUMNS_STORAGE_KEY = 'dimicall-visible-columns';
+
 
 // Composant DonutChart moderne
 const DonutChart: React.FC<{ progress: number; size?: number }> = ({ progress, size = 32 }) => {
@@ -120,12 +123,32 @@ const App: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   
   // State declarations
-  const [theme, setTheme] = useState<Theme>(Theme.Dark);
+  const [theme, setTheme] = useState<Theme>(() => {
+    try {
+      const saved = localStorage.getItem('dimicall-theme');
+      return saved === 'light' ? Theme.Light : Theme.Dark;
+    } catch {
+      return Theme.Dark;
+    }
+  });
   const [activeMenuTab, setActiveMenuTab] = useState<'dimicall'>('dimicall');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [callStates, setCallStates] = useState<CallStates>({});
-  const [searchTerm, setSearchTerm] = useState('');
-  const [searchColumn, setSearchColumn] = useState<keyof Contact | 'all'>('all');
+  const [searchTerm, setSearchTerm] = useState(() => {
+    try {
+      return localStorage.getItem('dimicall-search-term') || '';
+    } catch {
+      return '';
+    }
+  });
+  const [searchColumn, setSearchColumn] = useState<keyof Contact | 'all'>(() => {
+    try {
+      const saved = localStorage.getItem('dimicall-search-column');
+      return (saved && saved !== 'null') ? (saved as keyof Contact | 'all') : 'all';
+    } catch {
+      return 'all';
+    }
+  });
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [activeCallContactId, setActiveCallContactId] = useState<string | null>(null);
   const [callStartTime, setCallStartTime] = useState<Date | null>(null);
@@ -169,7 +192,14 @@ const App: React.FC = () => {
       return 'linkedin';
     }
   });
-  const [splitPanelOpen, setSplitPanelOpen] = useState(true);
+  const [splitPanelOpen, setSplitPanelOpen] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('dimicall-split-panel-open');
+      return saved ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
   
   // État pour l'URL Cal.com personnalisée
   const [calcomUrl, setCalcomUrl] = useState<string>(() => {
@@ -222,7 +252,14 @@ Dimitri MOREL - Arcanis Conseil`;
   });
 
   // État intelligent pour les colonnes visibles basé sur les données réelles
-  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({});
+  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem(VISIBLE_COLUMNS_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
   const [availableDataKeys, setAvailableDataKeys] = useState<(keyof Contact | null)[]>([]);
 
@@ -325,6 +362,28 @@ Dimitri MOREL - Arcanis Conseil`;
     detectAvailableColumns(contacts);
   }, [contacts]); // Seulement dépendant des contacts, pas de detectAvailableColumns
 
+  // Sauvegarder la visibilité des colonnes à chaque modification
+  useEffect(() => {
+    try {
+      if (Object.keys(visibleColumns).length > 0) {
+        localStorage.setItem(VISIBLE_COLUMNS_STORAGE_KEY, JSON.stringify(visibleColumns));
+      }
+    } catch {
+      // Ignorer pour ne pas bloquer l'UI
+    }
+  }, [visibleColumns]);
+
+  // Charger la taille de page préférée
+  const savedItemsPerPage = useMemo(() => {
+    try {
+      const raw = localStorage.getItem('dimicall-items-per-page');
+      const n = raw ? parseInt(raw, 10) : NaN;
+      return Number.isFinite(n) && n > 0 ? n : 25;
+    } catch {
+      return 25;
+    }
+  }, []);
+
   // ADB Hook
   const { 
     connectionState: adbConnectionState, 
@@ -371,6 +430,23 @@ Dimitri MOREL - Arcanis Conseil`;
       setIsAuthModalOpen(false);
     }
   }, [auth.isAuthenticated]);
+
+  // Sauvegardes de préférences utilisateur
+  useEffect(() => {
+    try { localStorage.setItem('dimicall-theme', theme === Theme.Light ? 'light' : 'dark'); } catch {}
+  }, [theme]);
+  useEffect(() => {
+    try { localStorage.setItem('dimicall-active-tab', activeMenuTab); } catch {}
+  }, [activeMenuTab]);
+  useEffect(() => {
+    try { localStorage.setItem('dimicall-search-term', searchTerm); } catch {}
+  }, [searchTerm]);
+  useEffect(() => {
+    try { localStorage.setItem('dimicall-search-column', String(searchColumn)); } catch {}
+  }, [searchColumn]);
+  useEffect(() => {
+    try { localStorage.setItem('dimicall-split-panel-open', String(splitPanelOpen)); } catch {}
+  }, [splitPanelOpen]);
 
   // Effect pour synchroniser les DevTools au démarrage
   useEffect(() => {
@@ -2430,7 +2506,7 @@ Dimitri MOREL - Arcanis Conseil`;
                 onToggleColumnVisibility={toggleColumnVisibility}
                 availableColumns={availableColumns}
                 onFileImport={handleSingleFileImport}
-                initialItemsPerPage={25}
+                initialItemsPerPage={savedItemsPerPage}
                 pageSizeOptions={[25, 50, 100]}
               />
             </div>

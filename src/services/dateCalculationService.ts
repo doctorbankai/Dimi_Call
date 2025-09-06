@@ -3,7 +3,7 @@
  * Utilisé pour la fonctionnalité de sélection de dates de rappel
  */
 
-export type TimeUnit = 'days' | 'weeks' | 'months' | 'years';
+export type TimeUnit = 'minutes' | 'hours' | 'days' | 'weeks' | 'months' | 'years';
 
 export interface RelativeDateConfig {
   quantity: number;
@@ -34,6 +34,12 @@ export class DateCalculationService {
     const futureDate = new Date(now);
 
     switch (unit) {
+      case 'minutes':
+        futureDate.setMinutes(now.getMinutes() + quantity);
+        break;
+      case 'hours':
+        futureDate.setHours(now.getHours() + quantity);
+        break;
       case 'days':
         futureDate.setDate(now.getDate() + quantity);
         break;
@@ -80,36 +86,61 @@ export class DateCalculationService {
       const maxFutureDate = new Date();
       maxFutureDate.setFullYear(now.getFullYear() + this.MAX_YEARS_FUTURE);
 
-      // Réinitialiser les heures pour une comparaison de dates uniquement
-      const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      // Pour les rappels à court terme (moins d'un jour), on compare avec l'heure actuelle
+      const timeDifference = date.getTime() - now.getTime();
+      const isShortTerm = timeDifference < 24 * 60 * 60 * 1000; // Moins de 24h
 
-      if (dateOnly < nowOnly) {
-        return {
-          isValid: false,
-          errorMessage: 'La date ne peut pas être dans le passé'
-        };
+      if (isShortTerm) {
+        // Pour les rappels à court terme, vérifier qu'ils sont dans le futur
+        if (date <= now) {
+          return {
+            isValid: false,
+            errorMessage: 'Le rappel doit être programmé dans le futur'
+          };
+        }
+
+        // Avertissement pour les rappels très proches (moins de 5 minutes)
+        const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+        if (date < fiveMinutesFromNow) {
+          return {
+            isValid: true,
+            warningMessage: 'Ce rappel est programmé dans moins de 5 minutes'
+          };
+        }
+
+        return { isValid: true };
+      } else {
+        // Pour les rappels à long terme, utiliser la logique existante
+        const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        if (dateOnly < nowOnly) {
+          return {
+            isValid: false,
+            errorMessage: 'La date ne peut pas être dans le passé'
+          };
+        }
+
+        if (date > maxFutureDate) {
+          return {
+            isValid: false,
+            errorMessage: `La date ne peut pas dépasser ${this.MAX_YEARS_FUTURE} ans dans le futur`
+          };
+        }
+
+        // Avertissement pour les dates très éloignées (plus de 2 ans)
+        const twoYearsFromNow = new Date();
+        twoYearsFromNow.setFullYear(now.getFullYear() + 2);
+        
+        if (date > twoYearsFromNow) {
+          return {
+            isValid: true,
+            warningMessage: 'Cette date est très éloignée dans le futur'
+          };
+        }
+
+        return { isValid: true };
       }
-
-      if (date > maxFutureDate) {
-        return {
-          isValid: false,
-          errorMessage: `La date ne peut pas dépasser ${this.MAX_YEARS_FUTURE} ans dans le futur`
-        };
-      }
-
-      // Avertissement pour les dates très éloignées (plus de 2 ans)
-      const twoYearsFromNow = new Date();
-      twoYearsFromNow.setFullYear(now.getFullYear() + 2);
-      
-      if (date > twoYearsFromNow) {
-        return {
-          isValid: true,
-          warningMessage: 'Cette date est très éloignée dans le futur'
-        };
-      }
-
-      return { isValid: true };
     } catch {
       return {
         isValid: false,
@@ -125,6 +156,10 @@ export class DateCalculationService {
     const isSingular = quantity === 1;
 
     switch (unit) {
+      case 'minutes':
+        return isSingular ? 'minute' : 'minutes';
+      case 'hours':
+        return isSingular ? 'heure' : 'heures';
       case 'days':
         return isSingular ? 'jour' : 'jours';
       case 'weeks':

@@ -280,7 +280,6 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
             onDateChange={handleRelativeDateChange}
             currentDate={state.selectedDate}
             disabled={false}
-            key={state.useRelativeSelector ? 'relative-active' : 'relative-inactive'}
           />
 
           {/* Actions */}

@@ -483,23 +483,20 @@ export default function ContactsPage() {
     const timestamp = format(now, 'yyyy_MM_dd_HH_mm_ss');
     const filename = `DimiCall_${timestamp}.xlsx`;
 
-    const worksheet = XLSX.utils.json_to_sheet(contactsToExport.map(c => ({
-      ID: c.id,
-      Prénom: c.firstName,
-      Nom: c.lastName,
-      Email: c.email,
-      Téléphone: c.phoneNumber,
-      Statut: c.status,
-      Source: c.source,
-      Commentaire: c.comment,
-      "Date d'appel": c.dateAppel,
-      "Heure d'appel": c.heureAppel,
-      "Durée d'appel": c.dureeAppel,
-      "Date de rappel": c.dateRappel,
-      "Heure de rappel": c.heureRappel,
-      "Date de rendez-vous": c.dateRendezVous,
-      "Heure de rendez-vous": c.heureRendezVous,
-    })));
+    const columnsForExport = tableColumns; // Exporter toutes les colonnes définies dans la table
+    const rowsForExport = contactsToExport.map((c) => {
+      const row: Record<string, string | number | null | undefined> = {};
+      columnsForExport.forEach(({ id, label }) => {
+        let value = (c as any)[id];
+        if ((id === 'dateRendezVous' || id === 'heureRendezVous') && (value === undefined || value === null || value === '')) {
+          if (id === 'dateRendezVous') value = (c as any).bookingDate ?? '';
+          if (id === 'heureRendezVous') value = (c as any).bookingTime ?? '';
+        }
+        row[label] = value ?? '';
+      });
+      return row;
+    });
+    const worksheet = XLSX.utils.json_to_sheet(rowsForExport);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Contacts");
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
@@ -527,24 +524,20 @@ export default function ContactsPage() {
     const timestamp = format(now, 'yyyy_MM_dd_HH_mm_ss');
     const filename = `DimiCall_${timestamp}.csv`;
 
-    const csvData = contactsToExport.map(c => ({
-      ID: c.id,
-      Prénom: c.firstName,
-      Nom: c.lastName,
-      Email: c.email,
-      Téléphone: c.phoneNumber,
-      Statut: c.status,
-      Source: c.source,
-      Commentaire: c.comment,
-      "Date d'appel": c.dateAppel,
-      "Heure d'appel": c.heureAppel,
-      "Durée d'appel": c.dureeAppel,
-      "Date de rappel": c.dateRappel,
-      "Heure de rappel": c.heureRappel,
-      "Date de rendez-vous": c.dateRendezVous,
-      "Heure de rendez-vous": c.heureRendezVous,
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(csvData);
+    const columnsForExport = tableColumns; // Exporter toutes les colonnes définies dans la table
+    const rowsForExport = contactsToExport.map((c) => {
+      const row: Record<string, string | number | null | undefined> = {};
+      columnsForExport.forEach(({ id, label }) => {
+        let value = (c as any)[id];
+        if ((id === 'dateRendezVous' || id === 'heureRendezVous') && (value === undefined || value === null || value === '')) {
+          if (id === 'dateRendezVous') value = (c as any).bookingDate ?? '';
+          if (id === 'heureRendezVous') value = (c as any).bookingTime ?? '';
+        }
+        row[label] = value ?? '';
+      });
+      return row;
+    });
+    const worksheet = XLSX.utils.json_to_sheet(rowsForExport);
     const csvString = XLSX.utils.sheet_to_csv(worksheet);
     const data = new Blob(["\uFEFF" + csvString], { type: "text/csv;charset=utf-8;" });
     saveAs(data, filename);

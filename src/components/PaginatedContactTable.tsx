@@ -55,7 +55,15 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
   } = usePagination({
     data: contacts,
     initialItemsPerPage,
-    initialPage: 1,
+    initialPage: (() => {
+      try {
+        const saved = localStorage.getItem('dimicall-current-page');
+        const n = saved ? parseInt(saved, 10) : 1;
+        return Number.isFinite(n) && n > 0 ? n : 1;
+      } catch {
+        return 1;
+      }
+    })(),
   });
 
   // Gérer la sélection de contact avec pagination
@@ -65,6 +73,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
 
   // Gérer les changements de pagination
   const handlePageChange = (page: number) => {
+    try { localStorage.setItem('dimicall-current-page', String(page)); } catch {}
     goToPage(page);
     // Optionnel: scroll vers le haut de la table
     if (ref && 'current' in ref && ref.current) {
@@ -75,6 +84,11 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
   };
 
   const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    try {
+      localStorage.setItem('dimicall-items-per-page', String(newItemsPerPage));
+    } catch (error) {
+      // Ignorer les erreurs de localStorage pour ne pas bloquer l'UI
+    }
     setItemsPerPage(newItemsPerPage);
   };
 

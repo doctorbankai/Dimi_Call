@@ -33,6 +33,10 @@ import { useColumnTypes } from '../hooks/useColumnTypes';
 
 type SortDirection = 'asc' | 'desc' | null;
 
+// Clés de stockage pour la persistance des préférences de table
+const COLUMN_ORDER_STORAGE_KEY = 'dimicall-column-order';
+const SORT_CONFIG_STORAGE_KEY = 'dimicall-sort-config';
+
 // Configuration des colonnes
 interface ColumnConfig {
   id: string;
@@ -767,12 +771,34 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
     });
   }, [columnHeaders, contactDataKeys]);
 
-  // Initialiser l'ordre des colonnes quand dynamicColumns change
+  // Charger l'ordre des colonnes sauvegardé quand la définition change
   useEffect(() => {
-    if (dynamicColumns.length > 0) {
-      setColumnOrder(dynamicColumns.map(col => col.id));
-    }
+    if (dynamicColumns.length === 0) return;
+    try {
+      const saved = localStorage.getItem(COLUMN_ORDER_STORAGE_KEY);
+      const dynamicIds = dynamicColumns.map(col => col.id);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const validSaved = parsed.filter((id: string) => dynamicIds.includes(id));
+          const missing = dynamicIds.filter((id) => !validSaved.includes(id));
+          setColumnOrder([...validSaved, ...missing]);
+          return;
+        }
+      }
+    } catch {}
+    // Fallback: ordre par défaut
+    setColumnOrder(dynamicColumns.map(col => col.id));
   }, [dynamicColumns]);
+
+  // Sauvegarder l'ordre des colonnes quand il change
+  useEffect(() => {
+    try {
+      if (columnOrder.length > 0) {
+        localStorage.setItem(COLUMN_ORDER_STORAGE_KEY, JSON.stringify(columnOrder));
+      }
+    } catch {}
+  }, [columnOrder]);
 
   // État pour le drag & drop
   const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
@@ -807,6 +833,30 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
       }
     });
   }, []);
+
+  // Charger la configuration de tri sauvegardée
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(SORT_CONFIG_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved) as { key: string | null; direction: SortDirection };
+        const validKeys = dynamicColumns
+          .map(col => col.key)
+          .filter((k): k is keyof Contact => k !== 'actions' && k !== 'index');
+        if (parsed && (parsed.key === null || (typeof parsed.key === 'string' && (validKeys as string[]).includes(parsed.key))) &&
+            (parsed.direction === 'asc' || parsed.direction === 'desc' || parsed.direction === null)) {
+          setSortConfig({ key: parsed.key as keyof Contact | null, direction: parsed.direction });
+        }
+      }
+    } catch {}
+  }, [dynamicColumns]);
+
+  // Sauvegarder la configuration de tri
+  useEffect(() => {
+    try {
+      localStorage.setItem(SORT_CONFIG_STORAGE_KEY, JSON.stringify(sortConfig));
+    } catch {}
+  }, [sortConfig]);
 
   // Tri des contacts
   const sortedContacts = useMemo(() => {
