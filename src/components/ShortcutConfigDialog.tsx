@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { X, RotateCcw, Save, Settings } from 'lucide-react';
-import { ContactStatus } from '../types';
+import { ContactStatus, CallMode } from '../types';
+import { useCallMode } from '../context/ModeContext';
 import { shortcutService, ShortcutConfig } from '../services/shortcutService';
 import { Theme } from '../types';
 
@@ -22,6 +23,7 @@ export const ShortcutConfigDialog: React.FC<ShortcutConfigDialogProps> = ({
   theme,
   onSave
 }) => {
+  const { mode } = useCallMode();
   const [shortcuts, setShortcuts] = useState<ShortcutConfig[]>([]);
   const [hasChanges, setHasChanges] = useState(false);
 
@@ -238,18 +240,21 @@ export const ShortcutConfigDialog: React.FC<ShortcutConfigDialogProps> = ({
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
-                        {availableStatuses.map((status) => (
-                          <SelectItem key={status} value={status}>
-                            <div className="flex items-center gap-2">
-                              <span className={`
-                                px-2 py-1 rounded text-xs font-medium
-                                ${getStatusColor(status)}
-                              `}>
-                                {getStatusLabel(status)}
-                              </span>
-                            </div>
-                          </SelectItem>
-                        ))}
+                        {availableStatuses.map((status) => {
+                          if (status === ContactStatus.A0 && mode !== CallMode.Mandataire) return null;
+                          return (
+                            <SelectItem key={status} value={status}>
+                              <div className="flex items-center gap-2">
+                                <span className={`
+                                  px-2 py-1 rounded text-xs font-medium
+                                  ${getStatusColor(status)}
+                                `}>
+                                  {getStatusLabel(status)}
+                                </span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                   </div>

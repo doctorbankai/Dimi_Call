@@ -1,4 +1,4 @@
-import { Contact, ContactStatus, ClientFile, EmailType, Civility } from '../types';
+import { Contact, ContactStatus, ClientFile, EmailType, Civility, CallMode } from '../types';
 import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs
 import Papa from 'papaparse'; // For CSV parsing
 import * as XLSX from 'xlsx'; // For Excel parsing and writing
@@ -754,6 +754,7 @@ export const generateGmailComposeUrl = (
   
   // Charger les templates personnalisés
   const STORAGE_KEY = 'dimicall_email_templates';
+  const MODE_STORAGE_KEY = 'dimicall-call-mode';
   let subject = "";
   let bodyTemplate = "";
   
@@ -785,10 +786,19 @@ export const generateGmailComposeUrl = (
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const data = JSON.parse(saved);
-      if (data.templates) {
+      // Choisir templates/signature selon le mode
+      const modeSaved = localStorage.getItem(MODE_STORAGE_KEY) as CallMode | null;
+      const isMandataire = modeSaved === CallMode.Mandataire;
+
+      if (isMandataire && data.mandataireTemplates) {
+        templates = data.mandataireTemplates;
+      } else if (data.templates) {
         templates = data.templates;
       }
-      if (data.signature) {
+
+      if (isMandataire && data.mandataireSignature) {
+        signature = data.mandataireSignature;
+      } else if (data.signature) {
         signature = data.signature;
       }
     }

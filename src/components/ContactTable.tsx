@@ -1,12 +1,11 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import { Contact, ContactStatus, CallStates, Theme } from '../types';
+import { Contact, ContactStatus, CallStates, Theme, CallMode } from '../types';
 import { QUICK_COMMENTS } from '../constants';
 import { cn } from '../lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -22,16 +21,15 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { 
   Phone, User, Mail, MessageCircle, Clock, Calendar as CalendarIcon, FileText, ArrowUpDown, 
-  ArrowUp, ArrowDown, Trash2, Zap, Timer, Eye, EyeOff, Settings2, GripVertical, Move, X,
-  Hash, FolderOpen, Upload, FileSpreadsheet, Users, CloudUpload, Bell
+  ArrowUp, ArrowDown, Zap, Timer, Settings2, GripVertical, Upload, FileSpreadsheet, Users, CloudUpload, Bell, Hash, FolderOpen, X
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatPhoneNumber } from '../services/dataService';
 import { ReminderDialog } from './ReminderDialog';
 import { ColumnTypeSelector } from './ColumnTypeSelector';
 import { useColumnTypes } from '../hooks/useColumnTypes';
-
-type SortDirection = 'asc' | 'desc' | null;
+import { useCallMode } from '../context/ModeContext';
+import { StatusConfigService } from '../services/statusConfigService';
 
 // Clés de stockage pour la persistance des préférences de table
 const COLUMN_ORDER_STORAGE_KEY = 'dimicall-column-order';
@@ -50,244 +48,26 @@ interface ColumnConfig {
   defaultVisible: boolean;
 }
 
-// Configuration des colonnes avec largeurs optimisées
-const DEFAULT_COLUMNS: ColumnConfig[] = [
-  {
-    id: 'index',
-    key: 'prenom', // Pas vraiment utilisé, juste pour l'ordre
-    label: '#',
-    icon: Hash,
-    width: '60px',
-    minWidth: '60px',
-    canHide: false,
-    canSort: false,
-    defaultVisible: true,
-  },
-  {
-    id: 'prenom',
-    key: 'prenom',
-    label: 'Prénom',
-    icon: User,
-    width: 'auto',
-    minWidth: '120px',
-    canHide: false,
-    canSort: true,
-    defaultVisible: true,
-  },
-  {
-    id: 'nom',
-    key: 'nom',
-    label: 'Nom',
-    icon: User,
-    width: 'auto',
-    minWidth: '120px',
-    canHide: false,
-    canSort: true,
-    defaultVisible: true,
-  },
-
-  {
-    id: 'telephone',
-    key: 'telephone',
-    label: 'Téléphone',
-    icon: Phone,
-    width: 'auto',
-    minWidth: '160px',
-    canHide: true,
-    canSort: true,
-    defaultVisible: true,
-  },
-  {
-    id: 'email',
-    key: 'email',
-    label: 'Mail',
-    icon: Mail,
-    width: 'auto',
-    minWidth: '200px',
-    canHide: true,
-    canSort: true,
-    defaultVisible: true,
-  },
-  {
-    id: 'statut',
-    key: 'statut',
-    label: 'Statut',
-    icon: FileText,
-    width: 'auto',
-    minWidth: '140px',
-    canHide: true,
-    canSort: true,
-    defaultVisible: true,
-  },
-  {
-    id: 'commentaire',
-    key: 'commentaire',
-    label: 'Commentaire',
-    icon: MessageCircle,
-    width: 'auto',
-    minWidth: '320px', // Augmenté de 250px à 320px pour éviter la troncature
-    canHide: false,
-    canSort: true,
-    defaultVisible: true,
-  },
-  {
-    id: 'dateRappel',
-    key: 'dateRappel',
-    label: 'Date Rappel',
-    icon: CalendarIcon,
-    width: 'auto',
-    minWidth: '140px',
-    canHide: true,
-    canSort: true,
-    defaultVisible: true,
-  },
-  {
-    id: 'heureRappel',
-    key: 'heureRappel',
-    label: 'Heure Rappel',
-    icon: Clock,
-    width: 'auto',
-    minWidth: '140px',
-    canHide: true,
-    canSort: true,
-    defaultVisible: true,
-  },
-  {
-    id: 'dateRDV',
-    key: 'dateRDV',
-    label: 'Date RDV',
-    icon: CalendarIcon,
-    width: 'auto',
-    minWidth: '140px',
-    canHide: true,
-    canSort: true,
-    defaultVisible: true,
-  },
-  {
-    id: 'heureRDV',
-    key: 'heureRDV',
-    label: 'Heure RDV',
-    icon: Clock,
-    width: 'auto',
-    minWidth: '140px',
-    canHide: true,
-    canSort: true,
-    defaultVisible: true,
-  },
-  {
-    id: 'dateAppel',
-    key: 'dateAppel',
-    label: 'Date Appel',
-    icon: CalendarIcon,
-    width: 'auto',
-    minWidth: '140px',
-    canHide: true,
-    canSort: true,
-    defaultVisible: true,
-  },
-  {
-    id: 'heureAppel',
-    key: 'heureAppel',
-    label: 'Heure Appel',
-    icon: Clock,
-    width: 'auto',
-    minWidth: '140px',
-    canHide: true,
-    canSort: true,
-    defaultVisible: true,
-  },
-  {
-    id: 'dureeAppel',
-    key: 'dureeAppel',
-    label: 'Durée Appel',
-    icon: Timer,
-    width: 'auto',
-    minWidth: '140px',
-    canHide: true,
-    canSort: true,
-    defaultVisible: true,
-  },
-];
+type SortDirection = 'asc' | 'desc' | null;
 
 const INPUT_BASE_CLASS = "h-8 px-2 text-xs border border-border/50 rounded-md bg-background/80 focus:bg-background focus:border-primary/50 transition-colors";
 
 interface StatusComboBoxProps {
   value: ContactStatus;
   onChange: (newStatus: ContactStatus) => void;
-  theme: Theme;
 }
 
-const StatusComboBox: React.FC<StatusComboBoxProps> = ({ value, onChange, theme }) => {
+const StatusComboBox: React.FC<StatusComboBoxProps> = ({ value, onChange }) => {
+  const { mode } = useCallMode();
   const [localValue, setLocalValue] = useState(value);
   
-  // Synchroniser la valeur locale avec la prop quand elle change
   useEffect(() => {
     setLocalValue(value);
   }, [value]);
 
   const getStatusConfig = (status: ContactStatus) => {
-    switch (status) {
-      case ContactStatus.NonDefini: 
-        return { 
-          color: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200', 
-          dot: 'bg-gray-400' 
-        };
-      case ContactStatus.MauvaisNum: 
-        return { 
-          color: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-200', 
-          dot: 'bg-red-500' 
-        };
-      case ContactStatus.Repondeur: 
-        return { 
-          color: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-200', 
-          dot: 'bg-orange-500' 
-        };
-      case ContactStatus.ARappeler: 
-        return { 
-          color: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-200', 
-          dot: 'bg-yellow-500' 
-        };
-      case ContactStatus.PasInteresse: 
-        return { 
-          color: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-200', 
-          dot: 'bg-red-500' 
-        };
-      case ContactStatus.Argumente: 
-        return { 
-          color: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-200', 
-          dot: 'bg-blue-500' 
-        };
-      case ContactStatus.DO: 
-        return { 
-          color: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200', 
-          dot: 'bg-emerald-500' 
-        };
-      case ContactStatus.RO: 
-        return { 
-          color: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-200', 
-          dot: 'bg-green-500' 
-        };
-      case ContactStatus.ListeNoire: 
-        return { 
-          color: 'bg-gray-800 text-gray-100 border-gray-600 dark:bg-gray-700 dark:text-gray-100', 
-          dot: 'bg-gray-600' 
-        };
-      case ContactStatus.Premature: 
-        return { 
-          color: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-200', 
-          dot: 'bg-purple-500' 
-        };
-      case ContactStatus.A0: 
-        return { 
-          color: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-200', 
-          dot: 'bg-indigo-500' 
-        };
-      default: 
-        return { 
-          color: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200', 
-          dot: 'bg-gray-400' 
-        };
-    }
+    const { color, dot } = StatusConfigService.getColor(status, mode);
+    return { color, dot };
   };
 
   const handleStatusChange = (newStatus: ContactStatus) => {
@@ -301,7 +81,7 @@ const StatusComboBox: React.FC<StatusComboBoxProps> = ({ value, onChange, theme 
     <Select 
       value={localValue} 
       onValueChange={(newValue) => handleStatusChange(newValue as ContactStatus)}
-      key={`status-${localValue}`} // Force re-render quand la valeur change
+      key={`status-${localValue}`}
     >
       <SelectTrigger className="border-none bg-transparent p-0 h-auto">
         <div className={cn(
@@ -309,11 +89,15 @@ const StatusComboBox: React.FC<StatusComboBoxProps> = ({ value, onChange, theme 
           config.color
         )}>
           <div className={cn("w-1.5 h-1.5 rounded-full", config.dot)} />
-          {localValue}
+          {StatusConfigService.getLabel(localValue, mode)}
         </div>
       </SelectTrigger>
       <SelectContent className="bg-popover border shadow-lg">
         {Object.values(ContactStatus).map(status => {
+          if (!StatusConfigService.isVisible(status, mode)) return null;
+          if (status === ContactStatus.A0 && mode !== CallMode.Mandataire) {
+            return null;
+          }
           const statusConfig = getStatusConfig(status);
           return (
             <SelectItem key={status} value={status}>
@@ -322,7 +106,7 @@ const StatusComboBox: React.FC<StatusComboBoxProps> = ({ value, onChange, theme 
                 statusConfig.color
               )}>
                 <div className={cn("w-1.5 h-1.5 rounded-full", statusConfig.dot)} />
-                {status}
+                {StatusConfigService.getLabel(status, mode)}
               </div>
             </SelectItem>
           );
@@ -1108,7 +892,6 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                 statut: newStatus
               });
             }}
-            theme={theme}
           />
         );
 

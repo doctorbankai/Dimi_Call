@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Minus, Square, X, Maximize, Settings, User, Smartphone, WifiOff, Loader2, MailQuestion, Download, RefreshCw, Beaker } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Theme } from '../types';
+import { Theme, CallMode } from '../types';
+import { useCallMode } from '../context/ModeContext';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { BetaPreferencesService } from '../services/betaPreferencesService';
 
 import { UserProfileDialog } from './UserProfileDialog';
 import { useSupabaseAuth } from '../lib/auth-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
 import { TicketForm } from './TicketForm';
 import HelpTutorialButton from './HelpTutorialButton';
 import packageJson from '../../package.json';
@@ -55,6 +57,7 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
   onUpdateClick,
   onUpdateConfirmationOpen
 }) => {
+  const { mode, setMode } = useCallMode();
   const auth = useSupabaseAuth();
   const [isMaximized, setIsMaximized] = useState(false);
   const [isElectron, setIsElectron] = useState(false);
@@ -402,6 +405,15 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
             className="flex items-center gap-2 pointer-events-auto mr-3"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
+            {/* Mode switcher clair et visible */}
+            <div className="hidden md:flex items-center gap-2 mr-2">
+              <Badge variant={mode === CallMode.Client ? 'default' : 'secondary'} className="text-[10px]">Client</Badge>
+              <Switch
+                checked={mode === CallMode.Mandataire}
+                onCheckedChange={(checked) => setMode(checked ? CallMode.Mandataire : CallMode.Client)}
+              />
+              <Badge variant={mode === CallMode.Mandataire ? 'default' : 'secondary'} className="text-[10px]">Mandataire</Badge>
+            </div>
             {/* Badge de mise à jour */}
             {isUpdateEnabled && updateState && (updateState.downloaded || updateState.downloading || updateState.checking) && (onUpdateClick || onUpdateConfirmationOpen) && (
               <Badge 

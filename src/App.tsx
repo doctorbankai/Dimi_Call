@@ -1,6 +1,7 @@
 import './index.css';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Theme, Contact, CallState, CallStates, ContactStatus, Civility, EmailType } from './types';
+import { Theme, Contact, CallState, CallStates, ContactStatus, Civility, EmailType, CallMode } from './types';
+import { useCallMode } from './context/ModeContext';
 import { APP_NAME, COLUMN_HEADERS, CONTACT_DATA_KEYS, headerIcons } from './constants';
 import { ContactTable, ContactTableRef } from './components/ContactTable';
 import { PaginatedContactTable } from './components/PaginatedContactTable';
@@ -111,6 +112,7 @@ const DonutChart: React.FC<{ progress: number; size?: number }> = ({ progress, s
 };
 
 const App: React.FC = () => {
+  const { mode } = useCallMode();
   // Authentication hook
   const auth = useSupabaseAuth();
   
@@ -249,6 +251,18 @@ https://calendly.com/dimitri-morel-arcanis-conseil/audit
 Bien à vous,
 
 Dimitri MOREL - Arcanis Conseil`;
+  });
+
+  // Template SMS Mandataire séparé
+  const [smsTemplateMandataire, setSmsTemplateMandataire] = useState<string>(() => {
+    try {
+      const savedAll = localStorage.getItem('dimicall_email_templates');
+      if (savedAll) {
+        const data = JSON.parse(savedAll);
+        if (data.smsMandataire) return data.smsMandataire as string;
+      }
+    } catch {}
+    return `Bonjour {civilite} {nom},\n\nJe vous contacte dans le cadre de la gestion de votre dossier mandataire. Voici les informations et liens dédiés.\n\nBien à vous,`;
   });
 
   // État intelligent pour les colonnes visibles basé sur les données réelles
@@ -657,8 +671,9 @@ Dimitri MOREL - Arcanis Conseil`;
     // Créer le nom d'accueil avec civilité
     const greetingName = civilite ? `${civilite} ${target.nom}`.trim() : `${target.prenom} ${target.nom}`.trim() || "client(e)";
     
-    // Utiliser le template SMS personnalisé avec remplacement des variables
-    const messageBody = smsTemplate
+    // Utiliser le template SMS en fonction du mode (Client / Mandataire)
+    const selectedTemplate = mode === CallMode.Mandataire ? smsTemplateMandataire : smsTemplate;
+    const messageBody = selectedTemplate
       .replace(/{civilite}/g, civilite || target.prenom || "")
       .replace(/{nom}/g, target.nom || "")
       .replace(/{prenom}/g, target.prenom || "")
@@ -681,7 +696,7 @@ Dimitri MOREL - Arcanis Conseil`;
     } catch (error) {
       showNotification('error', `Erreur lors de la préparation du SMS: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
-  }, [selectedContact, showNotification, adbConnectionState.isConnected, sendSms, smsTemplate]);
+  }, [selectedContact, showNotification, adbConnectionState.isConnected, sendSms, smsTemplate, smsTemplateMandataire, mode]);
 
   // Clear data handlers
   const clearAllData = useCallback(() => {
@@ -1740,10 +1755,20 @@ Dimitri MOREL - Arcanis Conseil`;
 
   // Fonction pour sauvegarder le nouveau template SMS
   const handleSaveSmsTemplate = useCallback((newTemplate: string) => {
-    setSmsTemplate(newTemplate);
-    localStorage.setItem('sms-template', newTemplate);
+    if (mode === CallMode.Mandataire) {
+      setSmsTemplateMandataire(newTemplate);
+      try {
+        const savedAll = localStorage.getItem('dimicall_email_templates');
+        const data = savedAll ? JSON.parse(savedAll) : {};
+        data.smsMandataire = newTemplate;
+        localStorage.setItem('dimicall_email_templates', JSON.stringify(data));
+      } catch {}
+    } else {
+      setSmsTemplate(newTemplate);
+      localStorage.setItem('sms-template', newTemplate);
+    }
     showNotification('success', 'Template SMS mis à jour');
-  }, [showNotification]);
+  }, [showNotification, mode]);
 
   // Fonction callback quand un RDV est pris avec succès
   const handleCalendarSuccess = useCallback(() => {

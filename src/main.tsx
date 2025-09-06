@@ -5,6 +5,7 @@ import App from './App'
 import ModernLoader from './components/ModernLoader'
 import { useSupabaseAuth } from './lib/auth-client'
 import './index.css'
+import { ModeProvider } from './context/ModeContext'
 
 // Fonction pour masquer l'écran de chargement HTML initial
 const hideInitialLoadingScreen = () => {
@@ -47,6 +48,8 @@ const AppWithModernLoader = () => {
 
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
-    <AppWithModernLoader />
+    <ModeProvider>
+      <AppWithModernLoader />
+    </ModeProvider>
   </React.StrictMode>
-) 
+)

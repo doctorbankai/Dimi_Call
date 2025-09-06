@@ -15,9 +15,10 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { EmailType, Civility, Theme, ContactStatus } from '../types';
+import { EmailType, Civility, Theme, ContactStatus, CallMode } from '../types';
 import { shortcutService, ShortcutConfig } from '../services/shortcutService';
 import { cn } from '../lib/utils';
+import { StatusConfigService, StatusConfigMap } from '../services/statusConfigService';
 
 interface SettingsDialogProps {
   isOpen: boolean;
@@ -64,6 +65,7 @@ const defaultTemplates: EmailTemplates = {
 
 const STORAGE_KEY = 'dimicall_email_templates';
 const COLUMNS_STORAGE_KEY = 'dimicall_column_config';
+const MODE_STORAGE_KEY = 'dimicall-call-mode';
 
 // Configuration par défaut des colonnes
 const DEFAULT_COLUMN_CONFIG = {
@@ -84,7 +86,7 @@ const DEFAULT_COLUMN_CONFIG = {
   'Source': { isEssential: false, label: 'Source du contact' }
 };
 
-type SettingsCategory = 'email' | 'sms' | 'calcom' | 'appearance' | 'shortcuts' | 'update' | 'columns' | 'logs';
+type SettingsCategory = 'email' | 'sms' | 'calcom' | 'appearance' | 'shortcuts' | 'update' | 'columns' | 'statuses' | 'logs';
 
 const getCategories = (devToolsEnabled: boolean, updateEnabled: boolean = true) => [
   { 
@@ -122,6 +124,12 @@ const getCategories = (devToolsEnabled: boolean, updateEnabled: boolean = true) 
     label: 'Gestion des Colonnes',
     icon: Columns,
     description: 'Configuration de la visibilité des colonnes'
+  },
+  {
+    id: 'statuses' as SettingsCategory,
+    label: 'Statuts',
+    icon: FileText,
+    description: 'Noms et couleurs des statuts'
   },
   // Section Mise à jour visible uniquement si les mises à jour sont activées
   ...(updateEnabled ? [{
@@ -181,15 +189,26 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 }) => {
   const [activeCategory, setActiveCategory] = useState<SettingsCategory>('email');
   const [templates, setTemplates] = useState<EmailTemplates>(defaultTemplates);
+  const [mandataireTemplates, setMandataireTemplates] = useState<EmailTemplates>(defaultTemplates);
   const [signature, setSignature] = useState('');
+  const [mandataireSignature, setMandataireSignature] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedEmailType, setSelectedEmailType] = useState<EmailType>(EmailType.PremierContact);
   const [localCalcomUrl, setLocalCalcomUrl] = useState<string>(calcomUrl || 'https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true');
   const [localSmsTemplate, setLocalSmsTemplate] = useState<string>(smsTemplate || DEFAULT_SMS_TEMPLATE);
+  const [localSmsTemplateMandataire, setLocalSmsTemplateMandataire] = useState<string>(smsTemplate || DEFAULT_SMS_TEMPLATE);
   const [shortcuts, setShortcuts] = useState<ShortcutConfig[]>([]);
   const [shortcutsChanged, setShortcutsChanged] = useState(false);
   const [appVersion, setAppVersion] = useState<string>('Chargement...');
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+  const [callMode, setCallMode] = useState<CallMode>(() => {
+    try {
+      const saved = localStorage.getItem(MODE_STORAGE_KEY);
+      return saved === CallMode.Mandataire ? CallMode.Mandataire : CallMode.Client;
+    } catch {
+      return CallMode.Client;
+    }
+  });
 
   // État pour le diagnostic
   const [diagnosticInfo, setDiagnosticInfo] = useState<{
@@ -209,6 +228,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   // Configuration des colonnes
   const [columnConfig, setColumnConfig] = useState<Record<string, boolean>>({});
   const [columnConfigChanged, setColumnConfigChanged] = useState(false);
+  // Éditeur de statuts: configuration par mode (libellés/couleurs/visibilité)
+  const [statusConfig, setStatusConfig] = useState<StatusConfigMap>(() => StatusConfigService.getConfig());
 
   // Hooks pour les paramètres de mise à jour (déplacés ici pour éviter les erreurs de hooks conditionnels)
   const { betaPreferences, setBetaPreferences, revertToStable, isUpdateEnabled, manualUpdateInfo } = useAutoUpdate();
@@ -245,6 +266,10 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         const data = JSON.parse(saved);
         if (data.templates) setTemplates(data.templates);
         if (data.signature) setSignature(data.signature);
+        // mode mandataire
+        if (data.mandataireTemplates) setMandataireTemplates(data.mandataireTemplates);
+        if (data.mandataireSignature) setMandataireSignature(data.mandataireSignature);
+        if (data.smsMandataire) setLocalSmsTemplateMandataire(data.smsMandataire);
       } catch (error) {
         console.error('Erreur lors du chargement des templates:', error);
       }
@@ -308,6 +333,14 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     }
   }, [isOpen]);
 
+  // Recharger la configuration des statuts lorsque le mode change ou quand on ouvre/va sur la section
+  useEffect(() => {
+    try {
+      const next = StatusConfigService.getConfig(callMode);
+      setStatusConfig(next);
+    } catch {}
+  }, [callMode, activeCategory, isOpen]);
+
   // Charger les informations de diagnostic quand la section diagnostic est ouverte
   useEffect(() => {
     if (isOpen && activeCategory === 'diagnostic') {
@@ -316,18 +349,32 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   }, [isOpen, activeCategory]);
 
   const handleTemplateChange = (field: 'subject' | 'body', value: string) => {
-    setTemplates(prev => ({
-      ...prev,
-      [selectedEmailType]: {
-        ...prev[selectedEmailType],
-        [field]: value
-      }
-    }));
+    if (callMode === CallMode.Mandataire) {
+      setMandataireTemplates(prev => ({
+        ...prev,
+        [selectedEmailType]: {
+          ...prev[selectedEmailType],
+          [field]: value
+        }
+      }));
+    } else {
+      setTemplates(prev => ({
+        ...prev,
+        [selectedEmailType]: {
+          ...prev[selectedEmailType],
+          [field]: value
+        }
+      }));
+    }
     setHasChanges(true);
   };
 
   const handleSignatureChange = (value: string) => {
-    setSignature(value);
+    if (callMode === CallMode.Mandataire) {
+      setMandataireSignature(value);
+    } else {
+      setSignature(value);
+    }
     setHasChanges(true);
   };
 
@@ -337,25 +384,17 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   };
 
   const handleSmsTemplateChange = (value: string) => {
-    setLocalSmsTemplate(value);
+    if (callMode === CallMode.Mandataire) {
+      setLocalSmsTemplateMandataire(value);
+    } else {
+      setLocalSmsTemplate(value);
+    }
     setHasChanges(true);
   };
 
-  // Obtenir le libellé d'un statut
+  // Obtenir le libellé d'un statut (dépend du mode)
   const getStatusLabel = (status: ContactStatus): string => {
-    const labelMap: Record<ContactStatus, string> = {
-      [ContactStatus.NonDefini]: 'Non défini',
-      [ContactStatus.Premature]: 'Prématuré',
-      [ContactStatus.MauvaisNum]: 'Mauvais num',
-      [ContactStatus.Repondeur]: 'Répondeur',
-      [ContactStatus.ARappeler]: 'À rappeler',
-      [ContactStatus.PasInteresse]: 'Pas intéressé',
-      [ContactStatus.Argumente]: 'Argumenté',
-      [ContactStatus.DO]: 'DO',
-      [ContactStatus.RO]: 'RO',
-      [ContactStatus.ListeNoire]: 'Liste noire'
-    };
-    return labelMap[status] || status;
+    return StatusConfigService.getLabel(status, callMode);
   };
 
   // Gérer le changement de statut pour une touche
@@ -400,21 +439,10 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     setHasChanges(true);
   };
 
-  // Obtenir la couleur d'un statut
+  // Obtenir la couleur d'un statut (dépend du mode)
   const getStatusColor = (status: ContactStatus) => {
-    const colors: Record<ContactStatus, string> = {
-      [ContactStatus.NonDefini]: 'bg-muted text-muted-foreground border-transparent',
-      [ContactStatus.Premature]: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-      [ContactStatus.MauvaisNum]: 'bg-red-500/10 text-red-500 border-red-500/20',
-      [ContactStatus.Repondeur]: 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20',
-      [ContactStatus.ARappeler]: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-      [ContactStatus.PasInteresse]: 'bg-red-500/10 text-red-500 border-red-500/20',
-      [ContactStatus.Argumente]: 'bg-purple-500/10 text-purple-500 border-purple-500/20',
-      [ContactStatus.DO]: 'bg-green-500/10 text-green-500 border-green-500/20',
-      [ContactStatus.RO]: 'bg-teal-500/10 text-teal-500 border-teal-500/20',
-      [ContactStatus.ListeNoire]: 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20'
-    };
-    return colors[status] || 'bg-muted text-muted-foreground border-transparent';
+    const cfg = StatusConfigService.getColor(status, callMode);
+    return cfg.color;
   };
 
   const handleSave = () => {
@@ -423,9 +451,14 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       const data = {
         templates,
         signature,
+        mandataireTemplates,
+        mandataireSignature,
+        smsMandataire: localSmsTemplateMandataire,
         lastModified: new Date().toISOString()
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      // Sauvegarder le mode
+      localStorage.setItem(MODE_STORAGE_KEY, callMode);
       
       // Sauvegarder l'URL Cal.com si elle a changé
       if (onCalcomUrlChange && localCalcomUrl !== calcomUrl) {
@@ -433,8 +466,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       }
       
       // Sauvegarder le template SMS si il a changé
-      if (onSmsTemplateChange && localSmsTemplate !== smsTemplate) {
-        onSmsTemplateChange(localSmsTemplate);
+      if (onSmsTemplateChange) {
+        const toSave = callMode === CallMode.Mandataire ? localSmsTemplateMandataire : localSmsTemplate;
+        if (toSave !== smsTemplate) onSmsTemplateChange(toSave);
       }
       
       // Sauvegarder les raccourcis si ils ont changé
@@ -460,7 +494,6 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       console.log('✅ Sauvegarde des paramètres réussie');
       setHasChanges(false);
       onSave();
-      onClose();
     } catch (error) {
       console.error('❌ Erreur lors de la sauvegarde des paramètres:', error);
       // TODO: Afficher un message d'erreur à l'utilisateur (sera implémenté dans la tâche 3)
@@ -863,7 +896,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   };
 
   const renderEmailSettings = () => {
-    const currentTemplate = templates[selectedEmailType];
+    const templatesByMode = callMode === CallMode.Mandataire ? mandataireTemplates : templates;
+    const currentTemplate = templatesByMode[selectedEmailType];
     const emailInfo = emailTypeLabels[selectedEmailType];
 
     return (
@@ -884,7 +918,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           <CardContent>
             <Input
               id="signature-input"
-              value={signature}
+              value={callMode === CallMode.Mandataire ? mandataireSignature : signature}
               onChange={(e) => handleSignatureChange(e.target.value)}
               placeholder="Votre nom et fonction"
             />
@@ -932,7 +966,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             </Select>
           </div>
 
-          {/* Template Editor */}
+          {/* Template Editor (par mode) */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
@@ -1013,6 +1047,25 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Bandeau mode actif */}
+          <div className="flex items-center justify-between p-3 rounded-md bg-accent/30 border">
+            <div className="text-sm">
+              Mode actif : <strong>{callMode === CallMode.Mandataire ? 'Mandataire' : 'Client'}</strong>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={callMode === CallMode.Client ? 'default' : 'secondary'} className="text-[10px]">Client</Badge>
+              <Switch
+                checked={callMode === CallMode.Mandataire}
+                onCheckedChange={(checked) => {
+                  const newMode = checked ? CallMode.Mandataire : CallMode.Client;
+                  setCallMode(newMode);
+                  try { localStorage.setItem(MODE_STORAGE_KEY, newMode); } catch {}
+                }}
+              />
+              <Badge variant={callMode === CallMode.Mandataire ? 'default' : 'secondary'} className="text-[10px]">Mandataire</Badge>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="calcom-url-input">URL Cal.com</Label>
             <Input
@@ -1078,18 +1131,37 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Bandeau mode actif */}
+          <div className="flex items-center justify-between p-3 rounded-md bg-accent/30 border">
+            <div className="text-sm">
+              Mode actif : <strong>{callMode === CallMode.Mandataire ? 'Mandataire' : 'Client'}</strong>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={callMode === CallMode.Client ? 'default' : 'secondary'} className="text-[10px]">Client</Badge>
+              <Switch
+                checked={callMode === CallMode.Mandataire}
+                onCheckedChange={(checked) => {
+                  const newMode = checked ? CallMode.Mandataire : CallMode.Client;
+                  setCallMode(newMode);
+                  try { localStorage.setItem(MODE_STORAGE_KEY, newMode); } catch {}
+                }}
+              />
+              <Badge variant={callMode === CallMode.Mandataire ? 'default' : 'secondary'} className="text-[10px]">Mandataire</Badge>
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="sms-template-input">Message SMS</Label>
+            <Label htmlFor="sms-template-input">Message SMS ({callMode === CallMode.Mandataire ? 'Mandataire' : 'Client'})</Label>
             <Textarea
               id="sms-template-input"
-              value={localSmsTemplate}
+              value={callMode === CallMode.Mandataire ? localSmsTemplateMandataire : localSmsTemplate}
               onChange={(e) => handleSmsTemplateChange(e.target.value)}
               placeholder="Tapez votre message SMS personnalisé..."
               rows={10}
               className="font-mono text-sm"
             />
             <div className="text-xs text-muted-foreground">
-              Caractères: {localSmsTemplate.length} / 1600 (recommandé pour SMS long)
+              Caractères: {(callMode === CallMode.Mandataire ? localSmsTemplateMandataire : localSmsTemplate).length} / 1600 (recommandé pour SMS long)
             </div>
           </div>
 
@@ -1116,14 +1188,14 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           </div>
 
           {/* Aperçu avec exemple */}
-          {localSmsTemplate && (
+          {(callMode === CallMode.Mandataire ? localSmsTemplateMandataire : localSmsTemplate) && (
             <div className="bg-muted/50 rounded-lg p-4 border">
               <div className="flex items-center gap-2 mb-3">
                 <MessageSquare className="w-4 h-4 text-muted-foreground" />
                 <span className="text-sm font-medium">Aperçu avec exemple</span>
               </div>
               <div className="bg-background rounded-lg p-3 border text-xs font-mono whitespace-pre-wrap">
-                {localSmsTemplate
+                {(callMode === CallMode.Mandataire ? localSmsTemplateMandataire : localSmsTemplate)
                   .replace(/{civilite}/g, 'Madame')
                   .replace(/{nom}/g, 'Dupont')
                   .replace(/{prenom}/g, 'Marie')
@@ -1231,13 +1303,16 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {availableStatuses.map((status) => (
-                        <SelectItem key={status} value={status}>
-                          <Badge className={cn("text-xs font-normal border", getStatusColor(status))}>
-                            {getStatusLabel(status)}
-                          </Badge>
-                        </SelectItem>
-                      ))}
+                      {availableStatuses.map((status) => {
+                        if (status === ContactStatus.A0 && callMode !== CallMode.Mandataire) return null;
+                        return (
+                          <SelectItem key={status} value={status}>
+                            <Badge className={cn("text-xs font-normal border", getStatusColor(status))}>
+                              {getStatusLabel(status)}
+                            </Badge>
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1354,6 +1429,118 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     </div>
   );
 
+  const renderStatusEditor = () => {
+    // Presets de couleurs (shadcn/tailwind) simplifiés
+    const COLOR_PRESETS = [
+      { key: 'gray', name: 'Gris', badgeClass: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200', dotClass: 'bg-gray-500' },
+      { key: 'red', name: 'Rouge', badgeClass: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-200', dotClass: 'bg-red-500' },
+      { key: 'orange', name: 'Orange', badgeClass: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-200', dotClass: 'bg-orange-500' },
+      { key: 'yellow', name: 'Jaune', badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-200', dotClass: 'bg-yellow-500' },
+      { key: 'blue', name: 'Bleu', badgeClass: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-200', dotClass: 'bg-blue-500' },
+      { key: 'purple', name: 'Violet', badgeClass: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-200', dotClass: 'bg-purple-500' },
+      { key: 'indigo', name: 'Indigo', badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-200', dotClass: 'bg-indigo-500' },
+      { key: 'emerald', name: 'Émeraude', badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200', dotClass: 'bg-emerald-500' },
+      { key: 'green', name: 'Vert', badgeClass: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-200', dotClass: 'bg-green-500' },
+    ] as const;
+
+    const getPresetKeyFor = (status: ContactStatus): string => {
+      const current = statusConfig[status]?.color || '';
+      for (const preset of COLOR_PRESETS) {
+        if (current.includes(`bg-${preset.key}-`)) return preset.key;
+      }
+      return 'gray';
+    };
+
+    const applyPreset = (status: ContactStatus, presetKey: string) => {
+      const preset = COLOR_PRESETS.find((p) => p.key === presetKey);
+      if (!preset) return;
+      const next = { ...statusConfig, [status]: { ...statusConfig[status], color: preset.badgeClass, dot: preset.dotClass } };
+      setStatusConfig(next);
+      StatusConfigService.saveConfig(next, callMode);
+      setHasChanges(true);
+    };
+
+    const handleLabelChange = (status: ContactStatus, newLabel: string) => {
+      const next = { ...statusConfig, [status]: { ...statusConfig[status], label: newLabel } };
+      setStatusConfig(next);
+      StatusConfigService.saveConfig(next, callMode);
+      setHasChanges(true);
+    };
+
+    const handleVisibilityToggle = (status: ContactStatus, visible: boolean) => {
+      const next = { ...statusConfig, [status]: { ...statusConfig[status], visible } };
+      setStatusConfig(next);
+      StatusConfigService.saveConfig(next, callMode);
+      setHasChanges(true);
+    };
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Statuts personnalisés</CardTitle>
+          <CardDescription>Un libellé, une couleur, une visibilité. Simple.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="divide-y border rounded-md">
+            {Object.values(ContactStatus).map((status) => {
+              const presetKey = getPresetKeyFor(status);
+              const preset = COLOR_PRESETS.find(p => p.key === presetKey)!;
+              const label = statusConfig[status]?.label || status;
+              return (
+                <div key={status} className="p-3 grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-primary" />
+                    <div className="text-sm font-medium">{status}</div>
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Libellé</Label>
+                    <Input value={label} onChange={(e) => handleLabelChange(status, e.target.value)} />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs">Couleur</Label>
+                    <Select value={presetKey} onValueChange={(val) => applyPreset(status, val)}>
+                      <SelectTrigger>
+                        <SelectValue>
+                          <div className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border', preset.badgeClass)}>
+                            <div className={cn('w-1.5 h-1.5 rounded-full', preset.dotClass)} />
+                            {label}
+                          </div>
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COLOR_PRESETS.map((p) => (
+                          <SelectItem key={p.key} value={p.key}>
+                            <div className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border', p.badgeClass)}>
+                              <div className={cn('w-1.5 h-1.5 rounded-full', p.dotClass)} />
+                              {p.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <Switch checked={statusConfig[status]?.visible !== false} onCheckedChange={(checked) => handleVisibilityToggle(status, checked)} />
+                      <span className="text-xs">Visible</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="text-xs text-muted-foreground mt-3">
+            Astuce: le libellé est ce qui s'affiche dans le tableau des contacts.
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+
   const renderCategory = () => {
     switch (activeCategory) {
       case 'email':
@@ -1372,6 +1559,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         return renderDiagnosticSettings();
       case 'columns':
         return renderColumnSettings();
+      case 'statuses':
+        return renderStatusEditor();
       case 'logs':
         return renderLogsSettings();
       default:
@@ -1387,9 +1576,24 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             <Settings className="w-5 h-5" />
             Réglages de l'application
           </DialogTitle>
-          <button onClick={onClose} className="p-1 rounded-full hover:bg-muted">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-4">
+            {/* Toggle mode Client / Mandataire */}
+            <div className="flex items-center gap-2">
+              <Badge variant={callMode === CallMode.Client ? 'default' : 'secondary'} className="text-xs">Client</Badge>
+              <Switch
+                checked={callMode === CallMode.Mandataire}
+                onCheckedChange={(checked) => {
+                  const newMode = checked ? CallMode.Mandataire : CallMode.Client;
+                  setCallMode(newMode);
+                  try { localStorage.setItem(MODE_STORAGE_KEY, newMode); } catch {}
+                }}
+              />
+              <Badge variant={callMode === CallMode.Mandataire ? 'default' : 'secondary'} className="text-xs">Mandataire</Badge>
+            </div>
+            <button onClick={onClose} className="p-1 rounded-full hover:bg-muted">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </DialogHeader>
 
         <div className="flex flex-1 overflow-hidden">
@@ -1440,7 +1644,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           <Button variant="ghost" onClick={handleReset}>Réinitialiser les changements</Button>
           <Button onClick={handleSave} disabled={!hasChanges}>
             <Save className="w-4 h-4 mr-2" />
-            Sauvegarder et Fermer
+            Sauvegarder
           </Button>
         </div>
       </DialogContent>

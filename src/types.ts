@@ -4,6 +4,11 @@ export enum Theme {
   System = 'system',
 }
 
+export enum CallMode {
+  Client = 'client',
+  Mandataire = 'mandataire',
+}
+
 export enum ContactStatus {
   NonDefini = "Non défini",
   MauvaisNum = "Mauvais num",
