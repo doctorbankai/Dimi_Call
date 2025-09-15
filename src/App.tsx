@@ -59,6 +59,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { DropZoneOverlay } from './components/Common';
 import { CalendarModal } from './components/CalendarModal';
 import { AuthModal } from './components/AuthModal';
+import { SupabaseDisconnectDialog } from '@/components/SupabaseDisconnectDialog';
 import { UserProfileCard } from './components/UserProfileCard';
 import { useSupabaseAuth } from './lib/auth-client';
 
@@ -609,6 +610,16 @@ Dimitri MOREL - Arcanis Conseil`;
       showNotification('info', "Appel terminé (simulé).");
     }
   }, [activeCallContactId, callStates, callStartTime, updateCallState, updateContact, showNotification]);
+
+  // Marqueur global d'appel en cours pour la gestion d'auth (pas de déconnexion pendant appel)
+  useEffect(() => {
+    try {
+      const inCall = Boolean(activeCallContactId && callStartTime);
+      localStorage.setItem('dc_call_in_progress', inCall ? '1' : '0');
+    } catch (e) {
+      // noop
+    }
+  }, [activeCallContactId, callStartTime]);
 
   // Search handlers
   const handleLinkedInSearch = useCallback((contact?: Contact) => {
@@ -2848,6 +2859,19 @@ Dimitri MOREL - Arcanis Conseil`;
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
         />
+
+      {/* Pop-up de déconnexion Supabase */}
+      <SupabaseDisconnectDialog
+        open={!!auth.disconnectInfo}
+        info={auth.disconnectInfo}
+        onClose={auth.clearDisconnectInfo}
+        onRetry={async () => {
+          const ok = await auth.requestSessionRefresh();
+          if (ok) {
+            auth.clearDisconnectInfo();
+          }
+        }}
+      />
 
       {/* Dialog de confirmation de mise à jour */}
       <UpdateConfirmationDialog

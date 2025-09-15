@@ -33,7 +33,7 @@ export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
 }) => {
   const [state, setState] = useState<RelativeDateSelectorState>({
     quantity: '',
-    unit: 'hours'
+    unit: 'days'
   });
   const [previewText, setPreviewText] = useState<string>('');
   const [error, setError] = useState<string>('');

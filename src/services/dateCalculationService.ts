@@ -86,31 +86,10 @@ export class DateCalculationService {
       const maxFutureDate = new Date();
       maxFutureDate.setFullYear(now.getFullYear() + this.MAX_YEARS_FUTURE);
 
-      // Pour les rappels à court terme (moins d'un jour), on compare avec l'heure actuelle
-      const timeDifference = date.getTime() - now.getTime();
-      const isShortTerm = timeDifference < 24 * 60 * 60 * 1000; // Moins de 24h
+      // Si la chaîne est au format date seule (YYYY-MM-DD), on valide au jour près
+      const isDateOnly = this.isValidDateFormat(dateString);
 
-      if (isShortTerm) {
-        // Pour les rappels à court terme, vérifier qu'ils sont dans le futur
-        if (date <= now) {
-          return {
-            isValid: false,
-            errorMessage: 'Le rappel doit être programmé dans le futur'
-          };
-        }
-
-        // Avertissement pour les rappels très proches (moins de 5 minutes)
-        const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
-        if (date < fiveMinutesFromNow) {
-          return {
-            isValid: true,
-            warningMessage: 'Ce rappel est programmé dans moins de 5 minutes'
-          };
-        }
-
-        return { isValid: true };
-      } else {
-        // Pour les rappels à long terme, utiliser la logique existante
+      if (isDateOnly) {
         const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
         const nowOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -131,7 +110,7 @@ export class DateCalculationService {
         // Avertissement pour les dates très éloignées (plus de 2 ans)
         const twoYearsFromNow = new Date();
         twoYearsFromNow.setFullYear(now.getFullYear() + 2);
-        
+
         if (date > twoYearsFromNow) {
           return {
             isValid: true,
@@ -141,6 +120,32 @@ export class DateCalculationService {
 
         return { isValid: true };
       }
+
+      // Si l'heure est présente dans la chaîne, appliquer une validation à la minute près
+      if (date <= now) {
+        return {
+          isValid: false,
+          errorMessage: 'Le rappel doit être programmé dans le futur'
+        };
+      }
+
+      if (date > maxFutureDate) {
+        return {
+          isValid: false,
+          errorMessage: `La date ne peut pas dépasser ${this.MAX_YEARS_FUTURE} ans dans le futur`
+        };
+      }
+
+      // Avertissement pour les rappels très proches (moins de 5 minutes)
+      const fiveMinutesFromNow = new Date(now.getTime() + 5 * 60 * 1000);
+      if (date < fiveMinutesFromNow) {
+        return {
+          isValid: true,
+          warningMessage: 'Ce rappel est programmé dans moins de 5 minutes'
+        };
+      }
+
+      return { isValid: true };
     } catch {
       return {
         isValid: false,

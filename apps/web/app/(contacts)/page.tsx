@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState, useRef, startTransition, useMe
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format, isValid } from 'date-fns';
 import { Ribbon } from '@/components/Ribbon';
+import { SupabaseDisconnectDialog } from '@/components/SupabaseDisconnectDialog';
 import { TableSearchBar, type SearchableColumn } from '@/components/ui/TableSearchBar';
 import { importContactsAction, updateContactAction, clearAllDataAction, callAction } from '@/app/actions';
 import { useSmsAction } from '@/hooks/useSmsAction';
@@ -271,11 +272,26 @@ export default function ContactsPage() {
         setActiveContactState(updatedContact);
         setContactInCallId(updatedContact.id ?? null);
       }
+      // Marqueur global pour empêcher la déconnexion pendant un appel
+      try {
+        localStorage.setItem('dc_call_in_progress', updatedContact?.id ? '1' : '0');
+      } catch {}
     },
     onError: (/* error: Error */) => { // error n'est plus utilisé
       // Les lignes de toast ont été supprimées
     },
   });
+
+  // Nettoyer le marqueur quand l'appel se termine (polling)
+  useEffect(() => {
+    if (!contactInCallId) {
+      try { localStorage.setItem('dc_call_in_progress', '0'); } catch {}
+    }
+  }, [contactInCallId]);
+
+  // Popup de déconnexion (si l’app Next consomme le même hook/état, brancher ici).
+  // Dans cette page SSR/CSR mixte, on peut afficher une simple info si localStorage indique une déconnexion côté app desktop.
+  // Si plus tard on utilise un provider d’auth partagé, on pourra remplacer par <SupabaseDisconnectDialog ... /> avec ce provider.
 
   const clearAllDataMutation = useMutation<
     { message?: string },
