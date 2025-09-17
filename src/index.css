@@ -50,6 +50,14 @@
   --sidebar-accent-foreground: hsl(240 5.9% 10%);
   --sidebar-border: hsl(220 13% 91%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
+
+  /* Palette pour charts shadcn/recharts */
+  --chart-1: hsl(217 91% 60%); /* Bleu */
+  --chart-2: hsl(142 71% 45%); /* Vert */
+  --chart-3: hsl(38 92% 55%);  /* Jaune/Orange */
+  --chart-4: hsl(262 89% 66%); /* Violet */
+  --chart-5: hsl(0 84% 63%);   /* Rouge */
+  --chart-6: hsl(24 95% 57%);  /* Orange vif */
 }
 
 .dark {
@@ -84,6 +92,14 @@
   --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
   --sidebar-border: hsl(240 3.7% 15.9%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
+
+  /* Palette charts - mode sombre (teintes légèrement plus vives) */
+  --chart-1: hsl(217 91% 60%);
+  --chart-2: hsl(142 71% 45%);
+  --chart-3: hsl(38 92% 55%);
+  --chart-4: hsl(262 89% 66%);
+  --chart-5: hsl(0 84% 63%);
+  --chart-6: hsl(24 95% 57%);
 }
 
 /* Force tous les sidebar-gap à être masqués - FIX ESPACE VIDE */

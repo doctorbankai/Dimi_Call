@@ -49,10 +49,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem
 } from "@/components/ui/dropdown-menu";
-import {
+import { 
   Phone, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck, Linkedin, Globe, ExternalLink,
   Download, Keyboard, RefreshCw, Sun, Moon, Columns, X, Filter, Infinity, 
-  Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2, Users, Timer
+  Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2, Users, Timer, Table, BarChart3
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -67,6 +67,7 @@ import { ShortcutConfigDialog } from './components/ShortcutConfigDialog';
 import { ShortcutIndicator } from './components/ShortcutIndicator';
 import { shortcutService } from './services/shortcutService';
 import { SettingsDialog, getSavedColumnConfig } from './components/SettingsDialog';
+import { ChartDashboard } from './components/ChartDashboard';
 
 // Clé de stockage pour la visibilité des colonnes
 const VISIBLE_COLUMNS_STORAGE_KEY = 'dimicall-visible-columns';
@@ -176,6 +177,7 @@ const App: React.FC = () => {
   const [isClearDataDialogOpen, setIsClearDataDialogOpen] = useState(false);
 
   const [importProgress, setImportProgress] = useState<{ percentage: number; message: string } | null>(null);
+  const [viewMode, setViewMode] = useState<'table' | 'graph'>('table');
   
   const [autoSearchMode, setAutoSearchMode] = useState<'disabled' | 'linkedin' | 'google' | 'link'>(() => {
     try {
@@ -2394,6 +2396,31 @@ Dimitri MOREL - Arcanis Conseil`;
 
         {/* Search bar area */}
         <div className="flex items-stretch gap-3">
+          {/* 0ème encadré: Bascule Vue */}
+          <div className="flex items-center bg-card rounded-lg p-3 shadow-sm border">
+            <div className="inline-flex gap-2">
+              <Button
+                variant={viewMode === 'table' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('table')}
+                className="h-9"
+                title="Vue Table"
+              >
+                <Table className="h-4 w-4 mr-2" />
+                Table
+              </Button>
+              <Button
+                variant={viewMode === 'graph' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('graph')}
+                className="h-9"
+                title="Vue Graphique"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Graphique
+              </Button>
+            </div>
+          </div>
           {/* 1er encadré: Recherche */}
           <div className="flex-1 flex gap-3 items-center bg-card rounded-lg p-3 shadow-sm border">
             <Select value={searchColumn} onValueChange={(value) => setSearchColumn(value as keyof Contact | 'all')}>
@@ -2525,30 +2552,37 @@ Dimitri MOREL - Arcanis Conseil`;
 
         {/* Content area */}
         <div className="flex-1 flex overflow-hidden min-h-0">
-          {/* Contact table */}
-          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-            <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-hidden">
-              <PaginatedContactTable
-                ref={contactTableRef}
-                contacts={filteredContacts}
-                callStates={callStates}
-                onSelectContact={handleRowSelection}
-                selectedContactId={selectedContact?.id || null}
-                onUpdateContact={updateContact}
-                onDeleteContact={handleDeleteContact}
-                activeCallContactId={activeCallContactId}
-                theme={theme}
-                visibleColumns={visibleColumns}
-                columnHeaders={availableColumns.length > 0 ? availableColumns : COLUMN_HEADERS}
-                contactDataKeys={availableDataKeys.length > 0 ? availableDataKeys : CONTACT_DATA_KEYS as (keyof Contact | null)[]}
-                onToggleColumnVisibility={toggleColumnVisibility}
-                availableColumns={availableColumns}
-                onFileImport={handleSingleFileImport}
-                initialItemsPerPage={savedItemsPerPage}
-                pageSizeOptions={[25, 50, 100]}
-              />
+          {viewMode === 'table' ? (
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+              <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-hidden">
+                <PaginatedContactTable
+                  ref={contactTableRef}
+                  contacts={filteredContacts}
+                  callStates={callStates}
+                  onSelectContact={handleRowSelection}
+                  selectedContactId={selectedContact?.id || null}
+                  onUpdateContact={updateContact}
+                  onDeleteContact={handleDeleteContact}
+                  activeCallContactId={activeCallContactId}
+                  theme={theme}
+                  visibleColumns={visibleColumns}
+                  columnHeaders={availableColumns.length > 0 ? availableColumns : COLUMN_HEADERS}
+                  contactDataKeys={availableDataKeys.length > 0 ? availableDataKeys : CONTACT_DATA_KEYS as (keyof Contact | null)[]}
+                  onToggleColumnVisibility={toggleColumnVisibility}
+                  availableColumns={availableColumns}
+                  onFileImport={handleSingleFileImport}
+                  initialItemsPerPage={savedItemsPerPage}
+                  pageSizeOptions={[25, 50, 100]}
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+              <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-auto p-4">
+                <ChartDashboard contacts={filteredContacts} />
+              </div>
+            </div>
+          )}
         </div>
               </main>
 
