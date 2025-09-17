@@ -1000,7 +1000,10 @@ Dimitri MOREL - Arcanis Conseil`;
   };
 
   return (
-    <div ref={ref} className="flex flex-wrap sm:flex-nowrap items-stretch gap-1 md:gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
+    <div
+      ref={ref}
+      className="flex flex-wrap sm:flex-nowrap items-stretch gap-1 md:gap-2 overflow-x-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent max-w-full"
+    >
         <input 
           type="file" 
         ref={inputFileRef as React.RefObject<HTMLInputElement>} 
@@ -1010,7 +1013,7 @@ Dimitri MOREL - Arcanis Conseil`;
       />
 
       {/* Groupe 1: Appeler uniquement (Raccrocher a été supprimé) */}
-      <div className="flex items-center gap-1 p-1 border border-muted rounded-md shadow-sm mb-1 sm:mb-0 w-full sm:w-auto">
+      <div className="flex items-center gap-1 p-1 border border-muted rounded-md shadow-sm mb-1 sm:mb-0 w-full sm:w-auto min-w-[260px]">
         <RibbonButton 
           label="Appeler"
           icon={Phone} 
@@ -1024,7 +1027,7 @@ Dimitri MOREL - Arcanis Conseil`;
       <RibbonSeparator />
 
       {/* Groupe 2: Email, SMS, Rappel, Rendez-vous, Qualification */}
-      <div className="flex items-center gap-1 p-1 border border-muted rounded-md shadow-sm mb-1 sm:mb-0 w-full sm:w-auto">
+      <div className="flex items-center gap-1 p-1 border border-muted rounded-md shadow-sm mb-1 sm:mb-0 w-full sm:w-auto min-w-[360px]">
         <RibbonButton 
           label="Email" 
           icon={Mail} 
@@ -1113,7 +1116,7 @@ Dimitri MOREL - Arcanis Conseil`;
         <RibbonSeparator />
 
       {/* Groupe 3: LinkedIn, Google - Ajout de l'encadrement */}
-      <div className="flex items-center gap-1 p-1 border border-muted rounded-md shadow-sm mb-1 sm:mb-0 w-full sm:w-auto">
+      <div className="flex items-center gap-1 p-1 border border-muted rounded-md shadow-sm mb-1 sm:mb-0 w-full sm:w-auto min-w-[300px]">
         <RibbonButton 
           label="LinkedIn"
           icon={Linkedin}
@@ -1146,7 +1149,7 @@ Dimitri MOREL - Arcanis Conseil`;
         <RibbonSeparator />
 
       {/* Groupe 4: Importer, Exporter, Autosave, Tout Effacer */}
-      <div className="flex items-center gap-1 p-1 border border-muted rounded-md shadow-sm w-full sm:w-auto">
+      <div className="flex items-center gap-1 p-1 border border-muted rounded-md shadow-sm w-full sm:w-auto min-w-[320px]">
         <RibbonButton 
           label="Importer"
           icon={UploadCloud} 

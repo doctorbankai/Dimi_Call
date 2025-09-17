@@ -1444,7 +1444,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
           scrollContainerRef.current = node;
         }}
         className={cn(
-          "border rounded-lg scrollbar-hidden relative bg-background transition-all duration-300 h-full",
+          "border rounded-lg scrollbar-hidden relative bg-background transition-all duration-300 h-full overflow-x-auto",
           isDragActive && "ring-2 ring-blue-500 ring-offset-2"
         )}
         style={{
@@ -1466,7 +1466,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
           ) : (
             <Table 
               key="table"
-              className="relative w-full table-auto" 
+              className="relative w-full table-auto min-w-[560px] md:min-w-0"
               style={{ 
                 borderCollapse: 'separate', 
                 borderSpacing: 0,

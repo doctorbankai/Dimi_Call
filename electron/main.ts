@@ -426,10 +426,10 @@ function createWindow(): BrowserWindow {
   
   // Créer la fenêtre de navigateur principale
   const mainWindow = new BrowserWindow({
-    width: 1800,
-    height: 1200,
-    minWidth: 1400,
-    minHeight: 900,
+    width: 1400,
+    height: 900,
+    minWidth: 480,
+    minHeight: 360,
     show: false,
     autoHideMenuBar: !is.dev, // Masquer le menu en production, l'afficher en développement
     titleBarStyle: isMacOS ? 'hiddenInset' : 'hidden', // Configuration adaptée pour macOS

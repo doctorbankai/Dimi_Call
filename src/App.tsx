@@ -1802,9 +1802,11 @@ Dimitri MOREL - Arcanis Conseil`;
 
   return (
     <div className={cn(
-      "flex h-screen overflow-hidden bg-background", 
+      "flex h-[100svh] md:h-screen overflow-hidden bg-background",
       theme === Theme.Dark ? "dark" : ""
-    )}>
+    )}
+      style={{ minHeight: 0 }}
+    >
       {/* Contenu principal */}
       <main className="flex flex-col flex-1 w-full min-h-0 overflow-hidden pt-8">
           {/* Barre de titre personnalisée pour Electron */}
@@ -1900,12 +1902,12 @@ Dimitri MOREL - Arcanis Conseil`;
       
       {/* Main content */}
       <main className={cn(
-        "flex-1 flex flex-col p-3 space-y-3 overflow-hidden w-full min-h-0",
+        "flex-1 flex flex-col p-2 md:p-3 space-y-2 md:space-y-3 overflow-hidden w-full min-h-0",
         isAuthModalOpen && "pointer-events-none opacity-50"
       )}>
       {/* Ribbon */}
-        <Card className="p-3 ribbon-container w-fit mx-auto shadow-md">
-          <div className="flex items-stretch justify-center gap-2 relative">
+        <Card className="p-2 md:p-3 ribbon-container mx-auto shadow-md max-w-full overflow-x-auto">
+          <div className="flex items-stretch justify-center gap-2 md:gap-3 relative flex-wrap md:flex-nowrap">
             
             {/* Communication Group */}
             <div className="flex flex-col items-center">
