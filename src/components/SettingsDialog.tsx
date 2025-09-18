@@ -1596,9 +1596,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           </div>
         </DialogHeader>
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden min-h-0">
           {/* Sidebar de navigation */}
-          <div className="w-64 border-r bg-muted/30 p-4 flex-shrink-0">
+          <div className="w-64 border-r bg-muted/30 p-4 flex-shrink-0 h-full overflow-y-auto">
             <div className="pb-4">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-md bg-foreground/10 flex items-center justify-center">

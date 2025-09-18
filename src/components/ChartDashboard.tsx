@@ -1,8 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Contact, ContactStatus } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, RadialBar, RadialBarChart } from 'recharts';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EventCalendar from '@/components/EventCalendar';
 
 type ChartDashboardProps = {
@@ -92,20 +93,33 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
     return count > 0 ? Math.round(sum / count) : 0;
   }, [contacts]);
 
-  // Bar: durée de chaque appel (derniers 50)
-  const lastCallsDurations = useMemo(() => {
-    const calls = contacts
-      .filter((c) => c.dateAppel && c.dureeAppel)
-      .map((c) => ({
-        date: c.dateAppel!,
-        label: c.dateAppel!,
-        duration: parseDuration(c.dureeAppel!),
-      }))
-      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
-    return calls.slice(-50);
-  }, [contacts]);
+  // Bar: nombre d'appels par période (jour / demi-journée)
+  type PeriodMode = 'day' | 'halfday';
+  const [periodMode, setPeriodMode] = useState<PeriodMode>('day');
 
-  const durationConfig = { duration: { label: 'Durée (s)', color: 'var(--chart-5)' } } as const;
+  function getHalfDayBucket(dateStr?: string, timeStr?: string): string | null {
+    if (!dateStr) return null;
+    if (!timeStr) return `${dateStr} AM`; // défaut matin
+    const [hh] = timeStr.split(':');
+    const h = parseInt(hh || '0', 10);
+    return `${dateStr} ${h < 12 ? 'AM' : 'PM'}`;
+  }
+
+  const callsByPeriod = useMemo(() => {
+    const map = new Map<string, number>();
+    contacts.forEach((c) => {
+      if (!c.dateAppel) return;
+      const key = periodMode === 'day' ? c.dateAppel : getHalfDayBucket(c.dateAppel, c.heureAppel);
+      if (!key) return;
+      map.set(key, (map.get(key) || 0) + 1);
+    });
+    const arr = Array.from(map.entries())
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0));
+    return arr;
+  }, [contacts, periodMode]);
+
+  const callsConfig = { count: { label: 'Appels', color: 'var(--chart-5)' } } as const;
 
   const total = contacts.length || 1;
 
@@ -198,17 +212,32 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
 
       <Card className="lg:col-span-2">
         <CardHeader>
-          <CardTitle>Durée de chaque appel (derniers 50)</CardTitle>
-          <CardDescription>En secondes</CardDescription>
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <CardTitle>Nombre d'appels par période</CardTitle>
+              <CardDescription>Jour ou demi-journée</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={periodMode} onValueChange={(v) => setPeriodMode(v as PeriodMode)}>
+                <SelectTrigger size="sm">
+                  <SelectValue placeholder="Période" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="day">Par jour</SelectItem>
+                  <SelectItem value="halfday">Par demi-journée</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={durationConfig as any} className="mx-auto aspect-square max-h-[300px]">
-            <BarChart data={lastCallsDurations}>
+          <ChartContainer config={callsConfig as any} className="mx-auto aspect-square max-h-[300px]">
+            <BarChart data={callsByPeriod}>
               <CartesianGrid vertical={false} />
               <XAxis dataKey="label" tickLine={false} tickMargin={10} axisLine={false} minTickGap={24} allowDuplicatedCategory={false} />
               <YAxis width={40} />
-              <ChartTooltip content={<ChartTooltipContent hideLabel nameKey="duration" />} />
-              <Bar dataKey="duration" fill="var(--color-duration)" radius={[4, 4, 0, 0]} />
+              <ChartTooltip content={<ChartTooltipContent hideLabel nameKey="count" />} />
+              <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ChartContainer>
         </CardContent>
