@@ -21,7 +21,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
   }, [contacts]);
 
   const radialData = useMemo(() => {
-    const entries = Object.entries(statusCounts);
+    const entries = Object.entries(statusCounts).filter(([label]) => label !== ContactStatus.NonDefini);
     // Limiter le nombre de segments pour lisibilité, regrouper le reste
     const sorted = entries.sort((a, b) => b[1] - a[1]);
     const top = sorted.slice(0, 6);
@@ -70,6 +70,28 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
     return count > 0 ? Math.round(sum / count) : 0;
   }, [contacts]);
 
+  // Durée moyenne des appels décrochés uniquement (exclure certains statuts)
+  const averageAnsweredDurationSeconds = useMemo(() => {
+    const excluded = new Set< ContactStatus >([
+      ContactStatus.MauvaisNum,
+      ContactStatus.Premature,
+      ContactStatus.Repondeur,
+    ]);
+    let sum = 0;
+    let count = 0;
+    contacts.forEach((c) => {
+      if (excluded.has(c.statut)) return;
+      if (c.dureeAppel) {
+        const secs = parseDuration(c.dureeAppel);
+        if (secs > 0) {
+          sum += secs;
+          count += 1;
+        }
+      }
+    });
+    return count > 0 ? Math.round(sum / count) : 0;
+  }, [contacts]);
+
   // Bar: durée de chaque appel (derniers 50)
   const lastCallsDurations = useMemo(() => {
     const calls = contacts
@@ -101,6 +123,15 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
               <RadialBar dataKey="value" background />
             </RadialBarChart>
           </ChartContainer>
+          {/* Légende personnalisée statuts */}
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-3 text-xs text-muted-foreground">
+            {radialData.map((d) => (
+              <div key={d.label} className="flex items-center gap-1.5">
+                <div className="h-2 w-2 shrink-0 rounded-[2px]" style={{ backgroundColor: d.fill }} />
+                <span>{d.label}</span>
+              </div>
+            ))}
+          </div>
           <div className="mt-3 text-xs text-muted-foreground text-center">{contacts.length} contacts</div>
         </CardContent>
       </Card>
@@ -115,7 +146,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
       </Card>
 
       {/* KPIs alignés en une ligne sur grands écrans */}
-      <div className="grid grid-cols-1 gap-4 xl:col-span-2 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 xl:col-span-2 xl:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle>Durée moyenne d'appel</CardTitle>
@@ -124,6 +155,18 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
           <CardContent>
             <div className="flex items-center justify-center py-8">
               <div className="text-4xl font-bold tabular-nums">{averageDurationSeconds.toLocaleString()}</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Durée moyenne (décrochés)</CardTitle>
+            <CardDescription>En secondes</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-center py-8">
+              <div className="text-4xl font-bold tabular-nums">{averageAnsweredDurationSeconds.toLocaleString()}</div>
             </div>
           </CardContent>
         </Card>
@@ -159,10 +202,10 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
           <CardDescription>En secondes</CardDescription>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={durationConfig as any} className="min-h-[260px] w-full">
+          <ChartContainer config={durationConfig as any} className="mx-auto aspect-square max-h-[300px]">
             <BarChart data={lastCallsDurations}>
               <CartesianGrid vertical={false} />
-              <XAxis dataKey="label" tickLine={false} tickMargin={10} axisLine={false} minTickGap={24} />
+              <XAxis dataKey="label" tickLine={false} tickMargin={10} axisLine={false} minTickGap={24} allowDuplicatedCategory={false} />
               <YAxis width={40} />
               <ChartTooltip content={<ChartTooltipContent hideLabel nameKey="duration" />} />
               <Bar dataKey="duration" fill="var(--color-duration)" radius={[4, 4, 0, 0]} />

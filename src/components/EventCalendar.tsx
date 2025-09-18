@@ -49,9 +49,35 @@ export const EventCalendar: React.FC<Props> = ({ contacts }) => {
         const showTooltip = showRdv || showRappel;
         const tooltipText = showTooltip
             ? [
-                ...((ev?.rappel || []).map((c) => `${c.prenom} ${c.nom} (Rappel)`)),
-                ...((ev?.rdv || []).map((c) => `${c.prenom} ${c.nom} (RDV)`)),
-              ].join('\n')
+                ev?.rdv?.length
+                  ? [
+                      `RDV (${ev.rdv.length})`,
+                      ...ev.rdv
+                        .slice()
+                        .sort((a, b) => (a.heureRDV || '').localeCompare(b.heureRDV || ''))
+                        .map((c) => [
+                          `• ${c.prenom} ${c.nom}`,
+                          c.heureRDV ? `   ⏰ ${c.heureRDV}` : undefined,
+                          c.telephone ? `   ☎ ${c.telephone}` : undefined,
+                          c.commentaire ? `   "${c.commentaire}"` : undefined,
+                        ].filter(Boolean).join('\n')),
+                    ].join('\n')
+                  : '',
+                ev?.rappel?.length
+                  ? [
+                      `Rappels (${ev.rappel.length})`,
+                      ...ev.rappel
+                        .slice()
+                        .sort((a, b) => (a.heureRappel || '').localeCompare(b.heureRappel || ''))
+                        .map((c) => [
+                          `• ${c.prenom} ${c.nom}`,
+                          c.heureRappel ? `   ⏰ ${c.heureRappel}` : undefined,
+                          c.telephone ? `   ☎ ${c.telephone}` : undefined,
+                          c.commentaire ? `   "${c.commentaire}"` : undefined,
+                        ].filter(Boolean).join('\n')),
+                    ].join('\n')
+                  : '',
+              ].filter(Boolean).join('\n\n')
             : '';
 
         const buttonStyle: React.CSSProperties = {};
