@@ -72,7 +72,13 @@ jobs:
           echo "APP_VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
+
+      - name: Corriger node-abi pour Electron 38
+        run: npm i node-abi@latest --no-save
+
+      - name: Exécuter postinstall Electron (rebuild des modules natifs)
+        run: npx electron-builder install-app-deps
 
       - name: Vérifier l'image source pour les icônes
         shell: bash
