@@ -62,6 +62,14 @@ interface ElectronAPI {
   onUpdateError: (callback: (error: string) => void) => void
   onUpdateDownloadProgress: (callback: (progress: any) => void) => void
   onUpdateDownloaded: (callback: (updateInfo: any) => void) => void
+
+  // APIs Local DB (SQLite)
+  localdb: {
+    insertStatus: (payload: any) => Promise<{ success: boolean; data?: any; error?: string }>
+    listStatus: (startDate?: string, endDate?: string) => Promise<{ success: boolean; data?: any; error?: string }>
+    getAll: () => Promise<{ success: boolean; data?: any; error?: string }>
+    getPath: () => Promise<{ success: boolean; data?: string | null }>
+  }
 }
 
 // API personnalisée à exposer dans la sandbox du navigateur
@@ -157,6 +165,17 @@ const electronAPI: ElectronAPI = {
   },
   onUpdateDownloaded: (callback: (updateInfo: any) => void) => {
     ipcRenderer.on('update-downloaded', (event, updateInfo) => callback(updateInfo))
+  },
+
+  // APIs Local DB (SQLite)
+  localdb: {
+    insertStatus: (payload: any) => ipcRenderer.invoke('localdb:insert-status', payload),
+    listStatus: (startDate?: string, endDate?: string) => ipcRenderer.invoke('localdb:list-status', startDate, endDate),
+    getAll: () => ipcRenderer.invoke('localdb:get-all'),
+    getPath: () => ipcRenderer.invoke('localdb:path'),
+    delete: (id: number) => ipcRenderer.invoke('localdb:delete', id),
+    update: (payload: any) => ipcRenderer.invoke('localdb:update', payload),
+    updateLatestForContact: (contactId: string, fields: any) => ipcRenderer.invoke('localdb:update-latest-for-contact', contactId, fields),
   }
 }
 

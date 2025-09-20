@@ -9,6 +9,7 @@ import * as fs from 'fs'
 import electronUpdater from 'electron-updater'
 import log from 'electron-log'
 import { PlatformUpdateService } from '../src/services/PlatformUpdateService'
+import * as localDbJsonStatic from './services/localDbJson'
 
 // Extraction de autoUpdater depuis le module CommonJS
 const { autoUpdater } = electronUpdater
@@ -597,6 +598,183 @@ app.whenReady().then(async () => {
     await validatePlatformToolsOnStartup()
   }
 
+  // Initialisation DB locale (Drizzle + SQLite) AVANT la création de la fenêtre
+  const dbPath = path.join(app.getPath('userData'), 'local-data', 'events.db')
+  let localDbModule: any = null
+  let localDbInitDone = false
+  let localDbInitError: any = null
+  let localDbInitPromise: Promise<void> | null = null
+
+  let jsonDbInitDone = false
+  const ensureJsonDbInitialized = (): void => {
+    if (jsonDbInitDone) return
+    try {
+      localDbJsonStatic.initDb(dbPath)
+      jsonDbInitDone = true
+      console.log('[LOCALDB] Fallback JSON initialisé')
+    } catch (e) {
+      console.error('[LOCALDB] Erreur init fallback JSON', e)
+    }
+  }
+
+  const ensureLocalDbInitialized = async (): Promise<void> => {
+    if (localDbInitDone) return
+    if (localDbInitPromise) {
+      await localDbInitPromise
+      return
+    }
+    localDbInitPromise = (async () => {
+      try {
+        if (!localDbModule) {
+          localDbModule = await import('./services/localDb')
+        }
+        console.log('[LOCALDB] Initialisation avec chemin:', dbPath)
+        try {
+          localDbModule.initDb(dbPath)
+          localDbInitDone = true
+          localDbInitError = null
+          console.log('[LOCALDB] DB initialisée (better-sqlite3)')
+        } catch (initErr) {
+          console.warn('[LOCALDB] Échec init better-sqlite3, tentative fallback JSON...', initErr)
+          // Fallback JSON
+          localDbModule = await import('./services/localDbJson')
+          localDbModule.initDb(dbPath)
+          localDbInitDone = true
+          localDbInitError = null
+          console.log('[LOCALDB] DB initialisée (fallback JSON)')
+        }
+      } catch (e) {
+        // Échec import du module better-sqlite3 -> fallback JSON
+        console.warn('[LOCALDB] Échec import better-sqlite3, tentative fallback JSON...', e)
+        try {
+          localDbModule = await import('./services/localDbJson')
+          localDbModule.initDb(dbPath)
+          localDbInitDone = true
+          localDbInitError = null
+          console.log('[LOCALDB] DB initialisée (fallback JSON)')
+        } catch (fallbackErr) {
+          localDbInitDone = false
+          localDbInitError = fallbackErr
+          console.error('Erreur init DB locale (fallback JSON échoué)', fallbackErr)
+        }
+      } finally {
+        localDbInitPromise = null
+      }
+    })()
+    await localDbInitPromise
+  }
+
+  // Enregistrer les handlers IPC immédiatement (grâce à l'init paresseuse)
+  ipcMain.handle('localdb:insert-status', async (event, payload) => {
+    try {
+      await ensureLocalDbInitialized()
+      if (localDbInitDone && localDbModule?.insertStatusEvent) {
+        console.log('[LOCALDB] insert-status (sqlite)')
+        return { success: true, data: localDbModule.insertStatusEvent(payload) }
+      }
+      // Fallback JSON
+      ensureJsonDbInitialized()
+      console.log('[LOCALDB] insert-status (fallback JSON)')
+      return { success: true, data: localDbJsonStatic.insertStatusEvent(payload) }
+    } catch (e: any) {
+      console.error('[LOCALDB] insert-status error:', e)
+      return { success: false, error: e?.message || String(e) }
+    }
+  })
+
+  ipcMain.handle('localdb:list-status', async (event, startDate?: string, endDate?: string) => {
+    try {
+      await ensureLocalDbInitialized()
+      console.log('[LOCALDB] list-status', startDate, endDate)
+      if (localDbInitDone && localDbModule?.listStatusEvents) {
+        return { success: true, data: localDbModule.listStatusEvents(startDate, endDate) }
+      }
+      // Fallback JSON
+      ensureJsonDbInitialized()
+      return { success: true, data: localDbJsonStatic.listStatusEvents(startDate, endDate) }
+    } catch (e: any) {
+      console.error('[LOCALDB] list-status error:', e)
+      return { success: false, error: e?.message || String(e) }
+    }
+  })
+
+  ipcMain.handle('localdb:get-all', async () => {
+    try {
+      await ensureLocalDbInitialized()
+      console.log('[LOCALDB] get-all')
+      if (localDbInitDone && localDbModule?.getAllStatusEvents) {
+        return { success: true, data: localDbModule.getAllStatusEvents() }
+      }
+      // Fallback JSON
+      ensureJsonDbInitialized()
+      return { success: true, data: localDbJsonStatic.getAllStatusEvents() }
+    } catch (e: any) {
+      console.error('[LOCALDB] get-all error:', e)
+      return { success: false, error: e?.message || String(e) }
+    }
+  })
+
+  ipcMain.handle('localdb:delete', async (event, id: number) => {
+    try {
+      await ensureLocalDbInitialized()
+      if (localDbInitDone && localDbModule?.deleteStatusEvent) {
+        return { success: true, data: localDbModule.deleteStatusEvent(id) }
+      }
+      ensureJsonDbInitialized()
+      return { success: true, data: localDbJsonStatic.deleteStatusEvent(id) }
+    } catch (e: any) {
+      console.error('[LOCALDB] delete error:', e)
+      return { success: false, error: e?.message || String(e) }
+    }
+  })
+
+  ipcMain.handle('localdb:update', async (event, payload: any) => {
+    try {
+      await ensureLocalDbInitialized()
+      if (localDbInitDone && localDbModule?.updateStatusEvent) {
+        return { success: true, data: localDbModule.updateStatusEvent(payload) }
+      }
+      ensureJsonDbInitialized()
+      return { success: true, data: localDbJsonStatic.updateStatusEvent(payload) }
+    } catch (e: any) {
+      console.error('[LOCALDB] update error:', e)
+      return { success: false, error: e?.message || String(e) }
+    }
+  })
+
+  ipcMain.handle('localdb:update-latest-for-contact', async (event, contactId: string, fields: any) => {
+    try {
+      await ensureLocalDbInitialized()
+      if (localDbInitDone && localDbModule?.updateLatestStatusEventForContact) {
+        return { success: true, data: localDbModule.updateLatestStatusEventForContact(contactId, fields) }
+      }
+      ensureJsonDbInitialized()
+      return { success: true, data: localDbJsonStatic.updateLatestStatusEventForContact(contactId, fields) }
+    } catch (e: any) {
+      console.error('[LOCALDB] update-latest-for-contact error:', e)
+      return { success: false, error: e?.message || String(e) }
+    }
+  })
+
+  ipcMain.handle('localdb:path', async () => {
+    try {
+      // Toujours renvoyer un chemin utile; fallback sur dbPath si pas encore mémorisé
+      const pSqlite = localDbModule?.getDbPath ? localDbModule.getDbPath() : null
+      const pJson = localDbJsonStatic.getDbPath ? localDbJsonStatic.getDbPath() : null
+      const effectivePath = pSqlite ?? pJson ?? dbPath
+      console.log('[LOCALDB] path =>', effectivePath)
+      return { success: true, data: effectivePath }
+    } catch (e: any) {
+      return { success: true, data: dbPath }
+    }
+  })
+
+  // Démarrer l'init en arrière-plan (non bloquant)
+  ensureLocalDbInitialized().catch(() => {})
+
+  console.log('[LOCALDB] Handlers enregistrés')
+
+  // Créer la fenêtre après l'enregistrement des handlers
   mainWindow = createWindow()
 
   // IPC handlers basiques pour l'interface utilisateur

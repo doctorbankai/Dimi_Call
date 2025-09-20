@@ -1,10 +1,10 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Calendar, CalendarDayButton as BaseDayButton } from '@/components/ui/calendar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Contact } from '@/types';
 import { cn } from '@/lib/utils';
 
-type Props = { contacts: Contact[] };
+type Props = { contacts?: Contact[] };
 
 function formatDateKey(date?: Date | null): string | null {
     if (!date || Number.isNaN(date.getTime?.())) return null;
@@ -14,22 +14,39 @@ function formatDateKey(date?: Date | null): string | null {
     return `${y}-${m}-${d}`;
 }
 
-export const EventCalendar: React.FC<Props> = ({ contacts }) => {
-	// Map des événements par jour
-	const eventsByDay = useMemo(() => {
-		const map: Record<string, { rdv: Contact[]; rappel: Contact[] }> = {};
-		for (const c of contacts) {
-			if (c.dateRDV) {
-				map[c.dateRDV] = map[c.dateRDV] || { rdv: [], rappel: [] };
-				map[c.dateRDV].rdv.push(c);
-			}
-			if (c.dateRappel) {
-				map[c.dateRappel] = map[c.dateRappel] || { rdv: [], rappel: [] };
-				map[c.dateRappel].rappel.push(c);
-			}
-		}
-		return map;
-	}, [contacts]);
+export const EventCalendar: React.FC<Props> = () => {
+    // Charger les événements locaux (status_events)
+    const [localEvents, setLocalEvents] = useState<any[]>([])
+    const loadEvents = async () => {
+        try {
+            if (typeof window !== 'undefined' && (window as any).electronAPI?.localdb) {
+                const res = await (window as any).electronAPI.localdb.getAll()
+                if (res?.success) setLocalEvents(res.data || [])
+            }
+        } catch {}
+    }
+    useEffect(() => { loadEvents() }, [])
+    useEffect(() => {
+        const h = () => loadEvents()
+        window.addEventListener('localdb-updated', h as any)
+        return () => window.removeEventListener('localdb-updated', h as any)
+    }, [])
+
+    // Map des événements par jour (depuis status_events)
+    const eventsByDay = useMemo(() => {
+        const map: Record<string, { rdv: any[]; rappel: any[] }> = {};
+        for (const ev of localEvents) {
+            if (ev.dateRDV) {
+                map[ev.dateRDV] = map[ev.dateRDV] || { rdv: [], rappel: [] };
+                map[ev.dateRDV].rdv.push(ev);
+            }
+            if (ev.dateRappel) {
+                map[ev.dateRappel] = map[ev.dateRappel] || { rdv: [], rappel: [] };
+                map[ev.dateRappel].rappel.push(ev);
+            }
+        }
+        return map;
+    }, [localEvents]);
 
     // Matchers pour rdv/rappel
     const hasRdv = (date: Date) => {
@@ -56,10 +73,10 @@ export const EventCalendar: React.FC<Props> = ({ contacts }) => {
                         .slice()
                         .sort((a, b) => (a.heureRDV || '').localeCompare(b.heureRDV || ''))
                         .map((c) => [
-                          `• ${c.prenom} ${c.nom}`,
+                          `• ${c.prenom || ''} ${c.nom || ''}`.trim(),
                           c.heureRDV ? `   ⏰ ${c.heureRDV}` : undefined,
                           c.telephone ? `   ☎ ${c.telephone}` : undefined,
-                          c.commentaire ? `   "${c.commentaire}"` : undefined,
+                          (c.commentaire || (c.comment)) ? `   "${c.commentaire || c.comment}"` : undefined,
                         ].filter(Boolean).join('\n')),
                     ].join('\n')
                   : '',
@@ -70,10 +87,10 @@ export const EventCalendar: React.FC<Props> = ({ contacts }) => {
                         .slice()
                         .sort((a, b) => (a.heureRappel || '').localeCompare(b.heureRappel || ''))
                         .map((c) => [
-                          `• ${c.prenom} ${c.nom}`,
+                          `• ${c.prenom || ''} ${c.nom || ''}`.trim(),
                           c.heureRappel ? `   ⏰ ${c.heureRappel}` : undefined,
                           c.telephone ? `   ☎ ${c.telephone}` : undefined,
-                          c.commentaire ? `   "${c.commentaire}"` : undefined,
+                          (c.commentaire || (c.comment)) ? `   "${c.commentaire || c.comment}"` : undefined,
                         ].filter(Boolean).join('\n')),
                     ].join('\n')
                   : '',

@@ -68,6 +68,8 @@ import { ShortcutIndicator } from './components/ShortcutIndicator';
 import { shortcutService } from './services/shortcutService';
 import { SettingsDialog, getSavedColumnConfig } from './components/SettingsDialog';
 import { ChartDashboard } from './components/ChartDashboard';
+import LocalDBViewer from './components/LocalDBViewer';
+import PaginatedEventTable from './components/PaginatedEventTable';
 
 // Clé de stockage pour la visibilité des colonnes
 const VISIBLE_COLUMNS_STORAGE_KEY = 'dimicall-visible-columns';
@@ -177,7 +179,7 @@ const App: React.FC = () => {
   const [isClearDataDialogOpen, setIsClearDataDialogOpen] = useState(false);
 
   const [importProgress, setImportProgress] = useState<{ percentage: number; message: string } | null>(null);
-  const [viewMode, setViewMode] = useState<'table' | 'graph'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'graph' | 'db'>('table');
   
   const [autoSearchMode, setAutoSearchMode] = useState<'disabled' | 'linkedin' | 'google' | 'link'>(() => {
     try {
@@ -480,6 +482,7 @@ Dimitri MOREL - Arcanis Conseil`;
     // Utiliser une fonction de mise à jour pour éviter les stale closures
     let updatedContact: Contact | null = null;
     let contactFound = false;
+    let previousStatusBeforeUpdate: ContactStatus | undefined;
     
     setContacts(currentContacts => {
       const existingContact = currentContacts.find(c => c.id === updatedFields.id);
@@ -489,6 +492,8 @@ Dimitri MOREL - Arcanis Conseil`;
       }
 
       contactFound = true;
+      // Capture l'ancien statut avant fusion
+      previousStatusBeforeUpdate = existingContact.statut;
       updatedContact = { ...existingContact, ...updatedFields };
       const updatedContacts = currentContacts.map(c => c.id === updatedFields.id ? updatedContact! : c);
       
@@ -520,6 +525,72 @@ Dimitri MOREL - Arcanis Conseil`;
 
     // Forcer un petit délai pour que l'interface se mette à jour
     await new Promise(resolve => setTimeout(resolve, 50));
+
+    // Enregistrer un événement de statut en local si le statut a changé
+    try {
+      const newStatus = updatedFields.statut;
+      if (typeof window !== 'undefined' && window.electronAPI?.localdb && typeof newStatus !== 'undefined' && updatedContact) {
+        // Insérer uniquement si le statut change réellement
+        if (previousStatusBeforeUpdate !== newStatus) {
+          await window.electronAPI.localdb.insertStatus({
+            contactId: updatedContact.id,
+            oldStatus: previousStatusBeforeUpdate,
+            newStatus,
+            prenom: updatedContact.prenom,
+            nom: updatedContact.nom,
+            telephone: updatedContact.telephone,
+            email: updatedContact.email,
+            commentaire: updatedContact.commentaire,
+            dateRappel: updatedContact.dateRappel,
+            heureRappel: updatedContact.heureRappel,
+            dateRDV: updatedContact.dateRDV,
+            heureRDV: updatedContact.heureRDV,
+            dateAppel: updatedContact.dateAppel,
+            heureAppel: updatedContact.heureAppel,
+            dureeAppel: updatedContact.dureeAppel,
+          });
+          try { window.dispatchEvent(new CustomEvent('localdb-updated')); } catch {}
+        }
+      }
+    } catch (e) {
+      console.warn('Échec d\'enregistrement local du statut:', e);
+    }
+
+    // Journaliser aussi les modifications de champs (commentaire, dates, etc.) comme événements
+    try {
+      if (typeof window !== 'undefined' && window.electronAPI?.localdb && updatedContact) {
+        const fieldsToSync: any = {}
+        const syncKeys = ['commentaire','comment','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','email','telephone','prenom','nom'] as const
+        for (const k of syncKeys) {
+          if (k in updatedFields) {
+            fieldsToSync[k] = (updatedFields as any)[k]
+          }
+        }
+        // Si pas de champs à synchroniser, ne rien faire
+        if (Object.keys(fieldsToSync).length > 0) {
+          await window.electronAPI.localdb.insertStatus({
+            contactId: updatedContact.id,
+            oldStatus: previousStatusBeforeUpdate,
+            newStatus: updatedContact.statut,
+            prenom: updatedContact.prenom,
+            nom: updatedContact.nom,
+            telephone: updatedContact.telephone,
+            email: 'email' in fieldsToSync ? fieldsToSync.email : updatedContact.email,
+            commentaire: ('commentaire' in fieldsToSync ? fieldsToSync.commentaire : (('comment' in fieldsToSync) ? fieldsToSync.comment : updatedContact.commentaire)),
+            dateRappel: 'dateRappel' in fieldsToSync ? fieldsToSync.dateRappel : updatedContact.dateRappel,
+            heureRappel: 'heureRappel' in fieldsToSync ? fieldsToSync.heureRappel : updatedContact.heureRappel,
+            dateRDV: 'dateRDV' in fieldsToSync ? fieldsToSync.dateRDV : updatedContact.dateRDV,
+            heureRDV: 'heureRDV' in fieldsToSync ? fieldsToSync.heureRDV : updatedContact.heureRDV,
+            dateAppel: 'dateAppel' in fieldsToSync ? fieldsToSync.dateAppel : updatedContact.dateAppel,
+            heureAppel: 'heureAppel' in fieldsToSync ? fieldsToSync.heureAppel : updatedContact.heureAppel,
+            dureeAppel: 'dureeAppel' in fieldsToSync ? fieldsToSync.dureeAppel : updatedContact.dureeAppel,
+          })
+          try { window.dispatchEvent(new CustomEvent('localdb-updated')); } catch {}
+        }
+      }
+    } catch (e) {
+      console.warn('Échec de mise à jour de l\'événement local:', e)
+    }
 
   }, [selectedContact, showNotification]); // Retiré 'contacts' car on utilise setContacts avec fonction
 
@@ -2419,6 +2490,16 @@ Dimitri MOREL - Arcanis Conseil`;
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Graphique
               </Button>
+              <Button
+                variant={viewMode === 'db' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('db' as any)}
+                className="h-9"
+                title="Vue Base Locale"
+              >
+                <FileSpreadsheet className="h-4 w-4 mr-2" />
+                BDD
+              </Button>
             </div>
           </div>
           {/* 1er encadré: Recherche */}
@@ -2576,10 +2657,16 @@ Dimitri MOREL - Arcanis Conseil`;
                 />
               </div>
             </div>
-          ) : (
+          ) : viewMode === 'graph' ? (
             <div className="flex-1 flex flex-col overflow-hidden min-h-0">
               <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-auto p-4">
                 <ChartDashboard contacts={filteredContacts} />
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+              <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-hidden">
+                <PaginatedEventTable />
               </div>
             </div>
           )}
