@@ -4,7 +4,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { TablePagination } from '@/components/TablePagination'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
-import { Trash2, RefreshCw } from 'lucide-react'
+import { Trash2, RefreshCw, Upload, Download, Calendar as CalendarIcon } from 'lucide-react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 
 type StatusEvent = {
   id: number
@@ -61,6 +63,29 @@ export default function PaginatedEventTable() {
     return () => window.removeEventListener('localdb-updated', handler as any)
   }, [])
 
+  // Actions déclenchées depuis App (bandeau BDD)
+  useEffect(() => {
+    const onDelete = async () => {
+      const ids = selectedIds.size > 0 ? Array.from(selectedIds) : (selectedId ? [selectedId] : [])
+      for (const id of ids) { await handleDelete(id) }
+      setSelectedIds(new Set())
+      try { window.dispatchEvent(new CustomEvent('dimicall-db-selection', { detail: { count: 0 } })) } catch {}
+    }
+    const onExport = async () => { await handleExportCsv() }
+    const onImport = async () => { await handleImportCsv() }
+    const onRefresh = async () => { await loadAll() }
+    window.addEventListener('dimicall-db-delete', onDelete as any)
+    window.addEventListener('dimicall-db-export', onExport as any)
+    window.addEventListener('dimicall-db-import', onImport as any)
+    window.addEventListener('dimicall-db-refresh', onRefresh as any)
+    return () => {
+      window.removeEventListener('dimicall-db-delete', onDelete as any)
+      window.removeEventListener('dimicall-db-export', onExport as any)
+      window.removeEventListener('dimicall-db-import', onImport as any)
+      window.removeEventListener('dimicall-db-refresh', onRefresh as any)
+    }
+  }, [selectedId, selectedIds])
+
   const handleDelete = async (id: number) => {
     try {
       if (typeof window !== 'undefined' && (window as any).electronAPI?.localdb) {
@@ -84,7 +109,7 @@ export default function PaginatedEventTable() {
 
   // Pagination
   const savedItemsPerPage = useMemo(() => {
-    try { return Number(localStorage.getItem('dimicall-events-items-per-page')) || 25 } catch { return 25 }
+    try { return Number(localStorage.getItem('dimicall-items-per-page')) || 50 } catch { return 50 }
   }, [])
 
   const initialPage = useMemo(() => {
@@ -107,7 +132,7 @@ export default function PaginatedEventTable() {
   }
 
   const handleItemsPerPageChange = (n: number) => {
-    try { localStorage.setItem('dimicall-events-items-per-page', String(n)) } catch {}
+    try { localStorage.setItem('dimicall-items-per-page', String(n)) } catch {}
     setItemsPerPage(n)
   }
 
@@ -117,6 +142,8 @@ export default function PaginatedEventTable() {
     setSelectedIds(prev => {
       const next = new Set(prev)
       if (checked) next.add(id); else next.delete(id)
+      // informer App pour activer/désactiver le bouton Supprimer
+      try { window.dispatchEvent(new CustomEvent('dimicall-db-selection', { detail: { count: next.size } })) } catch {}
       return next
     })
   }
@@ -130,9 +157,63 @@ export default function PaginatedEventTable() {
     })
   }
 
+  const handleExportCsv = async () => {
+    try {
+      const res = await (window as any).electronAPI?.localdb?.exportCsv()
+      if (res?.success) {
+        // Optionnel: feedback utilisateur
+      }
+    } catch {}
+  }
+
+  const handleImportCsv = async () => {
+    try {
+      const res = await (window as any).electronAPI?.localdb?.importCsv()
+      if (res?.success) {
+        await loadAll()
+      }
+    } catch {}
+  }
+
+  // Filtres de date pilotés depuis la barre supérieure (App)
+  const [startDate, setStartDate] = useState<string>('')
+  const [endDate, setEndDate] = useState<string>('')
+  const toLocalYMD = (d: Date) => {
+    const y = d.getFullYear(); const m = String(d.getMonth() + 1).padStart(2, '0'); const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`
+  }
+  const applyListFilter = async (s?: string, e?: string) => {
+    setIsLoading(true)
+    try {
+      const start = s ? `${s} 00:00:00` : undefined
+      const end = e ? `${e} 23:59:59` : undefined
+      const res = await (window as any).electronAPI?.localdb?.listStatus(start, end)
+      if (res?.success) setEvents(res.data || [])
+    } finally {
+      setIsLoading(false)
+    }
+  }
+  // Écoute des filtres émis par App (scope=db)
+  useEffect(() => {
+    const handler = (e: any) => {
+      const { scope, start, end } = e.detail || {}
+      if (scope === 'db') {
+        const s = start || ''
+        const d = end || ''
+        setStartDate(s)
+        setEndDate(d)
+        applyListFilter(s, d)
+      }
+    }
+    window.addEventListener('dimicall-date-filter', handler as any)
+    return () => window.removeEventListener('dimicall-date-filter', handler as any)
+  }, [])
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
+        {/* Barre de filtres fournie par App pour uniformité (rien ici) */}
+
         <Table className="relative w-full table-auto min-w-[560px] md:min-w-0">
           <TableHeader
             className="[&_tr]:border-b"
@@ -270,31 +351,7 @@ export default function PaginatedEventTable() {
       {/* Barre d'actions + Pagination sticky en bas */}
       <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center justify-between px-3 py-1.5 gap-2">
-          <div className="flex items-center gap-2 text-xs">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={selectedIds.size === 0 && !selectedId}
-              onClick={async () => {
-                const ids = selectedIds.size > 0 ? Array.from(selectedIds) : (selectedId ? [selectedId] : [])
-                for (const id of ids) { await handleDelete(id) }
-                setSelectedIds(new Set())
-              }}
-              title="Supprimer la sélection"
-              className="h-8"
-            >
-              <Trash2 className="h-4 w-4 mr-1.5" /> Supprimer
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadAll}
-              title="Rafraîchir"
-              className="h-8"
-            >
-              <RefreshCw className="h-4 w-4 mr-1.5" /> Rafraîchir
-            </Button>
-          </div>
+          <div className="flex items-center gap-2 text-xs"></div>
           <TablePagination
             currentPage={currentPage}
             totalPages={totalPages}

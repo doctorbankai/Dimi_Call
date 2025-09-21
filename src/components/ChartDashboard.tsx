@@ -1,10 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Contact } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Calendar } from '@/components/ui/calendar';
-import { Button } from '@/components/ui/button';
-import { RefreshCw, Calendar as CalendarIcon } from 'lucide-react';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, RadialBar, RadialBarChart } from 'recharts';
  
@@ -18,9 +14,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
   // Filtres de dates pour les événements locaux (status_events)
   const [startDate, setStartDate] = useState<string>(''); // ISO yyyy-mm-dd
   const [endDate, setEndDate] = useState<string>('');
-  const [quickRange, setQuickRange] = useState<'today' | 'thisWeek' | 'thisMonth' | 'custom'>('custom');
   const [localEvents, setLocalEvents] = useState<any[]>([]);
-  const [rangeOpen, setRangeOpen] = useState(false);
   const fromDate = startDate ? new Date(startDate) : undefined;
   const toDate = endDate ? new Date(endDate) : undefined;
   // Format local YYYY-MM-DD (évite le décalage UTC)
@@ -49,29 +43,18 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [startDate, endDate]);
 
-  // Quick ranges
-  function setDateFilter(range: 'today' | 'thisWeek' | 'thisMonth') {
-    const today = new Date();
-    if (range === 'today') {
-      setStartDate(toLocalYMD(today));
-      setEndDate(toLocalYMD(today));
-    } else if (range === 'thisWeek') {
-      const day = today.getDay(); // 0 (dim) - 6 (sam)
-      const diffToMonday = (day + 6) % 7; // lundi = 0
-      const start = new Date(today);
-      start.setDate(today.getDate() - diffToMonday);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6);
-      setStartDate(toLocalYMD(start));
-      setEndDate(toLocalYMD(end));
-    } else if (range === 'thisMonth') {
-      const start = new Date(today.getFullYear(), today.getMonth(), 1);
-      const end = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-      setStartDate(toLocalYMD(start));
-      setEndDate(toLocalYMD(end));
-    }
-    setQuickRange(range);
-  }
+  // Écoute des filtres externes (pilotage depuis App)
+  useEffect(() => {
+    const handler = (e: any) => {
+      const { scope, start, end } = e.detail || {};
+      if (scope === 'graph') {
+        setStartDate(start || '');
+        setEndDate(end || '');
+      }
+    };
+    window.addEventListener('dimicall-date-filter', handler as any);
+    return () => window.removeEventListener('dimicall-date-filter', handler as any);
+  }, []);
   // Répartition des statuts basée sur la base locale
   const radialData = useMemo(() => {
     const map = new Map<string, number>();
@@ -177,49 +160,6 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-      {/* Filtres de dates (local DB) */}
-      <Card className="xl:col-span-2">
-        <CardContent className="py-3">
-          <div className="flex flex-wrap items-center justify-center gap-2 w-full">
-            <div className="inline-flex items-center gap-2">
-              <Button size="sm" variant={quickRange==='today'?'default':'outline'} onClick={() => setDateFilter('today')}>Aujourd'hui</Button>
-              <Button size="sm" variant={quickRange==='thisWeek'?'default':'outline'} onClick={() => setDateFilter('thisWeek')}>Cette semaine</Button>
-              <Button size="sm" variant={quickRange==='thisMonth'?'default':'outline'} onClick={() => setDateFilter('thisMonth')}>Ce mois</Button>
-            </div>
-            <Popover open={rangeOpen} onOpenChange={setRangeOpen}>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8">
-                  <CalendarIcon className="h-4 w-4 mr-2" />
-                  {fromDate && toDate ? `${toLocalYMD(fromDate)} → ${toLocalYMD(toDate)}` : 'Plage'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="p-0 pointer-events-auto" align="start">
-                <div className="p-2">
-                  <Calendar
-                    mode="range"
-                    selected={{ from: fromDate, to: toDate } as any}
-                    onSelect={(r: any) => {
-                      setQuickRange('custom');
-                      const f: Date | undefined = r?.from ?? undefined;
-                      const t: Date | undefined = r?.to ?? r?.from ?? undefined;
-                      setStartDate(f ? toLocalYMD(f) : '');
-                      setEndDate(t ? toLocalYMD(t) : '');
-                    }}
-                    numberOfMonths={2}
-                  />
-                  <div className="flex justify-end gap-2 p-2">
-                    <Button size="sm" variant="secondary" onClick={() => { setRangeOpen(false); }}>Fermer</Button>
-                    <Button size="sm" onClick={() => { setRangeOpen(false); fetchLocalEvents(); }}>Appliquer</Button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-            <Button onClick={fetchLocalEvents} variant="outline" size="sm" className="h-8">
-              <RefreshCw className="h-4 w-4 mr-2" /> Actualiser
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
       <Card className="flex flex-col">
         <CardHeader className="items-center pb-0">
           <CardTitle>Répartition des statuts</CardTitle>

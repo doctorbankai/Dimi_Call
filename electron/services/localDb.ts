@@ -232,3 +232,47 @@ export function updateLatestStatusEventForContact(contactId: string, fields: Rec
 }
 
 
+// Remplacer tous les événements (utile pour import CSV)
+export function replaceAllStatusEvents(events: StatusEvent[]): { success: boolean; count: number } {
+  if (!sqlite || !db) throw new Error('DB non initialisée')
+  const tx = sqlite.transaction((rows: StatusEvent[]) => {
+    sqlite!.prepare(`DELETE FROM status_events`).run()
+    const insert = sqlite!.prepare(`
+      INSERT INTO status_events (
+        id, contact_id, old_status, new_status, applied_at, prenom, nom, telephone,
+        email, commentaire, dateRappel, heureRappel, dateRDV, heureRDV, dateAppel, heureAppel, dureeAppel, dateEntree, heureEntree
+      ) VALUES (
+        @id, @contact_id, @old_status, @new_status, @applied_at, @prenom, @nom, @telephone,
+        @email, @commentaire, @dateRappel, @heureRappel, @dateRDV, @heureRDV, @dateAppel, @heureAppel, @dureeAppel, @dateEntree, @heureEntree
+      )
+    `)
+    for (const r of rows) {
+      const rec: any = {
+        id: r.id ?? null,
+        contact_id: (r as any).contact_id ?? (r as any).contactId ?? '',
+        old_status: (r as any).old_status ?? (r as any).oldStatus ?? null,
+        new_status: (r as any).new_status ?? (r as any).newStatus ?? '',
+        applied_at: r.applied_at ?? new Date().toISOString(),
+        prenom: (r as any).prenom ?? null,
+        nom: (r as any).nom ?? null,
+        telephone: (r as any).telephone ?? null,
+        email: (r as any).email ?? null,
+        commentaire: (r as any).commentaire ?? (r as any).comment ?? null,
+        dateRappel: (r as any).dateRappel ?? null,
+        heureRappel: (r as any).heureRappel ?? null,
+        dateRDV: (r as any).dateRDV ?? null,
+        heureRDV: (r as any).heureRDV ?? null,
+        dateAppel: (r as any).dateAppel ?? null,
+        heureAppel: (r as any).heureAppel ?? null,
+        dureeAppel: (r as any).dureeAppel ?? null,
+        dateEntree: (r as any).dateEntree ?? null,
+        heureEntree: (r as any).heureEntree ?? null,
+      }
+      insert.run(rec)
+    }
+  })
+  tx(events)
+  return { success: true, count: events.length }
+}
+
+

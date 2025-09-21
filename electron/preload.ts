@@ -69,6 +69,8 @@ interface ElectronAPI {
     listStatus: (startDate?: string, endDate?: string) => Promise<{ success: boolean; data?: any; error?: string }>
     getAll: () => Promise<{ success: boolean; data?: any; error?: string }>
     getPath: () => Promise<{ success: boolean; data?: string | null }>
+    exportCsv: () => Promise<{ success: boolean; path?: string; error?: string }>
+    importCsv: () => Promise<{ success: boolean; count?: number; error?: string }>
   }
 }
 
@@ -173,6 +175,8 @@ const electronAPI: ElectronAPI = {
     listStatus: (startDate?: string, endDate?: string) => ipcRenderer.invoke('localdb:list-status', startDate, endDate),
     getAll: () => ipcRenderer.invoke('localdb:get-all'),
     getPath: () => ipcRenderer.invoke('localdb:path'),
+    exportCsv: () => ipcRenderer.invoke('localdb:export-csv'),
+    importCsv: () => ipcRenderer.invoke('localdb:import-csv'),
     delete: (id: number) => ipcRenderer.invoke('localdb:delete', id),
     update: (payload: any) => ipcRenderer.invoke('localdb:update', payload),
     updateLatestForContact: (contactId: string, fields: any) => ipcRenderer.invoke('localdb:update-latest-for-contact', contactId, fields),

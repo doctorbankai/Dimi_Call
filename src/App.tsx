@@ -39,6 +39,8 @@ import { cn, searchLinkedIn, searchGoogle, openDirectLink } from './lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as UiCalendar } from '@/components/ui/calendar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -180,6 +182,21 @@ const App: React.FC = () => {
 
   const [importProgress, setImportProgress] = useState<{ percentage: number; message: string } | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'graph' | 'db'>('table');
+  // Filtres globaux par vue pour uniformité
+  const [graphRange, setGraphRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
+  const [dbRange, setDbRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
+  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false)
+  const [filterQuick, setFilterQuick] = useState<'all' | 'today' | 'thisWeek' | 'thisMonth' | 'custom'>('all')
+  const [dbSelectedCount, setDbSelectedCount] = useState<number>(0)
+
+  useEffect(() => {
+    const onSel = (e: any) => {
+      const c = Number(e?.detail?.count ?? 0)
+      setDbSelectedCount(isNaN(c) ? 0 : c)
+    }
+    window.addEventListener('dimicall-db-selection', onSel as any)
+    return () => window.removeEventListener('dimicall-db-selection', onSel as any)
+  }, [])
   
   const [autoSearchMode, setAutoSearchMode] = useState<'disabled' | 'linkedin' | 'google' | 'link'>(() => {
     try {
@@ -2502,133 +2519,252 @@ Dimitri MOREL - Arcanis Conseil`;
               </Button>
             </div>
           </div>
-          {/* 1er encadré: Recherche */}
-          <div className="flex-1 flex gap-3 items-center bg-card rounded-lg p-3 shadow-sm border">
-            <Select value={searchColumn} onValueChange={(value) => setSearchColumn(value as keyof Contact | 'all')}>
-              <SelectTrigger className="w-44 text-sm h-9 border-border/50 focus:border-primary">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {searchColumnsOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-              </SelectContent>
-            </Select>
-            <div className="flex-1 relative">
-              <Input
-                type="text"
-                placeholder="Rechercher..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="text-sm h-9 pl-9 border-border/50 focus:border-primary"
-              />
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            </div>
-          </div>
-
-          {/* 2ème encadré: Colonnes */}
-          <div className="flex items-center bg-card rounded-lg p-3 shadow-sm border">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9">
-                  <Settings2 className="h-4 w-4 mr-2" />
-                  Colonnes
-                  <Badge variant="secondary" className="ml-2 h-4 px-1 text-xs">
-                    {availableColumns.filter(col => visibleColumns[col]).length}
-                  </Badge>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64 bg-background/95 backdrop-blur-sm border shadow-lg">
-                <DropdownMenuLabel className="flex items-center gap-2">
-                  <Eye className="h-4 w-4" />
-                  Gestion des colonnes
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                
-                {/* Afficher uniquement les colonnes disponibles dans les données */}
-                {availableColumns
-                  // Afficher toutes les colonnes disponibles
-                  .map((header) => {
-                    const isEssential = essentialColumns.includes(header);
-                    return (
-                      <DropdownMenuCheckboxItem
-                        key={header}
-                        className="flex items-center gap-2"
-                        checked={visibleColumns[header] || false}
-                        onCheckedChange={() => toggleColumnVisibility(header)}
-                        onSelect={(e) => e.preventDefault()} // Empêche la fermeture du menu
-                      >
-                        <span className="flex-1">{header}</span>
-                        {isEssential && (
-                          <span className="text-xs text-muted-foreground ml-2">
-                            (essentielle)
-                          </span>
-                        )}
-                      </DropdownMenuCheckboxItem>
-                    );
-                  })}
-
-                <DropdownMenuSeparator />
-                
-                {/* Actions rapides */}
-                <DropdownMenuCheckboxItem
-                  className="flex items-center gap-2 text-primary"
-                  checked={false}
-                  onCheckedChange={showAllAvailableColumns}
-                  onSelect={(e) => e.preventDefault()} // Empêche la fermeture du menu
-                >
-                  <Eye className="h-4 w-4" />
-                  Afficher toutes les colonnes disponibles
-                </DropdownMenuCheckboxItem>
-                
-                <DropdownMenuCheckboxItem
-                  className="flex items-center gap-2 text-orange-600 dark:text-orange-400"
-                  checked={false}
-                  onCheckedChange={hideOptionalColumns}
-                  onSelect={(e) => e.preventDefault()} // Empêche la fermeture du menu
-                >
-                  <Eye className="h-4 w-4" />
-                  Masquer les colonnes optionnelles
-                </DropdownMenuCheckboxItem>
-                
-                {/* Informations sur les colonnes */}
-                <DropdownMenuSeparator />
-                <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                  {availableColumns.length} colonne{availableColumns.length > 1 ? 's' : ''} disponible{availableColumns.length > 1 ? 's' : ''} dans les données
+          {viewMode === 'table' && (
+            <>
+              {/* 1er encadré: Recherche */}
+              <div className="flex-1 flex gap-3 items-center bg-card rounded-lg p-3 shadow-sm border">
+                <Select value={searchColumn} onValueChange={(value) => setSearchColumn(value as keyof Contact | 'all')}>
+                  <SelectTrigger className="w-44 text-sm h-9 border-border/50 focus:border-primary">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {searchColumnsOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <div className="flex-1 relative">
+                  <Input
+                    type="text"
+                    placeholder="Rechercher..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="text-sm h-9 pl-9 border-border/50 focus:border-primary"
+                  />
+                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 </div>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-          
-          {/* 3ème encadré: Chart */}
-          <div className="flex items-center bg-card rounded-lg p-3 shadow-sm border">
-            <div className="relative inline-flex items-center justify-center px-2 py-0.5">
-              <svg width="32" height="32" className="transform -rotate-90">
-                <circle 
-                  cx="16" 
-                  cy="16" 
-                  r="14" 
-                  stroke="currentColor" 
-                  strokeWidth="2" 
-                  fill="transparent" 
-                  className="text-muted-foreground/20"
-                />
-                <circle 
-                  cx="16" 
-                  cy="16" 
-                  r="14" 
-                  stroke="#3B82F6" 
-                  strokeWidth="2" 
-                  fill="transparent" 
-                  strokeDasharray="87.96459430051421" 
-                  strokeDashoffset={87.96459430051421 - (87.96459430051421 * progressPercentage / 100)}
-                  className="transition-all duration-300 ease-in-out" 
-                  strokeLinecap="round"
-                />
-              </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-[9px] font-medium text-muted-foreground">{Math.round(progressPercentage)}%</span>
+              </div>
+
+              {/* 2ème encadré: Colonnes */}
+              <div className="flex items-center bg-card rounded-lg p-3 shadow-sm border">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9">
+                      <Settings2 className="h-4 w-4 mr-2" />
+                      Colonnes
+                      <Badge variant="secondary" className="ml-2 h-4 px-1 text-xs">
+                        {availableColumns.filter(col => visibleColumns[col]).length}
+                      </Badge>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64 bg-background/95 backdrop-blur-sm border shadow-lg">
+                    <DropdownMenuLabel className="flex items-center gap-2">
+                      <Eye className="h-4 w-4" />
+                      Gestion des colonnes
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {availableColumns.map((header) => {
+                      const isEssential = essentialColumns.includes(header);
+                      return (
+                        <DropdownMenuCheckboxItem
+                          key={header}
+                          className="flex items-center gap-2"
+                          checked={visibleColumns[header] || false}
+                          onCheckedChange={() => toggleColumnVisibility(header)}
+                          onSelect={(e) => e.preventDefault()}
+                        >
+                          <span className="flex-1">{header}</span>
+                          {isEssential && (
+                            <span className="text-xs text-muted-foreground ml-2">
+                              (essentielle)
+                            </span>
+                          )}
+                        </DropdownMenuCheckboxItem>
+                      );
+                    })}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem
+                      className="flex items-center gap-2 text-primary"
+                      checked={false}
+                      onCheckedChange={showAllAvailableColumns}
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      <Eye className="h-4 w-4" />
+                      Afficher toutes les colonnes disponibles
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      className="flex items-center gap-2 text-orange-600 dark:text-orange-400"
+                      checked={false}
+                      onCheckedChange={hideOptionalColumns}
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      <Eye className="h-4 w-4" />
+                      Masquer les colonnes optionnelles
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuSeparator />
+                    <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                      {availableColumns.length} colonne{availableColumns.length > 1 ? 's' : ''} disponible{availableColumns.length > 1 ? 's' : ''} dans les données
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              
+              {/* 3ème encadré: Chart */}
+              <div className="flex items-center bg-card rounded-lg p-3 shadow-sm border">
+                <div className="relative inline-flex items-center justify-center px-2 py-0.5">
+                  <svg width="32" height="32" className="transform -rotate-90">
+                    <circle 
+                      cx="16" 
+                      cy="16" 
+                      r="14" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      fill="transparent" 
+                      className="text-muted-foreground/20"
+                    />
+                    <circle 
+                      cx="16" 
+                      cy="16" 
+                      r="14" 
+                      stroke="#3B82F6" 
+                      strokeWidth="2" 
+                      fill="transparent" 
+                      strokeDasharray="87.96459430051421" 
+                      strokeDashoffset={87.96459430051421 - (87.96459430051421 * progressPercentage / 100)}
+                      className="transition-all duration-300 ease-in-out" 
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-[9px] font-medium text-muted-foreground">{Math.round(progressPercentage)}%</span>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Bandeau filtres uniformisé pour Graph/BDD (remplace recherche/colonnes/progress) */}
+          {viewMode !== 'table' && (
+            <div className="flex-1 bg-card rounded-lg p-3 shadow-sm border">
+              <div className="flex flex-wrap items-center justify-center gap-2 w-full">
+                <div className="inline-flex items-center gap-2">
+                  <Button size="sm" variant={filterQuick==='all'?'default':'outline'} onClick={() => {
+                    setFilterQuick('all')
+                    if (viewMode==='graph') { setGraphRange({ start:'', end:'' }) }
+                    if (viewMode==='db') { setDbRange({ start:'', end:'' }) }
+                    const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode==='graph'?'graph':'db', start: '', end: '' } })
+                    window.dispatchEvent(evt)
+                  }}>Tout</Button>
+                  <Button size="sm" variant={filterQuick==='today'?'default':'outline'} onClick={() => {
+                    const today = new Date(); const y = today.getFullYear(); const m = String(today.getMonth()+1).padStart(2,'0'); const d = String(today.getDate()).padStart(2,'0'); const ymd = `${y}-${m}-${d}`
+                    setFilterQuick('today')
+                    const range = { start: ymd, end: ymd }
+                    if (viewMode==='graph') setGraphRange(range); else setDbRange(range)
+                    const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode==='graph'?'graph':'db', start: ymd, end: ymd } })
+                    window.dispatchEvent(evt)
+                  }}>Aujourd'hui</Button>
+                  <Button size="sm" variant={filterQuick==='thisWeek'?'default':'outline'} onClick={() => {
+                    const today = new Date(); const day = today.getDay(); const diffToMonday = (day + 6) % 7
+                    const start = new Date(today); start.setDate(today.getDate() - diffToMonday)
+                    const end = new Date(start); end.setDate(start.getDate() + 6)
+                    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                    const s = fmt(start), e = fmt(end)
+                    setFilterQuick('thisWeek')
+                    const range = { start: s, end: e }
+                    if (viewMode==='graph') setGraphRange(range); else setDbRange(range)
+                    const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode==='graph'?'graph':'db', start: s, end: e } })
+                    window.dispatchEvent(evt)
+                  }}>Cette semaine</Button>
+                  <Button size="sm" variant={filterQuick==='thisMonth'?'default':'outline'} onClick={() => {
+                    const today = new Date(); const start = new Date(today.getFullYear(), today.getMonth(), 1); const end = new Date(today.getFullYear(), today.getMonth()+1, 0)
+                    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+                    const s = fmt(start), e = fmt(end)
+                    setFilterQuick('thisMonth')
+                    const range = { start: s, end: e }
+                    if (viewMode==='graph') setGraphRange(range); else setDbRange(range)
+                    const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode==='graph'?'graph':'db', start: s, end: e } })
+                    window.dispatchEvent(evt)
+                  }}>Ce mois</Button>
+                </div>
+                <Popover open={filterPopoverOpen} onOpenChange={setFilterPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8">
+                      <Calendar className="h-4 w-4 mr-2" />
+                      {(viewMode==='graph'?graphRange.start:dbRange.start) && (viewMode==='graph'?graphRange.end:dbRange.end) ? `${viewMode==='graph'?graphRange.start:dbRange.start} → ${viewMode==='graph'?graphRange.end:dbRange.end}` : 'Plage'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-2" align="start">
+                    <UiCalendar
+                      mode="range"
+                      selected={{ from: (viewMode==='graph'?graphRange.start:dbRange.start) ? new Date(viewMode==='graph'?graphRange.start:dbRange.start) : undefined, to: (viewMode==='graph'?graphRange.end:dbRange.end) ? new Date(viewMode==='graph'?graphRange.end:dbRange.end) : undefined } as any}
+                      onSelect={(r: any) => {
+                        const f: Date | undefined = r?.from ?? undefined
+                        const t: Date | undefined = r?.to ?? r?.from ?? undefined
+                        const fmt = (d?: Date) => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : ''
+                        const s = fmt(f), e = fmt(t)
+                        setFilterQuick('custom')
+                        if (viewMode==='graph') setGraphRange({ start: s, end: e }); else setDbRange({ start: s, end: e })
+                        const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode==='graph'?'graph':'db', start: s, end: e } })
+                        window.dispatchEvent(evt)
+                      }}
+                      numberOfMonths={2}
+                    />
+                  </PopoverContent>
+                </Popover>
+                {viewMode==='graph' && (
+                  <Button variant="outline" size="sm" className="h-8" onClick={() => {
+                    const r = graphRange
+                    const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: 'graph', start: r.start, end: r.end } })
+                    window.dispatchEvent(evt)
+                  }}>
+                    <RefreshCw className="h-4 w-4 mr-2" /> Actualiser
+                  </Button>
+                )}
               </div>
             </div>
-          </div>
+          )}
+
+          {viewMode === 'db' && (
+            <div className="bg-card rounded-lg p-3 shadow-sm border">
+              <div className="flex items-center gap-2 text-xs">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  title="Supprimer la sélection"
+                  disabled={dbSelectedCount === 0}
+                  onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-delete'))}
+                >
+                  <Trash2 className="h-4 w-4 mr-1.5" /> Supprimer
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  title="Exporter en CSV"
+                  onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-export'))}
+                >
+                  <Download className="h-4 w-4 mr-1.5" /> Exporter
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  title="Importer depuis CSV"
+                  onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-import'))}
+                >
+                  <Upload className="h-4 w-4 mr-1.5" /> Importer
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  title="Rafraîchir"
+                  onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-refresh'))}
+                >
+                  <RefreshCw className="h-4 w-4 mr-1.5" /> Rafraîchir
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Content area */}

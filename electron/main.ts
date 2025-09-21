@@ -769,6 +769,136 @@ app.whenReady().then(async () => {
     }
   })
 
+  // Export CSV (écrit un fichier .csv à l'emplacement choisi par l'utilisateur)
+  ipcMain.handle('localdb:export-csv', async () => {
+    try {
+      await ensureLocalDbInitialized()
+      const rows = (localDbInitDone && localDbModule?.getAllStatusEvents)
+        ? (localDbModule.getAllStatusEvents() as any[])
+        : localDbJsonStatic.getAllStatusEvents()
+
+      const { canceled, filePath } = await dialog.showSaveDialog(mainWindow!, {
+        title: 'Exporter events.csv',
+        defaultPath: 'events.csv',
+        filters: [{ name: 'CSV', extensions: ['csv'] }]
+      })
+      if (canceled || !filePath) return { success: false, error: 'Annulé' }
+
+      // Utiliser le fallback CSV writer pour garantir un CSV correct
+      const { replaceAllStatusEvents: _unused, ...jsonModule } = localDbJsonStatic as any
+      const headers = [
+        'id','contact_id','old_status','new_status','applied_at','prenom','nom','telephone',
+        'email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree'
+      ]
+      const csvEscape = (v: any) => {
+        if (v === null || v === undefined) return ''
+        const s = String(v)
+        const needsQuotes = /[",\n\r]/.test(s)
+        const esc = s.replace(/"/g, '""')
+        return needsQuotes ? `"${esc}"` : esc
+      }
+      const header = headers.join(',')
+      const lines = rows.map((r) => headers.map(h => csvEscape((r as any)[h] ?? '')).join(','))
+      const csv = [header, ...lines].join('\n') + '\n'
+      require('fs').writeFileSync(filePath, csv, 'utf8')
+      return { success: true, path: filePath }
+    } catch (e: any) {
+      console.error('[LOCALDB] export-csv error:', e)
+      return { success: false, error: e?.message || String(e) }
+    }
+  })
+
+  // Import CSV (remplace tout le contenu)
+  ipcMain.handle('localdb:import-csv', async () => {
+    try {
+      await ensureLocalDbInitialized()
+      const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
+        title: 'Importer events.csv',
+        filters: [{ name: 'CSV', extensions: ['csv'] }],
+        properties: ['openFile']
+      })
+      if (canceled || !filePaths?.[0]) return { success: false, error: 'Annulé' }
+      const filePath = filePaths[0]
+      const content = require('fs').readFileSync(filePath, 'utf8')
+
+      // Parser CSV avec le fallback parser robuste
+      const parseCsv = (csv: string) => {
+        const splitLine = (line: string) => {
+          const arr: string[] = []
+          let cur = ''
+          let q = false
+          for (let i = 0; i < line.length; i++) {
+            const ch = line[i]
+            if (q) {
+              if (ch === '"') {
+                if (i + 1 < line.length && line[i + 1] === '"') { cur += '"'; i++ } else { q = false }
+              } else { cur += ch }
+            } else {
+              if (ch === ',') { arr.push(cur); cur = '' }
+              else if (ch === '"') { q = true }
+              else { cur += ch }
+            }
+          }
+          arr.push(cur)
+          return arr
+        }
+        const lines = csv.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim().length > 0)
+        if (lines.length === 0) return []
+        const headers = splitLine(lines[0])
+        const idx = (name: string) => headers.findIndex(h => h === name)
+        const mapIdx: any = {}
+        const wanted = ['id','contact_id','old_status','new_status','applied_at','prenom','nom','telephone','email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree']
+        wanted.forEach(h => { mapIdx[h] = idx(h) })
+        const rows: any[] = []
+        for (let i = 1; i < lines.length; i++) {
+          const cols = splitLine(lines[i])
+          const get = (h: string) => {
+            const j = mapIdx[h]
+            if (j === -1 || j === undefined) return null
+            const v = cols[j]
+            return (v === undefined || v === '') ? null : v
+          }
+          const idRaw = get('id')
+          const id = idRaw ? Number(idRaw) : NaN
+          rows.push({
+            id: Number.isFinite(id) ? id : 0,
+            contact_id: get('contact_id') ?? '',
+            old_status: get('old_status'),
+            new_status: get('new_status') ?? '',
+            applied_at: get('applied_at') ?? new Date().toISOString(),
+            prenom: get('prenom'),
+            nom: get('nom'),
+            telephone: get('telephone'),
+            email: get('email'),
+            commentaire: get('commentaire'),
+            dateRappel: get('dateRappel'),
+            heureRappel: get('heureRappel'),
+            dateRDV: get('dateRDV'),
+            heureRDV: get('heureRDV'),
+            dateAppel: get('dateAppel'),
+            heureAppel: get('heureAppel'),
+            dureeAppel: get('dureeAppel'),
+            dateEntree: get('dateEntree'),
+            heureEntree: get('heureEntree'),
+          })
+        }
+        return rows
+      }
+
+      const rows = parseCsv(content)
+      // Remplacer via SQLite si dispo, sinon via fallback JSON/CSV
+      if (localDbInitDone && localDbModule?.replaceAllStatusEvents) {
+        localDbModule.replaceAllStatusEvents(rows)
+      } else if (localDbJsonStatic?.replaceAllStatusEvents) {
+        localDbJsonStatic.replaceAllStatusEvents(rows)
+      }
+      return { success: true, count: rows.length }
+    } catch (e: any) {
+      console.error('[LOCALDB] import-csv error:', e)
+      return { success: false, error: e?.message || String(e) }
+    }
+  })
+
   // Démarrer l'init en arrière-plan (non bloquant)
   ensureLocalDbInitialized().catch(() => {})
 
