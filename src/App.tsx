@@ -1738,7 +1738,7 @@ Dimitri MOREL - Arcanis Conseil`;
     );
 
     const buttonClasses = cn(
-      "flex flex-col items-center justify-center w-[80px] h-12 ribbon-button-modern",
+      "flex flex-col items-center justify-center w-[80px] h-12 shrink-0 ribbon-button-modern",
       "relative overflow-hidden transition-all duration-300 ease-out",
       "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
       "group cursor-pointer",
@@ -1996,12 +1996,12 @@ Dimitri MOREL - Arcanis Conseil`;
         isAuthModalOpen && "pointer-events-none opacity-50"
       )}>
       {/* Ribbon */}
-        <Card className="p-2 md:p-3 ribbon-container mx-auto shadow-md max-w-full overflow-x-auto">
-          <div className="flex items-stretch justify-center gap-2 md:gap-3 relative flex-wrap md:flex-nowrap">
+        <Card className="p-2 md:p-3 ribbon-container mx-auto shadow-md max-w-full overflow-x-auto overflow-y-hidden">
+          <div className="flex items-stretch justify-start md:justify-center gap-2 md:gap-3 relative flex-nowrap whitespace-nowrap w-max">
             
             {/* Communication Group */}
-            <div className="flex flex-col items-center">
-              <div className="flex gap-2 p-2 border-r border-border pr-4 mr-2 justify-center items-center">
+            <div className="flex flex-col items-center shrink-0">
+              <div className="flex gap-2 p-2 border-r border-border pr-4 mr-2 justify-center items-center shrink-0">
                 <RibbonButton 
                   onClick={() => makePhoneCall()} 
                   icon={<Phone />} 
@@ -2024,7 +2024,7 @@ Dimitri MOREL - Arcanis Conseil`;
                     size="sm"
                     disabled={!selectedContact}
                     className={cn(
-                        "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 ribbon-button-modern",
+                        "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
                       "relative overflow-hidden transition-all duration-300 ease-out",
                       "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
                       "group cursor-pointer",
@@ -2083,8 +2083,8 @@ Dimitri MOREL - Arcanis Conseil`;
             </div>
 
             {/* Planification Group */}
-            <div className="flex flex-col items-center">
-              <div className="flex gap-2 p-2 border-r border-border pr-4 mr-2 justify-center items-center">
+            <div className="flex flex-col items-center shrink-0">
+              <div className="flex gap-2 p-2 border-r border-border pr-4 mr-2 justify-center items-center shrink-0">
                 <RibbonButton 
                   onClick={() => selectedContact && setIsRappelDialogOpen(true)} 
                   icon={<Bell />} 
@@ -2116,8 +2116,8 @@ Dimitri MOREL - Arcanis Conseil`;
             </div>
 
             {/* Qualification Group */}
-            <div className="flex flex-col items-center">
-              <div className="flex gap-2 p-2 border-r border-border pr-4 mr-2 justify-center items-center">
+            <div className="flex flex-col items-center shrink-0">
+              <div className="flex gap-2 p-2 border-r border-border pr-4 mr-2 justify-center items-center shrink-0">
                 <RibbonButton 
                   onClick={() => selectedContact && setIsQualificationDialogOpen(true)} 
                   icon={<FileCheck />} 
@@ -2130,8 +2130,8 @@ Dimitri MOREL - Arcanis Conseil`;
             </div>
 
             {/* Recherche Group */}
-            <div className="flex flex-col items-center">
-              <div className="flex gap-2 p-2 border-r border-border pr-4 mr-2 justify-center items-center">
+            <div className="flex flex-col items-center shrink-0">
+              <div className="flex gap-2 p-2 border-r border-border pr-4 mr-2 justify-center items-center shrink-0">
                 <RibbonButton 
                   onClick={() => handleLinkedInSearch()} 
                   icon={<Linkedin />} 
@@ -2161,7 +2161,7 @@ Dimitri MOREL - Arcanis Conseil`;
                     variant="ghost"
                     size="sm"
                     className={cn(
-                        "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 ribbon-button-modern",
+                        "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
                       "relative overflow-hidden transition-all duration-300 ease-out",
                       "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
                       "group cursor-pointer",
@@ -2256,14 +2256,14 @@ Dimitri MOREL - Arcanis Conseil`;
             </div>
 
             {/* Données Group */}
-            <div className="flex flex-col items-center">
-              <div className="flex gap-2 p-2 justify-center items-center">
+            <div className="flex flex-col items-center shrink-0">
+              <div className="flex gap-2 p-2 justify-center items-center shrink-0">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => document.getElementById('fileImporter')?.click()}
                   className={cn(
-                    "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 ribbon-button-modern",
+                    "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
                     "relative overflow-hidden transition-all duration-300 ease-out",
                     "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
                     "group cursor-pointer",
@@ -2299,7 +2299,7 @@ Dimitri MOREL - Arcanis Conseil`;
                     size="sm"
                     disabled={contacts.length === 0}
                     className={cn(
-                        "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 ribbon-button-modern",
+                        "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
                       "relative overflow-hidden transition-all duration-300 ease-out",
                       "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
                       "group cursor-pointer",
@@ -2364,7 +2364,7 @@ Dimitri MOREL - Arcanis Conseil`;
                 disabled={contacts.length === 0}
                 onClick={handleClearData}
                 className={cn(
-                  "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 ribbon-button-modern",
+                  "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
                   "relative overflow-hidden transition-all duration-300 ease-out",
                   "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
                   "group cursor-pointer",
@@ -2402,7 +2402,7 @@ Dimitri MOREL - Arcanis Conseil`;
                   : 'Aucun contact à exporter - Seuls les contacts avec les statuts "À rappeler", "DO", "RO" ou "A0" sont exportés'
                 }
                 className={cn(
-                  "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 ribbon-button-modern",
+                  "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
                   "relative overflow-hidden transition-all duration-300 ease-out",
                   "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
                   "group cursor-pointer",
@@ -2445,7 +2445,7 @@ Dimitri MOREL - Arcanis Conseil`;
                   : 'Aucun rappel à exporter - Seuls les contacts avec date de rappel sont exportés'
                 }
                 className={cn(
-                  "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 ribbon-button-modern",
+                  "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
                   "relative overflow-hidden transition-all duration-300 ease-out",
                   "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
                   "group cursor-pointer",
