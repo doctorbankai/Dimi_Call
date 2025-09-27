@@ -1496,28 +1496,40 @@ table {
 /* CSS personnalisé pour forcer la sidebar à pousser le contenu au lieu de se superposer */
 [data-slot="sidebar-wrapper"] {
   display: flex !important;
+  width: 100%;
+  min-width: 0;
+}
+
+[data-slot="sidebar"] {
+  position: relative;
+  display: flex;
+  flex: 0 0 var(--sidebar-width);
+  width: var(--sidebar-width);
+  transition: flex-basis 200ms ease-linear, width 200ms ease-linear;
+}
+
+[data-slot="sidebar"][data-collapsible="icon"] {
+  flex-basis: var(--sidebar-width-icon);
+  width: var(--sidebar-width-icon);
 }
 
 [data-slot="sidebar-gap"] {
-  width: var(--sidebar-width) !important;
-  transition: width 200ms ease-linear !important;
-}
-
-[data-slot="sidebar-gap"][data-collapsible="icon"] {
-  width: var(--sidebar-width-icon) !important;
+  display: none !important;
 }
 
 [data-slot="sidebar-container"] {
   position: relative !important;
   left: auto !important;
   right: auto !important;
+  inset: auto !important;
   z-index: auto !important;
-  width: var(--sidebar-width) !important;
-  transition: width 200ms ease-linear !important;
+  width: 100% !important;
+  transition: inherit !important;
 }
 
-[data-slot="sidebar-container"][data-collapsible="icon"] {
-  width: var(--sidebar-width-icon) !important;
+[data-slot="sidebar-inset"] {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* Forcer la sidebar à se rétracter correctement */

@@ -2063,7 +2063,7 @@ Dimitri MOREL - Arcanis Conseil`;
   return (
     <SidebarProvider>
       <div className={cn(
-        "flex h-[100svh] md:h-screen overflow-hidden bg-background",
+        "flex h-[100svh] md:h-screen overflow-hidden bg-background min-w-0",
         theme === Theme.Dark ? "dark" : ""
       )}
         style={{ minHeight: 0 }}
@@ -2077,9 +2077,9 @@ Dimitri MOREL - Arcanis Conseil`;
           viewMode={viewMode}
           onChangeViewMode={(mode) => setViewMode(mode)}
         />
-        <SidebarInset>
-      {/* Contenu principal */}
-      <main className="flex flex-col flex-1 w-full min-h-0 overflow-hidden pt-8">
+        <SidebarInset className="min-w-0">
+          {/* Contenu principal */}
+          <main className="flex flex-col flex-1 w-full min-h-0 min-w-0 overflow-hidden pt-8">
           {/* Barre de titre personnalisée pour Electron */}
           <TitleBar 
             theme={theme} 
