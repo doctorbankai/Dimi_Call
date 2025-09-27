@@ -132,10 +132,10 @@ export const IconClock = ({ className = TABLE_HEADER_ICON_SIZE }: { className?: 
   </svg>
 );
 
-export const IconDuration = ({ className = TABLE_HEADER_ICON_SIZE }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m-4.5 0a9 9 0 11-18 0 9 9 0 0118 0zM6.75 9l-1.5 1.5M17.25 9l1.5 1.5" />
-    </svg>
+export const IconHourglass = ({ className = TABLE_HEADER_ICON_SIZE }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={className}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-6.364-.386l1.591-1.591M3 12h2.25m.386-6.364l1.591 1.591M12 12l-3 3m3-3l3 3m-3-3v6" />
+  </svg>
 );
 
 
@@ -391,7 +391,7 @@ export const headerIcons: Record<string, React.ReactNode> = {
   "Heure RDV": <IconClock />,
   "Date Appel": <IconCalendar />,
   "Heure Appel": <IconClock />,
-  "Durée Appel": <IconDuration />,
+  "Durée Appel": <IconHourglass />,
   "Sexe": <IconUser />,
   "Don": <IconUser />,
   "Qualité": <IconUser />,
@@ -400,6 +400,9 @@ export const headerIcons: Record<string, React.ReactNode> = {
   "UID": <IconUser />,
   "Actions": <IconSettings />,
 };
+
+// Export alias pour compat shadcn en-têtes
+export const TABLE_HEADER_ICONS = headerIcons;
 
 export const INITIAL_CONTACTS_COUNT = 0; // Or load from a default set later
 

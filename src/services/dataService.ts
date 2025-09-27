@@ -196,84 +196,83 @@ export const saveCallStates = (states: Record<string, { isCalling?: boolean; has
   }
 };
 
-// Normalize header names for CSV import
-// Fonction pour normaliser les chaînes (supprimer accents, espaces, etc.)
+// Normalize header names for CSV/Excel import
+// Fonction pour normaliser les chaînes (supprimer accents, espaces, ponctuation, etc.)
 const removeAccents = (str: string): string => {
   return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 };
 
-const normalizeHeader = (header: string): string => {
-  // Nettoyage initial : supprimer espaces de début/fin, convertir en minuscules, supprimer accents
-  const cleaned = removeAccents(header.trim().toLowerCase());
+const normalizeString = (str: string): string => {
+  return removeAccents(str.trim().toLowerCase())
+    .replace(/[^a-z0-9]/g, ''); // supprimer tout sauf lettres/chiffres
+};
+
+export const normalizeHeader = (header: string): string => {
+  // Nettoyage fort pour détecter les variantes (accents, espaces, slashes, etc.)
+  const cleaned = normalizeString(header);
   
-  // Mapping étendu avec toutes les variantes possibles
+  // Mapping étendu avec variantes normalisées (sans ponctuation)
   const mapping: Record<string, string> = {
     // PRÉNOM - toutes variantes
-    'prénom': 'prenom',
     'prenom': 'prenom',
     'firstname': 'prenom',
-    'first_name': 'prenom',
-    'first name': 'prenom',
+    'firstnme': 'prenom',
     'fname': 'prenom',
     
-    // NOM - toutes variantes  
+    // NOM - toutes variantes
     'nom': 'nom',
     'lastname': 'nom',
-    'last_name': 'nom',
-    'last name': 'nom',
+    'lastnam': 'nom',
     'lname': 'nom',
     'surname': 'nom',
-    'family_name': 'nom',
+    'familyname': 'nom',
     
-    // TÉLÉPHONE - toutes variantes
-    'téléphone': 'telephone',
+    // TÉLÉPHONE/NUMÉRO - très flexible
     'telephone': 'telephone',
     'phone': 'telephone',
     'numero': 'telephone',
-    'numéro': 'telephone',
+    'numeroportable': 'telephone',
     'number': 'telephone',
     'tel': 'telephone',
     'mobile': 'telephone',
     'gsm': 'telephone',
     'portable': 'telephone',
     'cellulaire': 'telephone',
-    'tél': 'telephone',
+    'cell': 'telephone',
     
     // EMAIL - toutes variantes
     'email': 'email',
-    'e-mail': 'email',
     'mail': 'email',
-    'mél': 'email',
     'mel': 'email',
     'courriel': 'email',
-    'adresse_mail': 'email',
-    'adresse mail': 'email',
-    'email_address': 'email',
+    'adressemail': 'email',
+    'emailaddress': 'email',
     
-    // SOURCE/ÉCOLE - toutes variantes
-    'école': 'source',
-    'ecole': 'source',
+    // SOURCE/ÉCOLE - toutes variantes (mapping vers 'source')
     'source': 'source',
+    'ecole': 'source',
+    'ecolesource': 'source',
     'origin': 'source',
     'origine': 'source',
     'etablissement': 'source',
-    'établissement': 'source',
     'institution': 'source',
     'university': 'source',
     'universite': 'source',
-    'université': 'source',
     'school': 'source',
+    'provenance': 'source',
     
     // STATUT - toutes variantes
     'statut': 'statut',
+    'statutappel': 'statut',
     'status': 'statut',
-    'état': 'statut',
+    'callstatus': 'statut',
     'etat': 'statut',
     'state': 'statut',
     
     // COMMENTAIRE - toutes variantes
     'commentaire': 'commentaire',
     'commentaires': 'commentaire',
+    'commentairesappel': 'commentaire',
     'comment': 'commentaire',
     'comments': 'commentaire',
     'note': 'commentaire',
@@ -282,6 +281,79 @@ const normalizeHeader = (header: string): string => {
     'remarques': 'commentaire',
     'observation': 'commentaire',
     'observations': 'commentaire',
+    
+    // SEXE - toutes variantes
+    'sexe': 'sexe',
+    'genre': 'sexe',
+    'gender': 'sexe',
+    'civilite': 'sexe',
+    'civility': 'sexe',
+    
+    // TYPE - toutes variantes
+    'type': 'type',
+    'categorie': 'type',
+    'category': 'type',
+    'typologie': 'type',
+    
+    // QUALITÉ - toutes variantes
+    'qualite': 'qualite',
+    'quality': 'qualite',
+    'niveau': 'qualite',
+    'grade': 'qualite',
+    
+    // DATE RAPPEL - toutes variantes
+    'daterappel': 'dateRappel',
+    'datederappel': 'dateRappel',
+    'rappeldate': 'dateRappel',
+    'callbackdate': 'dateRappel',
+    
+    // HEURE RAPPEL - toutes variantes
+    'heurerappel': 'heureRappel',
+    'heurederappel': 'heureRappel',
+    'rappelheure': 'heureRappel',
+    'callbacktime': 'heureRappel',
+    
+    // DATE APPEL - toutes variantes
+    'dateappel': 'dateAppel',
+    'datedappel': 'dateAppel',
+    'appeldate': 'dateAppel',
+    'calldate': 'dateAppel',
+    
+    // HEURE APPEL - toutes variantes
+    'heureappel': 'heureAppel',
+    'heuredappel': 'heureAppel',
+    'appelheure': 'heureAppel',
+    'calltime': 'heureAppel',
+    
+    // DATE RDV - toutes variantes
+    'daterdv': 'dateRDV',
+    'daterendezvous': 'dateRDV',
+    'rdvdate': 'dateRDV',
+    'appointmentdate': 'dateRDV',
+    
+    // HEURE RDV - toutes variantes
+    'heurerdv': 'heureRDV',
+    'heurerendezvous': 'heureRDV',
+    'rdvheure': 'heureRDV',
+    'appointmenttime': 'heureRDV',
+    
+    // DURÉE APPEL - toutes variantes
+    'dureeappel': 'dureeAppel',
+    'dureedappel': 'dureeAppel',
+    'callduration': 'dureeAppel',
+    'duration': 'dureeAppel',
+    'duree': 'dureeAppel',
+    
+    // LIEN - toutes variantes
+    'lien': 'lien',
+    'link': 'lien',
+    'url': 'lien',
+    'site': 'lien',
+    'website': 'lien',
+    'siteweb': 'lien',
+    'siteinternet': 'lien',
+    'webpage': 'lien',
+    'weblink': 'lien'
   };
   
   // Recherche directe
@@ -289,7 +361,15 @@ const normalizeHeader = (header: string): string => {
     return mapping[cleaned];
   }
   
-  // Si aucun mapping trouvé, retourner le header nettoyé
+  // Fallback: correspondance partielle (ex: "ecole/source" → "ecolesource")
+  for (const [key, value] of Object.entries(mapping)) {
+    if (cleaned.includes(key) || key.includes(cleaned)) {
+      console.log(`🔍 Correspondance partielle trouvée: "${header}" → "${key}" → "${value}"`);
+      return value;
+    }
+  }
+  
+  // Si aucun mapping trouvé, retourner le header nettoyé (normalisé)
   console.warn(`⚠️ En-tête non reconnu: "${header}" → "${cleaned}"`);
   return cleaned;
 };
@@ -379,7 +459,10 @@ const detectDelimiter = async (file: File): Promise<string> => {
 };
 
 // Import contacts from file (CSV or Excel)
-export const importContactsFromFile = async (file: File): Promise<Contact[]> => {
+export const importContactsFromFile = async (
+  file: File,
+  headerMapping?: Record<string, string>
+): Promise<Contact[]> => {
   // 🔍 Vérification préliminaire de la taille du fichier
   const fileSizeInMB = file.size / (1024 * 1024);
   console.log(`📄 Traitement du fichier: ${file.name} (${fileSizeInMB.toFixed(1)}MB)`);
@@ -431,7 +514,13 @@ export const importContactsFromFile = async (file: File): Promise<Contact[]> => 
           
           // Traitement par chunks pour éviter le blocage de l'UI
           try {
-            const normalizedHeaders = results.meta.fields.map(normalizeHeader);
+            const normalizedHeaders = (results.meta.fields as string[]).map((orig: string) => {
+              const original = orig?.toString().trim();
+              if (headerMapping && original && headerMapping[original]) {
+                return headerMapping[original];
+              }
+              return normalizeHeader(original || '');
+            });
 
             const chunkContacts = results.data.map((row: any, index: number) => {
               rowIndex++;
@@ -514,7 +603,12 @@ export const importContactsFromFile = async (file: File): Promise<Contact[]> => 
           
           // 1. Extraire les en-têtes originaux de la première ligne
           const originalHeaders = (jsonData[0] as string[]).map(h => h ? h.toString().trim() : '');
-          const normalizedHeaders = originalHeaders.map(h => normalizeHeader(h));
+          const normalizedHeaders = originalHeaders.map(h => {
+            if (headerMapping && headerMapping[h]) {
+              return headerMapping[h];
+            }
+            return normalizeHeader(h);
+          });
           const contacts: Contact[] = [];
           
           // 📊 Validation des en-têtes pour Excel

@@ -33,6 +33,7 @@ import { useAutoUpdate } from './hooks/useAutoUpdate';
 import { DevToolsService } from './services/devToolsService';
 import { v4 as uuidv4 } from 'uuid';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn, searchLinkedIn, searchGoogle, openDirectLink } from './lib/utils';
@@ -49,12 +50,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuCheckboxItem
+  DropdownMenuCheckboxItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem
 } from "@/components/ui/dropdown-menu";
 import { 
   Phone, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck, Linkedin, Globe, ExternalLink,
   Download, Keyboard, RefreshCw, Sun, Moon, Columns, X, Filter, Infinity, 
-  Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2, Users, Timer, Table, BarChart3
+  Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2, Users, Timer, BarChart3, Database,
+  ChevronLeft, ChevronRight, Plus
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -64,6 +68,7 @@ import { AuthModal } from './components/AuthModal';
 import { SupabaseDisconnectDialog } from '@/components/SupabaseDisconnectDialog';
 import { UserProfileCard } from './components/UserProfileCard';
 import { useSupabaseAuth } from './lib/auth-client';
+import CallControl from './components/CallControl';
 
 import { ShortcutConfigDialog } from './components/ShortcutConfigDialog';
 import { ShortcutIndicator } from './components/ShortcutIndicator';
@@ -72,6 +77,13 @@ import { SettingsDialog, getSavedColumnConfig } from './components/SettingsDialo
 import { ChartDashboard } from './components/ChartDashboard';
 import LocalDBViewer from './components/LocalDBViewer';
 import PaginatedEventTable from './components/PaginatedEventTable';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+  ContextMenuSeparator,
+} from '@/components/ui/context-menu';
 
 // Clé de stockage pour la visibilité des colonnes
 const VISIBLE_COLUMNS_STORAGE_KEY = 'dimicall-visible-columns';
@@ -188,6 +200,18 @@ const App: React.FC = () => {
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false)
   const [filterQuick, setFilterQuick] = useState<'all' | 'today' | 'thisWeek' | 'thisMonth' | 'custom'>('all')
   const [dbSelectedCount, setDbSelectedCount] = useState<number>(0)
+  // Onglets Table
+  type TableTab = { id: string; name: string; color?: string; contacts: Contact[] }
+  const [tableTabs, setTableTabs] = useState<TableTab[]>(() => {
+    try {
+      const raw = localStorage.getItem('dimicall-table-tabs')
+      return raw ? JSON.parse(raw) as TableTab[] : []
+    } catch { return [] }
+  })
+  const [activeTableTabId, setActiveTableTabId] = useState<string>(() => {
+    try { return localStorage.getItem('dimicall-active-table-tab') || '' } catch { return '' }
+  })
+  const [editingTabId, setEditingTabId] = useState<string | null>(null)
 
   useEffect(() => {
     const onSel = (e: any) => {
@@ -197,6 +221,37 @@ const App: React.FC = () => {
     window.addEventListener('dimicall-db-selection', onSel as any)
     return () => window.removeEventListener('dimicall-db-selection', onSel as any)
   }, [])
+
+  // Persister tabs
+  useEffect(() => {
+    try { localStorage.setItem('dimicall-table-tabs', JSON.stringify(tableTabs)) } catch {}
+  }, [tableTabs])
+  useEffect(() => {
+    try { localStorage.setItem('dimicall-active-table-tab', activeTableTabId) } catch {}
+  }, [activeTableTabId])
+
+  // Réception transfert depuis BDD
+  useEffect(() => {
+    const handler = (e: any) => {
+      const contactsFromDb: Contact[] = e?.detail?.contacts || []
+      const name: string = e?.detail?.name || `Nouvel onglet (${tableTabs.length + 1})`
+      setTableTabs(prev => {
+        const limited = prev.slice(0, 5)
+        if (limited.length >= 5) {
+          // Remplacer le dernier onglet si déjà 5
+          const replaced = [...limited]
+          replaced[4] = { id: crypto.randomUUID(), name, contacts: contactsFromDb }
+          setActiveTableTabId(replaced[4].id)
+          return replaced
+        }
+        const id = crypto.randomUUID()
+        setActiveTableTabId(id)
+        return [...limited, { id, name, contacts: contactsFromDb }]
+      })
+    }
+    window.addEventListener('dimicall-db-transferred', handler as any)
+    return () => window.removeEventListener('dimicall-db-transferred', handler as any)
+  }, [tableTabs.length])
   
   const [autoSearchMode, setAutoSearchMode] = useState<'disabled' | 'linkedin' | 'google' | 'link'>(() => {
     try {
@@ -886,7 +941,24 @@ Dimitri MOREL - Arcanis Conseil`;
         totalRows: updatedContacts.length
       });
       
-      setContacts(updatedContacts);
+      // Injecter dans l'onglet actif si la vue Tabs est utilisée, sinon dans la vue globale
+      if (tableTabs.length > 0) {
+        const targetTabId = activeTableTabId || tableTabs[0]?.id || '';
+        if (targetTabId) {
+          setTableTabs(prev => prev.map(t => t.id === targetTabId ? { ...t, contacts: updatedContacts } : t));
+          setActiveTableTabId(targetTabId);
+        } else {
+          // Fallback: créer un onglet si aucune id active
+          const id = crypto.randomUUID();
+          setTableTabs(prev => [...prev, { id, name: `Import (${new Date().toLocaleString()})`, contacts: updatedContacts }]);
+          setActiveTableTabId(id);
+        }
+        // Maintenir les colonnes détectées en mettant aussi à jour le global
+        setContacts(updatedContacts);
+        setViewMode('table');
+      } else {
+        setContacts(updatedContacts);
+      }
       setCallStates({});
       setSelectedContact(null);
       
@@ -913,7 +985,12 @@ Dimitri MOREL - Arcanis Conseil`;
 
     setIsImporting(true);
     try {
-      await handleSingleFileImport(file);
+      // Ouvrir le dialogue de mappage via la table si disponible
+      if (contactTableRef.current?.openImportMapping) {
+        await contactTableRef.current.openImportMapping(file);
+      } else {
+        await handleSingleFileImport(file);
+      }
     } finally {
       setIsImporting(false);
     }
@@ -1113,6 +1190,16 @@ Dimitri MOREL - Arcanis Conseil`;
           id: activeCallContactId, 
           dureeAppel: durationStr
         });
+        // Si des tabs sont actifs, propager la durée dans le tab courant pour un rendu immédiat
+        setTableTabs(prev => {
+          if (!prev || prev.length === 0) return prev;
+          const targetId = activeTableTabId || prev[0]?.id;
+          return prev.map(tab => {
+            if (tab.id !== targetId) return tab;
+            const newContacts = tab.contacts.map(c => c.id === activeCallContactId ? { ...c, dureeAppel: durationStr } : c);
+            return { ...tab, contacts: newContacts };
+          });
+        });
         
         // Terminer l'appel dans l'interface
         updateCallState(activeCallContactId, { isCalling: false, hasBeenCalled: true });
@@ -1162,6 +1249,40 @@ Dimitri MOREL - Arcanis Conseil`;
   useEffect(() => {
     // S'exécuter une seule fois au démarrage
     if (!isInitialized) {
+      // Appliquer des contacts importés depuis le dialogue de mappage
+      const onImported = (e: any) => {
+        try {
+          const { contacts: newContacts, fileName, source } = e.detail || {};
+          if (!newContacts || !Array.isArray(newContacts)) return;
+          const updatedContacts = newContacts.map((c: Contact, idx: number) => ({
+            ...c,
+            numeroLigne: idx + 1,
+            id: c.id || uuidv4()
+          }));
+          saveImportedTable(updatedContacts, { fileName: fileName || 'Import', source: (source || 'csv'), totalRows: updatedContacts.length });
+          // Injecter dans l'onglet actif si des tabs existent
+          if (tableTabs.length > 0) {
+            const targetTabId = activeTableTabId || tableTabs[0]?.id || ''
+            if (targetTabId) {
+              setTableTabs(prev => prev.map(t => t.id === targetTabId ? { ...t, contacts: updatedContacts } : t))
+              setActiveTableTabId(targetTabId)
+            } else {
+              const id = crypto.randomUUID()
+              setTableTabs(prev => [...prev, { id, name: `Import (${new Date().toLocaleString()})`, contacts: updatedContacts }])
+              setActiveTableTabId(id)
+            }
+            setContacts(updatedContacts) // maintenir la liste globale en cohérence
+            setViewMode('table')
+          } else {
+            setContacts(updatedContacts)
+          }
+          setCallStates({});
+          setSelectedContact(null);
+          showNotification('success', `✅ ${updatedContacts.length} contacts importés avec succès !`);
+        } catch {}
+      }
+      window.addEventListener('dimicall-imported-contacts', onImported as any)
+
       // Vérifier s'il y a une table importée sauvegardée
       if (hasImportedTable()) {
         const savedTable = loadImportedTable();
@@ -1187,6 +1308,10 @@ Dimitri MOREL - Arcanis Conseil`;
       // Chargement normal si pas de table importée
       refreshData();
       setIsInitialized(true);
+
+      return () => {
+        try { window.removeEventListener('dimicall-imported-contacts', onImported as any) } catch {}
+      }
     }
   }, [isInitialized, showNotification]);
 
@@ -1685,18 +1810,33 @@ Dimitri MOREL - Arcanis Conseil`;
   };
 
   // Derived state & constants for rendering
-  const searchColumnsOptions = useMemo(() => [
-    { value: 'all', label: 'Toutes les colonnes' },
-    ...COLUMN_HEADERS.slice(1, COLUMN_HEADERS.length -1) 
-      .map((header, idx) => {
-        const dataKeyIndex = idx + 1; 
-        const dataKey = CONTACT_DATA_KEYS[dataKeyIndex] as keyof Contact | null;
-        return {
-          value: dataKey || 'all',
-          label: header
-        };
-      })
-  ], []);
+  // Options de recherche basées sur les colonnes réellement disponibles/importées
+  const searchColumnsOptions = useMemo(() => {
+    // Toujours proposer la recherche globale
+    const options: { value: keyof Contact | 'all'; label: string }[] = [
+      { value: 'all', label: 'Toutes les colonnes' }
+    ];
+
+    // Utiliser le mapping disponible (entêtes -> dataKeys) détecté dynamiquement
+    if (availableColumns.length > 0 && availableDataKeys.length === availableColumns.length) {
+      for (let i = 0; i < availableColumns.length; i++) {
+        const header = availableColumns[i];
+        const dataKey = availableDataKeys[i];
+        // Ne pas ajouter l’index "#" qui n’a pas de dataKey exploitable
+        if (!dataKey || header === '#') continue;
+        options.push({ value: dataKey as keyof Contact, label: header });
+      }
+      return options;
+    }
+
+    // Fallback: ancienne logique sur constantes si rien de détecté
+    const fallback = COLUMN_HEADERS.slice(1, COLUMN_HEADERS.length - 1).map((header, idx) => {
+      const dataKeyIndex = idx + 1;
+      const dataKey = CONTACT_DATA_KEYS[dataKeyIndex] as keyof Contact | null;
+      return { value: (dataKey || 'all') as keyof Contact | 'all', label: header };
+    });
+    return options.concat(fallback);
+  }, [availableColumns, availableDataKeys]);
 
   const totalContacts = contacts.length;
   const processedContacts = contacts.filter(c => c.statut !== ContactStatus.NonDefini).length;
@@ -1999,88 +2139,7 @@ Dimitri MOREL - Arcanis Conseil`;
         <Card className="p-2 md:p-3 ribbon-container mx-auto shadow-md max-w-full overflow-x-auto overflow-y-hidden">
           <div className="flex items-stretch justify-start md:justify-center gap-2 md:gap-3 relative flex-nowrap whitespace-nowrap w-max">
             
-            {/* Communication Group */}
-            <div className="flex flex-col items-center shrink-0">
-              <div className="flex gap-2 p-2 border-r border-border pr-4 mr-2 justify-center items-center shrink-0">
-                <RibbonButton 
-                  onClick={() => makePhoneCall()} 
-                  icon={<Phone />} 
-                  label="Appeler" 
-                  disabled={!selectedContact}
-                  className="min-w-[80px] max-w-[80px] h-12"
-                />
-                <RibbonButton 
-                  onClick={() => selectedContact && setIsEmailDialogOpen(true)} 
-                  icon={<Mail />} 
-                  label="Email" 
-                  disabled={!selectedContact}
-                  className="min-w-[80px] max-w-[80px] h-12"
-                />
-              {/* Bouton SMS avec dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={!selectedContact}
-                    className={cn(
-                        "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
-                      "relative overflow-hidden transition-all duration-300 ease-out",
-                      "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
-                      "group cursor-pointer",
-                      "border border-transparent hover:bg-gradient-to-br hover:from-primary/10 hover:to-accent/10 hover:border-primary/30",
-                      selectedContact && "hover:transform hover:rotate-1"
-                    )}
-                  >
-                    {/* Shimmer effect */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
-                    </div>
-                    
-                    {/* Glow effect */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-radial from-primary/20 via-transparent to-transparent blur-xl" />
-                    
-                    {/* Content */}
-                    <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
-                      <div className="w-4 h-4 mb-1 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
-                        <MessageSquare />
-                      </div>
-                      <span className="text-[10px] leading-tight w-full transition-all duration-300 group-hover:font-semibold text-center">
-                        SMS
-                      </span>
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent 
-                  className="w-40 border shadow-lg bg-popover text-popover-foreground z-50" 
-                  align="center"
-                >
-                  <DropdownMenuLabel className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4" />
-                    Envoyer SMS
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem 
-                      onClick={() => handleSms('Monsieur')}
-                      className="cursor-pointer"
-                      disabled={!selectedContact}
-                    >
-                      Monsieur {selectedContact?.nom}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => handleSms('Madame')}
-                      className="cursor-pointer"
-                      disabled={!selectedContact}
-                    >
-                      Madame {selectedContact?.nom}
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              </div>
-              <span className="text-[9px] text-muted-foreground mt-1 font-medium tracking-wider text-center w-full">Communication</span>
-            </div>
+            {/* Communication Group supprimé (déplacé dans CallControl) */}
 
             {/* Planification Group */}
             <div className="flex flex-col items-center shrink-0">
@@ -2486,51 +2545,62 @@ Dimitri MOREL - Arcanis Conseil`;
         <div className="flex items-stretch gap-3">
           {/* 0ème encadré: Bascule Vue */}
           <div className="flex items-center bg-card rounded-lg p-3 shadow-sm border">
-            <div className="inline-flex gap-2">
-              <Button
-                variant={viewMode === 'table' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('table')}
-                className="h-9"
-                title="Vue Table"
-              >
-                <Table className="h-4 w-4 mr-2" />
-                Table
-              </Button>
-              <Button
-                variant={viewMode === 'graph' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('graph')}
-                className="h-9"
-                title="Vue Graphique"
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                Graphique
-              </Button>
-              <Button
-                variant={viewMode === 'db' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setViewMode('db' as any)}
-                className="h-9"
-                title="Vue Base Locale"
-              >
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                BDD
-              </Button>
-            </div>
+            <span className="text-xs text-muted-foreground mr-2 select-none">Mode</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9" title="Sélectionner le mode d'affichage">
+                  {viewMode === 'table' ? (
+                    <Phone className="h-4 w-4 mr-2" />
+                  ) : viewMode === 'graph' ? (
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Database className="h-4 w-4 mr-2" />
+                  )}
+                  {viewMode === 'table' ? 'Appels' : viewMode === 'graph' ? 'Graphiques' : 'Données'}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56">
+                <DropdownMenuLabel>Mode d'affichage</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup value={viewMode} onValueChange={(v) => setViewMode(v as 'table' | 'graph' | 'db')}>
+                  <DropdownMenuRadioItem value="table">
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      <span>Appels</span>
+                    </div>
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="graph">
+                    <div className="flex items-center gap-2">
+                      <BarChart3 className="h-4 w-4" />
+                      <span>Graphiques</span>
+                    </div>
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="db">
+                    <div className="flex items-center gap-2">
+                      <Database className="h-4 w-4" />
+                      <span>Données</span>
+                    </div>
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+          {/* Call Control inline (à droite du sélecteur de mode) */}
+          <CallControl
+            contact={selectedContact}
+            isCalling={Boolean(activeCallContactId && selectedContact && activeCallContactId === selectedContact.id)}
+            callStartTime={callStartTime}
+            onCall={() => makePhoneCall()}
+            onHangUp={() => adbEndCall()}
+            onEmail={() => selectedContact && setIsEmailDialogOpen(true)}
+            onSmsMonsieur={() => handleSms('Monsieur')}
+            onSmsMadame={() => handleSms('Madame')}
+            adbConnected={adbConnectionState.isConnected}
+          />
           {viewMode === 'table' && (
             <>
               {/* 1er encadré: Recherche */}
               <div className="flex-1 flex gap-3 items-center bg-card rounded-lg p-3 shadow-sm border">
-                <Select value={searchColumn} onValueChange={(value) => setSearchColumn(value as keyof Contact | 'all')}>
-                  <SelectTrigger className="w-44 text-sm h-9 border-border/50 focus:border-primary">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {searchColumnsOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
                 <div className="flex-1 relative">
                   <Input
                     type="text"
@@ -2539,7 +2609,28 @@ Dimitri MOREL - Arcanis Conseil`;
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="text-sm h-9 pl-9 border-border/50 focus:border-primary"
                   />
-                  <Filter className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label="Choisir la colonne de recherche"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground outline-none hover:text-foreground"
+                      >
+                        <Filter className="h-4 w-4" />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-56">
+                      <DropdownMenuLabel>Rechercher dans</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuRadioGroup value={String(searchColumn)} onValueChange={(val) => setSearchColumn(val as keyof Contact | 'all')}>
+                        {searchColumnsOptions.map((opt) => (
+                          <DropdownMenuRadioItem key={String(opt.value)} value={String(opt.value)}>
+                            {opt.label}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
 
@@ -2555,7 +2646,7 @@ Dimitri MOREL - Arcanis Conseil`;
                       </Badge>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64 bg-background/95 backdrop-blur-sm border shadow-lg">
+                  <DropdownMenuContent align="end" className="w-64">
                     <DropdownMenuLabel className="flex items-center gap-2">
                       <Eye className="h-4 w-4" />
                       Gestion des colonnes
@@ -2722,9 +2813,23 @@ Dimitri MOREL - Arcanis Conseil`;
             </div>
           )}
 
-          {viewMode === 'db' && (
+              {viewMode === 'db' && (
             <div className="bg-card rounded-lg p-3 shadow-sm border">
               <div className="flex items-center gap-2 text-xs">
+              <Button
+                variant="default"
+                size="sm"
+                className="h-8"
+                    title="Transférer la sélection vers Appels"
+                disabled={dbSelectedCount === 0}
+                onClick={() => {
+                  try { window.dispatchEvent(new CustomEvent('dimicall-db-transfer')) } catch {}
+                      // Basculer automatiquement vers Appels; App écoutera l'événement pour créer un onglet
+                  setViewMode('table')
+                }}
+              >
+                    Transférer → Appels
+              </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -2772,25 +2877,185 @@ Dimitri MOREL - Arcanis Conseil`;
           {viewMode === 'table' ? (
             <div className="flex-1 flex flex-col overflow-hidden min-h-0">
               <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-hidden">
-                <PaginatedContactTable
-                  ref={contactTableRef}
-                  contacts={filteredContacts}
-                  callStates={callStates}
-                  onSelectContact={handleRowSelection}
-                  selectedContactId={selectedContact?.id || null}
-                  onUpdateContact={updateContact}
-                  onDeleteContact={handleDeleteContact}
-                  activeCallContactId={activeCallContactId}
-                  theme={theme}
-                  visibleColumns={visibleColumns}
-                  columnHeaders={availableColumns.length > 0 ? availableColumns : COLUMN_HEADERS}
-                  contactDataKeys={availableDataKeys.length > 0 ? availableDataKeys : CONTACT_DATA_KEYS as (keyof Contact | null)[]}
-                  onToggleColumnVisibility={toggleColumnVisibility}
-                  availableColumns={availableColumns}
-                  onFileImport={handleSingleFileImport}
-                  initialItemsPerPage={savedItemsPerPage}
-                  pageSizeOptions={[25, 50, 100]}
-                />
+                {tableTabs.length === 0 ? (
+                  <PaginatedContactTable
+                    ref={contactTableRef}
+                    contacts={tableTabs.length === 1 ? tableTabs[0].contacts : filteredContacts}
+                    callStates={callStates}
+                    onSelectContact={handleRowSelection}
+                    selectedContactId={selectedContact?.id || null}
+                    onUpdateContact={updateContact}
+                    onDeleteContact={handleDeleteContact}
+                    activeCallContactId={activeCallContactId}
+                    theme={theme}
+                    visibleColumns={visibleColumns}
+                    columnHeaders={availableColumns.length > 0 ? availableColumns : COLUMN_HEADERS}
+                    contactDataKeys={availableDataKeys.length > 0 ? availableDataKeys : CONTACT_DATA_KEYS as (keyof Contact | null)[]}
+                    onToggleColumnVisibility={toggleColumnVisibility}
+                    availableColumns={availableColumns}
+                    onFileImport={handleSingleFileImport}
+                    initialItemsPerPage={savedItemsPerPage}
+                    pageSizeOptions={[25, 50, 100]}
+                  />
+                ) : (
+                  <Tabs value={activeTableTabId || tableTabs[0]?.id} onValueChange={setActiveTableTabId} className="flex h-full flex-col">
+                    {/* Barre d'onglets en haut */}
+                    <div className="flex items-center justify-between px-1.5 py-1.5 border-b bg-card">
+                      {/* Flèches et liste d'onglets */}
+                      <div className="flex items-center gap-1 flex-1 min-w-0">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              aria-label="Onglet précédent"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              disabled={tableTabs.length <= 1}
+                              onClick={() => {
+                                // Aller à l'onglet précédent
+                                const i = tableTabs.findIndex(t => t.id === (activeTableTabId || tableTabs[0]?.id))
+                                const prev = i > 0 ? tableTabs[i-1].id : tableTabs[0]?.id
+                                if (prev) setActiveTableTabId(prev)
+                              }}
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Onglet précédent</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              aria-label="Onglet suivant"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              disabled={tableTabs.length <= 1}
+                              onClick={() => {
+                                // Aller à l'onglet suivant
+                                const i = tableTabs.findIndex(t => t.id === (activeTableTabId || tableTabs[0]?.id))
+                                const next = i >= 0 && i < tableTabs.length-1 ? tableTabs[i+1].id : tableTabs[tableTabs.length-1]?.id
+                                if (next) setActiveTableTabId(next)
+                              }}
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Onglet suivant</TooltipContent>
+                        </Tooltip>
+
+                        <TabsList className="flex-1 overflow-x-auto bg-transparent border-0 shadow-none rounded-none px-0 text-foreground/80 justify-start gap-1">
+                          {tableTabs.map(tab => (
+                            <ContextMenu key={tab.id}>
+                              <ContextMenuTrigger asChild>
+                                <TabsTrigger
+                                  value={tab.id}
+                                  className="relative group rounded-md border border-transparent px-2 py-1 text-xs bg-transparent hover:border-border hover:bg-accent/30 data-[state=active]:bg-accent/50 data-[state=active]:text-foreground data-[state=active]:border-border"
+                                >
+                                  <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tab.color || 'var(--primary)' }} />
+                                  {editingTabId === tab.id ? (
+                                    <input
+                                      className="bg-transparent outline-none w-[10ch] md:w-[16ch] text-center group-data-[state=active]:text-foreground"
+                                      value={tab.name}
+                                      onChange={(e) => setTableTabs(prev => prev.map(t => t.id === tab.id ? { ...t, name: e.target.value.slice(0, 32) } : t))}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onBlur={() => setEditingTabId(null)}
+                                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setEditingTabId(null) }}
+                                      autoFocus
+                                    />
+                                  ) : (
+                                    <span
+                                      className="text-center w-[10ch] md:w-[16ch] truncate"
+                                      onDoubleClick={(e) => { e.stopPropagation(); setEditingTabId(tab.id) }}
+                                    >
+                                      {tab.name}
+                                    </span>
+                                  )}
+                                  <span
+                                    className="ml-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setTableTabs(prev => {
+                                        const next = prev.filter(t => t.id !== tab.id)
+                                        if ((activeTableTabId || tableTabs[0]?.id) === tab.id) {
+                                          setActiveTableTabId(next[0]?.id || '')
+                                        }
+                                        return next
+                                      })
+                                    }}
+                                    title="Fermer l'onglet"
+                                  >×</span>
+                                </TabsTrigger>
+                              </ContextMenuTrigger>
+                              <ContextMenuContent className="w-48">
+                                <ContextMenuItem onClick={() => setEditingTabId(tab.id)}>Renommer…</ContextMenuItem>
+                                <ContextMenuSeparator />
+                                {[
+                                  { label: 'Bleu', value: '#3B82F6' },
+                                  { label: 'Vert', value: '#10B981' },
+                                  { label: 'Orange', value: '#F59E0B' },
+                                  { label: 'Rouge', value: '#EF4444' },
+                                  { label: 'Violet', value: '#8B5CF6' },
+                                ].map(c => (
+                                  <ContextMenuItem key={c.value} onClick={() => setTableTabs(prev => prev.map(t => t.id === tab.id ? { ...t, color: c.value } : t))}>
+                                    <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: c.value }} /> {c.label}
+                                  </ContextMenuItem>
+                                ))}
+                                <ContextMenuItem onClick={() => setTableTabs(prev => prev.map(t => t.id === tab.id ? { ...t, color: undefined } : t))}>Réinitialiser</ContextMenuItem>
+                              </ContextMenuContent>
+                            </ContextMenu>
+                          ))}
+                        </TabsList>
+                      </div>
+                      <div className="pl-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              aria-label="Ajouter un onglet"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                              disabled={tableTabs.length >= 5}
+                              onClick={() => {
+                                const id = crypto.randomUUID()
+                                setTableTabs(prev => [...prev, { id, name: `Onglet ${prev.length + 1}`, contacts: [] }])
+                                setActiveTableTabId(id)
+                              }}
+                            >
+                              <Plus className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Ajouter un onglet</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+                    {/* Contenu des onglets */}
+                    {tableTabs.map((tab) => (
+                      <TabsContent key={tab.id} value={tab.id} className="flex-1 overflow-hidden">
+                        <PaginatedContactTable
+                          ref={contactTableRef}
+                          contacts={tab.contacts}
+                          callStates={callStates}
+                          onSelectContact={handleRowSelection}
+                          selectedContactId={selectedContact?.id || null}
+                          onUpdateContact={updateContact}
+                          onDeleteContact={handleDeleteContact}
+                          activeCallContactId={activeCallContactId}
+                          theme={theme}
+                          visibleColumns={visibleColumns}
+                          columnHeaders={availableColumns.length > 0 ? availableColumns : COLUMN_HEADERS}
+                          contactDataKeys={availableDataKeys.length > 0 ? availableDataKeys : CONTACT_DATA_KEYS as (keyof Contact | null)[]}
+                          onToggleColumnVisibility={toggleColumnVisibility}
+                          availableColumns={availableColumns}
+                          onFileImport={handleSingleFileImport}
+                          initialItemsPerPage={savedItemsPerPage}
+                          pageSizeOptions={[25, 50, 100]}
+                        />
+                      </TabsContent>
+                    ))}
+                  </Tabs>
+                )}
               </div>
             </div>
           ) : viewMode === 'graph' ? (

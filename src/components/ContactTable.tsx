@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Contact, ContactStatus, CallStates, Theme, CallMode } from '../types';
-import { QUICK_COMMENTS } from '../constants';
+import { QUICK_COMMENTS, TABLE_HEADER_ICONS } from '../constants';
 import { cn } from '../lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,9 +19,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
-  Phone, User, Mail, MessageCircle, Clock, Calendar as CalendarIcon, FileText, ArrowUpDown, 
-  ArrowUp, ArrowDown, Zap, Timer, Settings2, GripVertical, Upload, FileSpreadsheet, Users, CloudUpload, Bell, Hash, FolderOpen, X
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Phone, User, Mail, MessageCircle, Clock, Calendar as CalendarIcon, FileText, ArrowUpDown,
+  ArrowUp, ArrowDown, Zap, Timer, Hourglass, Settings2, GripVertical, Upload, FileSpreadsheet, Users, CloudUpload, Bell, Hash, FolderOpen, X
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatPhoneNumber } from '../services/dataService';
@@ -30,6 +31,9 @@ import { ColumnTypeSelector } from './ColumnTypeSelector';
 import { useColumnTypes } from '../hooks/useColumnTypes';
 import { useCallMode } from '../context/ModeContext';
 import { StatusConfigService } from '../services/statusConfigService';
+import ImportMappingDialog from './ImportMappingDialog';
+import * as XLSX from 'xlsx';
+import { importContactsFromFile, normalizeHeader } from '../services/dataService';
 
 // Clés de stockage pour la persistance des préférences de table
 const COLUMN_ORDER_STORAGE_KEY = 'dimicall-column-order';
@@ -441,6 +445,7 @@ const SortableHeader: React.FC<SortableHeaderProps> = ({
 // Interface pour les méthodes exposées via ref
 export interface ContactTableRef {
   scrollToContact: (contactId: string) => void;
+  openImportMapping: (file: File) => Promise<void>;
 }
 
 interface ContactTableProps {
@@ -531,7 +536,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
         'Heure RDV': Clock,
         'Date Appel': CalendarIcon,
         'Heure Appel': Clock,
-        'Durée Appel': Timer,
+        'Durée Appel': Hourglass,
         'Sexe': User,
         'Don': User,
         'Qualité': User,
@@ -596,6 +601,14 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
   const [isDragActive, setIsDragActive] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const dropzoneRef = useRef<HTMLDivElement>(null);
+
+  // État pour le dialogue de mappage d'import
+  const [mappingDialog, setMappingDialog] = useState<{
+    open: boolean;
+    file?: File | null;
+    headers: string[];
+    preview: string[][];
+  }>({ open: false, file: null, headers: [], preview: [] });
 
   // État pour le dialog de rappel
   const [reminderDialog, setReminderDialog] = useState<{
@@ -710,9 +723,12 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
     }
   }, [sortedContacts]);
 
-  // Exposer la fonction de scroll via ref
+  // Exposer des méthodes via ref
   useImperativeHandle(ref, () => ({
-    scrollToContact
+    scrollToContact,
+    openImportMapping: async (file: File) => {
+      await prepareAndOpenMappingDialog(file)
+    }
   }), [scrollToContact]);
 
   // Scroll automatique quand le contact sélectionné change
@@ -1092,10 +1108,11 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
     }
     
     const file = validFiles[0]; // Prendre le premier fichier valide
-    
+
     try {
       setIsProcessing(true);
-      await onFileImport(file);
+      // Ouvrir le dialogue de mappage avant import
+      await prepareAndOpenMappingDialog(file);
     } catch (error) {
       console.error('Erreur lors de l\'import:', error);
     } finally {
@@ -1104,194 +1121,99 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
     }
   }, [onFileImport]);
 
-  // Composant d'état vide moderne avec Framer Motion
+  // Prépare l'aperçu des en-têtes et premières lignes pour le dialogue
+  const prepareAndOpenMappingDialog = async (file: File) => {
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    let headers: string[] = [];
+    let preview: string[][] = [];
+
+    if (ext === 'csv' || ext === 'tsv') {
+      const text = await file.text();
+      const rows = text.split(/\r?\n/).filter(Boolean).slice(0, 6).map((line) => line.split(ext === 'tsv' ? '\t' : ';').length > 1 ? line.split(ext === 'tsv' ? '\t' : ';') : line.split(','));
+      headers = rows[0] || [];
+      preview = rows.slice(1);
+    } else {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
+      headers = (aoa[0] as string[]).map((h) => (h ? String(h) : ''));
+      preview = (aoa.slice(1, 6) as string[][]) || [];
+    }
+
+    setMappingDialog({ open: true, file, headers, preview });
+  };
+
+  const expectedTargets = useMemo(() => {
+    const options = [
+      { label: 'Prénom', value: 'prenom' },
+      { label: 'Nom', value: 'nom' },
+      { label: 'Téléphone', value: 'telephone' },
+      { label: 'Mail', value: 'email' },
+      { label: 'Source', value: 'source' },
+      { label: 'Statut', value: 'statut' },
+      { label: 'Commentaire', value: 'commentaire' },
+      { label: 'Date Rappel', value: 'dateRappel' },
+      { label: 'Heure Rappel', value: 'heureRappel' },
+      { label: 'Date RDV', value: 'dateRDV' },
+      { label: 'Heure RDV', value: 'heureRDV' },
+      { label: 'Date Appel', value: 'dateAppel' },
+      { label: 'Heure Appel', value: 'heureAppel' },
+      { label: 'Durée Appel', value: 'dureeAppel' },
+      { label: 'Lien', value: 'lien' },
+      { label: 'Sexe', value: 'sexe' },
+      { label: 'Type', value: 'type' },
+      { label: 'Qualité', value: 'qualite' },
+    ];
+    return options;
+  }, []);
+
+  const requiredTargets = useMemo(() => ['prenom', 'nom', 'telephone'], []);
+
+  const autoSuggestMapping = useMemo(() => {
+    const m: Record<string, string> = {};
+    mappingDialog.headers.forEach((h) => {
+      const norm = normalizeHeader(h);
+      const match = expectedTargets.find((opt) => opt.value === norm);
+      if (match) m[h] = match.value;
+    });
+    return m;
+  }, [mappingDialog.headers, expectedTargets]);
+
+  // Composant d'état vide sobre (shadcn)
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const EmptyState = () => (
-    <div className="absolute inset-0 flex items-center justify-center">
-      <motion.div 
-        className="text-center space-y-6 p-8 max-w-md mx-auto"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-      >
-        {/* Animation de l'icône principale avec glow effect */}
-        <div className="relative">
-          <motion.div 
-            className="absolute inset-0 w-24 h-24 mx-auto rounded-full bg-gradient-to-r from-blue-500/20 to-purple-600/20"
-            animate={{ 
-              scale: [1, 1.2, 1],
-              opacity: [0.3, 0.6, 0.3] 
-            }}
-            transition={{ 
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut" 
-            }}
-          />
-          <motion.div 
-            className="relative w-24 h-24 mx-auto rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center shadow-lg"
-            whileHover={{ scale: 1.05 }}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
-          >
-            <motion.div
-              animate={{ rotate: [0, 5, 0, -5, 0] }}
-              transition={{ 
-                duration: 4,
-                repeat: Infinity,
-                ease: "easeInOut" 
+    <div className="absolute inset-0 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardContent className="p-6">
+          <div className="flex flex-col items-center text-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+              <Users className="w-6 h-6 text-muted-foreground" />
+            </div>
+            <h3 className="text-lg font-semibold">Aucun contact</h3>
+            <p className="text-sm text-muted-foreground">Importez un fichier pour commencer.</p>
+            <div className="flex items-center gap-2 mt-2">
+              <Button size="sm" onClick={() => fileInputRef.current?.click()}>
+                Importer des contacts
+              </Button>
+              <span className="text-xs text-muted-foreground">ou glissez-déposez un fichier (.csv, .xlsx)</span>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".csv,.tsv,.xlsx,.xls"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  await prepareAndOpenMappingDialog(file);
+                  try { e.currentTarget.value = ''; } catch {}
+                }
               }}
-            >
-              <Users className="w-12 h-12 text-white" />
-            </motion.div>
-          </motion.div>
-        </div>
-        
-        {/* Titre avec gradient et animation */}
-        <motion.div 
-          className="space-y-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-        >
-          <motion.h3 
-            className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
-            initial={{ y: 10 }}
-            animate={{ y: 0 }}
-            transition={{ delay: 0.3, duration: 0.4 }}
-          >
-            Aucun contact pour le moment
-          </motion.h3>
-          <motion.p 
-            className="text-muted-foreground text-lg"
-            initial={{ y: 10 }}
-            animate={{ y: 0 }}
-            transition={{ delay: 0.4, duration: 0.4 }}
-          >
-            Commencez par importer vos contacts
-          </motion.p>
-        </motion.div>
-        
-        {/* Instructions avec icônes animées */}
-        <motion.div 
-          className="space-y-4 text-sm text-muted-foreground"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5, duration: 0.5 }}
-        >
-          <motion.div 
-            className="flex items-center justify-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-            whileHover={{ scale: 1.02 }}
-            transition={{ type: "spring", stiffness: 400, damping: 17 }}
-          >
-            <motion.div
-              animate={{ y: [0, -3, 0] }}
-              transition={{ 
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut" 
-              }}
-            >
-              <CloudUpload className="w-5 h-5 text-blue-500" />
-            </motion.div>
-            <span>Glissez-déposez vos fichiers ici</span>
-          </motion.div>
-          
-          <div className="grid grid-cols-2 gap-3">
-            <motion.div 
-              className="flex items-center gap-2 p-2 rounded bg-green-500/10 text-green-700 dark:text-green-400"
-              whileHover={{ scale: 1.02 }}
-              initial={{ x: -10, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.6, duration: 0.3 }}
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span className="text-xs">Excel (.xlsx)</span>
-            </motion.div>
-            <motion.div 
-              className="flex items-center gap-2 p-2 rounded bg-blue-500/10 text-blue-700 dark:text-blue-400"
-              whileHover={{ scale: 1.02 }}
-              initial={{ x: 10, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.7, duration: 0.3 }}
-            >
-              <FileText className="w-4 h-4" />
-              <span className="text-xs">CSV / TSV</span>
-            </motion.div>
+            />
           </div>
-        </motion.div>
-        
-        {/* Éléments décoratifs modernes et sobres */}
-        <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
-          {/* Cercles flottants sobres */}
-          <motion.div 
-            className="absolute top-10 left-10 w-2 h-2 bg-blue-400/40 rounded-full"
-            animate={{ 
-              scale: [1, 1.2, 1],
-              opacity: [0.4, 0.8, 0.4] 
-            }}
-            transition={{ 
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 0 
-            }}
-          />
-          <motion.div 
-            className="absolute top-20 right-20 w-1 h-1 bg-purple-400/50 rounded-full"
-            animate={{ 
-              scale: [1, 1.5, 1],
-              opacity: [0.3, 0.7, 0.3] 
-            }}
-            transition={{ 
-              duration: 2.5,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 0.5 
-            }}
-          />
-          <motion.div 
-            className="absolute bottom-20 left-16 w-1.5 h-1.5 bg-indigo-400/40 rounded-full"
-            animate={{ 
-              scale: [1, 1.3, 1],
-              opacity: [0.5, 0.9, 0.5] 
-            }}
-            transition={{ 
-              duration: 3.5,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 1 
-            }}
-          />
-          
-          {/* Lignes subtiles animées */}
-          <motion.div 
-            className="absolute bottom-32 right-12 w-8 h-0.5 bg-gradient-to-r from-transparent via-cyan-400/30 to-transparent"
-            animate={{ 
-              scaleX: [0, 1, 0],
-              opacity: [0, 0.6, 0] 
-            }}
-            transition={{ 
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 1.5 
-            }}
-          />
-          
-          <motion.div 
-            className="absolute top-32 right-32 w-0.5 h-6 bg-gradient-to-b from-transparent via-violet-400/30 to-transparent"
-            animate={{ 
-              scaleY: [0, 1, 0],
-              opacity: [0, 0.5, 0] 
-            }}
-            transition={{ 
-              duration: 3.8,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 2 
-            }}
-          />
-        </div>
-      </motion.div>
+        </CardContent>
+      </Card>
     </div>
   );
 
@@ -1451,7 +1373,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
           // CRITICAL: Configuration pour sticky header
           position: 'relative',
           height: '100%',
-          overflow: 'auto',
+          overflow: 'hidden',
           display: 'block' // Force block display pour sticky
         }}
         onDragEnter={handleFileDragEnter}
@@ -1534,7 +1456,10 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                               {/* Ligne supérieure : Grip + Label + Indicateurs de tri */}
                               <div className="flex items-center justify-center gap-1 w-full">
                                 <GripVertical className="w-3 h-3 text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
-                                <span className="truncate flex-1 text-center text-xs font-medium">{column.label}</span>
+                                <span className="inline-flex items-center gap-1.5 truncate text-xs font-medium [&>svg]:w-3.5 [&>svg]:h-3.5 [&>svg]:text-muted-foreground">
+                                  {TABLE_HEADER_ICONS[column.label]}
+                                  <span className="truncate">{column.label}</span>
+                                </span>
                                 {column.canSort && sortConfig.key === column.key && (
                                   <>
                                     {sortConfig.direction === 'asc' && <ArrowUp className="w-3 h-3 text-muted-foreground/50" />}
@@ -1545,17 +1470,6 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                                 {column.canSort && sortConfig.key !== column.key && (
                                   <ArrowUpDown className="w-3 h-3 text-muted-foreground/50" />
                                 )}
-                              </div>
-                              
-                              {/* Ligne inférieure : Sélecteur de type */}
-                              <div className="flex items-center justify-center">
-                                <ColumnTypeSelector
-                                  columnId={column.id}
-                                  columnLabel={column.label}
-                                  currentType={getColumnType(column.id, column.label)}
-                                  onTypeChange={updateColumnType}
-                                  className="h-5 px-1.5 text-xs"
-                                />
                               </div>
                             </div>
                           </TableHead>
@@ -1643,6 +1557,40 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
           onSave={handleSaveReminder}
         />
       )}
+
+      {/* Dialog de mappage d'import */}
+      <ImportMappingDialog
+        isOpen={mappingDialog.open}
+        onClose={() => setMappingDialog((s) => ({ ...s, open: false }))}
+        fileName={mappingDialog.file?.name}
+        detectedHeaders={mappingDialog.headers}
+        previewRows={mappingDialog.preview}
+        expectedTargets={expectedTargets}
+        requiredTargets={requiredTargets}
+        onConfirm={async (mapping) => {
+          try {
+            if (!mappingDialog.file) return;
+            // Import en utilisant le mapping défini par l'utilisateur
+            const imported = await importContactsFromFile(mappingDialog.file, mapping);
+            // Signal global pour injection dans l'onglet actif
+            try {
+              const ext = mappingDialog.file.name.split('.').pop()?.toLowerCase();
+              const source = (ext === 'xlsx' || ext === 'xls') ? 'xlsx' : (ext === 'csv' || ext === 'tsv') ? 'csv' : 'csv';
+              window.dispatchEvent(new CustomEvent('dimicall-imported-contacts', {
+                detail: {
+                  contacts: imported,
+                  fileName: mappingDialog.file.name,
+                  source
+                }
+              }));
+            } catch {}
+            // Fermer le dialog
+            setMappingDialog({ open: false, file: null, headers: [], preview: [] });
+          } catch (e) {
+            console.error(e);
+          }
+        }}
+      />
     </>
   );
 });

@@ -83,9 +83,9 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
     };
 
     return (
-        <div className={`flex items-center justify-between px-3 py-1.5 min-h-[48px] ${className}`}>
+        <div className={`grid grid-cols-[1fr_auto_1fr] items-center px-3 py-1.5 min-h-[48px] ${className}`}>
             {/* Sélecteur de taille de page - compact */}
-            <div className="flex items-center space-x-1.5 flex-shrink-0">
+            <div className="flex items-center space-x-2.5 flex-shrink-0 justify-self-start">
                 <p className="text-xs text-muted-foreground whitespace-nowrap">
                     Lignes par page:
                 </p>
@@ -108,8 +108,8 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
 
             {/* Navigation de pagination - centrée et compacte */}
             {totalPages > 1 && (
-                <Pagination className="mx-0">
-                    <PaginationContent className="gap-0.5">
+                <Pagination className="mx-auto w-auto justify-self-center">
+                    <PaginationContent className="gap-1.5">
                         {/* Bouton première page */}
                         {showFirstLast && (
                             <PaginationItem>
@@ -193,7 +193,7 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
 
             {/* Informations sur le total - à droite et compact */}
             {showPageInfo && (
-                <div className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0">
+                <div className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 justify-self-end pl-2">
                     {totalItems === 0 ? (
                         'Aucun résultat'
                     ) : (

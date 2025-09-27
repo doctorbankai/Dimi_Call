@@ -181,12 +181,17 @@
           
           // Vérifier si React a rendu quelque chose
           if (root && root.children.length > 0) {
-            loadingScreen.classList.add('hidden');
+            if (loadingScreen) {
+              loadingScreen.classList.add('hidden');
+            }
             // Retirer complètement l'écran de chargement après la transition
             setTimeout(() => {
-              if (loadingScreen && loadingScreen.parentNode) {
-                loadingScreen.parentNode.removeChild(loadingScreen);
-              }
+              try {
+                const ls = document.getElementById('loading-screen');
+                if (ls && ls.parentNode) {
+                  ls.parentNode.removeChild(ls);
+                }
+              } catch {}
             }, 300);
           } else {
             // Si React n'a pas encore rendu, réessayer
@@ -197,15 +202,17 @@
       
       // Fallback : masquer l'écran de chargement après 5 secondes maximum
       setTimeout(function() {
-        const loadingScreen = document.getElementById('loading-screen');
-        if (loadingScreen) {
-          loadingScreen.classList.add('hidden');
-          setTimeout(() => {
-            if (loadingScreen && loadingScreen.parentNode) {
-              loadingScreen.parentNode.removeChild(loadingScreen);
-            }
-          }, 300);
-        }
+        try {
+          const ls = document.getElementById('loading-screen');
+          if (ls) {
+            ls.classList.add('hidden');
+            setTimeout(() => {
+              if (ls && ls.parentNode) {
+                ls.parentNode.removeChild(ls);
+              }
+            }, 300);
+          }
+        } catch {}
       }, 5000);
     </script>
   </body>

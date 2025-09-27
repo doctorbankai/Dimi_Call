@@ -7,7 +7,7 @@
 /* Variables CSS personnalisées pour le design ultra moderne */
 :root {
   /* Couleurs principales ultra modernes - AMÉLIORÉES POUR LE MODE CLAIR */
-  --primary: 213 94% 68%; /* Bleu moderne plus vibrant */
+  --primary: 0 0% 10%; /* Noir shadcn-like pour accents */
   --primary-foreground: 0 0% 100%;
   --secondary: 210 40% 95%; /* Fond secondaire plus doux */
   --secondary-foreground: 215 25% 27%; /* Texte plus contrasté */
@@ -27,7 +27,7 @@
   /* Bordures minimalistes - AMÉLIORÉES */
   --border: 214 32% 91%; /* Bordures avec une teinte bleue subtile */
   --input: 214 25% 93%; /* Inputs avec fond légèrement teinté */
-  --ring: 213 94% 68%; /* Ring focus assorti au primary */
+  --ring: 0 0% 10%; /* Ring focus assorti au primary (noir) */
 
   /* États interactifs */
   --destructive: 0 84% 60%;
@@ -62,8 +62,8 @@
 
 .dark {
   /* Mode sombre ultra élégant */
-  --primary: 220 100% 65%;
-  --primary-foreground: 220 9% 9%;
+  --primary: 0 0% 90%; /* Accent clair sur fond sombre */
+  --primary-foreground: 0 0% 10%;
   --secondary: 220 9% 9%;
   --secondary-foreground: 220 9% 91%;
   --accent: 220 9% 9%;
@@ -80,7 +80,7 @@
 
   --border: 220 9% 15%;
   --input: 220 9% 15%;
-  --ring: 220 100% 65%;
+  --ring: 0 0% 90%;
 
   --destructive: 0 84% 65%;
   --destructive-foreground: 220 9% 9%;
@@ -216,6 +216,22 @@ body {
 .ribbon-container {
   overscroll-behavior-x: contain; /* évite les rebonds sur Electron/Web */
   -webkit-overflow-scrolling: touch; /* inertie sur trackpads/mobiles */
+  /* Masquer la barre horizontale mais conserver le scroll */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+
+.ribbon-container::-webkit-scrollbar {
+  height: 0 !important;
+  display: none !important;
+  background: transparent !important;
+}
+
+.ribbon-container::-webkit-scrollbar-track,
+.ribbon-container::-webkit-scrollbar-thumb,
+.ribbon-container::-webkit-scrollbar-corner {
+  display: none !important;
+  background: transparent !important;
 }
 
 .ribbon-button-modern:hover {
@@ -1253,19 +1269,20 @@ table:has(.sticky-table-header),
 [data-radix-select-content],
 [data-slot="dropdown-menu-content"] {
   opacity: 1 !important;
-  background-color: white !important;
-  border: 1px solid #e5e7eb !important;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  background-color: hsl(var(--popover)) !important; /* noir en dark, blanc cassé en clair */
+  border: 1px solid hsl(var(--border)) !important;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -2px rgb(0 0 0 / 0.1) !important;
+  color: hsl(var(--popover-foreground)) !important;
   z-index: 250 !important;
 }
 
 .dark [data-radix-dropdown-menu-content],
 .dark [data-radix-select-content],
 .dark [data-slot="dropdown-menu-content"] {
-  background-color: #1f2937 !important;
-  border: 1px solid #374151 !important;
-  color: #f9fafb !important;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.15) !important;
+  background-color: hsl(var(--popover)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.45), 0 4px 6px -2px rgb(0 0 0 / 0.25) !important;
 }
 
 /* Force l'opacité des éléments de dropdown */

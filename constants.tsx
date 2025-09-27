@@ -1,6 +1,19 @@
 
 import React from 'react';
 import { ContactStatus } from './types';
+import {
+  User as LucideUser,
+  Phone as LucidePhone,
+  Mail as LucideMail,
+  Folder as LucideFolder,
+  FileText as LucideFileText,
+  MessageSquare as LucideMessageSquare,
+  Calendar as LucideCalendar,
+  Clock as LucideClock,
+  Timer as LucideTimer,
+  Hash as LucideHash,
+  DotsVertical as LucideDotsVertical
+} from 'lucide-react';
 
 export const APP_NAME = "DimiCall Web";
 
@@ -306,9 +319,9 @@ export const IconDotsVertical = ({ className = "w-5 h-5" }: { className?: string
 
 
 // Add "Actions" to COLUMN_HEADERS and a corresponding 'null' or specific key to CONTACT_DATA_KEYS
-export const COLUMN_HEADERS = ["#", "Prénom", "Nom", "Téléphone", "Mail", "Ecole", "Statut", "Commentaire", "Date Rappel", "Heure Rappel", "Date RDV", "Heure RDV", "Date Appel", "Heure Appel", "Durée Appel", "Actions"];
+export const COLUMN_HEADERS = ["#", "Prénom", "Nom", "Téléphone", "Mail", "Source", "Statut", "Commentaire", "Date Rappel", "Heure Rappel", "Date RDV", "Heure RDV", "Date Appel", "Heure Appel", "Durée Appel", "Actions"];
 export const CONTACT_DATA_KEYS: (keyof import('./types').Contact | 'actions' | null)[] = [
-    'numeroLigne', 'prenom', 'nom', 'telephone', 'email', 'ecole', 'statut', 
+    'numeroLigne', 'prenom', 'nom', 'telephone', 'email', 'source', 'statut', 
     'commentaire', 'dateRappel', 'heureRappel', 'dateRDV', 'heureRDV', 
     'dateAppel', 'heureAppel', 'dureeAppel', 'actions' // 'actions' key for the new column
   ];
@@ -333,23 +346,23 @@ export const STATUS_COLORS: Record<ContactStatus, { bg: string; text: string; da
 
 export const QUICK_COMMENTS = ["Accompagné", "Du métier", "Prospection", "Non exploitable", "Bloqué ?"];
 
-export const headerIcons: Record<string, React.ReactNode> = {
-  "#": undefined, 
-  "Prénom": <IconUser />,
-  "Nom": <IconUser />,
-  "Téléphone": <IconPhone className={TABLE_HEADER_ICON_SIZE} />,
-  "Mail": <IconMail className={TABLE_HEADER_ICON_SIZE} />,
-  "Ecole": <IconFolder />,
-  "Statut": <IconStatus />,
-  "Commentaire": <IconComment />,
-  "Date Rappel": <IconCalendar className={TABLE_HEADER_ICON_SIZE} />,
-  "Heure Rappel": <IconClock />,
-  "Date RDV": <IconCalendar className={TABLE_HEADER_ICON_SIZE} />,
-  "Heure RDV": <IconClock />,
-  "Date Appel": <IconCalendar className={TABLE_HEADER_ICON_SIZE} />,
-  "Heure Appel": <IconClock />,
-  "Durée Appel": <IconDuration />,
-  "Actions": <IconDotsVertical className="w-3.5 h-3.5" />
+export const TABLE_HEADER_ICONS: Record<string, React.ReactNode> = {
+  "#": <LucideHash className="w-3.5 h-3.5 text-muted-foreground" />, 
+  "Prénom": <LucideUser className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Nom": <LucideUser className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Téléphone": <LucidePhone className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Mail": <LucideMail className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Source": <LucideFolder className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Statut": <LucideFileText className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Commentaire": <LucideMessageSquare className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Date Rappel": <LucideCalendar className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Heure Rappel": <LucideClock className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Date RDV": <LucideCalendar className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Heure RDV": <LucideClock className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Date Appel": <LucideCalendar className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Heure Appel": <LucideClock className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Durée Appel": <LucideTimer className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Actions": <LucideDotsVertical className="w-3.5 h-3.5 text-muted-foreground" />
 };
 
 export const INITIAL_CONTACTS_COUNT = 0; // Or load from a default set later

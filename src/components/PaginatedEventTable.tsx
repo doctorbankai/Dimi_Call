@@ -4,9 +4,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { TablePagination } from '@/components/TablePagination'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
-import { Trash2, RefreshCw, Upload, Download, Calendar as CalendarIcon } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Trash2, RefreshCw, Upload, Download, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
+import { Contact, ContactStatus } from '@/types'
 
 type StatusEvent = {
   id: number
@@ -36,6 +38,9 @@ export default function PaginatedEventTable() {
   const [isLoading, setIsLoading] = useState(false)
   const [editing, setEditing] = useState<{ id: number; field: keyof StatusEvent; value: string } | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
+  const [searchTerm, setSearchTerm] = useState<string>('')
+  const [sortKey, setSortKey] = useState<keyof StatusEvent | 'id'>('id')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
 
   const loadAll = async () => {
     setIsLoading(true)
@@ -116,6 +121,45 @@ export default function PaginatedEventTable() {
     try { return Number(localStorage.getItem('dimicall-events-current-page')) || 1 } catch { return 1 }
   }, [])
 
+  // Recherche globale (texte)
+  const filteredData = useMemo(() => {
+    if (!searchTerm.trim()) return events
+    const t = searchTerm.toLowerCase()
+    return events.filter(ev => {
+      const email = (ev as any).email || (ev as any).mail || ''
+      const comment = (ev as any).commentaire || (ev as any).comment || ''
+      return [
+        String(ev.id),
+        ev.prenom || '',
+        ev.nom || '',
+        ev.telephone || '',
+        email,
+        (ev as any).new_status || (ev as any).newStatus || '',
+        comment,
+        ev.dateRappel || '', ev.heureRappel || '', ev.dateRDV || '', ev.heureRDV || '',
+        ev.dateAppel || '', ev.heureAppel || '', ev.dateEntree || '', ev.heureEntree || '',
+      ].some(v => String(v).toLowerCase().includes(t))
+    })
+  }, [events, searchTerm])
+
+  // Tri
+  const sortedData = useMemo(() => {
+    const data = [...filteredData]
+    data.sort((a, b) => {
+      const va = (a as any)[sortKey] ?? ''
+      const vb = (b as any)[sortKey] ?? ''
+      if (va == null && vb == null) return 0
+      if (va == null) return sortDir === 'asc' ? -1 : 1
+      if (vb == null) return sortDir === 'asc' ? 1 : -1
+      const na = typeof va === 'number' ? va : Number(String(va).replaceAll(/[^0-9.-]/g, ''))
+      const nb = typeof vb === 'number' ? vb : Number(String(vb).replaceAll(/[^0-9.-]/g, ''))
+      const bothNumeric = !Number.isNaN(na) && !Number.isNaN(nb) && String(va).trim() !== '' && String(vb).trim() !== ''
+      const cmp = bothNumeric ? (na - nb) : String(va).localeCompare(String(vb))
+      return sortDir === 'asc' ? cmp : -cmp
+    })
+    return data
+  }, [filteredData, sortKey, sortDir])
+
   const {
     currentPage,
     totalPages,
@@ -124,7 +168,7 @@ export default function PaginatedEventTable() {
     totalItems,
     goToPage,
     setItemsPerPage,
-  } = usePagination<StatusEvent>({ data: events, initialItemsPerPage: savedItemsPerPage, initialPage })
+  } = usePagination<StatusEvent>({ data: sortedData, initialItemsPerPage: savedItemsPerPage, initialPage })
 
   const handlePageChange = (page: number) => {
     try { localStorage.setItem('dimicall-events-current-page', String(page)) } catch {}
@@ -209,10 +253,65 @@ export default function PaginatedEventTable() {
     return () => window.removeEventListener('dimicall-date-filter', handler as any)
   }, [])
 
+  // Transfert vers Table (sur demande App)
+  useEffect(() => {
+    const onTransfer = () => {
+      const selected = events.filter(e => selectedIds.has(e.id))
+      if (selected.length === 0) return
+      const contacts: Contact[] = selected.map((ev, idx) => {
+        const email = (ev as any).email || (ev as any).mail || ''
+        const comment = (ev as any).commentaire || (ev as any).comment || ''
+        const rawStatus = (ev as any).new_status ?? (ev as any).newStatus ?? ''
+        const status = Object.values(ContactStatus).includes(rawStatus as ContactStatus)
+          ? (rawStatus as ContactStatus)
+          : ContactStatus.NonDefini
+        return {
+          id: ev.contact_id || String(ev.id),
+          numeroLigne: ev.id || (idx + 1),
+          prenom: ev.prenom || '',
+          nom: ev.nom || '',
+          telephone: ev.telephone || '',
+          email,
+          source: 'Données',
+          statut: status,
+          commentaire: comment,
+          dateRappel: ev.dateRappel || '',
+          heureRappel: ev.heureRappel || '',
+          dateRDV: ev.dateRDV || '',
+          heureRDV: ev.heureRDV || '',
+          dateAppel: ev.dateAppel || '',
+          heureAppel: ev.heureAppel || '',
+          dureeAppel: ev.dureeAppel || '',
+          lien: '',
+        }
+      })
+      const name = `Sélection Données (${new Date().toLocaleString('fr-FR')})`
+      try {
+        localStorage.setItem('dimicall-db-transfer-data', JSON.stringify({ contacts, name }))
+      } catch {}
+      // IMPORTANT: différer l'événement pour éviter setState durant le render d'un autre composant
+      setTimeout(() => {
+        try {
+          window.dispatchEvent(new CustomEvent('dimicall-db-transferred', { detail: { contacts, name } }))
+        } catch {}
+      }, 0)
+    }
+    window.addEventListener('dimicall-db-transfer', onTransfer as any)
+    return () => window.removeEventListener('dimicall-db-transfer', onTransfer as any)
+  }, [events, selectedIds])
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
-        {/* Barre de filtres fournie par App pour uniformité (rien ici) */}
+        {/* Recherche locale */}
+        <div className="flex items-center gap-2 px-2 py-1.5">
+          <Input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Rechercher dans Données…"
+            className="h-8 text-xs max-w-sm"
+          />
+        </div>
 
         <Table className="relative w-full table-auto min-w-[560px] md:min-w-0">
           <TableHeader
@@ -237,22 +336,38 @@ export default function PaginatedEventTable() {
                   aria-label="Tout sélectionner"
                 />
               </TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[60px]">#</TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[100px]">Prénom</TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[100px]">Nom</TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[150px]">Téléphone</TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[150px]">Mail</TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[100px]">Statut</TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[120px]">Commentaire</TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[100px]">Date Rappel</TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[100px]">Heure Rappel</TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[100px]">Date RDV</TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[100px]">Heure RDV</TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[100px]">Date Appel</TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[100px]">Heure Appel</TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[100px]">Date Entrée</TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[100px]">Heure Entrée</TableHead>
-              <TableHead className="px-2 py-1.5 text-center text-xs min-w-[100px]">Durée Appel</TableHead>
+              <TableHead onClick={() => { setSortKey('id'); setSortDir(prev => (sortKey === 'id' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[60px] cursor-pointer select-none">
+                <div className="inline-flex items-center gap-1 justify-center">
+                  # {sortKey === 'id' ? (sortDir === 'asc' ? <ArrowUp className="w-3 h-3"/> : <ArrowDown className="w-3 h-3"/> ) : <ArrowUpDown className="w-3 h-3 text-muted-foreground"/>}
+                </div>
+              </TableHead>
+              <TableHead onClick={() => { setSortKey('prenom'); setSortDir(prev => (sortKey === 'prenom' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[100px] cursor-pointer select-none">
+                <div className="inline-flex items-center gap-1 justify-center">Prénom {sortKey === 'prenom' ? (sortDir === 'asc' ? <ArrowUp className="w-3 h-3"/> : <ArrowDown className="w-3 h-3"/> ) : <ArrowUpDown className="w-3 h-3 text-muted-foreground"/>}</div>
+              </TableHead>
+              <TableHead onClick={() => { setSortKey('nom'); setSortDir(prev => (sortKey === 'nom' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[100px] cursor-pointer select-none">
+                <div className="inline-flex items-center gap-1 justify-center">Nom {sortKey === 'nom' ? (sortDir === 'asc' ? <ArrowUp className="w-3 h-3"/> : <ArrowDown className="w-3 h-3"/> ) : <ArrowUpDown className="w-3 h-3 text-muted-foreground"/>}</div>
+              </TableHead>
+              <TableHead onClick={() => { setSortKey('telephone'); setSortDir(prev => (sortKey === 'telephone' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[150px] cursor-pointer select-none">
+                <div className="inline-flex items-center gap-1 justify-center">Téléphone {sortKey === 'telephone' ? (sortDir === 'asc' ? <ArrowUp className="w-3 h-3"/> : <ArrowDown className="w-3 h-3"/> ) : <ArrowUpDown className="w-3 h-3 text-muted-foreground"/>}</div>
+              </TableHead>
+              <TableHead onClick={() => { setSortKey('email' as any); setSortDir(prev => (sortKey === 'email' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[150px] cursor-pointer select-none">
+                <div className="inline-flex items-center gap-1 justify-center">Mail {sortKey === 'email' ? (sortDir === 'asc' ? <ArrowUp className="w-3 h-3"/> : <ArrowDown className="w-3 h-3"/> ) : <ArrowUpDown className="w-3 h-3 text-muted-foreground"/>}</div>
+              </TableHead>
+              <TableHead onClick={() => { setSortKey('new_status' as any); setSortDir(prev => (sortKey === 'new_status' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[100px] cursor-pointer select-none">
+                <div className="inline-flex items-center gap-1 justify-center">Statut {sortKey === 'new_status' ? (sortDir === 'asc' ? <ArrowUp className="w-3 h-3"/> : <ArrowDown className="w-3 h-3"/> ) : <ArrowUpDown className="w-3 h-3 text-muted-foreground"/>}</div>
+              </TableHead>
+              <TableHead onClick={() => { setSortKey('commentaire' as any); setSortDir(prev => (sortKey === 'commentaire' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[120px] cursor-pointer select-none">
+                <div className="inline-flex items-center gap-1 justify-center">Commentaire {sortKey === 'commentaire' ? (sortDir === 'asc' ? <ArrowUp className="w-3 h-3"/> : <ArrowDown className="w-3 h-3"/> ) : <ArrowUpDown className="w-3 h-3 text-muted-foreground"/>}</div>
+              </TableHead>
+              <TableHead onClick={() => { setSortKey('dateRappel'); setSortDir(prev => (sortKey === 'dateRappel' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[100px] cursor-pointer select-none">Date Rappel</TableHead>
+              <TableHead onClick={() => { setSortKey('heureRappel'); setSortDir(prev => (sortKey === 'heureRappel' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[100px] cursor-pointer select-none">Heure Rappel</TableHead>
+              <TableHead onClick={() => { setSortKey('dateRDV'); setSortDir(prev => (sortKey === 'dateRDV' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[100px] cursor-pointer select-none">Date RDV</TableHead>
+              <TableHead onClick={() => { setSortKey('heureRDV'); setSortDir(prev => (sortKey === 'heureRDV' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[100px] cursor-pointer select-none">Heure RDV</TableHead>
+              <TableHead onClick={() => { setSortKey('dateAppel'); setSortDir(prev => (sortKey === 'dateAppel' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[100px] cursor-pointer select-none">Date Appel</TableHead>
+              <TableHead onClick={() => { setSortKey('heureAppel'); setSortDir(prev => (sortKey === 'heureAppel' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[100px] cursor-pointer select-none">Heure Appel</TableHead>
+              <TableHead onClick={() => { setSortKey('dateEntree'); setSortDir(prev => (sortKey === 'dateEntree' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[100px] cursor-pointer select-none">Date Entrée</TableHead>
+              <TableHead onClick={() => { setSortKey('heureEntree'); setSortDir(prev => (sortKey === 'heureEntree' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[100px] cursor-pointer select-none">Heure Entrée</TableHead>
+              <TableHead onClick={() => { setSortKey('dureeAppel'); setSortDir(prev => (sortKey === 'dureeAppel' && prev === 'asc') ? 'desc' : 'asc') }} className="px-2 py-1.5 text-center text-xs min-w-[100px] cursor-pointer select-none">Durée Appel</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -350,9 +465,9 @@ export default function PaginatedEventTable() {
 
       {/* Barre d'actions + Pagination sticky en bas */}
       <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center justify-between px-3 py-1.5 gap-2">
-          <div className="flex items-center gap-2 text-xs"></div>
+        <div className="px-3 py-1.5">
           <TablePagination
+            className="w-full"
             currentPage={currentPage}
             totalPages={totalPages}
             totalItems={totalItems}

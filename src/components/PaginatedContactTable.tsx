@@ -1,5 +1,5 @@
-import React, { forwardRef } from 'react';
-import { Contact, ContactStatus, CallStates, Theme } from '../types';
+import { forwardRef } from 'react';
+import { Contact, CallStates, Theme } from '../types';
 import { ContactTable, ContactTableRef } from './ContactTable';
 import { TablePagination } from './TablePagination';
 import { usePagination } from '../hooks/usePagination';
@@ -24,7 +24,7 @@ interface PaginatedContactTableProps {
   className?: string;
 }
 
-export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContactTableProps>(({
+export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContactTableProps>(({ 
   contacts,
   callStates,
   onSelectContact,
@@ -92,6 +92,23 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
     setItemsPerPage(newItemsPerPage);
   };
 
+  const paginationNode = (
+    <div className="px-3 py-1.5 min-h-[48px] border-t bg-card">
+      <TablePagination
+        className="w-full"
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalItems={totalItems}
+        itemsPerPage={itemsPerPage}
+        onPageChange={handlePageChange}
+        onItemsPerPageChange={handleItemsPerPageChange}
+        pageSizeOptions={pageSizeOptions}
+        showFirstLast={true}
+        showPageInfo={true}
+      />
+    </div>
+  );
+
   return (
     <div className={`flex flex-col h-full ${className}`}>
       {/* Table avec données paginées */}
@@ -114,21 +131,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
           onFileImport={onFileImport}
         />
       </div>
-
-      {/* Pagination fixe en bas */}
-      <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <TablePagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalItems={totalItems}
-          itemsPerPage={itemsPerPage}
-          onPageChange={handlePageChange}
-          onItemsPerPageChange={handleItemsPerPageChange}
-          pageSizeOptions={pageSizeOptions}
-          showFirstLast={true}
-          showPageInfo={true}
-        />
-      </div>
+      {paginationNode}
     </div>
   );
 });
