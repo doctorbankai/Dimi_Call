@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Minus, Square, X, Maximize, Settings, User, Smartphone, WifiOff, Loader2, MailQuestion, Download, RefreshCw, Beaker } from 'lucide-react';
+import { Minus, Square, X, Maximize, Settings, User, Smartphone, WifiOff, Loader2, MailQuestion, Download, RefreshCw, Beaker, PanelLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Theme, CallMode } from '../types';
 import { useCallMode } from '../context/ModeContext';
@@ -12,6 +12,7 @@ import { useSupabaseAuth } from '../lib/auth-client';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { TicketForm } from './TicketForm';
 import HelpTutorialButton from './HelpTutorialButton';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import packageJson from '../../package.json';
 
 interface CustomMenuBarProps {
@@ -384,6 +385,7 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
           >
             {/* Logo et nom DimiCall */}
             <div className="flex items-center px-3 py-1 gap-2">
+              <SidebarTrigger className="size-7 -ml-1" />
               <span className={cn("text-sm font-semibold", textColor)}>DimiCall</span>
               {isBetaVersion && (
                 <Badge 

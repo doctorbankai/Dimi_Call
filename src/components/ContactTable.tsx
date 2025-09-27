@@ -406,7 +406,7 @@ const SortableHeader: React.FC<SortableHeaderProps> = ({
     return {
       position: 'sticky',
       top: 0,
-      zIndex: 101,
+      zIndex: 90,
       backgroundColor: 'hsl(var(--background))',
       backdropFilter: 'blur(8px)',
       WebkitBackdropFilter: 'blur(8px)',

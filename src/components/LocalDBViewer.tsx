@@ -130,7 +130,7 @@ export default function LocalDBViewer() {
               style={{
                 position: 'sticky',
                 top: 0,
-                zIndex: 101,
+              zIndex: 90,
                 backgroundColor: 'hsl(var(--background))',
                 backdropFilter: 'blur(4px)'
               }}

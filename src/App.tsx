@@ -9,6 +9,8 @@ import { EmailDialog, RappelDialog, RendezVousDialog, QualificationDialog, Gener
 
 
 import { TitleBar } from './components/TitleBar';
+import { AppSidebar } from '@/components/AppSidebar';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { UpdateConfirmationDialog } from './components/UpdateConfirmationDialog';
 import { 
   loadContacts, 
@@ -58,10 +60,12 @@ import {
   Phone, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck, Linkedin, Globe, ExternalLink,
   Download, Keyboard, RefreshCw, Sun, Moon, Columns, X, Filter, Infinity, 
   Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2, Users, Timer, BarChart3, Database,
-  ChevronLeft, ChevronRight, Plus
+  ChevronLeft, ChevronRight, ChevronDown, Plus
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+// Sonner (toast moderne shadcn)
+import { Toaster, toast } from 'sonner'
 import { DropZoneOverlay } from './components/Common';
 import { CalendarModal } from './components/CalendarModal';
 import { AuthModal } from './components/AuthModal';
@@ -177,6 +181,7 @@ const App: React.FC = () => {
   const [isRappelDialogOpen, setIsRappelDialogOpen] = useState(false);
   const [isRendezVousDialogOpen, setIsRendezVousDialogOpen] = useState(false);
   const [isUpdateConfirmationOpen, setIsUpdateConfirmationOpen] = useState(false);
+  const [exportFeedback, setExportFeedback] = useState<{ visible: boolean; title: string; path?: string } | null>(null)
   const [isQualificationDialogOpen, setIsQualificationDialogOpen] = useState(false);
   const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
   const [isFnKeysInfoOpen, setIsFnKeysInfoOpen] = useState(false);
@@ -250,7 +255,26 @@ const App: React.FC = () => {
       })
     }
     window.addEventListener('dimicall-db-transferred', handler as any)
-    return () => window.removeEventListener('dimicall-db-transferred', handler as any)
+    const onToast = (e: any) => {
+      const d = e?.detail || {}
+      if (d?.type === 'success') {
+        toast.success(d.title || 'Opération réussie', {
+          action: d.path ? {
+            label: "Ouvrir l'emplacement",
+            onClick: () => { try { (window as any).electronAPI?.showItemInFolder?.(d.path) } catch {} }
+          } : undefined
+        })
+      } else if (d?.type === 'error') {
+        toast.error(d.title || 'Opération échouée')
+      } else if (d?.type === 'info') {
+        toast.message(d.title || 'Information')
+      }
+    }
+    window.addEventListener('dimicall-toast', onToast as any)
+    return () => {
+      window.removeEventListener('dimicall-db-transferred', handler as any)
+      window.removeEventListener('dimicall-toast', onToast as any)
+    }
   }, [tableTabs.length])
   
   const [autoSearchMode, setAutoSearchMode] = useState<'disabled' | 'linkedin' | 'google' | 'link'>(() => {
@@ -1004,7 +1028,9 @@ Dimitri MOREL - Arcanis Conseil`;
     
     try {
       exportContactsToFile(contacts, format);
-      showNotification('success', `Export ${format.toUpperCase()} réussi`);
+      try {
+        window.dispatchEvent(new CustomEvent('dimicall-toast', { detail: { type: 'success', title: `Export ${format.toUpperCase()} réussi` } }))
+      } catch {}
     } catch (error) {
       showNotification('error', `Erreur lors de l'export: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
@@ -1037,7 +1063,9 @@ Dimitri MOREL - Arcanis Conseil`;
       }
       
       exportGoogleContactsCSV(contacts);
-      showNotification('success', `${googleContactsCount} contacts exportés vers Google Contacts`);
+      try {
+        window.dispatchEvent(new CustomEvent('dimicall-toast', { detail: { type: 'success', title: `${googleContactsCount} contacts exportés vers Google Contacts` } }))
+      } catch {}
     } catch (error) {
       console.error('Erreur lors de l\'export Google Contacts:', error);
       
@@ -1068,7 +1096,9 @@ Dimitri MOREL - Arcanis Conseil`;
       }
       
       exportGoogleCalendarCSV(contacts);
-      showNotification('success', `${calendarRemindersCount} rappels exportés vers Google Agenda`);
+      try {
+        window.dispatchEvent(new CustomEvent('dimicall-toast', { detail: { type: 'success', title: `${calendarRemindersCount} rappels exportés vers Google Agenda` } }))
+      } catch {}
     } catch (error) {
       console.error('Erreur lors de l\'export Google Calendar:', error);
       
@@ -2031,12 +2061,23 @@ Dimitri MOREL - Arcanis Conseil`;
   }
 
   return (
-    <div className={cn(
-      "flex h-[100svh] md:h-screen overflow-hidden bg-background",
-      theme === Theme.Dark ? "dark" : ""
-    )}
-      style={{ minHeight: 0 }}
-    >
+    <SidebarProvider>
+      <div className={cn(
+        "flex h-[100svh] md:h-screen overflow-hidden bg-background",
+        theme === Theme.Dark ? "dark" : ""
+      )}
+        style={{ minHeight: 0 }}
+      >
+        <AppSidebar
+          activeTab={activeMenuTab}
+          onTabChange={(tab) => {
+            if (tab === 'dimicall') setActiveMenuTab(tab)
+          }}
+          onSettingsClick={() => setIsSettingsOpen(true)}
+          viewMode={viewMode}
+          onChangeViewMode={(mode) => setViewMode(mode)}
+        />
+        <SidebarInset>
       {/* Contenu principal */}
       <main className="flex flex-col flex-1 w-full min-h-0 overflow-hidden pt-8">
           {/* Barre de titre personnalisée pour Electron */}
@@ -2105,7 +2146,6 @@ Dimitri MOREL - Arcanis Conseil`;
          </div>
        )} */}
 
-
       {/* Modal de progression */}
       {importProgress && (
         <Dialog open={true} onOpenChange={() => setImportProgress(null)}>
@@ -2129,13 +2169,17 @@ Dimitri MOREL - Arcanis Conseil`;
         </Dialog>
       )}
 
+      {/* Toast/Modal léger d'export réussi (Shadcn-like) */}
+      <Toaster position="bottom-right" richColors theme={theme === 'dark' ? 'dark' : 'light'} closeButton />
+
       
       {/* Main content */}
       <main className={cn(
         "flex-1 flex flex-col p-2 md:p-3 space-y-2 md:space-y-3 overflow-hidden w-full min-h-0",
         isAuthModalOpen && "pointer-events-none opacity-50"
       )}>
-      {/* Ribbon */}
+      {/* Ribbon (visible uniquement en mode Appels) */}
+      {viewMode === 'table' && (
         <Card className="p-2 md:p-3 ribbon-container mx-auto shadow-md max-w-full overflow-x-auto overflow-y-hidden">
           <div className="flex items-stretch justify-start md:justify-center gap-2 md:gap-3 relative flex-nowrap whitespace-nowrap w-max">
             
@@ -2540,63 +2584,25 @@ Dimitri MOREL - Arcanis Conseil`;
             </div>
           </div>
         </Card>
+      )}
 
         {/* Search bar area */}
         <div className="flex items-stretch gap-3">
-          {/* 0ème encadré: Bascule Vue */}
-          <div className="flex items-center bg-card rounded-lg p-3 shadow-sm border">
-            <span className="text-xs text-muted-foreground mr-2 select-none">Mode</span>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-9" title="Sélectionner le mode d'affichage">
-                  {viewMode === 'table' ? (
-                    <Phone className="h-4 w-4 mr-2" />
-                  ) : viewMode === 'graph' ? (
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                  ) : (
-                    <Database className="h-4 w-4 mr-2" />
-                  )}
-                  {viewMode === 'table' ? 'Appels' : viewMode === 'graph' ? 'Graphiques' : 'Données'}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56">
-                <DropdownMenuLabel>Mode d'affichage</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuRadioGroup value={viewMode} onValueChange={(v) => setViewMode(v as 'table' | 'graph' | 'db')}>
-                  <DropdownMenuRadioItem value="table">
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4" />
-                      <span>Appels</span>
-                    </div>
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="graph">
-                    <div className="flex items-center gap-2">
-                      <BarChart3 className="h-4 w-4" />
-                      <span>Graphiques</span>
-                    </div>
-                  </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="db">
-                    <div className="flex items-center gap-2">
-                      <Database className="h-4 w-4" />
-                      <span>Données</span>
-                    </div>
-                  </DropdownMenuRadioItem>
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          {/* 0ème encadré: Bascule Vue retirée (désormais dans la Sidebar) */}
           {/* Call Control inline (à droite du sélecteur de mode) */}
-          <CallControl
-            contact={selectedContact}
-            isCalling={Boolean(activeCallContactId && selectedContact && activeCallContactId === selectedContact.id)}
-            callStartTime={callStartTime}
-            onCall={() => makePhoneCall()}
-            onHangUp={() => adbEndCall()}
-            onEmail={() => selectedContact && setIsEmailDialogOpen(true)}
-            onSmsMonsieur={() => handleSms('Monsieur')}
-            onSmsMadame={() => handleSms('Madame')}
-            adbConnected={adbConnectionState.isConnected}
-          />
+          {viewMode === 'table' && (
+            <CallControl
+              contact={selectedContact}
+              isCalling={Boolean(activeCallContactId && selectedContact && activeCallContactId === selectedContact.id)}
+              callStartTime={callStartTime}
+              onCall={() => makePhoneCall()}
+              onHangUp={() => adbEndCall()}
+              onEmail={() => selectedContact && setIsEmailDialogOpen(true)}
+              onSmsMonsieur={() => handleSms('Monsieur')}
+              onSmsMadame={() => handleSms('Madame')}
+              adbConnected={adbConnectionState.isConnected}
+            />
+          )}
           {viewMode === 'table' && (
             <>
               {/* 1er encadré: Recherche */}
@@ -2816,20 +2822,21 @@ Dimitri MOREL - Arcanis Conseil`;
               {viewMode === 'db' && (
             <div className="bg-card rounded-lg p-3 shadow-sm border">
               <div className="flex items-center gap-2 text-xs">
-              <Button
-                variant="default"
-                size="sm"
-                className="h-8"
-                    title="Transférer la sélection vers Appels"
-                disabled={dbSelectedCount === 0}
-                onClick={() => {
-                  try { window.dispatchEvent(new CustomEvent('dimicall-db-transfer')) } catch {}
-                      // Basculer automatiquement vers Appels; App écoutera l'événement pour créer un onglet
-                  setViewMode('table')
-                }}
-              >
-                    Transférer → Appels
-              </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-8"
+                  title="Transférer la sélection vers Appels"
+                  disabled={dbSelectedCount === 0}
+                  onClick={() => {
+                    try { window.dispatchEvent(new CustomEvent('dimicall-db-transfer')) } catch {}
+                    // Basculer automatiquement vers Appels; App écoutera l'événement pour créer un onglet
+                    setViewMode('table')
+                  }}
+                >
+                  Transférer → Appels
+                </Button>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -2840,24 +2847,44 @@ Dimitri MOREL - Arcanis Conseil`;
                 >
                   <Trash2 className="h-4 w-4 mr-1.5" /> Supprimer
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8"
-                  title="Exporter en CSV"
-                  onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-export'))}
-                >
-                  <Download className="h-4 w-4 mr-1.5" /> Exporter
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8"
-                  title="Importer depuis CSV"
-                  onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-import'))}
-                >
-                  <Upload className="h-4 w-4 mr-1.5" /> Importer
-                </Button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8" title="Exporter">
+                      <Download className="h-4 w-4 mr-1.5" /> Exporter <ChevronDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-40">
+                    <DropdownMenuLabel className="flex items-center gap-2"><Download className="w-4 h-4" />Format d'export</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-export'))}>
+                        <span className="mr-2 text-green-600">CSV</span>
+                        <span className="text-xs text-muted-foreground">Fichier texte</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-export-xlsx'))}>
+                        <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
+                        <span>Excel</span>
+                        <span className="ml-auto text-xs text-muted-foreground">.xlsx</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-8" title="Importer">
+                      <Upload className="h-4 w-4 mr-1.5" /> Importer <ChevronDown className="ml-1 h-3 w-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-44">
+                    <DropdownMenuLabel>Importer depuis</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-import'))}>CSV</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-import-xlsx'))}>Excel (.xlsx)</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
                 <Button
                   variant="outline"
                   size="sm"
@@ -3428,7 +3455,9 @@ Dimitri MOREL - Arcanis Conseil`;
 
 
         </main>
+        </SidebarInset>
       </div>
+    </SidebarProvider>
   );
 };
 

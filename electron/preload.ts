@@ -145,6 +145,10 @@ const electronAPI: ElectronAPI = {
   getUpdateStatus: () => ipcRenderer.invoke('get-update-status'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
   revertToStable: () => ipcRenderer.invoke('revert-to-stable'),
+  // Ouvrir l'emplacement d'un fichier
+  showItemInFolder: (targetPath: string) => ipcRenderer.invoke('os:show-item-in-folder', targetPath),
+  getDownloadsPath: () => ipcRenderer.invoke('os:get-downloads-path'),
+  openDownloadsFolder: () => ipcRenderer.invoke('os:open-downloads-folder'),
   
   // API pour synchroniser les préférences beta
   syncBetaPreferences: (preferences: any) => ipcRenderer.invoke('sync-beta-preferences', preferences),
@@ -177,6 +181,8 @@ const electronAPI: ElectronAPI = {
     getPath: () => ipcRenderer.invoke('localdb:path'),
     exportCsv: () => ipcRenderer.invoke('localdb:export-csv'),
     importCsv: () => ipcRenderer.invoke('localdb:import-csv'),
+    exportXlsx: () => ipcRenderer.invoke('localdb:export-xlsx'),
+    importXlsx: () => ipcRenderer.invoke('localdb:import-xlsx'),
     delete: (id: number) => ipcRenderer.invoke('localdb:delete', id),
     update: (payload: any) => ipcRenderer.invoke('localdb:update', payload),
     updateLatestForContact: (contactId: string, fields: any) => ipcRenderer.invoke('localdb:update-latest-for-contact', contactId, fields),

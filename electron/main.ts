@@ -10,6 +10,7 @@ import electronUpdater from 'electron-updater'
 import log from 'electron-log'
 import { PlatformUpdateService } from '../src/services/PlatformUpdateService'
 import * as localDbJsonStatic from './services/localDbJson'
+import * as XLSX from 'xlsx'
 
 // Extraction de autoUpdater depuis le module CommonJS
 const { autoUpdater } = electronUpdater
@@ -777,9 +778,9 @@ app.whenReady().then(async () => {
         ? (localDbModule.getAllStatusEvents() as any[])
         : localDbJsonStatic.getAllStatusEvents()
 
-      const { canceled, filePath } = await dialog.showSaveDialog(mainWindow!, {
+      const { canceled, filePath } = await dialog.showSaveDialog({
         title: 'Exporter events.csv',
-        defaultPath: 'events.csv',
+        defaultPath: path.join(app.getPath('downloads'), 'events.csv'),
         filters: [{ name: 'CSV', extensions: ['csv'] }]
       })
       if (canceled || !filePath) return { success: false, error: 'Annulé' }
@@ -812,7 +813,7 @@ app.whenReady().then(async () => {
   ipcMain.handle('localdb:import-csv', async () => {
     try {
       await ensureLocalDbInitialized()
-      const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow!, {
+      const { canceled, filePaths } = await dialog.showOpenDialog({
         title: 'Importer events.csv',
         filters: [{ name: 'CSV', extensions: ['csv'] }],
         properties: ['openFile']
@@ -895,6 +896,187 @@ app.whenReady().then(async () => {
       return { success: true, count: rows.length }
     } catch (e: any) {
       console.error('[LOCALDB] import-csv error:', e)
+      return { success: false, error: e?.message || String(e) }
+    }
+  })
+
+  // Export XLSX (écrit un fichier .xlsx réel via SheetJS)
+  ipcMain.handle('localdb:export-xlsx', async () => {
+    try {
+      await ensureLocalDbInitialized()
+      const rows = (localDbInitDone && localDbModule?.getAllStatusEvents)
+        ? (localDbModule.getAllStatusEvents() as any[])
+        : localDbJsonStatic.getAllStatusEvents()
+
+      const { canceled, filePath } = await dialog.showSaveDialog({
+        title: 'Exporter events.xlsx',
+        defaultPath: path.join(app.getPath('downloads'), 'events.xlsx'),
+        filters: [{ name: 'Excel', extensions: ['xlsx'] }]
+      })
+      if (canceled || !filePath) return { success: false, error: 'Annulé' }
+
+      const headers = [
+        'id','contact_id','old_status','new_status','applied_at','prenom','nom','telephone',
+        'email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree'
+      ]
+      // Normaliser l'ordre des colonnes
+      const data = rows.map(r => {
+        const o: any = {}
+        headers.forEach(h => { o[h] = (r as any)[h] ?? null })
+        return o
+      })
+      const ws = XLSX.utils.json_to_sheet(data, { header: headers })
+      // Ajuster la largeur des colonnes de façon simple
+      const colWidths = headers.map(h => ({ wch: Math.max(h.length, 12) }))
+      ;(ws as any)['!cols'] = colWidths
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Events')
+      // Écrire via buffer pour éviter write_dl (environnement navigateur)
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' }) as Buffer
+      const dir = path.dirname(filePath)
+      try { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }) } catch {}
+      fs.writeFileSync(filePath, wbout)
+      return { success: true, path: filePath }
+    } catch (e: any) {
+      console.error('[LOCALDB] export-xlsx error:', e)
+      return { success: false, error: e?.message || String(e) }
+    }
+  })
+
+  // Import XLSX réel via SheetJS (supporte .xlsx/.xls) + CSV fallback
+  ipcMain.handle('localdb:import-xlsx', async () => {
+    try {
+      await ensureLocalDbInitialized()
+      const { canceled, filePaths } = await dialog.showOpenDialog({
+        title: 'Importer events',
+        filters: [{ name: 'Excel/CSV', extensions: ['xlsx','xls','csv'] }],
+        properties: ['openFile']
+      })
+      if (canceled || !filePaths?.[0]) return { success: false, error: 'Annulé' }
+
+      const filePath = filePaths[0]
+      const ext = (filePath.split('.').pop() || '').toLowerCase()
+      const wanted = ['id','contact_id','old_status','new_status','applied_at','prenom','nom','telephone','email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree']
+
+      let rows: any[] = []
+      if (ext === 'csv') {
+        const content = require('fs').readFileSync(filePath, 'utf8')
+        const parseCsv = (csv: string) => {
+          const splitLine = (line: string) => {
+            const arr: string[] = []
+            let cur = ''
+            let q = false
+            for (let i = 0; i < line.length; i++) {
+              const ch = line[i]
+              if (q) {
+                if (ch === '"') {
+                  if (i + 1 < line.length && line[i + 1] === '"') { cur += '"'; i++ } else { q = false }
+                } else { cur += ch }
+              } else {
+                if (ch === ',') { arr.push(cur); cur = '' }
+                else if (ch === '"') { q = true }
+                else { cur += ch }
+              }
+            }
+            arr.push(cur)
+            return arr
+          }
+          const lines = csv.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim().length > 0)
+          if (lines.length === 0) return []
+          const headers = splitLine(lines[0])
+          const idx = (name: string) => headers.findIndex(h => h === name)
+          const mapIdx: any = {}
+          wanted.forEach(h => { mapIdx[h] = idx(h) })
+          const out: any[] = []
+          for (let i = 1; i < lines.length; i++) {
+            const cols = splitLine(lines[i])
+            const get = (h: string) => {
+              const j = mapIdx[h]
+              if (j === -1 || j === undefined) return null
+              const v = cols[j]
+              return (v === undefined || v === '') ? null : v
+            }
+            const idRaw = get('id')
+            const id = idRaw ? Number(idRaw) : NaN
+            out.push({
+              id: Number.isFinite(id) ? id : 0,
+              contact_id: get('contact_id') ?? '',
+              old_status: get('old_status'),
+              new_status: get('new_status') ?? '',
+              applied_at: get('applied_at') ?? new Date().toISOString(),
+              prenom: get('prenom'),
+              nom: get('nom'),
+              telephone: get('telephone'),
+              email: get('email'),
+              commentaire: get('commentaire'),
+              dateRappel: get('dateRappel'),
+              heureRappel: get('heureRappel'),
+              dateRDV: get('dateRDV'),
+              heureRDV: get('heureRDV'),
+              dateAppel: get('dateAppel'),
+              heureAppel: get('heureAppel'),
+              dureeAppel: get('dureeAppel'),
+              dateEntree: get('dateEntree'),
+              heureEntree: get('heureEntree'),
+            })
+          }
+          return out
+        }
+        rows = parseCsv(content)
+      } else {
+        const buf = require('fs').readFileSync(filePath)
+        const wb = XLSX.read(buf, { type: 'buffer' })
+        const ws = wb.Sheets[wb.SheetNames[0]]
+        // Lire comme AoA pour récupérer l'en-tête d'abord
+        const aoa = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' }) as any[]
+        const headersRow = (aoa[0] || []).map((h: any) => String(h))
+        const idx = (name: string) => headersRow.findIndex(h => h === name)
+        const mapIdx: any = {}
+        wanted.forEach(h => { mapIdx[h] = idx(h) })
+        const out: any[] = []
+        for (let i = 1; i < aoa.length; i++) {
+          const cols = aoa[i] as any[]
+          const get = (h: string) => {
+            const j = mapIdx[h]
+            if (j === -1 || j === undefined) return null
+            const v = cols[j]
+            return (v === undefined || v === '') ? null : v
+          }
+          const idRaw = get('id')
+          const id = idRaw ? Number(idRaw) : NaN
+          out.push({
+            id: Number.isFinite(id) ? id : 0,
+            contact_id: get('contact_id') ?? '',
+            old_status: get('old_status'),
+            new_status: get('new_status') ?? '',
+            applied_at: get('applied_at') ?? new Date().toISOString(),
+            prenom: get('prenom'),
+            nom: get('nom'),
+            telephone: get('telephone'),
+            email: get('email'),
+            commentaire: get('commentaire'),
+            dateRappel: get('dateRappel'),
+            heureRappel: get('heureRappel'),
+            dateRDV: get('dateRDV'),
+            heureRDV: get('heureRDV'),
+            dateAppel: get('dateAppel'),
+            heureAppel: get('heureAppel'),
+            dureeAppel: get('dureeAppel'),
+            dateEntree: get('dateEntree'),
+            heureEntree: get('heureEntree'),
+          })
+        }
+        rows = out
+      }
+
+      if (localDbInitDone && localDbModule?.replaceAllStatusEvents) {
+        localDbModule.replaceAllStatusEvents(rows)
+      } else if (localDbJsonStatic?.replaceAllStatusEvents) {
+        localDbJsonStatic.replaceAllStatusEvents(rows)
+      }
+      return { success: true, count: rows.length }
+    } catch (e: any) {
+      console.error('[LOCALDB] import-xlsx error:', e)
       return { success: false, error: e?.message || String(e) }
     }
   })
@@ -1708,6 +1890,39 @@ app.whenReady().then(async () => {
       
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : String(error) }
+    }
+  })
+
+  // Ouvrir l'emplacement d'un fichier dans l'explorateur
+  ipcMain.handle('os:show-item-in-folder', async (_event, targetPath: string) => {
+    try {
+      if (typeof targetPath === 'string' && targetPath.length > 0) {
+        shell.showItemInFolder(targetPath)
+        return { success: true }
+      }
+      return { success: false, error: 'Chemin invalide' }
+    } catch (error: any) {
+      return { success: false, error: error?.message || String(error) }
+    }
+  })
+
+  // Récupérer le chemin du dossier Téléchargements
+  ipcMain.handle('os:get-downloads-path', async () => {
+    try {
+      return { success: true, path: app.getPath('downloads') }
+    } catch (error: any) {
+      return { success: false, error: error?.message || String(error) }
+    }
+  })
+
+  // Ouvrir le dossier Téléchargements
+  ipcMain.handle('os:open-downloads-folder', async () => {
+    try {
+      const p = app.getPath('downloads')
+      await shell.openPath(p)
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error?.message || String(error) }
     }
   })
 

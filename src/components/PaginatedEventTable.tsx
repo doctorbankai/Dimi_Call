@@ -78,15 +78,21 @@ export default function PaginatedEventTable() {
     }
     const onExport = async () => { await handleExportCsv() }
     const onImport = async () => { await handleImportCsv() }
+    const onExportXlsx = async () => { await handleExportXlsx() }
+    const onImportXlsx = async () => { await handleImportXlsx() }
     const onRefresh = async () => { await loadAll() }
     window.addEventListener('dimicall-db-delete', onDelete as any)
     window.addEventListener('dimicall-db-export', onExport as any)
     window.addEventListener('dimicall-db-import', onImport as any)
+    window.addEventListener('dimicall-db-export-xlsx', onExportXlsx as any)
+    window.addEventListener('dimicall-db-import-xlsx', onImportXlsx as any)
     window.addEventListener('dimicall-db-refresh', onRefresh as any)
     return () => {
       window.removeEventListener('dimicall-db-delete', onDelete as any)
       window.removeEventListener('dimicall-db-export', onExport as any)
       window.removeEventListener('dimicall-db-import', onImport as any)
+      window.removeEventListener('dimicall-db-export-xlsx', onExportXlsx as any)
+      window.removeEventListener('dimicall-db-import-xlsx', onImportXlsx as any)
       window.removeEventListener('dimicall-db-refresh', onRefresh as any)
     }
   }, [selectedId, selectedIds])
@@ -205,7 +211,9 @@ export default function PaginatedEventTable() {
     try {
       const res = await (window as any).electronAPI?.localdb?.exportCsv()
       if (res?.success) {
-        // Optionnel: feedback utilisateur
+        try {
+          window.dispatchEvent(new CustomEvent('dimicall-toast', { detail: { type: 'success', title: 'Export CSV réussi', path: res.path } }))
+        } catch {}
       }
     } catch {}
   }
@@ -213,6 +221,26 @@ export default function PaginatedEventTable() {
   const handleImportCsv = async () => {
     try {
       const res = await (window as any).electronAPI?.localdb?.importCsv()
+      if (res?.success) {
+        await loadAll()
+      }
+    } catch {}
+  }
+
+  const handleExportXlsx = async () => {
+    try {
+      const res = await (window as any).electronAPI?.localdb?.exportXlsx()
+      if (res?.success) {
+        try {
+          window.dispatchEvent(new CustomEvent('dimicall-toast', { detail: { type: 'success', title: 'Export Excel réussi', path: res.path } }))
+        } catch {}
+      }
+    } catch {}
+  }
+
+  const handleImportXlsx = async () => {
+    try {
+      const res = await (window as any).electronAPI?.localdb?.importXlsx()
       if (res?.success) {
         await loadAll()
       }
@@ -319,7 +347,7 @@ export default function PaginatedEventTable() {
             style={{
               position: 'sticky',
               top: 0,
-              zIndex: 101,
+              zIndex: 90,
               backgroundColor: 'hsl(var(--background))',
               backdropFilter: 'blur(4px)',
               WebkitBackdropFilter: 'blur(4px)',
