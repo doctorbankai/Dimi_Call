@@ -51,9 +51,9 @@ export function AppSidebar({
   onHelpClick,
 }: AppSidebarProps) {
   return (
-    <Sidebar collapsible="icon" className="top-8 h-[calc(100svh-2rem)]">
+    <Sidebar collapsible="icon" className="mt-8 h-[calc(100svh-2rem)]">
       <SidebarHeader className="p-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full">
           <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
             <Calendar className="w-4 h-4 text-white" />
           </div>
@@ -72,7 +72,7 @@ export function AppSidebar({
                 <SidebarMenuButton
                   isActive={viewMode === 'table'}
                   onClick={() => onChangeViewMode('table')}
-                  className="w-full justify-start gap-3"
+                  className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <Phone className="w-4 h-4" />
                   <span>Appels</span>
@@ -82,7 +82,7 @@ export function AppSidebar({
                 <SidebarMenuButton
                   isActive={viewMode === 'graph'}
                   onClick={() => onChangeViewMode('graph')}
-                  className="w-full justify-start gap-3"
+                  className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <BarChart3 className="w-4 h-4" />
                   <span>Graphiques</span>
@@ -92,7 +92,7 @@ export function AppSidebar({
                 <SidebarMenuButton
                   isActive={viewMode === 'db'}
                   onClick={() => onChangeViewMode('db')}
-                  className="w-full justify-start gap-3"
+                  className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <Database className="w-4 h-4" />
                   <span>Données</span>
@@ -108,7 +108,7 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={onTicketClick}
-                  className="w-full justify-start gap-3"
+                  className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <MailQuestion className="w-4 h-4" />
                   <span>Envoyer un ticket</span>
@@ -117,7 +117,7 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={onHelpClick}
-                  className="w-full justify-start gap-3"
+                  className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <HelpCircle className="w-4 h-4" />
                   <span>Aide et tutoriel</span>
@@ -126,7 +126,7 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={onSettingsClick}
-                  className="w-full justify-start gap-3"
+                  className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <Settings className="w-4 h-4" />
                   <span>Réglages</span>
@@ -144,7 +144,7 @@ export function AppSidebar({
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
-              className="w-full justify-start gap-3 h-auto p-3 hover:bg-accent"
+              className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 h-auto p-3 hover:bg-accent"
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="relative">

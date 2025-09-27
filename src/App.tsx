@@ -2902,7 +2902,7 @@ Dimitri MOREL - Arcanis Conseil`;
         {/* Content area */}
         <div className="flex-1 flex overflow-hidden min-h-0">
           {viewMode === 'table' ? (
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
               <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-hidden">
                 {tableTabs.length === 0 ? (
                   <PaginatedContactTable
@@ -3086,13 +3086,13 @@ Dimitri MOREL - Arcanis Conseil`;
               </div>
             </div>
           ) : viewMode === 'graph' ? (
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
-              <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-auto p-4">
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
+              <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-auto p-4 min-w-0">
                 <ChartDashboard contacts={filteredContacts} />
               </div>
             </div>
           ) : (
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
               <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-hidden">
                 <PaginatedEventTable />
               </div>

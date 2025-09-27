@@ -1506,6 +1506,7 @@ table {
   flex: 0 0 var(--sidebar-width);
   width: var(--sidebar-width);
   transition: flex-basis 200ms ease-linear, width 200ms ease-linear;
+  align-self: stretch;
 }
 
 [data-slot="sidebar"][data-collapsible="icon"] {
@@ -1515,6 +1516,15 @@ table {
 
 [data-slot="sidebar-gap"] {
   display: none !important;
+}
+
+[data-slot="sidebar"][data-collapsible="icon"] [data-slot="sidebar-menu-button"] {
+  justify-content: center !important;
+  gap: 0 !important;
+}
+
+[data-slot="sidebar"][data-collapsible="icon"] [data-slot="sidebar-menu-button"] > svg {
+  margin: 0 auto !important;
 }
 
 [data-slot="sidebar-container"] {
