@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Minus, Square, X, Maximize, Settings, User, Smartphone, WifiOff, Loader2, MailQuestion, Download, RefreshCw, Beaker, PanelLeft } from 'lucide-react';
+import { Minus, Square, X, Maximize, Smartphone, WifiOff, Loader2, Download, RefreshCw, Beaker } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Theme, CallMode } from '../types';
 import { useCallMode } from '../context/ModeContext';
@@ -7,12 +7,6 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { BetaPreferencesService } from '../services/betaPreferencesService';
 
-import { UserProfileDialog } from './UserProfileDialog';
-import { useSupabaseAuth } from '../lib/auth-client';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { TicketForm } from './TicketForm';
-import HelpTutorialButton from './HelpTutorialButton';
-import { SidebarTrigger } from '@/components/ui/sidebar';
 import packageJson from '../../package.json';
 
 interface CustomMenuBarProps {
@@ -59,14 +53,10 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
   onUpdateConfirmationOpen
 }) => {
   const { mode, setMode } = useCallMode();
-  const auth = useSupabaseAuth();
   const [isMaximized, setIsMaximized] = useState(false);
   const [isElectron, setIsElectron] = useState(false);
   const [isMacOS, setIsMacOS] = useState(false);
-  const [isProfileDialogOpen, setIsProfileDialogOpen] = useState(false);
-  const [isTicketFormOpen, setIsTicketFormOpen] = useState(false);
   const [isBetaVersion, setIsBetaVersion] = useState(false);
-  const appVersion = packageJson.version;
 
   useEffect(() => {
     // Vérifier si nous sommes dans Electron
@@ -109,13 +99,6 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
     };
   }, []);
 
-  // Empêcher l'ouverture automatique du profil utilisateur après connexion
-  useEffect(() => {
-    // S'assurer que le dialog du profil reste fermé par défaut
-    if (auth.isAuthenticated && isProfileDialogOpen) {
-      setIsProfileDialogOpen(false);
-    }
-  }, [auth.isAuthenticated]);
 
   const handleMinimize = async () => {
     if (window.electronAPI) {
@@ -155,38 +138,6 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
     ? 'hover:bg-[hsl(var(--muted))]' 
     : 'hover:bg-[hsl(var(--muted))]';
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'online': return 'bg-green-500';
-      case 'away': return 'bg-yellow-500';
-      case 'offline': return 'bg-gray-400';
-      default: return 'bg-gray-400';
-    }
-  };
-
-  const getCurrentTabLabel = () => {
-    return 'DimiCall';
-  };
-
-  // Fonction pour générer une image de profil optimisée (SVG inline léger)
-  const generateProfileImage = (name: string) => {
-    const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-    const colors = [
-      '#3B82F6', '#8B5CF6', '#EF4444', '#10B981', '#F59E0B', 
-      '#EC4899', '#06B6D4', '#84CC16', '#F97316', '#6366F1'
-    ];
-    const colorIndex = name.length % colors.length;
-    const bgColor = colors[colorIndex];
-    
-    return `data:image/svg+xml;base64,${btoa(`
-      <svg width="20" height="20" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="10" cy="10" r="10" fill="${bgColor}"/>
-        <text x="10" y="14" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="8" font-weight="600">
-          ${initials}
-        </text>
-      </svg>
-    `)}`;
-  };
 
   // Fonction pour gérer le clic sur le badge de mise à jour
   const handleUpdateBadgeClick = () => {
@@ -238,142 +189,38 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
                   BETA
                 </Badge>
               )}
+              {/* Badge ADB à côté du titre */}
+              {adbConnectionState && onAdbClick && (
+                <Badge 
+                  variant={adbConnectionState.isConnected ? 'default' : 'outline'} 
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-0.5 cursor-pointer transition-all duration-200 hover:scale-105 text-xs h-6",
+                    adbConnectionState.isConnected && "bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20",
+                    !adbConnectionState.isConnected && adbConnectionState.error && "bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20",
+                    !adbConnectionState.isConnected && !adbConnectionState.error && "bg-gray-500/10 text-gray-600 border-gray-500/20 hover:bg-gray-500/20",
+                    adbConnecting && "animate-pulse",
+                    activeCallContactId && "ring-1 ring-blue-500/50"
+                  )}
+                  onClick={onAdbClick}
+                  title={`ADB ${adbConnectionState.isConnected ? 'Connecté' : 'Déconnecté'} - Clic pour ${adbConnectionState.isConnected ? 'déconnecter' : 'connecter'}`}
+                >
+                  {adbConnecting ? (
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                  ) : adbConnectionState.isConnected ? (
+                    <Smartphone className="w-2.5 h-2.5" />
+                  ) : (
+                    <WifiOff className="w-2.5 h-2.5" />
+                  )}
+                  <span className="font-medium">
+                    {adbConnecting ? 'ADB...' : 
+                     adbConnectionState.isConnected ? 'ADB' : 
+                     adbConnectionState.error ? 'Err' : 'Off'}
+                  </span>
+                </Badge>
+              )}
             </div>
           </div>
           
-          {/* Badge mise à jour et Badge ADB et Badge utilisateur */}
-          <div 
-            className="flex items-center gap-2 pointer-events-auto mr-3"
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          >
-            {/* Badge de mise à jour */}
-            {isUpdateEnabled && updateState && (updateState.downloaded || updateState.downloading || updateState.checking) && (onUpdateClick || onUpdateConfirmationOpen) && (
-              <Badge 
-                variant={updateState.downloaded ? 'default' : 'outline'} 
-                className={cn(
-                  "flex items-center gap-1 px-2 py-0.5 cursor-pointer transition-all duration-200 hover:scale-105 text-xs h-6",
-                  updateState.downloaded && "bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20",
-                  updateState.downloading && "bg-orange-500/10 text-orange-600 border-orange-500/20 hover:bg-orange-500/20",
-                  updateState.checking && "bg-gray-500/10 text-gray-600 border-gray-500/20 hover:bg-gray-500/20"
-                )}
-                onClick={handleUpdateBadgeClick}
-                title={
-                  updateState.downloaded 
-                    ? `Mise à jour ${updateState.updateInfo?.version} prête - Cliquer pour installer la mise à jour`
-                    : updateState.downloading 
-                    ? `Téléchargement en cours: ${updateState.progress}%`
-                    : 'Vérification des mises à jour...'
-                }
-              >
-                {updateState.downloaded ? (
-                  <RefreshCw className="w-2.5 h-2.5" />
-                ) : updateState.downloading ? (
-                  <Download className="w-2.5 h-2.5 animate-bounce" />
-                ) : (
-                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                )}
-                <span className="font-medium">
-                  {updateState.downloaded ? 'Mettre à jour' : 
-                   updateState.downloading ? `${updateState.progress}%` : 
-                   'MAJ...'}
-                </span>
-              </Badge>
-            )}
-
-            {/* Badge ADB compact */}
-            {adbConnectionState && onAdbClick && (
-              <Badge 
-                variant={adbConnectionState.isConnected ? 'default' : 'outline'} 
-                className={cn(
-                  "flex items-center gap-1 px-2 py-0.5 cursor-pointer transition-all duration-200 hover:scale-105 text-xs h-6",
-                  adbConnectionState.isConnected && "bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20",
-                  !adbConnectionState.isConnected && adbConnectionState.error && "bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20",
-                  !adbConnectionState.isConnected && !adbConnectionState.error && "bg-gray-500/10 text-gray-600 border-gray-500/20 hover:bg-gray-500/20",
-                  adbConnecting && "animate-pulse",
-                  activeCallContactId && "ring-1 ring-blue-500/50"
-                )}
-                onClick={onAdbClick}
-                title={`ADB ${adbConnectionState.isConnected ? 'Connecté' : 'Déconnecté'} - Clic pour ${adbConnectionState.isConnected ? 'déconnecter' : 'connecter'}`}
-              >
-                {adbConnecting ? (
-                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                ) : adbConnectionState.isConnected ? (
-                  <Smartphone className="w-2.5 h-2.5" />
-                ) : (
-                  <WifiOff className="w-2.5 h-2.5" />
-                )}
-                <span className="font-medium">
-                  {adbConnecting ? 'ADB...' : 
-                   adbConnectionState.isConnected ? 'ADB' : 
-                   adbConnectionState.error ? 'Err' : 'Off'}
-                </span>
-              </Badge>
-            )}
-
-            {/* Badge utilisateur */}
-            <button 
-              onClick={() => setIsProfileDialogOpen(true)}
-              className="flex items-center gap-2 px-2 py-1 bg-[hsl(var(--muted))] rounded-md hover:bg-[hsl(var(--muted))]/80 transition-colors focus:outline-none"
-            >
-              <div className="relative">
-                <Avatar className="w-5 h-5">
-                  <AvatarImage 
-                    src={generateProfileImage(auth.user?.email || userName)} 
-                    alt={auth.user?.email || userName}
-                    className="object-cover"
-                  />
-                  <AvatarFallback className="text-xs bg-[hsl(var(--muted-foreground))] text-[hsl(var(--background))]">
-                    {(auth.user?.email || userName).slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className={cn(
-                  "absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-[hsl(var(--background))]",
-                  getStatusColor(userStatus)
-                )} />
-              </div>
-              <span className="text-xs font-medium text-[hsl(var(--foreground))] max-w-[80px] truncate">
-                {auth.user?.email?.split('@')[0] || userName.split(' ')[0]}
-              </span>
-            </button>
-          </div>
-
-          {/* Bouton Settings */}
-          {onSettingsClick && (
-            <div 
-              className="flex items-center pointer-events-auto mr-2"
-              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-            >
-              <button
-                onClick={() => setIsTicketFormOpen(true)}
-                className={cn(
-                  "p-2 rounded transition-all duration-200 focus:outline-none",
-                  buttonHoverBg,
-                  textColor
-                )}
-                title="Envoyer un ticket"
-              >
-                <MailQuestion className="w-4 h-4" />
-              </button>
-              <HelpTutorialButton
-                theme={theme}
-                className={cn(
-                  buttonHoverBg,
-                  textColor
-                )}
-              />
-              <button
-                onClick={onSettingsClick}
-                className={cn(
-                  "p-2 rounded transition-all duration-200 focus:outline-none",
-                  buttonHoverBg,
-                  textColor
-                )}
-                title="Réglages"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-            </div>
-          )}
         </>
       ) : (
         // Layout pour Windows/Linux - Design original
@@ -385,7 +232,6 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
           >
             {/* Logo et nom DimiCall */}
             <div className="flex items-center px-3 py-1 gap-2">
-              <SidebarTrigger className="size-7 -ml-1" />
               <span className={cn("text-sm font-semibold", textColor)}>DimiCall</span>
               {isBetaVersion && (
                 <Badge 
@@ -396,154 +242,41 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
                   BETA
                 </Badge>
               )}
+              {/* Badge ADB à côté du titre */}
+              {adbConnectionState && onAdbClick && (
+                <Badge 
+                  variant={adbConnectionState.isConnected ? 'default' : 'outline'} 
+                  className={cn(
+                    "flex items-center gap-1 px-2 py-0.5 cursor-pointer transition-all duration-200 hover:scale-105 text-xs h-6",
+                    adbConnectionState.isConnected && "bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20",
+                    !adbConnectionState.isConnected && adbConnectionState.error && "bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20",
+                    !adbConnectionState.isConnected && !adbConnectionState.error && "bg-gray-500/10 text-gray-600 border-gray-500/20 hover:bg-gray-500/20",
+                    adbConnecting && "animate-pulse",
+                    activeCallContactId && "ring-1 ring-blue-500/50"
+                  )}
+                  onClick={onAdbClick}
+                  title={`ADB ${adbConnectionState.isConnected ? 'Connecté' : 'Déconnecté'} - Clic pour ${adbConnectionState.isConnected ? 'déconnecter' : 'connecter'}`}
+                >
+                  {adbConnecting ? (
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                  ) : adbConnectionState.isConnected ? (
+                    <Smartphone className="w-2.5 h-2.5" />
+                  ) : (
+                    <WifiOff className="w-2.5 h-2.5" />
+                  )}
+                  <span className="font-medium">
+                    {adbConnecting ? 'ADB...' : 
+                     adbConnectionState.isConnected ? 'ADB' : 
+                     adbConnectionState.error ? 'Err' : 'Off'}
+                  </span>
+                </Badge>
+              )}
             </div>
           </div>
 
           {/* Espace flexible pour permettre le drag */}
           <div className="flex-1" />
 
-          {/* Badge mise à jour et Badge ADB et Badge utilisateur */}
-          <div 
-            className="flex items-center gap-2 pointer-events-auto mr-3"
-            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          >
-            {/* Mode switcher clair et visible */}
-            <div className="hidden md:flex items-center gap-2 mr-2">
-              <Badge variant={mode === CallMode.Client ? 'default' : 'secondary'} className="text-[10px]">Client</Badge>
-              <Switch
-                checked={mode === CallMode.Mandataire}
-                onCheckedChange={(checked) => setMode(checked ? CallMode.Mandataire : CallMode.Client)}
-              />
-              <Badge variant={mode === CallMode.Mandataire ? 'default' : 'secondary'} className="text-[10px]">Mandataire</Badge>
-            </div>
-            {/* Badge de mise à jour */}
-            {isUpdateEnabled && updateState && (updateState.downloaded || updateState.downloading || updateState.checking) && (onUpdateClick || onUpdateConfirmationOpen) && (
-              <Badge 
-                variant={updateState.downloaded ? 'default' : 'outline'} 
-                className={cn(
-                  "flex items-center gap-1 px-2 py-0.5 cursor-pointer transition-all duration-200 hover:scale-105 text-xs h-6",
-                  updateState.downloaded && "bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20",
-                  updateState.downloading && "bg-orange-500/10 text-orange-600 border-orange-500/20 hover:bg-orange-500/20",
-                  updateState.checking && "bg-gray-500/10 text-gray-600 border-gray-500/20 hover:bg-gray-500/20"
-                )}
-                onClick={handleUpdateBadgeClick}
-                title={
-                  updateState.downloaded 
-                    ? `Mise à jour ${updateState.updateInfo?.version} prête - Cliquer pour installer la mise à jour`
-                    : updateState.downloading 
-                    ? `Téléchargement en cours: ${updateState.progress}%`
-                    : 'Vérification des mises à jour...'
-                }
-              >
-                {updateState.downloaded ? (
-                  <RefreshCw className="w-2.5 h-2.5" />
-                ) : updateState.downloading ? (
-                  <Download className="w-2.5 h-2.5 animate-bounce" />
-                ) : (
-                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                )}
-                <span className="font-medium">
-                  {updateState.downloaded ? 'Mettre à jour' : 
-                   updateState.downloading ? `${updateState.progress}%` : 
-                   'MAJ...'}
-                </span>
-              </Badge>
-            )}
-
-            {/* Badge ADB compact */}
-            {adbConnectionState && onAdbClick && (
-              <Badge 
-                variant={adbConnectionState.isConnected ? 'default' : 'outline'} 
-                className={cn(
-                  "flex items-center gap-1 px-2 py-0.5 cursor-pointer transition-all duration-200 hover:scale-105 text-xs h-6",
-                  adbConnectionState.isConnected && "bg-green-500/10 text-green-600 border-green-500/20 hover:bg-green-500/20",
-                  !adbConnectionState.isConnected && adbConnectionState.error && "bg-red-500/10 text-red-600 border-red-500/20 hover:bg-red-500/20",
-                  !adbConnectionState.isConnected && !adbConnectionState.error && "bg-gray-500/10 text-gray-600 border-gray-500/20 hover:bg-gray-500/20",
-                  adbConnecting && "animate-pulse",
-                  activeCallContactId && "ring-1 ring-blue-500/50"
-                )}
-                onClick={onAdbClick}
-                title={`ADB ${adbConnectionState.isConnected ? 'Connecté' : 'Déconnecté'} - Clic pour ${adbConnectionState.isConnected ? 'déconnecter' : 'connecter'}`}
-              >
-                {adbConnecting ? (
-                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                ) : adbConnectionState.isConnected ? (
-                  <Smartphone className="w-2.5 h-2.5" />
-                ) : (
-                  <WifiOff className="w-2.5 h-2.5" />
-                )}
-                <span className="font-medium">
-                  {adbConnecting ? 'ADB...' : 
-                   adbConnectionState.isConnected ? 'ADB' : 
-                   adbConnectionState.error ? 'Err' : 'Off'}
-                </span>
-              </Badge>
-            )}
-
-            {/* Badge utilisateur */}
-            <button 
-              onClick={() => setIsProfileDialogOpen(true)}
-              className="flex items-center gap-2 px-2 py-1 bg-[hsl(var(--muted))] rounded-md hover:bg-[hsl(var(--muted))]/80 transition-colors focus:outline-none"
-            >
-              <div className="relative">
-                <Avatar className="w-5 h-5">
-                  <AvatarImage 
-                    src={generateProfileImage(auth.user?.email || userName)} 
-                    alt={auth.user?.email || userName}
-                    className="object-cover"
-                  />
-                  <AvatarFallback className="text-xs bg-[hsl(var(--muted-foreground))] text-[hsl(var(--background))]">
-                    {(auth.user?.email || userName).slice(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <div className={cn(
-                  "absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-[hsl(var(--background))]",
-                  getStatusColor(userStatus)
-                )} />
-              </div>
-              <span className="text-xs font-medium text-[hsl(var(--foreground))] max-w-[80px] truncate">
-                {auth.user?.email?.split('@')[0] || userName.split(' ')[0]}
-              </span>
-            </button>
-          </div>
-
-          {/* Bouton Settings */}
-          {onSettingsClick && (
-            <div 
-              className="flex items-center pointer-events-auto mr-2"
-              style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-            >
-              <button
-                onClick={() => setIsTicketFormOpen(true)}
-                className={cn(
-                  "p-2 rounded transition-all duration-200 focus:outline-none",
-                  buttonHoverBg,
-                  textColor
-                )}
-                title="Envoyer un ticket"
-              >
-                <MailQuestion className="w-4 h-4" />
-              </button>
-              <HelpTutorialButton
-                theme={theme}
-                className={cn(
-                  buttonHoverBg,
-                  textColor
-                )}
-              />
-              <button
-                onClick={onSettingsClick}
-                className={cn(
-                  "p-2 rounded transition-all duration-200 focus:outline-none",
-                  buttonHoverBg,
-                  textColor
-                )}
-                title="Réglages"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
-            </div>
-          )}
 
           {/* Contrôles de fenêtre Windows */}
           <div 
@@ -598,21 +331,6 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
         </>
       )}
 
-      {/* Dialog de profil utilisateur */}
-      <UserProfileDialog
-        isOpen={isProfileDialogOpen}
-        onClose={() => setIsProfileDialogOpen(false)}
-        userName={auth.user?.email || userName}
-        userStatus={userStatus}
-      />
-
-      {/* Formulaire de ticket */}
-      <TicketForm 
-        isOpen={isTicketFormOpen} 
-        onOpenChange={setIsTicketFormOpen}
-        userEmail={auth.user?.email}
-        appVersion={appVersion}
-      />
     </div>
   );
 };

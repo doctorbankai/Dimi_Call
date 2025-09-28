@@ -10,7 +10,7 @@ import { EmailDialog, RappelDialog, RendezVousDialog, QualificationDialog, Gener
 
 import { TitleBar } from './components/TitleBar';
 import { AppSidebar } from '@/components/AppSidebar';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { UpdateConfirmationDialog } from './components/UpdateConfirmationDialog';
 import { 
   loadContacts, 
@@ -2063,10 +2063,14 @@ Dimitri MOREL - Arcanis Conseil`;
   return (
     <SidebarProvider>
       <div className={cn(
-        "flex h-[100svh] md:h-screen overflow-hidden bg-background min-w-0",
+        "flex h-[calc(100vh-2rem)] overflow-hidden bg-background min-w-0",
         theme === Theme.Dark ? "dark" : ""
       )}
-        style={{ minHeight: 0 }}
+        style={{
+          minHeight: 0,
+          "--sidebar-width": "16rem",
+          "--sidebar-width-icon": "3rem"
+        } as React.CSSProperties}
       >
         <AppSidebar
           activeTab={activeMenuTab}
@@ -2076,10 +2080,18 @@ Dimitri MOREL - Arcanis Conseil`;
           onSettingsClick={() => setIsSettingsOpen(true)}
           viewMode={viewMode}
           onChangeViewMode={(mode) => setViewMode(mode)}
+          theme={theme}
         />
-        <SidebarInset className="min-w-0">
+        <div
+          className="flex-1 min-w-0 relative transition-all duration-200 ease-linear"
+          style={{
+            marginLeft: "var(--sidebar-width-icon)",
+            "--sidebar-width": "16rem",
+            "--sidebar-width-icon": "3rem"
+          } as React.CSSProperties}
+        >
           {/* Contenu principal */}
-          <main className="flex flex-col flex-1 w-full min-h-0 min-w-0 overflow-hidden pt-8">
+          <main className="flex flex-col flex-1 w-full min-h-0 min-w-0 overflow-hidden h-full">
           {/* Barre de titre personnalisée pour Electron */}
           <TitleBar 
             theme={theme} 
@@ -2180,7 +2192,7 @@ Dimitri MOREL - Arcanis Conseil`;
       )}>
       {/* Ribbon (visible uniquement en mode Appels) */}
       {viewMode === 'table' && (
-        <Card className="p-2 md:p-3 ribbon-container mx-auto shadow-md max-w-full overflow-x-auto overflow-y-hidden">
+        <Card className="p-2 md:p-3 ribbon-container mx-auto shadow-md max-w-full overflow-x-auto overflow-y-hidden mt-[2.5rem]">
           <div className="flex items-stretch justify-start md:justify-center gap-2 md:gap-3 relative flex-nowrap whitespace-nowrap w-max">
             
             {/* Communication Group supprimé (déplacé dans CallControl) */}
@@ -2740,7 +2752,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
           {/* Bandeau filtres uniformisé pour Graph/BDD (remplace recherche/colonnes/progress) */}
           {viewMode !== 'table' && (
-            <div className="flex-1 bg-card rounded-lg p-3 shadow-sm border">
+            <div className="flex-1 w-full bg-card rounded-lg p-3 shadow-sm border">
               <div className="flex flex-wrap items-center justify-center gap-2 w-full">
                 <div className="inline-flex items-center gap-2">
                   <Button size="sm" variant={filterQuick==='all'?'default':'outline'} onClick={() => {
@@ -3087,7 +3099,7 @@ Dimitri MOREL - Arcanis Conseil`;
             </div>
           ) : viewMode === 'graph' ? (
             <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
-              <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-auto p-4 min-w-0">
+              <div className="flex-1 w-full bg-card rounded-lg border shadow-sm overflow-auto p-4 min-w-0">
                 <ChartDashboard contacts={filteredContacts} />
               </div>
             </div>
@@ -3455,7 +3467,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
 
         </main>
-        </SidebarInset>
+        </div>
       </div>
     </SidebarProvider>
   );

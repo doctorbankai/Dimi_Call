@@ -159,14 +159,14 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
   const total = contacts.length || 1;
 
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+    <div className="grid w-full grid-cols-1 xl:grid-cols-2 gap-4">
       <Card className="flex flex-col">
         <CardHeader className="items-center pb-0">
           <CardTitle>Répartition des statuts</CardTitle>
           <CardDescription>Mise à jour sur la sélection actuelle</CardDescription>
         </CardHeader>
         <CardContent className="flex-1 pb-0">
-          <ChartContainer config={radialConfig as any} className="mx-auto aspect-square max-h-[220px] sm:max-h-[260px] md:max-h-[320px] lg:max-h-[360px]">
+          <ChartContainer config={radialConfig as any} className="mx-auto w-full max-w-[420px] aspect-square sm:max-w-[460px] lg:max-w-[520px]">
             <RadialBarChart data={radialData.map((d) => ({ ...d, [d.label]: d.label }))} innerRadius={30} outerRadius={120}>
               <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel nameKey="label" />} />
               <RadialBar dataKey="value" background />
@@ -196,7 +196,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
       </Card>
 
       {/* KPIs alignés en une ligne sur grands écrans */}
-      <div className="grid grid-cols-1 gap-4 xl:col-span-2 xl:grid-cols-4">
+      <div className="grid w-full grid-cols-1 gap-4 xl:col-span-2 xl:grid-cols-4">
         <Card>
           <CardHeader>
             <CardTitle>Durée moyenne d'appel</CardTitle>
@@ -246,7 +246,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
         </Card>
       </div>
 
-      <Card className="lg:col-span-2">
+      <Card className="xl:col-span-2">
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -257,7 +257,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
           </div>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={callsConfig as any} className="mx-auto aspect-square max-h-[220px] sm:max-h-[260px] md:max-h-[320px] lg:max-h-[360px]">
+          <ChartContainer config={callsConfig as any} className="w-full h-[280px] sm:h-[320px] md:h-[360px] xl:h-[420px]">
             <BarChart data={eventsByDay}>
               <CartesianGrid vertical={false} />
               <XAxis dataKey="label" tickLine={false} tickMargin={10} axisLine={false} minTickGap={24} allowDuplicatedCategory={false} />
@@ -275,5 +275,4 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
 };
 
 export default ChartDashboard;
-
 
