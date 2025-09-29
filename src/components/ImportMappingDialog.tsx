@@ -70,11 +70,14 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
   }, [headers, suggestions])
 
   const unmappedCount = useMemo(() => headers.filter((h) => !mapping[h]).length, [headers, mapping])
+  const ignoredCount = useMemo(() => Object.values(mapping).filter(target => target === 'no-mapping').length, [mapping])
 
   const isValid = useMemo(() => {
     // chaque required target doit être mappée par au moins un header
+    // (en excluant les colonnes ignorées "no-mapping")
+    const mappedTargets = Object.values(mapping).filter(target => target !== 'no-mapping')
     for (const req of requiredSet) {
-      if (![...Object.values(mapping)].includes(req)) return false
+      if (!mappedTargets.includes(req)) return false
     }
     return true
   }, [mapping, requiredSet])
@@ -113,6 +116,12 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                       <Badge variant={unmappedCount === 0 ? 'default' : 'secondary'} className="h-5 px-2 text-[10px]">
                         {headers.length - unmappedCount}/{headers.length} mappées
                       </Badge>
+                      {ignoredCount > 0 && (
+                        <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 text-[11px]">
+                          <CheckCircle2 className="h-3.5 w-3.5" />
+                          <span>{ignoredCount} ignorée(s)</span>
+                        </div>
+                      )}
                       {unmappedCount > 0 && (
                         <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 text-[11px]">
                           <AlertCircle className="h-3.5 w-3.5" />
@@ -136,16 +145,20 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                   <div className="divide-y">
                     {headers.map((h, idx) => {
                       const isUnmapped = !mapping[h]
+                      const isIgnored = mapping[h] === 'no-mapping'
                       return (
                         <div
                           key={idx}
                           className={cn(
                             "grid grid-cols-12 gap-2 p-2 items-center",
-                            isUnmapped && "bg-amber-50 dark:bg-amber-900/10"
+                            isUnmapped && "bg-amber-50 dark:bg-amber-900/10",
+                            isIgnored && "bg-blue-50 dark:bg-blue-900/10"
                           )}
                         >
                           <div className="col-span-5 truncate flex items-center gap-1" title={h}>
-                            {isUnmapped ? (
+                            {isIgnored ? (
+                              <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                            ) : isUnmapped ? (
                               <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
                             ) : (
                               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />

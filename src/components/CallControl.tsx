@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Contact } from '../types';
+import { Contact, ContactStatus } from '../types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Phone, PhoneOff, Mail, MessageSquare } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatPhoneNumber } from '../services/dataService';
+import { cn } from '@/lib/utils';
 
 interface CallControlProps {
   contact: Contact | null;
@@ -17,6 +19,7 @@ interface CallControlProps {
   onEmail?: () => void;
   onSmsMonsieur?: () => void;
   onSmsMadame?: () => void;
+  onStatusChange?: (status: ContactStatus) => void;
   adbConnected?: boolean;
 }
 
@@ -41,6 +44,7 @@ const CallControl: React.FC<CallControlProps> = ({
   onEmail,
   onSmsMonsieur,
   onSmsMadame,
+  onStatusChange,
   adbConnected = true,
 }) => {
   const [now, setNow] = useState<number>(Date.now());
@@ -79,11 +83,16 @@ const CallControl: React.FC<CallControlProps> = ({
     }
   }, [contact]);
 
+  const email = useMemo(() => {
+    if (!contact?.email) return '';
+    return contact.email;
+  }, [contact]);
+
   const canCall = !!contact && !isCalling && adbConnected;
   const canHangUp = isCalling;
 
   return (
-    <div className="flex items-center bg-card rounded-lg p-3 shadow-sm border min-w-[280px] w-full md:w-auto">
+    <div className="flex items-center bg-card rounded-lg p-3 shadow-sm border min-w-[280px] w-fit mx-auto">
       <div className="flex items-center gap-3 min-w-0">
         <Avatar className="h-8 w-8 flex-shrink-0">
           <AvatarFallback>{initials}</AvatarFallback>
@@ -96,6 +105,42 @@ const CallControl: React.FC<CallControlProps> = ({
         </div>
       </div>
       <div className="ml-auto flex items-center gap-3 pl-2 md:pl-3 flex-shrink-0">
+        {/* Séparateur après les infos contact */}
+        <div className="text-muted-foreground/50 text-sm">|</div>
+
+        {/* Email affiché dans les infos contact */}
+        {email && (
+          <>
+            <span className="text-xs text-muted-foreground truncate max-w-[180px] md:max-w-[220px]" title={email}>{email}</span>
+            <div className="text-muted-foreground/50 text-sm">|</div>
+          </>
+        )}
+
+        {/* Sélecteur de statut */}
+        {contact && (
+          <>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">Statut:</span>
+              <Select
+                value={contact.statut}
+                onValueChange={(value) => onStatusChange && onStatusChange(value as ContactStatus)}
+              >
+                <SelectTrigger className="w-[140px] h-8 text-xs">
+                  <SelectValue placeholder="Statut" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.values(ContactStatus).map((status) => (
+                    <SelectItem key={status} value={status} className="text-xs">
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="text-muted-foreground/50 text-sm">|</div>
+          </>
+        )}
+
         {isCalling && (
           <span className="text-xs text-muted-foreground select-none" aria-live="polite">{duration}</span>
         )}
@@ -110,6 +155,12 @@ const CallControl: React.FC<CallControlProps> = ({
                   title="Raccrocher l'appel"
                   onClick={() => onHangUp()}
                   disabled={!canHangUp}
+                  className={cn(
+                    "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                    "bg-red-500 hover:bg-red-600 text-white shadow-lg",
+                    "focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                  )}
                 >
                   <PhoneOff className="h-4 w-4" />
                 </Button>
@@ -121,6 +172,12 @@ const CallControl: React.FC<CallControlProps> = ({
                   title={contact ? 'Appeler' : 'Sélectionnez un contact'}
                   onClick={() => onCall()}
                   disabled={!canCall}
+                  className={cn(
+                    "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                    "bg-green-500 hover:bg-green-600 text-white shadow-lg",
+                    "focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                  )}
                 >
                   <Phone className="h-4 w-4" />
                 </Button>
@@ -151,6 +208,12 @@ const CallControl: React.FC<CallControlProps> = ({
                 title="Email"
                 onClick={() => onEmail && onEmail()}
                 disabled={!contact}
+                className={cn(
+                  "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                  "border-2 hover:bg-accent hover:text-accent-foreground",
+                  "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                  "disabled:opacity-50 disabled:cursor-not-allowed"
+                )}
               >
                 <Mail className="h-4 w-4" />
               </Button>
@@ -170,6 +233,12 @@ const CallControl: React.FC<CallControlProps> = ({
               aria-label="SMS"
               title="SMS"
               disabled={!contact}
+              className={cn(
+                "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                "border-2 hover:bg-accent hover:text-accent-foreground",
+                "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                "disabled:opacity-50 disabled:cursor-not-allowed"
+              )}
             >
               <MessageSquare className="h-4 w-4" />
             </Button>

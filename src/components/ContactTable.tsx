@@ -1366,7 +1366,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
           scrollContainerRef.current = node;
         }}
         className={cn(
-          "border rounded-lg scrollbar-hidden relative bg-background transition-all duration-300 h-full overflow-x-auto",
+          "border rounded-t-lg scrollbar-hidden relative bg-background transition-all duration-300 h-full overflow-x-auto",
           isDragActive && "ring-2 ring-blue-500 ring-offset-2"
         )}
         style={{

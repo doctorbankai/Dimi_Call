@@ -517,31 +517,68 @@ export const importContactsFromFile = async (
             const normalizedHeaders = (results.meta.fields as string[]).map((orig: string) => {
               const original = orig?.toString().trim();
               if (headerMapping && original && headerMapping[original]) {
+                // Si la colonne est mappée à "no-mapping", on l'ignore
+                if (headerMapping[original] === 'no-mapping') {
+                  return null; // Marquer pour ignorer
+                }
                 return headerMapping[original];
               }
               return normalizeHeader(original || '');
             });
 
             const chunkContacts = results.data.map((row: any, index: number) => {
-              rowIndex++;
-              const contactData: Partial<Contact> = {
-                id: uuidv4(),
-                numeroLigne: rowIndex,
-              };
+              try {
+                rowIndex++;
+                const contactData: Partial<Contact> = {
+                  id: uuidv4(),
+                  numeroLigne: rowIndex,
+                };
 
-              (results.meta.fields || []).forEach((originalHeader: string, i: number) => {
-                const normalized = normalizedHeaders[i];
-                if (normalized) {
-                  (contactData as any)[normalized] = row[originalHeader];
+                (results.meta.fields || []).forEach((originalHeader: string, i: number) => {
+                  try {
+                    const normalized = normalizedHeaders[i];
+                    // Ignorer les colonnes marquées comme "no-mapping" (null)
+                    if (normalized) {
+                      (contactData as any)[normalized] = row[originalHeader];
+                    }
+                  } catch (fieldError) {
+                    console.warn(`⚠️ Erreur lors du traitement de la colonne ${originalHeader}:`, fieldError);
+                    // Continuer avec les autres colonnes
+                  }
+                });
+
+                // Format phone number after mapping
+                if (contactData.telephone) {
+                  contactData.telephone = formatPhoneNumber(contactData.telephone);
                 }
-              });
 
-              // Format phone number after mapping
-              if (contactData.telephone) {
-                contactData.telephone = formatPhoneNumber(contactData.telephone);
+                return contactData as Contact;
+              } catch (rowError) {
+                console.warn(`⚠️ Erreur lors du traitement de la ligne ${rowIndex}:`, rowError);
+                // Retourner un contact vide pour éviter de casser le traitement
+                return {
+                  id: uuidv4(),
+                  numeroLigne: rowIndex,
+                  prenom: '',
+                  nom: '',
+                  telephone: '',
+                  email: '',
+                  source: '',
+                  statut: ContactStatus.NonDefini,
+                  commentaire: '',
+                  dateRappel: '',
+                  heureRappel: '',
+                  dateRDV: '',
+                  heureRDV: '',
+                  dateAppel: '',
+                  heureAppel: '',
+                  dureeAppel: '',
+                  sexe: '',
+                  type: '',
+                  qualite: '',
+                  lien: ''
+                } as Contact;
               }
-
-              return contactData as Contact;
             });
             
             contacts.push(...chunkContacts);
@@ -605,17 +642,23 @@ export const importContactsFromFile = async (
           const originalHeaders = (jsonData[0] as string[]).map(h => h ? h.toString().trim() : '');
           const normalizedHeaders = originalHeaders.map(h => {
             if (headerMapping && headerMapping[h]) {
+              // Si la colonne est mappée à "no-mapping", on l'ignore
+              if (headerMapping[h] === 'no-mapping') {
+                return null; // Marquer pour ignorer
+              }
               return headerMapping[h];
             }
             return normalizeHeader(h);
           });
           const contacts: Contact[] = [];
           
-          // 📊 Validation des en-têtes pour Excel
-          const headerAnalysis = analyzeHeaders(normalizedHeaders);
+          // 📊 Validation des en-têtes pour Excel (en filtrant les colonnes ignorées)
+          const filteredHeaders = normalizedHeaders.filter(h => h !== null);
+          const headerAnalysis = analyzeHeaders(filteredHeaders);
           console.log('📊 Analyse des en-têtes Excel:');
           console.log('En-têtes détectés:', originalHeaders);
           console.log('Mappings:', headerAnalysis.mappings);
+          console.log('Colonnes ignorées:', originalHeaders.filter((_, i) => normalizedHeaders[i] === null));
           
           if (headerAnalysis.warnings.length > 0) {
             console.warn('⚠️ Avertissements:', headerAnalysis.warnings);
@@ -633,39 +676,50 @@ export const importContactsFromFile = async (
             const chunkContacts: Contact[] = [];
             
             for (let j = 0; j < chunk.length; j++) {
-              const row = chunk[j] as any[];
-              if (!row || row.length === 0) continue; // Ignorer les lignes vides
-              
-              const contactData: Partial<Contact> = {
-                id: uuidv4(),
-                numeroLigne: i + j,
-              };
+              try {
+                const row = chunk[j] as any[];
+                if (!row || row.length === 0) continue; // Ignorer les lignes vides
+                
+                const contactData: Partial<Contact> = {
+                  id: uuidv4(),
+                  numeroLigne: i + j,
+                };
 
-              // Mapper chaque colonne en utilisant l'en-tête original pour récupérer la valeur
-              // et l'en-tête normalisé pour l'assigner au bon champ
-              originalHeaders.forEach((originalHeader, index) => {
-                const normalizedField = normalizedHeaders[index];
-                if (normalizedField && row[index] !== undefined && row[index] !== null) {
-                  const cellValue = row[index].toString().trim();
-                  if (cellValue) {
-                    (contactData as any)[normalizedField] = cellValue;
+                // Mapper chaque colonne en utilisant l'en-tête original pour récupérer la valeur
+                // et l'en-tête normalisé pour l'assigner au bon champ
+                originalHeaders.forEach((originalHeader, index) => {
+                  try {
+                    const normalizedField = normalizedHeaders[index];
+                    // Ignorer les colonnes marquées comme "no-mapping" (null)
+                    if (normalizedField && row[index] !== undefined && row[index] !== null) {
+                      const cellValue = row[index].toString().trim();
+                      if (cellValue) {
+                        (contactData as any)[normalizedField] = cellValue;
+                      }
+                    }
+                  } catch (fieldError) {
+                    console.warn(`⚠️ Erreur lors du traitement de la colonne ${originalHeader}:`, fieldError);
+                    // Continuer avec les autres colonnes
                   }
+                });
+
+                // Format phone number after mapping
+                if (contactData.telephone) {
+                  contactData.telephone = formatPhoneNumber(String(contactData.telephone));
                 }
-              });
 
-              // Format phone number after mapping
-              if (contactData.telephone) {
-                contactData.telephone = formatPhoneNumber(String(contactData.telephone));
-              }
+                // Set default status if not provided
+                if (!contactData.statut) {
+                  contactData.statut = ContactStatus.NonDefini;
+                }
 
-              // Set default status if not provided
-              if (!contactData.statut) {
-                contactData.statut = ContactStatus.NonDefini;
-              }
-
-              // Ne pas ajouter les contacts complètement vides
-              if (contactData.prenom || contactData.nom || contactData.telephone || contactData.email) {
-                chunkContacts.push(contactData as Contact);
+                // Ne pas ajouter les contacts complètement vides
+                if (contactData.prenom || contactData.nom || contactData.telephone || contactData.email) {
+                  chunkContacts.push(contactData as Contact);
+                }
+              } catch (rowError) {
+                console.warn(`⚠️ Erreur lors du traitement de la ligne ${i + j}:`, rowError);
+                // Continuer avec la ligne suivante
               }
             }
             

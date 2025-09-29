@@ -83,122 +83,139 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
     };
 
     return (
-        <div className={`grid grid-cols-[1fr_auto_1fr] items-center px-3 py-1.5 min-h-[48px] ${className}`}>
-            {/* Sélecteur de taille de page - compact */}
-            <div className="flex items-center space-x-2.5 flex-shrink-0 justify-self-start">
-                <p className="text-xs text-muted-foreground whitespace-nowrap">
-                    Lignes par page:
-                </p>
-                <Select
-                    value={itemsPerPage.toString()}
-                    onValueChange={(value) => onItemsPerPageChange(Number(value))}
-                >
-                    <SelectTrigger className="h-7 w-[50px] text-xs">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent side="top">
-                        {pageSizeOptions.map((size) => (
-                            <SelectItem key={size} value={size.toString()}>
-                                {size}
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
-            </div>
+        <div className={`relative flex items-center justify-between px-3 py-1.5 min-h-[48px] ${className}`}>
+            {/* Conteneur principal avec grille pour pagination */}
+            <div className="flex-1 grid grid-cols-[1fr_auto] items-center">
+                {/* Sélecteur de taille de page - à gauche */}
+                <div className="flex items-center space-x-2.5 flex-shrink-0 justify-self-start">
+                    <p className="text-xs text-muted-foreground whitespace-nowrap">
+                        Lignes par page:
+                    </p>
+                    <Select
+                        value={itemsPerPage.toString()}
+                        onValueChange={(value) => onItemsPerPageChange(Number(value))}
+                    >
+                        <SelectTrigger className="h-7 w-[50px] text-xs">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent side="top">
+                            {pageSizeOptions.map((size) => (
+                                <SelectItem key={size} value={size.toString()}>
+                                    {size}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </div>
 
-            {/* Navigation de pagination - centrée et compacte */}
-            {totalPages > 1 && (
-                <Pagination className="mx-auto w-auto justify-self-center">
-                    <PaginationContent className="gap-1.5">
-                        {/* Bouton première page */}
-                        {showFirstLast && (
+                {/* Navigation de pagination - centrée */}
+                {totalPages > 1 && (
+                    <Pagination className="mx-auto w-auto justify-self-center">
+                        <PaginationContent className="gap-1.5">
+                            {/* Bouton première page */}
+                            {showFirstLast && (
+                                <PaginationItem>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => handlePageClick(1)}
+                                        disabled={currentPage === 1}
+                                    >
+                                        <ChevronFirst className="h-3 w-3" />
+                                        <span className="sr-only">Première page</span>
+                                    </Button>
+                                </PaginationItem>
+                            )}
+
+                            {/* Bouton précédent */}
                             <PaginationItem>
                                 <Button
                                     variant="outline"
                                     size="icon"
                                     className="h-7 w-7"
-                                    onClick={() => handlePageClick(1)}
+                                    onClick={() => handlePageClick(currentPage - 1)}
                                     disabled={currentPage === 1}
                                 >
-                                    <ChevronFirst className="h-3 w-3" />
-                                    <span className="sr-only">Première page</span>
+                                    <ChevronLeft className="h-3 w-3" />
+                                    <span className="sr-only">Page précédente</span>
                                 </Button>
                             </PaginationItem>
-                        )}
 
-                        {/* Bouton précédent */}
-                        <PaginationItem>
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => handlePageClick(currentPage - 1)}
-                                disabled={currentPage === 1}
-                            >
-                                <ChevronLeft className="h-3 w-3" />
-                                <span className="sr-only">Page précédente</span>
-                            </Button>
-                        </PaginationItem>
+                            {/* Pages numérotées */}
+                            {visiblePages.map((page, index) => (
+                                <PaginationItem key={index}>
+                                    {page === '...' ? (
+                                        <PaginationEllipsis />
+                                    ) : (
+                                        <PaginationLink
+                                            size="default"
+                                            onClick={() => handlePageClick(page)}
+                                            isActive={page === currentPage}
+                                            className="cursor-pointer h-7 w-7 text-xs"
+                                        >
+                                            {page}
+                                        </PaginationLink>
+                                    )}
+                                </PaginationItem>
+                            ))}
 
-                        {/* Pages numérotées */}
-                        {visiblePages.map((page, index) => (
-                            <PaginationItem key={index}>
-                                {page === '...' ? (
-                                    <PaginationEllipsis />
-                                ) : (
-                                    <PaginationLink
-                                        size="default"
-                                        onClick={() => handlePageClick(page)}
-                                        isActive={page === currentPage}
-                                        className="cursor-pointer h-7 w-7 text-xs"
-                                    >
-                                        {page}
-                                    </PaginationLink>
-                                )}
-                            </PaginationItem>
-                        ))}
-
-                        {/* Bouton suivant */}
-                        <PaginationItem>
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => handlePageClick(currentPage + 1)}
-                                disabled={currentPage === totalPages}
-                            >
-                                <ChevronRight className="h-3 w-3" />
-                                <span className="sr-only">Page suivante</span>
-                            </Button>
-                        </PaginationItem>
-
-                        {/* Bouton dernière page */}
-                        {showFirstLast && (
+                            {/* Bouton suivant */}
                             <PaginationItem>
                                 <Button
                                     variant="outline"
                                     size="icon"
                                     className="h-7 w-7"
-                                    onClick={() => handlePageClick(totalPages)}
+                                    onClick={() => handlePageClick(currentPage + 1)}
                                     disabled={currentPage === totalPages}
                                 >
-                                    <ChevronLast className="h-3 w-3" />
-                                    <span className="sr-only">Dernière page</span>
+                                    <ChevronRight className="h-3 w-3" />
+                                    <span className="sr-only">Page suivante</span>
                                 </Button>
                             </PaginationItem>
-                        )}
-                    </PaginationContent>
-                </Pagination>
-            )}
 
-            {/* Informations sur le total - à droite et compact */}
+                            {/* Bouton dernière page */}
+                            {showFirstLast && (
+                                <PaginationItem>
+                                    <Button
+                                        variant="outline"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        onClick={() => handlePageClick(totalPages)}
+                                        disabled={currentPage === totalPages}
+                                    >
+                                        <ChevronLast className="h-3 w-3" />
+                                        <span className="sr-only">Dernière page</span>
+                                    </Button>
+                                </PaginationItem>
+                            )}
+                        </PaginationContent>
+                    </Pagination>
+                )}
+            </div>
+
+            {/* Section droite avec informations, colonnes et graphique */}
             {showPageInfo && (
-                <div className="text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 justify-self-end pl-2">
-                    {totalItems === 0 ? (
-                        'Aucun résultat'
-                    ) : (
-                        `${startItem}-${endItem} sur ${totalItems}`
-                    )}
+                <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="text-xs text-muted-foreground whitespace-nowrap">
+                        {totalItems === 0 ? (
+                            'Aucun résultat'
+                        ) : (
+                            `${startItem}-${endItem} sur ${totalItems}`
+                        )}
+                    </div>
+                    {/* Graphique de progression */}
+                    <div className="flex-shrink-0">
+                        <div className="relative inline-flex items-center justify-center px-1 py-0.5">
+                            <svg width="24" height="24" className="transform -rotate-90">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" fill="transparent" className="text-muted-foreground/20"></circle>
+                                <circle cx="12" cy="12" r="10" stroke="#3B82F6" strokeWidth="1.5" fill="transparent" strokeDasharray="62.83185307179586" strokeDashoffset="50.26548245743669" className="transition-all duration-300 ease-in-out" strokeLinecap="round"></circle>
+                            </svg>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="text-[8px] font-medium text-muted-foreground">20%</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

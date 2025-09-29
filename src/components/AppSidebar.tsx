@@ -186,15 +186,21 @@ export function AppSidebar({
           onClick={() => setIsProfileDialogOpen(true)}
           className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0 h-auto p-3 hover:bg-accent"
         >
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="relative">
-              <span data-slot="avatar" className="relative flex size-8 shrink-0 overflow-hidden rounded-full w-8 h-8">
-                <img data-slot="avatar-image" className="aspect-square size-full object-cover" alt={userEmail} src={
-                  'data:image/svg+xml;base64,CiAgICAgIDxzdmcgd2lkdGg9IjIwIiBoZWlnaHQ9IjIwIiB2aWV3Qm94PSIwIDAgMjAgMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgICAgICAgPGNpcmNsZSBjeD0iMTAiIGN5PSIxMCIgcj0iMTAiIGZpbGw9IiNGNTlFMEIiLz4KICAgICAgICA8dGV4dCB4PSIxMCIgeT0iMTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IndoaXRlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iOCIgcG9pbnRlci1ldmVudHM9Im5vbmUiIGZvbnQtd2VpZ2h0PSI2MDAiPgogICAgICAgICAgIFAKICAgICAgICA8L3RleHQ+CiAgICAgIDwvc3ZnPgogICAg' } />
+          <div className="flex items-center gap-3 flex-1 min-w-0 group-data-[collapsible=icon]:justify-center">
+            <div className="relative group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center">
+              <span data-slot="avatar" className="relative flex size-8 shrink-0 overflow-hidden rounded-full w-8 h-8 group-data-[collapsible=icon]:size-7 group-data-[collapsible=icon]:w-7 group-data-[collapsible=icon]:h-7">
+                <img
+                  data-slot="avatar-image"
+                  className="aspect-square size-full object-cover"
+                  alt={userEmail}
+                  src={
+                    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8Y2lyY2xlIGN4PSIxNCIgY3k9IjE0IiByPSIxNCIgZmlsbD0iIzM0RDM5OSIvPgogIDx0ZXh0IHg9IjE0IiB5PSIxOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0id2hpdGUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZm9udC13ZWlnaHQ9IjYwMCI+CiAgICBQCiAgPC90ZXh0Pgo8L3N2Zz4K'
+                  }
+                />
               </span>
-              <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-[hsl(var(--background))] bg-green-500"></div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-[hsl(var(--background))] bg-green-500 group-data-[collapsible=icon]:w-1.5 group-data-[collapsible=icon]:h-1.5 group-data-[collapsible=icon]:-bottom-0 group-data-[collapsible=icon]:-right-0"></div>
             </div>
-            <div className="flex-1 min-w-0 text-left">
+            <div className="flex-1 min-w-0 text-left group-data-[collapsible=icon]:hidden">
               <div className="text-sm font-medium truncate">{userName}</div>
               <div className="text-xs text-muted-foreground truncate">{userEmail}</div>
             </div>

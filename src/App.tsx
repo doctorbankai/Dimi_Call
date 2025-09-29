@@ -58,9 +58,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { 
   Phone, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck, Linkedin, Globe, ExternalLink,
-  Download, Keyboard, RefreshCw, Sun, Moon, Columns, X, Filter, Infinity, 
+  Download, Keyboard, RefreshCw, Sun, Moon, Columns, X, Filter, Infinity,
   Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2, Users, Timer, BarChart3, Database,
-  ChevronLeft, ChevronRight, ChevronDown, Plus
+  ChevronLeft, ChevronRight, ChevronDown, Plus, Edit, RotateCcw
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -2599,154 +2599,29 @@ Dimitri MOREL - Arcanis Conseil`;
       )}
 
         {/* Search bar area */}
-        <div className="flex items-stretch gap-3">
+        <div className="flex items-stretch gap-3 w-full justify-between">
           {/* 0ème encadré: Bascule Vue retirée (désormais dans la Sidebar) */}
           {/* Call Control inline (à droite du sélecteur de mode) */}
           {viewMode === 'table' && (
-            <CallControl
-              contact={selectedContact}
-              isCalling={Boolean(activeCallContactId && selectedContact && activeCallContactId === selectedContact.id)}
-              callStartTime={callStartTime}
-              onCall={() => makePhoneCall()}
-              onHangUp={() => adbEndCall()}
-              onEmail={() => selectedContact && setIsEmailDialogOpen(true)}
-              onSmsMonsieur={() => handleSms('Monsieur')}
-              onSmsMadame={() => handleSms('Madame')}
-              adbConnected={adbConnectionState.isConnected}
-            />
-          )}
-          {viewMode === 'table' && (
             <>
-              {/* 1er encadré: Recherche */}
-              <div className="flex-1 flex gap-3 items-center bg-card rounded-lg p-3 shadow-sm border">
-                <div className="flex-1 relative">
-                  <Input
-                    type="text"
-                    placeholder="Rechercher..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="text-sm h-9 pl-9 border-border/50 focus:border-primary"
-                  />
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        aria-label="Choisir la colonne de recherche"
-                        className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground outline-none hover:text-foreground"
-                      >
-                        <Filter className="h-4 w-4" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-56">
-                      <DropdownMenuLabel>Rechercher dans</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuRadioGroup value={String(searchColumn)} onValueChange={(val) => setSearchColumn(val as keyof Contact | 'all')}>
-                        {searchColumnsOptions.map((opt) => (
-                          <DropdownMenuRadioItem key={String(opt.value)} value={String(opt.value)}>
-                            {opt.label}
-                          </DropdownMenuRadioItem>
-                        ))}
-                      </DropdownMenuRadioGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+
+              {/* Call Control - maintenant après la recherche */}
+              <div className="flex-grow">
+                <CallControl
+                  contact={selectedContact}
+                  isCalling={Boolean(activeCallContactId && selectedContact && activeCallContactId === selectedContact.id)}
+                  callStartTime={callStartTime}
+                  onCall={() => makePhoneCall()}
+                  onHangUp={() => adbEndCall()}
+                  onEmail={() => selectedContact && setIsEmailDialogOpen(true)}
+                  onSmsMonsieur={() => handleSms('Monsieur')}
+                  onSmsMadame={() => handleSms('Madame')}
+                  onStatusChange={(newStatus) => selectedContact && updateContact({ id: selectedContact.id, statut: newStatus })}
+                  adbConnected={adbConnectionState.isConnected}
+                />
               </div>
 
-              {/* 2ème encadré: Colonnes */}
-              <div className="flex items-center bg-card rounded-lg p-3 shadow-sm border">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9">
-                      <Settings2 className="h-4 w-4 mr-2" />
-                      Colonnes
-                      <Badge variant="secondary" className="ml-2 h-4 px-1 text-xs">
-                        {availableColumns.filter(col => visibleColumns[col]).length}
-                      </Badge>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-64">
-                    <DropdownMenuLabel className="flex items-center gap-2">
-                      <Eye className="h-4 w-4" />
-                      Gestion des colonnes
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    {availableColumns.map((header) => {
-                      const isEssential = essentialColumns.includes(header);
-                      return (
-                        <DropdownMenuCheckboxItem
-                          key={header}
-                          className="flex items-center gap-2"
-                          checked={visibleColumns[header] || false}
-                          onCheckedChange={() => toggleColumnVisibility(header)}
-                          onSelect={(e) => e.preventDefault()}
-                        >
-                          <span className="flex-1">{header}</span>
-                          {isEssential && (
-                            <span className="text-xs text-muted-foreground ml-2">
-                              (essentielle)
-                            </span>
-                          )}
-                        </DropdownMenuCheckboxItem>
-                      );
-                    })}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem
-                      className="flex items-center gap-2 text-primary"
-                      checked={false}
-                      onCheckedChange={showAllAvailableColumns}
-                      onSelect={(e) => e.preventDefault()}
-                    >
-                      <Eye className="h-4 w-4" />
-                      Afficher toutes les colonnes disponibles
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      className="flex items-center gap-2 text-orange-600 dark:text-orange-400"
-                      checked={false}
-                      onCheckedChange={hideOptionalColumns}
-                      onSelect={(e) => e.preventDefault()}
-                    >
-                      <Eye className="h-4 w-4" />
-                      Masquer les colonnes optionnelles
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuSeparator />
-                    <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                      {availableColumns.length} colonne{availableColumns.length > 1 ? 's' : ''} disponible{availableColumns.length > 1 ? 's' : ''} dans les données
-                    </div>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
               
-              {/* 3ème encadré: Chart */}
-              <div className="flex items-center bg-card rounded-lg p-3 shadow-sm border">
-                <div className="relative inline-flex items-center justify-center px-2 py-0.5">
-                  <svg width="32" height="32" className="transform -rotate-90">
-                    <circle 
-                      cx="16" 
-                      cy="16" 
-                      r="14" 
-                      stroke="currentColor" 
-                      strokeWidth="2" 
-                      fill="transparent" 
-                      className="text-muted-foreground/20"
-                    />
-                    <circle 
-                      cx="16" 
-                      cy="16" 
-                      r="14" 
-                      stroke="#3B82F6" 
-                      strokeWidth="2" 
-                      fill="transparent" 
-                      strokeDasharray="87.96459430051421" 
-                      strokeDashoffset={87.96459430051421 - (87.96459430051421 * progressPercentage / 100)}
-                      className="transition-all duration-300 ease-in-out" 
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-[9px] font-medium text-muted-foreground">{Math.round(progressPercentage)}%</span>
-                  </div>
-                </div>
-              </div>
             </>
           )}
 
@@ -2940,79 +2815,145 @@ Dimitri MOREL - Arcanis Conseil`;
                   <Tabs value={activeTableTabId || tableTabs[0]?.id} onValueChange={setActiveTableTabId} className="flex h-full flex-col">
                     {/* Barre d'onglets en haut */}
                     <div className="flex items-center justify-between px-1.5 py-1.5 border-b bg-card">
-                      {/* Flèches et liste d'onglets */}
-                      <div className="flex items-center gap-1 flex-1 min-w-0">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              aria-label="Onglet précédent"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              disabled={tableTabs.length <= 1}
-                              onClick={() => {
-                                // Aller à l'onglet précédent
-                                const i = tableTabs.findIndex(t => t.id === (activeTableTabId || tableTabs[0]?.id))
-                                const prev = i > 0 ? tableTabs[i-1].id : tableTabs[0]?.id
-                                if (prev) setActiveTableTabId(prev)
-                              }}
-                            >
-                              <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Onglet précédent</TooltipContent>
-                        </Tooltip>
+                      {/* Champ de recherche avec bouton colonnes - à gauche */}
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <div className="flex-1 max-w-md relative">
+                          <Input
+                            type="text"
+                            placeholder="Rechercher..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="text-sm h-9 pl-9 border-border/50 focus:border-primary"
+                          />
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button
+                                type="button"
+                                aria-label="Choisir la colonne de recherche"
+                                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground outline-none hover:text-foreground"
+                              >
+                                <Filter className="h-4 w-4" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start" className="w-56">
+                              <DropdownMenuLabel>Rechercher dans</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuRadioGroup value={String(searchColumn)} onValueChange={(val) => setSearchColumn(val as keyof Contact | 'all')}>
+                                {searchColumnsOptions.map((opt) => (
+                                  <DropdownMenuRadioItem key={String(opt.value)} value={String(opt.value)}>
+                                    {opt.label}
+                                  </DropdownMenuRadioItem>
+                                ))}
+                              </DropdownMenuRadioGroup>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
 
-                        <Tooltip>
-                          <TooltipTrigger asChild>
+                        {/* Bouton Colonnes */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
                             <Button
-                              aria-label="Onglet suivant"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              disabled={tableTabs.length <= 1}
-                              onClick={() => {
-                                // Aller à l'onglet suivant
-                                const i = tableTabs.findIndex(t => t.id === (activeTableTabId || tableTabs[0]?.id))
-                                const next = i >= 0 && i < tableTabs.length-1 ? tableTabs[i+1].id : tableTabs[tableTabs.length-1]?.id
-                                if (next) setActiveTableTabId(next)
-                              }}
+                              variant="outline"
+                              className="flex items-center gap-2 px-3 py-1.5 h-9 text-sm"
                             >
-                              <ChevronRight className="h-4 w-4" />
+                              <Settings2 className="h-4 w-4" />
+                              Colonnes
+                              <Badge variant="secondary" className="ml-2 h-4 px-1 text-xs">
+                                {availableColumns.filter(col => visibleColumns[col]).length}
+                              </Badge>
                             </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Onglet suivant</TooltipContent>
-                        </Tooltip>
-
-                        <TabsList className="flex-1 overflow-x-auto bg-transparent border-0 shadow-none rounded-none px-0 text-foreground/80 justify-start gap-1">
-                          {tableTabs.map(tab => (
-                            <ContextMenu key={tab.id}>
-                              <ContextMenuTrigger asChild>
-                                <TabsTrigger
-                                  value={tab.id}
-                                  className="relative group rounded-md border border-transparent px-2 py-1 text-xs bg-transparent hover:border-border hover:bg-accent/30 data-[state=active]:bg-accent/50 data-[state=active]:text-foreground data-[state=active]:border-border"
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-64">
+                            <DropdownMenuLabel className="flex items-center gap-2">
+                              <Eye className="h-4 w-4" />
+                              Gestion des colonnes
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {availableColumns.map((header) => {
+                              const isEssential = essentialColumns.includes(header);
+                              return (
+                                <DropdownMenuCheckboxItem
+                                  key={header}
+                                  className="flex items-center gap-2"
+                                  checked={visibleColumns[header] || false}
+                                  onCheckedChange={() => toggleColumnVisibility(header)}
+                                  onSelect={(e) => e.preventDefault()}
                                 >
-                                  <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tab.color || 'var(--primary)' }} />
-                                  {editingTabId === tab.id ? (
-                                    <input
-                                      className="bg-transparent outline-none w-[10ch] md:w-[16ch] text-center group-data-[state=active]:text-foreground"
-                                      value={tab.name}
-                                      onChange={(e) => setTableTabs(prev => prev.map(t => t.id === tab.id ? { ...t, name: e.target.value.slice(0, 32) } : t))}
-                                      onClick={(e) => e.stopPropagation()}
-                                      onBlur={() => setEditingTabId(null)}
-                                      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === 'Escape') setEditingTabId(null) }}
-                                      autoFocus
-                                    />
-                                  ) : (
-                                    <span
-                                      className="text-center w-[10ch] md:w-[16ch] truncate"
-                                      onDoubleClick={(e) => { e.stopPropagation(); setEditingTabId(tab.id) }}
-                                    >
-                                      {tab.name}
+                                  <span className="flex-1">{header}</span>
+                                  {isEssential && (
+                                    <span className="text-xs text-muted-foreground ml-2">
+                                      (essentielle)
                                     </span>
                                   )}
-                                  <span
-                                    className="ml-1 text-muted-foreground hover:text-foreground cursor-pointer"
+                                </DropdownMenuCheckboxItem>
+                              );
+                            })}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuCheckboxItem
+                              className="flex items-center gap-2 text-primary"
+                              checked={false}
+                              onCheckedChange={showAllAvailableColumns}
+                              onSelect={(e) => e.preventDefault()}
+                            >
+                              <Eye className="h-4 w-4" />
+                              Afficher toutes les colonnes disponibles
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                              className="flex items-center gap-2 text-orange-600 dark:text-orange-400"
+                              checked={false}
+                              onCheckedChange={hideOptionalColumns}
+                              onSelect={(e) => e.preventDefault()}
+                            >
+                              <Eye className="h-4 w-4" />
+                              Masquer les colonnes optionnelles
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuSeparator />
+                            <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                              {availableColumns.length} colonne{availableColumns.length > 1 ? 's' : ''} disponible{availableColumns.length > 1 ? 's' : ''} dans les données
+                            </div>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+
+                      {/* Dropdown des onglets - à droite */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="flex items-center gap-2 px-3 py-1.5 h-9 text-sm"
+                            >
+                              <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tableTabs.find(t => t.id === (activeTableTabId || tableTabs[0]?.id))?.color || 'var(--primary)' }} />
+                              <span className="truncate max-w-[200px]">
+                                {tableTabs.find(t => t.id === (activeTableTabId || tableTabs[0]?.id))?.name || 'Onglets'}
+                              </span>
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" className="w-64">
+                            <DropdownMenuLabel className="flex items-center gap-2">
+                              <Tabs className="h-4 w-4" />
+                              Onglets
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+
+                            {/* Liste des onglets existants */}
+                            {tableTabs.map(tab => (
+                              <DropdownMenuItem
+                                key={tab.id}
+                                onClick={() => setActiveTableTabId(tab.id)}
+                                className={cn(
+                                  "flex items-center gap-2 cursor-pointer",
+                                  (activeTableTabId || tableTabs[0]?.id) === tab.id && "bg-accent"
+                                )}
+                              >
+                                <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: tab.color || 'var(--primary)' }} />
+                                <span className="flex-1 truncate">{tab.name}</span>
+                                {tableTabs.length > 1 && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 p-0"
                                     onClick={(e) => {
                                       e.stopPropagation()
                                       setTableTabs(prev => {
@@ -3023,50 +2964,30 @@ Dimitri MOREL - Arcanis Conseil`;
                                         return next
                                       })
                                     }}
-                                    title="Fermer l'onglet"
-                                  >×</span>
-                                </TabsTrigger>
-                              </ContextMenuTrigger>
-                              <ContextMenuContent className="w-48">
-                                <ContextMenuItem onClick={() => setEditingTabId(tab.id)}>Renommer…</ContextMenuItem>
-                                <ContextMenuSeparator />
-                                {[
-                                  { label: 'Bleu', value: '#3B82F6' },
-                                  { label: 'Vert', value: '#10B981' },
-                                  { label: 'Orange', value: '#F59E0B' },
-                                  { label: 'Rouge', value: '#EF4444' },
-                                  { label: 'Violet', value: '#8B5CF6' },
-                                ].map(c => (
-                                  <ContextMenuItem key={c.value} onClick={() => setTableTabs(prev => prev.map(t => t.id === tab.id ? { ...t, color: c.value } : t))}>
-                                    <span className="inline-block w-3 h-3 rounded-full mr-2" style={{ backgroundColor: c.value }} /> {c.label}
-                                  </ContextMenuItem>
-                                ))}
-                                <ContextMenuItem onClick={() => setTableTabs(prev => prev.map(t => t.id === tab.id ? { ...t, color: undefined } : t))}>Réinitialiser</ContextMenuItem>
-                              </ContextMenuContent>
-                            </ContextMenu>
-                          ))}
-                        </TabsList>
-                      </div>
-                      <div className="pl-1">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              aria-label="Ajouter un onglet"
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              disabled={tableTabs.length >= 5}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </DropdownMenuItem>
+                            ))}
+
+                            {/* Bouton d'ajout d'onglet */}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
                               onClick={() => {
+                                if (tableTabs.length >= 5) return
                                 const id = crypto.randomUUID()
                                 setTableTabs(prev => [...prev, { id, name: `Onglet ${prev.length + 1}`, contacts: [] }])
                                 setActiveTableTabId(id)
                               }}
+                              disabled={tableTabs.length >= 5}
+                              className="flex items-center gap-2"
                             >
                               <Plus className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Ajouter un onglet</TooltipContent>
-                        </Tooltip>
+                              Ajouter un onglet
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                     {/* Contenu des onglets */}

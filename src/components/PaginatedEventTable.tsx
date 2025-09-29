@@ -493,7 +493,7 @@ export default function PaginatedEventTable() {
 
       {/* Barre d'actions + Pagination sticky en bas */}
       <div className="flex-shrink-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="px-3 py-1.5">
+        <div className="px-3 py-1.5 pb-4">
           <TablePagination
             className="w-full"
             currentPage={currentPage}
