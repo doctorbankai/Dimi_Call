@@ -1,4 +1,4 @@
-import './index.css';
+﻿import './index.css';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Theme, Contact, CallState, CallStates, ContactStatus, Civility, EmailType, CallMode } from './types';
 import { useCallMode } from './context/ModeContext';
@@ -134,7 +134,7 @@ const DonutChart: React.FC<{ progress: number; size?: number }> = ({ progress, s
   );
 };
 
-const App: React.FC = () => {
+const App: React.FC = ({ key }: { key?: number } = {}) => {
   const { mode } = useCallMode();
   // Authentication hook
   const auth = useSupabaseAuth();
@@ -175,6 +175,13 @@ const App: React.FC = () => {
     }
   });
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [tableUpdateKey, setTableUpdateKey] = useState(0);
+  const [appUpdateKey, setAppUpdateKey] = useState(0);
+
+  // Exposer la clé de mise Ã  jour pour les composants parents
+  React.useEffect(() => {
+    (window as any).appUpdateKey = appUpdateKey;
+  }, [appUpdateKey]);
   const [activeCallContactId, setActiveCallContactId] = useState<string | null>(null);
   const [callStartTime, setCallStartTime] = useState<Date | null>(null);
   
@@ -264,7 +271,7 @@ const App: React.FC = () => {
       setTableTabs(prev => {
         const limited = prev.slice(0, 5)
         if (limited.length >= 5) {
-          // Remplacer le dernier onglet si déjà 5
+          // Remplacer le dernier onglet si déjÃ  5
           const replaced = [...limited]
           replaced[4] = { id: crypto.randomUUID(), name, contacts: contactsFromDb }
           setActiveTableTabId(replaced[4].id)
@@ -301,7 +308,7 @@ const App: React.FC = () => {
   const [autoSearchMode, setAutoSearchMode] = useState<'disabled' | 'linkedin' | 'google' | 'link'>(() => {
     try {
       const saved = localStorage.getItem('auto-search-mode');
-      console.log('🔄 [AUTO-SEARCH] Chargement du mode depuis localStorage:', saved);
+      console.log('📄 [AUTO-SEARCH] Chargement du mode depuis localStorage:', saved);
       
       // Validation de la valeur chargée
       if (saved && ['disabled', 'linkedin', 'google', 'link'].includes(saved)) {
@@ -309,7 +316,7 @@ const App: React.FC = () => {
         return saved as 'disabled' | 'linkedin' | 'google' | 'link';
       }
       
-      console.log('🔄 [AUTO-SEARCH] Aucun mode valide trouvé, utilisation par défaut: linkedin');
+      console.log('📄 [AUTO-SEARCH] Aucun mode valide trouvé, utilisation par défaut: linkedin');
       return 'linkedin'; // Par défaut LinkedIn auto
     } catch (error) {
       console.error('❌ [AUTO-SEARCH] Erreur lors du chargement:', error);
@@ -333,20 +340,20 @@ const App: React.FC = () => {
     if (saved) {
       const newUrl = 'https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true';
       
-      // Liste des anciennes URLs à migrer
+      // Liste des anciennes URLs Ã  migrer
       const oldUrls = [
         'https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial',
         'https://cal.com/dimitri-morel-arcanis-conseil/arcanis-conseil-audit-patrimonial-dimicall',
       ];
       
-      // Vérifier si c'est une ancienne URL à migrer
+      // Vérifier si c'est une ancienne URL Ã  migrer
       const isOldUrl = oldUrls.some(oldUrl => saved === oldUrl) || 
                        (saved.includes('dimitri-morel-arcanis-conseil') && 
                         !saved.includes('overlayCalendar=true') && 
                         !saved.includes('audit-patrimonial?overlayCalendar=true'));
       
       if (isOldUrl) {
-        console.log('🔄 Migration URL Cal.com:', saved, '→', newUrl);
+        console.log('ðŸ”„ Migration URL Cal.com:', saved, 'â†’', newUrl);
         localStorage.setItem('calcom-url', newUrl);
         return newUrl;
       }
@@ -370,7 +377,7 @@ https://arcanis-conseil.fr
 Le site est avant tout une vitrine, le mieux est de m'appeler si vous souhaitez davantage d'informations ou de prendre un créneau de 30 minutes dans mon agenda via ce lien :
 https://calendly.com/dimitri-morel-arcanis-conseil/audit
 
-Bien à vous,
+Bien Ã  vous,
 
 Dimitri MOREL - Arcanis Conseil`;
   });
@@ -384,7 +391,7 @@ Dimitri MOREL - Arcanis Conseil`;
         if (data.smsMandataire) return data.smsMandataire as string;
       }
     } catch {}
-    return `Bonjour {civilite} {nom},\n\nJe vous contacte dans le cadre de la gestion de votre dossier mandataire. Voici les informations et liens dédiés.\n\nBien à vous,`;
+    return `Bonjour {civilite} {nom},\n\nJe vous contacte dans le cadre de la gestion de votre dossier mandataire. Voici les informations et liens dédiés.\n\nBien Ã  vous,`;
   });
 
   // État intelligent pour les colonnes visibles basé sur les données réelles
@@ -452,7 +459,7 @@ Dimitri MOREL - Arcanis Conseil`;
     const optionalDataKeys = ['sexe', 'don', 'qualite', 'type', 'date', 'uid'] as (keyof Contact)[];
     
     COLUMN_HEADERS.forEach((header, index) => {
-      if (alwaysIncludeColumns.includes(header)) return; // Déjà incluse
+      if (alwaysIncludeColumns.includes(header)) return; // DéjÃ  incluse
       
       const dataKey = CONTACT_DATA_KEYS[index];
       if (!dataKey) return;
@@ -473,7 +480,7 @@ Dimitri MOREL - Arcanis Conseil`;
     setAvailableColumns(newAvailableColumns);
     setAvailableDataKeys(detectedDataKeys);
     
-    // Mettre à jour la visibilité en utilisant une fonction callback pour éviter la dépendance circulaire
+    // Mettre Ã  jour la visibilité en utilisant une fonction callback pour éviter la dépendance circulaire
     setVisibleColumns(prevVisible => {
       const newVisibleColumns = newAvailableColumns.reduce((acc, col) => {
         // Garder la préférence existante si elle existe, sinon true par défaut
@@ -481,7 +488,7 @@ Dimitri MOREL - Arcanis Conseil`;
         return acc;
       }, {} as Record<string, boolean>);
       
-      // Masquer par défaut certaines colonnes moins importantes (seulement si pas déjà défini)
+      // Masquer par défaut certaines colonnes moins importantes (seulement si pas déjÃ  défini)
       const lessImportantColumns = ["Sexe", "Don", "Qualité", "Type", "Date", "UID"];
       lessImportantColumns.forEach(col => {
         if (newVisibleColumns[col] !== undefined && prevVisible[col] === undefined) {
@@ -498,7 +505,7 @@ Dimitri MOREL - Arcanis Conseil`;
     detectAvailableColumns(contacts);
   }, [contacts]); // Seulement dépendant des contacts, pas de detectAvailableColumns
 
-  // Sauvegarder la visibilité des colonnes à chaque modification
+  // Sauvegarder la visibilité des colonnes Ã  chaque modification
   useEffect(() => {
     try {
       if (Object.keys(visibleColumns).length > 0) {
@@ -596,7 +603,8 @@ Dimitri MOREL - Arcanis Conseil`;
 
 
   const updateContact = useCallback(async (updatedFields: Partial<Contact> & { id: string }) => {
-    // Utiliser une fonction de mise à jour pour éviter les stale closures
+    console.log('ðŸ”„ [UPDATE] updateContact appelé avec:', updatedFields);
+    // Utiliser une fonction de mise Ã  jour pour éviter les stale closures
     let updatedContact: Contact | null = null;
     let contactFound = false;
     let previousStatusBeforeUpdate: ContactStatus | undefined;
@@ -604,7 +612,7 @@ Dimitri MOREL - Arcanis Conseil`;
     setContacts(currentContacts => {
       const existingContact = currentContacts.find(c => c.id === updatedFields.id);
       if (!existingContact) {
-        console.warn(`Contact avec l'ID ${updatedFields.id} non trouvé pour mise à jour`);
+        console.warn(`Contact avec l'ID ${updatedFields.id} non trouvé pour mise Ã  jour`);
         return currentContacts; // Retourner l'état inchangé
       }
 
@@ -614,10 +622,13 @@ Dimitri MOREL - Arcanis Conseil`;
       updatedContact = { ...existingContact, ...updatedFields };
       const updatedContacts = currentContacts.map(c => c.id === updatedFields.id ? updatedContact! : c);
       
-      // Sauvegarder les contacts mis à jour
+      console.log('ðŸ”„ [UPDATE] Contacts mis Ã  jour:', updatedContacts.length, 'contacts');
+      console.log('ðŸ”„ [UPDATE] Contact modifié:', updatedContact);
+      
+      // Sauvegarder les contacts mis Ã  jour
       saveContacts(updatedContacts);
       
-      // Si on a une table importée, la mettre à jour aussi
+      // Si on a une table importée, la mettre Ã  jour aussi
       if (hasImportedTable()) {
         const savedTable = loadImportedTable();
         if (savedTable && savedTable.metadata) {
@@ -634,13 +645,46 @@ Dimitri MOREL - Arcanis Conseil`;
       return;
     }
 
-    // 🔄 Mise à jour en temps réel du contact sélectionné dans le panneau latéral
+    const resolvedContact = updatedContact!;
+
+    setTableTabs(prevTabs => {
+      if (!prevTabs || prevTabs.length === 0) {
+        return prevTabs;
+      }
+      let hasChanges = false;
+      const nextTabs = prevTabs.map(tab => {
+        let tabChanged = false;
+        const updatedTabContacts = tab.contacts.map(tabContact => {
+          if (tabContact.id === resolvedContact.id) {
+            tabChanged = true;
+            hasChanges = true;
+            return { ...tabContact, ...resolvedContact };
+          }
+          return tabContact;
+        });
+        return tabChanged ? { ...tab, contacts: updatedTabContacts } : tab;
+      });
+      return hasChanges ? nextTabs : prevTabs;
+    });
+
+
+    // 📄 Mise à jour en temps réel du contact sélectionné dans le panneau latéral
     if (selectedContact?.id === updatedFields.id) {
       setSelectedContact(updatedContact);
-
+      console.log('📄 [UPDATE] Contact sélectionné mis à jour:', updatedContact);
     }
 
-    // Forcer un petit délai pour que l'interface se mette à jour
+    // 📄 Forcer le re-render de la table
+    setTableUpdateKey(prev => prev + 1);
+    console.log('📄 [UPDATE] Table update key incrémentée:', tableUpdateKey + 1);
+
+    // 📄 Forcer le re-render de l'application entière après un délai
+    setTimeout(() => {
+      setAppUpdateKey(prev => prev + 1);
+      console.log('📄 [UPDATE] App update key incrémentée:', appUpdateKey + 1);
+    }, 100);
+
+    // Forcer un petit délai pour que l'interface se mette Ã  jour
     await new Promise(resolve => setTimeout(resolve, 50));
 
     // Enregistrer un événement de statut en local si le statut a changé
@@ -683,7 +727,7 @@ Dimitri MOREL - Arcanis Conseil`;
             fieldsToSync[k] = (updatedFields as any)[k]
           }
         }
-        // Si pas de champs à synchroniser, ne rien faire
+        // Si pas de champs Ã  synchroniser, ne rien faire
         if (Object.keys(fieldsToSync).length > 0) {
           await window.electronAPI.localdb.insertStatus({
             contactId: updatedContact.id,
@@ -706,7 +750,7 @@ Dimitri MOREL - Arcanis Conseil`;
         }
       }
     } catch (e) {
-      console.warn('Échec de mise à jour de l\'événement local:', e)
+      console.warn('Échec de mise Ã  jour de l\'événement local:', e)
     }
 
   }, [selectedContact, showNotification]); // Retiré 'contacts' car on utilise setContacts avec fonction
@@ -757,7 +801,7 @@ Dimitri MOREL - Arcanis Conseil`;
   }, []);
 
   const handleDeleteContact = useCallback(async (contactId: string) => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce contact ?")) {
+    if (window.confirm("ÃŠtes-vous sûr de vouloir supprimer ce contact ?")) {
       const contactToDelete = contacts.find(c => c.id === contactId);
       
       // Suppression locale immédiate
@@ -838,7 +882,7 @@ Dimitri MOREL - Arcanis Conseil`;
     }
     
     if (!target.lien) {
-      showNotification('warning', "Ce contact n'a pas de lien associé.");
+        showNotification('warning', "Ce contact n'a pas de lien associé.");
       return;
     }
 
@@ -958,15 +1002,15 @@ Dimitri MOREL - Arcanis Conseil`;
         await new Promise(res => setTimeout(res, 1000));
       }
       
-      setImportProgress({ message: `📖 Lecture du fichier...`, percentage: 10 });
+      setImportProgress({ message: `ðŸ“– Lecture du fichier...`, percentage: 10 });
       await new Promise(res => setTimeout(res, 200));
       
-      setImportProgress({ message: `⚙️ Traitement par chunks...`, percentage: 20 });
+      setImportProgress({ message: `âš™ï¸ Traitement par chunks...`, percentage: 20 });
       
       // Import optimisé
       const newContacts = await importContactsFromFile(file);
       
-      setImportProgress({ message: `📝 Préparation des données...`, percentage: 80 });
+      setImportProgress({ message: `ðŸ“ Préparation des données...`, percentage: 80 });
       await new Promise(res => setTimeout(res, 100));
       
       const updatedContacts = newContacts.map((c, idx) => ({ 
@@ -975,7 +1019,7 @@ Dimitri MOREL - Arcanis Conseil`;
         id: c.id || uuidv4() 
       }));
       
-      setImportProgress({ message: `💾 Sauvegarde...`, percentage: 90 });
+      setImportProgress({ message: `ðŸ’¾ Sauvegarde...`, percentage: 90 });
       
       // Sauvegarder la table importée pour persistance
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
@@ -1007,20 +1051,20 @@ Dimitri MOREL - Arcanis Conseil`;
       setCallStates({});
       setSelectedContact(null);
       
-      setImportProgress({ message: `✅ Finalisation...`, percentage: 100 });
+      setImportProgress({ message: `âœ… Finalisation...`, percentage: 100 });
       await new Promise(res => setTimeout(res, 500)); 
       setImportProgress(null);
       
       const message = fileSizeMB > 10 
-        ? `🎉 ${updatedContacts.length} contacts importés avec succès depuis un fichier de ${fileSizeMB.toFixed(1)} MB !`
-        : `✅ ${updatedContacts.length} contacts importés avec succès !`;
+        ? `ðŸŽ‰ ${updatedContacts.length} contacts importés avec succès depuis un fichier de ${fileSizeMB.toFixed(1)} MB !`
+        : `âœ… ${updatedContacts.length} contacts importés avec succès !`;
         
       showNotification('success', message);
       
     } catch (error) {
       console.error("Import error:", error);
       setImportProgress(null);
-      showNotification('error', `❌ Erreur d'importation: ${error instanceof Error ? error.message : "Erreur inconnue"}. Vérifiez le format de votre fichier.`);
+      showNotification('error', `âŒ Erreur d'importation: ${error instanceof Error ? error.message : "Erreur inconnue"}. Vérifiez le format de votre fichier.`);
     }
   }, [showNotification]);
 
@@ -1043,7 +1087,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
   const handleExport = useCallback((format: 'csv' | 'xlsx') => {
     if (contacts.length === 0) {
-      showNotification('info', 'Aucun contact à exporter');
+      showNotification('info', 'Aucun contact Ã  exporter');
       return;
     }
     
@@ -1092,7 +1136,7 @@ Dimitri MOREL - Arcanis Conseil`;
       
       // Messages d'erreur spécifiques
       if (error instanceof Error) {
-        if (error.message.includes('Aucun contact à exporter')) {
+        if (error.message.includes('Aucun contact Ã  exporter')) {
           showNotification('warning', 'Aucun contact à exporter avec les statuts sélectionnés');
         } else if (error.message.includes('CSV')) {
           showNotification('error', 'Erreur lors de la génération du fichier CSV');
@@ -1112,7 +1156,7 @@ Dimitri MOREL - Arcanis Conseil`;
     try {
       // Vérification préalable du nombre de rappels
       if (calendarRemindersCount === 0) {
-        showNotification('warning', 'Aucun rappel à exporter');
+        showNotification('warning', 'Aucun rappel Ã  exporter');
         return;
       }
       
@@ -1125,8 +1169,8 @@ Dimitri MOREL - Arcanis Conseil`;
       
       // Messages d'erreur spécifiques
       if (error instanceof Error) {
-        if (error.message.includes('Aucun rappel à exporter')) {
-          showNotification('warning', 'Aucun rappel à exporter');
+        if (error.message.includes('Aucun rappel Ã  exporter')) {
+          showNotification('warning', 'Aucun rappel Ã  exporter');
         } else if (error.message.includes('CSV')) {
           showNotification('error', 'Erreur lors de la génération du fichier CSV');
         } else if (error.message.includes('téléchargement')) {
@@ -1141,11 +1185,11 @@ Dimitri MOREL - Arcanis Conseil`;
   }, [contacts, calendarRemindersCount, showNotification]);
 
   const makePhoneCall = useCallback(async (contactToCall?: Contact) => {
-    console.log('🔍 [MAKEPHONECALL] Début makePhoneCall, contactToCall:', contactToCall);
-    console.log('🔍 [MAKEPHONECALL] selectedContact:', selectedContact);
+    console.log('📍 [MAKEPHONECALL] Début makePhoneCall, contactToCall:', contactToCall);
+    console.log('📍 [MAKEPHONECALL] selectedContact:', selectedContact);
     
     const targetContact = contactToCall || selectedContact;
-    console.log('🔍 [MAKEPHONECALL] targetContact final:', targetContact);
+    console.log('📍 [MAKEPHONECALL] targetContact final:', targetContact);
 
     if (!targetContact) {
       console.log('❌ [MAKEPHONECALL] Pas de contact - RETURN');
@@ -1153,14 +1197,14 @@ Dimitri MOREL - Arcanis Conseil`;
       return;
     }
     
-    console.log('🔍 [MAKEPHONECALL] activeCallContactId:', activeCallContactId);
+    console.log('📍 [MAKEPHONECALL] activeCallContactId:', activeCallContactId);
     if (activeCallContactId && activeCallContactId !== targetContact.id) {
-      console.log('🔍 [MAKEPHONECALL] Fin d\'appel en cours...');
+      console.log('📍 [MAKEPHONECALL] Fin d\'appel en cours...');
       endActiveCall(false, activeCallContactId); 
     }
 
     // Vérifier la connexion ADB
-    console.log('🔍 [MAKEPHONECALL] adbConnectionState.isConnected:', adbConnectionState.isConnected);
+    console.log('📍 [MAKEPHONECALL] adbConnectionState.isConnected:', adbConnectionState.isConnected);
     if (!adbConnectionState.isConnected) {
       console.log('❌ [MAKEPHONECALL] ADB pas connecté - RETURN');
       showNotification('error', "Aucun appareil Android connecté via ADB. Connectez votre téléphone d'abord.");
@@ -1169,24 +1213,24 @@ Dimitri MOREL - Arcanis Conseil`;
 
     // Nettoyer le numéro de téléphone pour l'appel
     const cleanPhoneNumber = targetContact.telephone.replace(/[^0-9+]/g, '');
-    console.log('🔍 [MAKEPHONECALL] cleanPhoneNumber:', cleanPhoneNumber);
+    console.log('ðŸ” [MAKEPHONECALL] cleanPhoneNumber:', cleanPhoneNumber);
     
     try {
-      console.log('🔍 [MAKEPHONECALL] Début du try...');
+      console.log('ðŸ” [MAKEPHONECALL] Début du try...');
       showNotification('info', `Appel en cours vers ${targetContact.prenom} ${targetContact.nom} au ${targetContact.telephone}...`);
       
-      console.log('🔍 [MAKEPHONECALL] Avant makeAdbCall...');
+      console.log('ðŸ” [MAKEPHONECALL] Avant makeAdbCall...');
       // Faire l'appel réel via ADB
         const callResult = await makeAdbCall(cleanPhoneNumber);
-        console.log('🔍 [MAKEPHONECALL] Après makeAdbCall, result:', callResult);
+        console.log('ðŸ” [MAKEPHONECALL] Après makeAdbCall, result:', callResult);
         
         if (callResult.success) {
           // Appel réussi
-          console.log(`📞 Configuration de l'appel pour le contact ${targetContact.id}...`);
+          console.log(`ðŸ“ž Configuration de l'appel pour le contact ${targetContact.id}...`);
           updateCallState(targetContact.id, { isCalling: true, hasBeenCalled: false });
           setActiveCallContactId(targetContact.id);
           setCallStartTime(new Date());
-          console.log(`📞 Contact actif défini: ${targetContact.id}, heure de début: ${new Date()}`);
+          console.log(`ðŸ“ž Contact actif défini: ${targetContact.id}, heure de début: ${new Date()}`);
           
           const now = new Date();
           updateContact({
@@ -1223,10 +1267,10 @@ Dimitri MOREL - Arcanis Conseil`;
 
   // Surveillance robuste des fins d'appel via événements ADB
   useEffect(() => {
-    console.log('🔧 Configuration de la surveillance des fins d\'appels...');
+    console.log('ðŸ”§ Configuration de la surveillance des fins d\'appels...');
     
     const unsubscribeCallEnd = onCallEnd((callEndEvent) => {
-      console.log('📞 Événement de fin d\'appel reçu:', callEndEvent);
+      console.log('ðŸ“ž Événement de fin d\'appel reçu:', callEndEvent);
       
       if (activeCallContactId) {
         // Calculer la durée d'appel formatée
@@ -1234,9 +1278,9 @@ Dimitri MOREL - Arcanis Conseil`;
         const minutes = Math.floor((callEndEvent.durationMs / (1000 * 60)) % 60);
         const durationStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         
-        console.log(`📞 Mise à jour du contact ${activeCallContactId} avec durée: ${durationStr}`);
+        console.log(`ðŸ“ž Mise Ã  jour du contact ${activeCallContactId} avec durée: ${durationStr}`);
         
-        // Mettre à jour le contact avec la durée réelle
+        // Mettre Ã  jour le contact avec la durée réelle
         updateContact({
           id: activeCallContactId, 
           dureeAppel: durationStr
@@ -1265,7 +1309,7 @@ Dimitri MOREL - Arcanis Conseil`;
     });
     
     return () => {
-      console.log('🔧 Nettoyage de la surveillance des fins d\'appels...');
+      console.log('ðŸ”§ Nettoyage de la surveillance des fins d\'appels...');
       unsubscribeCallEnd();
     };
   }, [activeCallContactId, onCallEnd, updateContact, updateCallState, showNotification]);
@@ -1329,7 +1373,7 @@ Dimitri MOREL - Arcanis Conseil`;
           }
           setCallStates({});
           setSelectedContact(null);
-          showNotification('success', `✅ ${updatedContacts.length} contacts importés avec succès !`);
+          showNotification('success', `âœ… ${updatedContacts.length} contacts importés avec succès !`);
         } catch {}
       }
       window.addEventListener('dimicall-imported-contacts', onImported as any)
@@ -1339,7 +1383,7 @@ Dimitri MOREL - Arcanis Conseil`;
         const savedTable = loadImportedTable();
         if (savedTable && savedTable.contacts.length > 0) {
           const metadata = savedTable.metadata;
-          console.log(`🔄 Restauration de la table importée: ${savedTable.contacts.length} contacts (${metadata?.fileName})`);
+          console.log(`ðŸ”„ Restauration de la table importée: ${savedTable.contacts.length} contacts (${metadata?.fileName})`);
           
           const contactsWithIds = savedTable.contacts.map((c, idx) => ({
             ...c,
@@ -1377,7 +1421,7 @@ Dimitri MOREL - Arcanis Conseil`;
     saveCallStates(callStates);
   }, [callStates]);
 
-  // Configuration des mises à jour temps réel - Supabase supprimé pour libérer de l'espace
+  // Configuration des mises Ã  jour temps réel - Supabase supprimé pour libérer de l'espace
   
   const filteredContacts = useMemo(() => {
     if (!searchTerm) return contacts;
@@ -1404,10 +1448,10 @@ Dimitri MOREL - Arcanis Conseil`;
    const contactsRef = useRef<Contact[]>([]);
    const makePhoneCallRef = useRef<((contactToCall?: Contact) => Promise<void>) | null>(null);
    
-   // Mettre à jour les refs quand les valeurs changent
+   // Mettre Ã  jour les refs quand les valeurs changent
    useEffect(() => {
      selectedContactRef.current = selectedContact;
-     console.log(`🔄 [CONTACT_REF] Contact sélectionné mis à jour:`, selectedContact ? `${selectedContact.prenom} ${selectedContact.nom}` : 'null');
+     console.log(`📄 [CONTACT_REF] Contact sélectionné mis à jour:`, selectedContact ? `${selectedContact.prenom} ${selectedContact.nom}` : 'null');
    }, [selectedContact]);
    
    useEffect(() => {
@@ -1429,36 +1473,36 @@ Dimitri MOREL - Arcanis Conseil`;
    // Persistance du mode d'auto-recherche dans localStorage
    useEffect(() => {
      try {
-       console.log('💾 [AUTO-SEARCH] Sauvegarde du mode:', autoSearchMode);
+       console.log('ðŸ’¾ [AUTO-SEARCH] Sauvegarde du mode:', autoSearchMode);
        localStorage.setItem('auto-search-mode', autoSearchMode);
-       console.log('✅ [AUTO-SEARCH] Mode sauvegardé avec succès dans localStorage');
+       console.log('âœ… [AUTO-SEARCH] Mode sauvegardé avec succès dans localStorage');
        
        // Vérification immédiate de la sauvegarde
        const verification = localStorage.getItem('auto-search-mode');
        if (verification === autoSearchMode) {
-         console.log('✅ [AUTO-SEARCH] Vérification réussie - Mode persistent:', verification);
+         console.log('âœ… [AUTO-SEARCH] Vérification réussie - Mode persistent:', verification);
        } else {
-         console.error('❌ [AUTO-SEARCH] Échec de la vérification:', { expected: autoSearchMode, actual: verification });
+         console.error('âŒ [AUTO-SEARCH] Échec de la vérification:', { expected: autoSearchMode, actual: verification });
        }
      } catch (error) {
-       console.error('❌ [AUTO-SEARCH] Erreur lors de la sauvegarde:', error);
+       console.error('âŒ [AUTO-SEARCH] Erreur lors de la sauvegarde:', error);
      }
    }, [autoSearchMode]);
 
    // Fonction de debug pour tester la persistence manuellement (accessible via window.testAutoSearchPersistence)
    useEffect(() => {
      (window as any).testAutoSearchPersistence = () => {
-       console.log('🧪 [AUTO-SEARCH] Test de persistence:');
-       console.log('📖 Mode actuel en mémoire:', autoSearchMode);
-       console.log('💾 Mode sauvegardé en localStorage:', localStorage.getItem('auto-search-mode'));
-       console.log('🔄 Pour tester: changez le mode via l\'interface, puis rafraîchissez la page');
+       console.log('ðŸ§ª [AUTO-SEARCH] Test de persistence:');
+       console.log('ðŸ“– Mode actuel en mémoire:', autoSearchMode);
+       console.log('ðŸ’¾ Mode sauvegardé en localStorage:', localStorage.getItem('auto-search-mode'));
+       console.log('ðŸ”„ Pour tester: changez le mode via l\'interface, puis rafraîchissez la page');
      };
    }, [autoSearchMode]);
 
    // Log initial du mode d'auto-recherche au démarrage
    useEffect(() => {
-     console.log('🚀 [AUTO-SEARCH] Application démarrée avec le mode:', autoSearchMode);
-     console.log('💡 [AUTO-SEARCH] Ce mode sera utilisé avec la touche F1 et le bouton Appeler');
+     console.log('ðŸš€ [AUTO-SEARCH] Application démarrée avec le mode:', autoSearchMode);
+     console.log('ðŸ’¡ [AUTO-SEARCH] Ce mode sera utilisé avec la touche F1 et le bouton Appeler');
    }, []); // Seulement au mount
 
    // Handler pour les raccourcis globaux Electron
@@ -1525,7 +1569,7 @@ Dimitri MOREL - Arcanis Conseil`;
        try {
          await executeSequentialWorkflow(key, newStatus, currentSelectedContact);
        } catch (error) {
-         console.error(`❌ [WORKFLOW] Erreur dans le workflow ${key}:`, error);
+         console.error(`âŒ [WORKFLOW] Erreur dans le workflow ${key}:`, error);
          showNotification('error', `Erreur lors du workflow ${key}: ${error}`);
        } finally {
          isProcessingRef.current = false; // Débloquer les workflows
@@ -1551,11 +1595,11 @@ Dimitri MOREL - Arcanis Conseil`;
        if (!statusUpdateSuccess) {
          showNotification('info', `${key}: Statut appliqué mais non vérifié pour ${contact.prenom}`);
        } else {
-         showNotification('success', `${key}: ${contact.prenom} → "${newStatus}"`);
+         showNotification('success', `${key}: ${contact.prenom} â†’ "${newStatus}"`);
        }
        
-       // Délai pour que l'interface se mette à jour
-       await waitWithLog(600, "Mise à jour de l'interface");
+       // Délai pour que l'interface se mette Ã  jour
+       await waitWithLog(600, "Mise Ã  jour de l'interface");
 
        // ÉTAPE 3: Sélection du contact suivant avec vérification
        const nextContact = await findAndSelectNextContact(contact);
@@ -1590,7 +1634,7 @@ Dimitri MOREL - Arcanis Conseil`;
            }
            
          } catch (error) {
-           console.error(`❌ [HANGUP] Erreur tentative ${attempt}:`, error);
+           console.error(`âŒ [HANGUP] Erreur tentative ${attempt}:`, error);
          }
          
          if (attempt < 3) {
@@ -1605,10 +1649,10 @@ Dimitri MOREL - Arcanis Conseil`;
        return false;
      };
 
-     // Fonction de mise à jour du statut avec vérification améliorée
+     // Fonction de mise Ã  jour du statut avec vérification améliorée
      const performStatusUpdateWithVerification = async (contact: Contact, newStatus: ContactStatus): Promise<boolean> => {
        try {
-         // Appliquer la mise à jour avec retry
+         // Appliquer la mise Ã  jour avec retry
          let updateAttempts = 0;
          const maxUpdateAttempts = 3;
          let updateSuccess = false;
@@ -1621,7 +1665,7 @@ Dimitri MOREL - Arcanis Conseil`;
              updateSuccess = true;
            } catch (error) {
              if (updateAttempts < maxUpdateAttempts) {
-               await waitWithLog(300, `Délai avant nouvelle tentative de mise à jour`);
+               await waitWithLog(300, `Délai avant nouvelle tentative de mise Ã  jour`);
              }
            }
          }
@@ -1631,7 +1675,7 @@ Dimitri MOREL - Arcanis Conseil`;
          }
          
          // Délais plus longs pour la propagation
-         await waitWithLog(400, "Propagation de la mise à jour du statut");
+         await waitWithLog(400, "Propagation de la mise Ã  jour du statut");
          
          // Vérifier dans plusieurs sources avec délais plus longs
          let verificationAttempts = 0;
@@ -1662,13 +1706,13 @@ Dimitri MOREL - Arcanis Conseil`;
              return true;
            }
          } catch (error) {
-           console.error(`❌ [STATUS] Échec du force-update:`, error);
+           console.error(`âŒ [STATUS] Échec du force-update:`, error);
          }
          
          return false; // Plus strict - on signale l'échec
          
        } catch (error) {
-         console.error(`❌ [STATUS] Erreur lors de la mise à jour du statut:`, error);
+         console.error(`âŒ [STATUS] Erreur lors de la mise Ã  jour du statut:`, error);
          return false;
        }
      };
@@ -1701,7 +1745,7 @@ Dimitri MOREL - Arcanis Conseil`;
          return nextContact;
          
        } catch (error) {
-         console.error(`❌ [SELECT] Erreur lors de la sélection du contact suivant:`, error);
+         console.error(`âŒ [SELECT] Erreur lors de la sélection du contact suivant:`, error);
          return null;
        }
      };
@@ -1725,7 +1769,7 @@ Dimitri MOREL - Arcanis Conseil`;
          while (callVerificationAttempts < maxCallVerificationAttempts) {
            callVerificationAttempts++;
            
-           // Vérifier à la fois la ref ET l'état direct avec une fonction de vérification
+           // Vérifier Ã  la fois la ref ET l'état direct avec une fonction de vérification
            let isCallActive = false;
            
            // Méthode 1: Vérifier la ref
@@ -1735,7 +1779,7 @@ Dimitri MOREL - Arcanis Conseil`;
            
            // Méthode 2: Vérifier l'état des appels directement
            if (!isCallActive) {
-             // Utiliser une fonction de callback pour accéder à l'état le plus récent
+             // Utiliser une fonction de callback pour accéder Ã  l'état le plus récent
              await new Promise<void>((resolve) => {
                setCallStates(currentCallStates => {
                  const contactCallState = currentCallStates[contact.id];
@@ -1760,7 +1804,7 @@ Dimitri MOREL - Arcanis Conseil`;
          return false;
          
        } catch (error) {
-         console.error(`❌ [CALL] Erreur lors du lancement de l'appel vers ${contact.prenom}:`, error);
+         console.error(`âŒ [CALL] Erreur lors du lancement de l'appel vers ${contact.prenom}:`, error);
          return false;
        }
      };
@@ -1779,7 +1823,7 @@ Dimitri MOREL - Arcanis Conseil`;
            window.electronAPI.ipcRenderer.removeListener('global-fn-key', handleGlobalFnKey);
          };
        } catch (error) {
-         console.error('❌ [ELECTRON_FN] Erreur activation raccourcis:', error);
+         console.error('âŒ [ELECTRON_FN] Erreur activation raccourcis:', error);
        }
      }
    }, [adbEndCall, endActiveCall, updateContact, showNotification]); // Retiré makePhoneCall car on utilise maintenant makePhoneCallRef
@@ -1823,7 +1867,7 @@ Dimitri MOREL - Arcanis Conseil`;
     
     setVisibleColumns(prev => {
       const newVisibleColumns = { ...prev, [header]: !prev[header] };
-      console.log('🔧 App.tsx - Toggle column visibility:', {
+      console.log('ðŸ”§ App.tsx - Toggle column visibility:', {
         header,
         'Ancienne valeur': prev[header],
         'Nouvelle valeur': newVisibleColumns[header],
@@ -1873,7 +1917,7 @@ Dimitri MOREL - Arcanis Conseil`;
       for (let i = 0; i < availableColumns.length; i++) {
         const header = availableColumns[i];
         const dataKey = availableDataKeys[i];
-        // Ne pas ajouter l’index "#" qui n’a pas de dataKey exploitable
+        // Ne pas ajouter l—™index "#" qui n—™a pas de dataKey exploitable
         if (!dataKey || header === '#') continue;
         options.push({ value: dataKey as keyof Contact, label: header });
       }
@@ -1978,19 +2022,19 @@ Dimitri MOREL - Arcanis Conseil`;
       return;
     }
     
-    console.log('🗓️ Ouverture du modal calendrier pour:', selectedContact.prenom, selectedContact.nom);
+    console.log('ðŸ—“ï¸ Ouverture du modal calendrier pour:', selectedContact.prenom, selectedContact.nom);
     
-    // ⚠️ SOLUTION TEMPORAIRE pour X-Frame-Options
+    // âš ï¸ SOLUTION TEMPORAIRE pour X-Frame-Options
     // Cal.com bloque l'embedding avec X-Frame-Options: sameorigin
     // On peut soit essayer l'embed (qui va échouer) soit aller directement au nouvel onglet
     
-    const useDirectOpen = true; // Changez à false pour essayer l'embed d'abord
+    const useDirectOpen = true; // Changez Ã  false pour essayer l'embed d'abord
     
     if (useDirectOpen) {
-      console.log('🗓️ Ouverture directe en nouvel onglet (contournement X-Frame-Options)');
+      console.log('ðŸ—“ï¸ Ouverture directe en nouvel onglet (contournement X-Frame-Options)');
       handleDirectCalendarOpen();
     } else {
-      console.log('🗓️ Tentative d\'embedding Cal.com (risque d\'échec X-Frame-Options)');
+      console.log('ðŸ—“ï¸ Tentative d\'embedding Cal.com (risque d\'échec X-Frame-Options)');
       setIsCalendarModalOpen(true);
     }
   }, [selectedContact, showNotification]);
@@ -2025,8 +2069,8 @@ Dimitri MOREL - Arcanis Conseil`;
     }
     
     const finalUrl = `${baseUrl}?${allParams.toString()}`;
-    console.log('🔗 Ouverture Cal.com:', finalUrl);
-    console.log('📝 Contact sélectionné:', { 
+    console.log('ðŸ”— Ouverture Cal.com:', finalUrl);
+    console.log('ðŸ“ Contact sélectionné:', { 
       nom: selectedContact.nom, 
       prenom: selectedContact.prenom, 
       email: selectedContact.email,
@@ -2042,7 +2086,7 @@ Dimitri MOREL - Arcanis Conseil`;
     setCalcomUrl(newUrl);
     localStorage.setItem('calcom-url', newUrl);
     setIsCalcomConfigOpen(false);
-    showNotification('success', 'URL Cal.com mise à jour');
+    showNotification('success', 'URL Cal.com mise Ã  jour');
   }, [showNotification]);
 
   // Fonction pour sauvegarder le nouveau template SMS
@@ -2059,14 +2103,14 @@ Dimitri MOREL - Arcanis Conseil`;
       setSmsTemplate(newTemplate);
       localStorage.setItem('sms-template', newTemplate);
     }
-    showNotification('success', 'Template SMS mis à jour');
+    showNotification('success', 'Template SMS mis Ã  jour');
   }, [showNotification, mode]);
 
   // Fonction callback quand un RDV est pris avec succès
   const handleCalendarSuccess = useCallback(() => {
     if (selectedContact) {
       showNotification('success', `Rendez-vous pris avec ${selectedContact.prenom} ${selectedContact.nom}`);
-      // Optionnel : mettre à jour la date/heure de RDV du contact
+      // Optionnel : mettre Ã  jour la date/heure de RDV du contact
       // updateContact({ id: selectedContact.id, dateRDV: new Date().toISOString().split('T')[0] });
     }
     setIsCalendarModalOpen(false);
@@ -2151,7 +2195,7 @@ Dimitri MOREL - Arcanis Conseil`;
       
       {/* Notifications */}
       
-             {/* 🔧 Indicateur d'appel en cours avec chronométrage en temps réel - DÉSACTIVÉ */}
+             {/* ðŸ”§ Indicateur d'appel en cours avec chronométrage en temps réel - DÉSACTIVÉ */}
        {/* {activeCallContactId && callStartTime && (
          <div className="fixed top-4 left-4 z-50">
            <div className="flex items-center gap-3 px-4 py-3 bg-green-500/10 border border-green-300 dark:border-green-700 rounded-lg animate-pulse shadow-lg">
@@ -2343,7 +2387,7 @@ Dimitri MOREL - Arcanis Conseil`;
                     <DropdownMenuItem 
                       onClick={() => {
                         setAutoSearchMode('disabled');
-                        console.log('🔧 [AUTO-SEARCH] Mode changé vers: Désactivé');
+                        console.log('ðŸ”§ [AUTO-SEARCH] Mode changé vers: Désactivé');
                       }}
                       className="cursor-pointer"
                     >
@@ -2354,7 +2398,7 @@ Dimitri MOREL - Arcanis Conseil`;
                     <DropdownMenuItem 
                       onClick={() => {
                         setAutoSearchMode('linkedin');
-                        console.log('🔧 [AUTO-SEARCH] Mode changé vers: Auto-LinkedIn');
+                        console.log('ðŸ”§ [AUTO-SEARCH] Mode changé vers: Auto-LinkedIn');
                       }}
                       className="cursor-pointer"
                     >
@@ -2365,7 +2409,7 @@ Dimitri MOREL - Arcanis Conseil`;
                     <DropdownMenuItem 
                       onClick={() => {
                         setAutoSearchMode('google');
-                        console.log('🔧 [AUTO-SEARCH] Mode changé vers: Auto-Google');
+                        console.log('ðŸ”§ [AUTO-SEARCH] Mode changé vers: Auto-Google');
                       }}
                       className="cursor-pointer"
                     >
@@ -2376,7 +2420,7 @@ Dimitri MOREL - Arcanis Conseil`;
                     <DropdownMenuItem 
                       onClick={() => {
                         setAutoSearchMode('link');
-                        console.log('🔧 [AUTO-SEARCH] Mode changé vers: Auto-Lien');
+                        console.log('ðŸ”§ [AUTO-SEARCH] Mode changé vers: Auto-Lien');
                       }}
                       className="cursor-pointer"
                     >
@@ -2534,8 +2578,8 @@ Dimitri MOREL - Arcanis Conseil`;
                 disabled={googleContactsCount === 0}
                 onClick={handleGoogleContactsExport}
                 title={googleContactsCount > 0 
-                  ? `Exporter ${googleContactsCount} contacts (À rappeler, DO, RO, A0) vers Google Contacts` 
-                  : 'Aucun contact à exporter - Seuls les contacts avec les statuts "À rappeler", "DO", "RO" ou "A0" sont exportés'
+                  ? `Exporter ${googleContactsCount} contacts (Ã€ rappeler, DO, RO, A0) vers Google Contacts` 
+                  : 'Aucun contact Ã  exporter - Seuls les contacts avec les statuts "Ã€ rappeler", "DO", "RO" ou "A0" sont exportés'
                 }
                 className={cn(
                   "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
@@ -2578,7 +2622,7 @@ Dimitri MOREL - Arcanis Conseil`;
                 onClick={handleGoogleCalendarExport}
                 title={calendarRemindersCount > 0 
                   ? `Exporter ${calendarRemindersCount} rappels vers Google Agenda` 
-                  : 'Aucun rappel à exporter - Seuls les contacts avec date de rappel sont exportés'
+                  : 'Aucun rappel Ã  exporter - Seuls les contacts avec date de rappel sont exportés'
                 }
                 className={cn(
                   "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
@@ -2622,7 +2666,7 @@ Dimitri MOREL - Arcanis Conseil`;
         {/* Search bar area */}
         <div className="flex items-stretch gap-3 w-full justify-between">
           {/* 0ème encadré: Bascule Vue retirée (désormais dans la Sidebar) */}
-          {/* Call Control inline (à droite du sélecteur de mode) */}
+          {/* Call Control inline (Ã  droite du sélecteur de mode) */}
           {viewMode === 'table' && (
             <>
 
@@ -2637,7 +2681,12 @@ Dimitri MOREL - Arcanis Conseil`;
                   onEmail={() => selectedContact && setIsEmailDialogOpen(true)}
                   onSmsMonsieur={() => handleSms('Monsieur')}
                   onSmsMadame={() => handleSms('Madame')}
-                  onStatusChange={(newStatus) => selectedContact && updateContact({ id: selectedContact.id, statut: newStatus })}
+                  onStatusChange={(newStatus) => {
+                    console.log('ðŸ”„ [STATUS] Changement de statut demandé:', newStatus, 'pour contact:', selectedContact?.id);
+                    if (selectedContact) {
+                      updateContact({ id: selectedContact.id, statut: newStatus });
+                    }
+                  }}
                   adbConnected={adbConnectionState.isConnected}
                 />
               </div>
@@ -2693,7 +2742,7 @@ Dimitri MOREL - Arcanis Conseil`;
                   <PopoverTrigger asChild>
                     <Button variant="outline" size="sm" className="h-8">
                       <Calendar className="h-4 w-4 mr-2" />
-                      {(viewMode==='graph'?graphRange.start:dbRange.start) && (viewMode==='graph'?graphRange.end:dbRange.end) ? `${viewMode==='graph'?graphRange.start:dbRange.start} → ${viewMode==='graph'?graphRange.end:dbRange.end}` : 'Plage'}
+                      {(viewMode==='graph'?graphRange.start:dbRange.start) && (viewMode==='graph'?graphRange.end:dbRange.end) ? `${viewMode==='graph'?graphRange.start:dbRange.start} â†’ ${viewMode==='graph'?graphRange.end:dbRange.end}` : 'Plage'}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="p-2" align="start">
@@ -2742,7 +2791,7 @@ Dimitri MOREL - Arcanis Conseil`;
                     setViewMode('table')
                   }}
                 >
-                  Transférer → Appels
+                  Transférer â†’ Appels
                 </Button>
 
                 <Button
@@ -2814,6 +2863,7 @@ Dimitri MOREL - Arcanis Conseil`;
               <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-hidden">
                 {tableTabs.length === 0 ? (
                   <PaginatedContactTable
+                    key={`table-${tableUpdateKey}-${contacts.length}-${selectedContact?.id || 'none'}`}
                     ref={contactTableRef}
                     contacts={tableTabs.length === 1 ? tableTabs[0].contacts : filteredContacts}
                     callStates={callStates}
@@ -2836,7 +2886,7 @@ Dimitri MOREL - Arcanis Conseil`;
                   <Tabs value={activeTableTabId || tableTabs[0]?.id} onValueChange={setActiveTableTabId} className="flex h-full flex-col">
                     {/* Barre d'onglets en haut */}
                     <div className="flex items-center justify-between px-1.5 py-1.5 border-b bg-card">
-                      {/* Champ de recherche avec bouton colonnes - à gauche */}
+                      {/* Champ de recherche avec bouton colonnes - Ã  gauche */}
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <div className="flex-1 max-w-md relative">
                           <Input
@@ -2936,7 +2986,7 @@ Dimitri MOREL - Arcanis Conseil`;
                         </DropdownMenu>
                       </div>
 
-                      {/* Dropdown des onglets - à droite */}
+                      {/* Dropdown des onglets - Ã  droite */}
                       <div className="flex items-center gap-2 flex-shrink-0">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -3033,6 +3083,7 @@ Dimitri MOREL - Arcanis Conseil`;
                     {tableTabs.map((tab) => (
                       <TabsContent key={tab.id} value={tab.id} className="flex-1 overflow-hidden">
                         <PaginatedContactTable
+                          key={`table-tab-${tab.id}-${tableUpdateKey}`}
                           ref={contactTableRef}
                           contacts={tab.contacts}
                           callStates={callStates}
@@ -3092,7 +3143,7 @@ Dimitri MOREL - Arcanis Conseil`;
           contact={selectedContact}
           onSave={(date, time) => {
             updateContact({ id: selectedContact.id, dateRappel: date, heureRappel: time });
-            showNotification('success', `Rappel défini pour ${selectedContact.prenom} le ${date} à ${time}.`);
+            showNotification('success', `Rappel défini pour ${selectedContact.prenom} le ${date} Ã  ${time}.`);
             setIsRappelDialogOpen(false);
           }}
         />
@@ -3104,7 +3155,7 @@ Dimitri MOREL - Arcanis Conseil`;
           contact={selectedContact}
           onSave={(date, time) => {
             updateContact({ id: selectedContact.id, dateRDV: date, heureRDV: time });
-            showNotification('success', `Rendez-vous programmé pour ${selectedContact.prenom} le ${date} à ${time}.`);
+            showNotification('success', `Rendez-vous programmé pour ${selectedContact.prenom} le ${date} Ã  ${time}.`);
             setIsRendezVousDialogOpen(false);
           }}
         />
@@ -3139,7 +3190,7 @@ Dimitri MOREL - Arcanis Conseil`;
                   <Badge variant="outline" className="font-mono text-xs bg-blue-100 dark:bg-blue-800">
                     F1
                   </Badge>
-                  <span className="text-sm font-medium">📞 Appeler le contact</span>
+                  <span className="text-sm font-medium">ðŸ“ž Appeler le contact</span>
                 </div>
               </div>
               
@@ -3261,10 +3312,10 @@ Dimitri MOREL - Arcanis Conseil`;
               
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <strong>État:</strong> {adbConnectionState.isConnected ? '✅ Connecté' : '❌ Déconnecté'}
+                  <strong>État:</strong> {adbConnectionState.isConnected ? 'âœ… Connecté' : 'âŒ Déconnecté'}
                 </div>
                 <div>
-                  <strong>Détection auto:</strong> {adbConnectionState.autoDetectionEnabled ? '✅ Activée' : '❌ Désactivée'}
+                  <strong>Détection auto:</strong> {adbConnectionState.autoDetectionEnabled ? 'âœ… Activée' : 'âŒ Désactivée'}
                 </div>
                 {adbConnectionState.device && (
                   <>
@@ -3278,7 +3329,7 @@ Dimitri MOREL - Arcanis Conseil`;
                 )}
                 {adbConnectionState.batteryLevel && (
                   <div>
-                    <strong>Batterie:</strong> {adbConnectionState.batteryLevel}% {adbConnectionState.isCharging ? '🔌' : '🔋'}
+                    <strong>Batterie:</strong> {adbConnectionState.batteryLevel}% {adbConnectionState.isCharging ? 'ðŸ”Œ' : 'ðŸ”‹'}
                   </div>
                 )}
               </div>
@@ -3351,9 +3402,9 @@ Dimitri MOREL - Arcanis Conseil`;
               </div>
               
               <div className="text-xs text-muted-foreground space-y-1">
-                <p>• Utilisez l'URL complète de votre événement Cal.com</p>
-                <p>• Format: https://cal.com/votre-nom/votre-événement</p>
-                <p>• Les paramètres du contact seront ajoutés automatiquement</p>
+                <p>—¢ Utilisez l'URL complète de votre événement Cal.com</p>
+                <p>—¢ Format: https://cal.com/votre-nom/votre-événement</p>
+                <p>—¢ Les paramètres du contact seront ajoutés automatiquement</p>
               </div>
             </div>
             
@@ -3396,7 +3447,7 @@ Dimitri MOREL - Arcanis Conseil`;
         }}
       />
 
-      {/* Dialog de confirmation de mise à jour */}
+      {/* Dialog de confirmation de mise Ã  jour */}
       <UpdateConfirmationDialog
         isOpen={isUpdateConfirmationOpen}
         onClose={() => setIsUpdateConfirmationOpen(false)}
@@ -3445,3 +3496,4 @@ Dimitri MOREL - Arcanis Conseil`;
 };
 
 export default App;
+

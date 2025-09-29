@@ -1,13 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Contact, ContactStatus } from '../types';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Phone, PhoneOff, Mail, MessageSquare } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { formatPhoneNumber } from '../services/dataService';
+import StatusSelect from './StatusSelect';
 import { cn } from '@/lib/utils';
 
 interface CallControlProps {
@@ -48,7 +47,6 @@ const CallControl: React.FC<CallControlProps> = ({
   adbConnected = true,
 }) => {
   const [now, setNow] = useState<number>(Date.now());
-
   useEffect(() => {
     if (!isCalling || !callStartTime) return;
     const interval = setInterval(() => setNow(Date.now()), 1000);
@@ -121,21 +119,13 @@ const CallControl: React.FC<CallControlProps> = ({
           <>
             <div className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground">Statut:</span>
-              <Select
+              <StatusSelect
                 value={contact.statut}
-                onValueChange={(value) => onStatusChange && onStatusChange(value as ContactStatus)}
-              >
-                <SelectTrigger className="w-[140px] h-8 text-xs">
-                  <SelectValue placeholder="Statut" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(ContactStatus).map((status) => (
-                    <SelectItem key={status} value={status} className="text-xs">
-                      {status}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onChange={(newStatus) => onStatusChange?.(newStatus)}
+                triggerClassName="w-[140px]"
+                contentClassName="text-xs"
+                size="sm"
+              />
             </div>
             <div className="text-muted-foreground/50 text-sm">|</div>
           </>
@@ -207,7 +197,7 @@ const CallControl: React.FC<CallControlProps> = ({
                 aria-label="Email"
                 title="Email"
                 onClick={() => onEmail && onEmail()}
-                disabled={!contact}
+                disabled={!contact || !contact.email}
                 className={cn(
                   "size-10 rounded-full transition-all duration-200 hover:scale-105",
                   "border-2 hover:bg-accent hover:text-accent-foreground",
@@ -265,5 +255,17 @@ const CallControl: React.FC<CallControlProps> = ({
 };
 
 export default CallControl;
+
+
+
+
+
+
+
+
+
+
+
+
 
 

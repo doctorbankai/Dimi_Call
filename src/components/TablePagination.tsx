@@ -84,8 +84,8 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
 
     return (
         <div className={`relative flex items-center justify-between px-3 py-1.5 min-h-[48px] ${className}`}>
-            {/* Conteneur principal avec grille pour pagination */}
-            <div className="flex-1 grid grid-cols-[1fr_auto] items-center">
+            {/* Conteneur principal avec grille à 3 colonnes pour centrer la pagination */}
+            <div className="flex-1 grid grid-cols-[1fr_auto_1fr] items-center">
                 {/* Sélecteur de taille de page - à gauche */}
                 <div className="flex items-center space-x-2.5 flex-shrink-0 justify-self-start">
                     <p className="text-xs text-muted-foreground whitespace-nowrap">
@@ -192,6 +192,9 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
                         </PaginationContent>
                     </Pagination>
                 )}
+
+                {/* Espace vide pour équilibrer la grille */}
+                <div></div>
             </div>
 
             {/* Section droite avec informations, colonnes et graphique */}

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+﻿import React, { useState, useCallback, useMemo, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Contact, ContactStatus, CallStates, Theme, CallMode } from '../types';
 import { QUICK_COMMENTS, TABLE_HEADER_ICONS } from '../constants';
 import { cn } from '../lib/utils';
@@ -28,9 +28,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { formatPhoneNumber } from '../services/dataService';
 import { ReminderDialog } from './ReminderDialog';
 import { ColumnTypeSelector } from './ColumnTypeSelector';
+import StatusSelect from './StatusSelect';
 import { useColumnTypes } from '../hooks/useColumnTypes';
 import { useCallMode } from '../context/ModeContext';
-import { StatusConfigService } from '../services/statusConfigService';
 import ImportMappingDialog from './ImportMappingDialog';
 import * as XLSX from 'xlsx';
 import { importContactsFromFile, normalizeHeader } from '../services/dataService';
@@ -55,70 +55,6 @@ interface ColumnConfig {
 type SortDirection = 'asc' | 'desc' | null;
 
 const INPUT_BASE_CLASS = "h-8 px-2 text-xs border border-border/50 rounded-md bg-background/80 focus:bg-background focus:border-primary/50 transition-colors";
-
-interface StatusComboBoxProps {
-  value: ContactStatus;
-  onChange: (newStatus: ContactStatus) => void;
-}
-
-const StatusComboBox: React.FC<StatusComboBoxProps> = ({ value, onChange }) => {
-  const { mode } = useCallMode();
-  const [localValue, setLocalValue] = useState(value);
-  
-  useEffect(() => {
-    setLocalValue(value);
-  }, [value]);
-
-  const getStatusConfig = (status: ContactStatus) => {
-    const { color, dot } = StatusConfigService.getColor(status, mode);
-    return { color, dot };
-  };
-
-  const handleStatusChange = (newStatus: ContactStatus) => {
-    setLocalValue(newStatus);
-    onChange(newStatus);
-  };
-
-  const config = getStatusConfig(localValue);
-
-  return (
-    <Select 
-      value={localValue} 
-      onValueChange={(newValue) => handleStatusChange(newValue as ContactStatus)}
-      key={`status-${localValue}`}
-    >
-      <SelectTrigger className="border-none bg-transparent p-0 h-auto">
-        <div className={cn(
-          "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
-          config.color
-        )}>
-          <div className={cn("w-1.5 h-1.5 rounded-full", config.dot)} />
-          {StatusConfigService.getLabel(localValue, mode)}
-        </div>
-      </SelectTrigger>
-      <SelectContent className="bg-popover border shadow-lg">
-        {Object.values(ContactStatus).map(status => {
-          if (!StatusConfigService.isVisible(status, mode)) return null;
-          if (status === ContactStatus.A0 && mode !== CallMode.Mandataire) {
-            return null;
-          }
-          const statusConfig = getStatusConfig(status);
-          return (
-            <SelectItem key={status} value={status}>
-              <div className={cn(
-                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
-                statusConfig.color
-              )}>
-                <div className={cn("w-1.5 h-1.5 rounded-full", statusConfig.dot)} />
-                {StatusConfigService.getLabel(status, mode)}
-              </div>
-            </SelectItem>
-          );
-        })}
-      </SelectContent>
-    </Select>
-  );
-};
 
 interface CommentWidgetProps {
   value: string;
@@ -706,7 +642,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
       const containerHeight = container.clientHeight;
       const scrollTop = container.scrollTop;
       
-      // Vérifier si le contact est déjà visible
+      // Vérifier si le contact est déjÃ  visible
       const isVisible = targetPosition >= scrollTop && 
                        targetPosition <= scrollTop + containerHeight - rowHeight;
       
@@ -734,7 +670,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
   // Scroll automatique quand le contact sélectionné change
   useEffect(() => {
     if (selectedContactId) {
-      // Délai pour laisser le temps au DOM de se mettre à jour
+      // Délai pour laisser le temps au DOM de se mettre Ã  jour
       const timeoutId = setTimeout(() => {
         scrollToContact(selectedContactId);
       }, 100);
@@ -745,7 +681,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
 
   // Gestion de l'édition
   const handleCellDoubleClick = (contactId: string, columnKey: keyof Contact, currentValue: any) => {
-    // On ignore les colonnes qui ont déjà leur propre widget ou ne sont pas destinées à l'édition texte simple
+    // On ignore les colonnes qui ont déjÃ  leur propre widget ou ne sont pas destinées Ã  l'édition texte simple
     const nonEditableFields: (keyof Contact)[] = [
       'statut', 'commentaire', 'dateRappel', 'heureRappel', 'dateRDV', 'heureRDV', 'dateAppel', 'heureAppel', 'dureeAppel'
     ];
@@ -777,7 +713,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
 
   // Toggle visibilité des colonnes - maintenant délégué au parent
   const handleToggleColumnVisibility = (columnId: string, visible: boolean) => {
-    // Trouver le header correspondant à ce columnId
+    // Trouver le header correspondant Ã  ce columnId
     const column = dynamicColumns.find(col => col.id === columnId);
     if (column) {
       onToggleColumnVisibility(column.label);
@@ -897,19 +833,23 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
           </span>
         );
 
-      case 'statut':
-        const currentStatus = (value as ContactStatus) || 'Non défini';
+      case 'statut': {
+        const currentStatus = (value as ContactStatus) || ContactStatus.NonDefini;
         return (
-          <StatusComboBox
+          <StatusSelect
             value={currentStatus}
             onChange={(newStatus) => {
               onUpdateContact({
                 id: contact.id,
-                statut: newStatus
+                statut: newStatus,
               });
             }}
+            triggerClassName="border-none bg-transparent p-0 h-auto"
+            contentClassName="bg-popover border shadow-lg"
+            size="sm"
           />
         );
+      }
 
       case 'commentaire':
         return (
@@ -989,7 +929,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
     
     // Debug temporaire
     if (result.length !== columnOrder.length) {
-      console.log('🔧 Colonnes filtrées:', {
+      console.log('ðŸ”§ Colonnes filtrées:', {
         'Toutes colonnes': dynamicColumns.map(c => c.label),
         'Visibilité': visibleColumns,
         'Colonnes affichées': result.map(c => c.label)
@@ -1040,7 +980,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
 
     // Retirer l'élément de sa position actuelle
     newOrder.splice(draggedIndex, 1);
-    // L'insérer à la nouvelle position
+    // L'insérer Ã  la nouvelle position
     newOrder.splice(targetIndex, 0, draggedColumn);
 
     setColumnOrder(newOrder);
@@ -1496,7 +1436,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                             isSelected && (theme === Theme.Dark
                               ? "bg-blue-900/60 text-oled-text"
                               : "bg-blue-200 text-light-text"),
-                            // Style spécifique à l'appel actif
+                            // Style spécifique Ã  l'appel actif
                             isActiveCall && (!isSelected
                               ? (theme === Theme.Dark
                                   ? "bg-green-900/20 hover:bg-green-900/30"
@@ -1596,4 +1536,9 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
 });
 
 ContactTable.displayName = 'ContactTable';
+
+
+
+
+
 
