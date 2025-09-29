@@ -1121,7 +1121,6 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
   }, [mappingDialog.headers, expectedTargets]);
 
   // Composant d'état vide sobre (shadcn)
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const EmptyState = () => (
     <div className="absolute inset-0 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -1133,24 +1132,17 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
             <h3 className="text-lg font-semibold">Aucun contact</h3>
             <p className="text-sm text-muted-foreground">Importez un fichier pour commencer.</p>
             <div className="flex items-center gap-2 mt-2">
-              <Button size="sm" onClick={() => fileInputRef.current?.click()}>
+              <Button 
+                size="sm" 
+                onClick={() => {
+                  console.log('🖱️ [IMPORT] Clic sur le bouton Importer des contacts');
+                  document.getElementById('fileImporter')?.click();
+                }}
+              >
                 Importer des contacts
               </Button>
               <span className="text-xs text-muted-foreground">ou glissez-déposez un fichier (.csv, .xlsx)</span>
             </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,.tsv,.xlsx,.xls"
-              className="hidden"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (file) {
-                  await prepareAndOpenMappingDialog(file);
-                  try { e.currentTarget.value = ''; } catch {}
-                }
-              }}
-            />
           </div>
         </CardContent>
       </Card>
@@ -1509,13 +1501,19 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
         requiredTargets={requiredTargets}
         onConfirm={async (mapping) => {
           try {
-            if (!mappingDialog.file) return;
+            if (!mappingDialog.file) {
+              console.log('❌ [MAPPING] Aucun fichier dans le dialogue');
+              return;
+            }
+            console.log('🔄 [MAPPING] Début de l\'importation avec mapping:', mapping);
             // Import en utilisant le mapping défini par l'utilisateur
             const imported = await importContactsFromFile(mappingDialog.file, mapping);
+            console.log(`📥 [MAPPING] ${imported.length} contacts importés`);
             // Signal global pour injection dans l'onglet actif
             try {
               const ext = mappingDialog.file.name.split('.').pop()?.toLowerCase();
               const source = (ext === 'xlsx' || ext === 'xls') ? 'xlsx' : (ext === 'csv' || ext === 'tsv') ? 'csv' : 'csv';
+              console.log('📡 [MAPPING] Déclenchement de l\'événement dimicall-imported-contacts');
               window.dispatchEvent(new CustomEvent('dimicall-imported-contacts', {
                 detail: {
                   contacts: imported,
@@ -1523,11 +1521,15 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                   source
                 }
               }));
-            } catch {}
+              console.log('✅ [MAPPING] Événement déclenché avec succès');
+            } catch (error) {
+              console.error('❌ [MAPPING] Erreur lors du déclenchement de l\'événement:', error);
+            }
             // Fermer le dialog
             setMappingDialog({ open: false, file: null, headers: [], preview: [] });
+            console.log('🔒 [MAPPING] Dialogue fermé');
           } catch (e) {
-            console.error(e);
+            console.error('❌ [MAPPING] Erreur lors de l\'importation:', e);
           }
         }}
       />

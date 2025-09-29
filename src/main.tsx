@@ -41,7 +41,7 @@ const AppWithModernLoader = () => {
           <ModernLoader key="modern-loader" />
         )}
       </AnimatePresence>
-      {!showModernLoader && <App key={(window as any).appUpdateKey || 0} />}
+      {!showModernLoader && <App appKey={(window as any).appUpdateKey || 0} />}
     </>
   );
 }

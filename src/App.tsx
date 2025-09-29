@@ -134,7 +134,7 @@ const DonutChart: React.FC<{ progress: number; size?: number }> = ({ progress, s
   );
 };
 
-const App: React.FC = ({ key }: { key?: number } = {}) => {
+const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const { mode } = useCallMode();
   // Authentication hook
   const auth = useSupabaseAuth();
@@ -961,12 +961,21 @@ Dimitri MOREL - Arcanis Conseil`;
         setCallStartTime(null);
       }
       
-      // 5. Nettoyer le localStorage
+      // 5. Créer un onglet vide par défaut (ne jamais laisser 0 onglet)
+      const defaultTabId = crypto.randomUUID();
+      setTableTabs([{ 
+        id: defaultTabId, 
+        name: 'Contacts', 
+        contacts: [] 
+      }]);
+      setActiveTableTabId(defaultTabId);
+      
+      // 6. Nettoyer le localStorage
       saveContacts([]);
       saveCallStates({});
       clearImportedTable();
       
-      // 6. Notification de succès
+      // 7. Notification de succès
       showNotification('success', 'Toutes les données ont été supprimées avec succès');
     } catch (error) {
       console.error('Erreur lors de la suppression des données:', error);
@@ -977,6 +986,28 @@ Dimitri MOREL - Arcanis Conseil`;
   const handleClearData = useCallback(() => {
     setIsClearDataDialogOpen(true);
   }, []);
+
+  // Fonction pour supprimer uniquement l'onglet actif
+  const handleClearActiveTab = useCallback(() => {
+    const currentTabId = activeTableTabId || tableTabs[0]?.id;
+    if (!currentTabId) return;
+
+    setTableTabs(prev => prev.map(tab => 
+      tab.id === currentTabId 
+        ? { ...tab, contacts: [] }
+        : tab
+    ));
+    
+    // Mettre à jour la liste globale des contacts si c'est l'onglet actif
+    const currentTab = tableTabs.find(t => t.id === currentTabId);
+    if (currentTab && currentTab.contacts.length > 0) {
+      setContacts([]);
+      setCallStates({});
+      setSelectedContact(null);
+    }
+    
+    showNotification('success', 'Table de l\'onglet actif supprimée');
+  }, [activeTableTabId, tableTabs, showNotification]);
 
   const confirmClearData = useCallback(() => {
     clearAllData();
@@ -1070,16 +1101,24 @@ Dimitri MOREL - Arcanis Conseil`;
 
   const handleImportFile = useCallback(async (files: FileList) => {
     const file = files[0];
-    if (!file) return;
+    if (!file) {
+      console.log('❌ [IMPORT] Aucun fichier sélectionné');
+      return;
+    }
 
+    console.log(`📁 [IMPORT] Fichier sélectionné: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
     setIsImporting(true);
     try {
       // Ouvrir le dialogue de mappage via la table si disponible
       if (contactTableRef.current?.openImportMapping) {
+        console.log('🔧 [IMPORT] Ouverture du dialogue de mappage via ContactTable');
         await contactTableRef.current.openImportMapping(file);
       } else {
+        console.log('🔧 [IMPORT] Import direct sans dialogue de mappage');
         await handleSingleFileImport(file);
       }
+    } catch (error) {
+      console.error('❌ [IMPORT] Erreur lors de l\'importation:', error);
     } finally {
       setIsImporting(false);
     }
@@ -1341,42 +1380,75 @@ Dimitri MOREL - Arcanis Conseil`;
 
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // Écouteur d'événement pour l'importation - toujours actif
+  useEffect(() => {
+    const onImported = (e: any) => {
+      try {
+        console.log('🔄 [IMPORT] Événement dimicall-imported-contacts reçu:', e.detail);
+        const { contacts: newContacts, fileName, source } = e.detail || {};
+        if (!newContacts || !Array.isArray(newContacts)) {
+          console.log('❌ [IMPORT] Pas de contacts valides dans l\'événement');
+          return;
+        }
+        console.log(`📥 [IMPORT] ${newContacts.length} contacts reçus pour importation`);
+        const updatedContacts = newContacts.map((c: Contact, idx: number) => ({
+          ...c,
+          numeroLigne: idx + 1,
+          id: c.id || uuidv4()
+        }));
+        saveImportedTable(updatedContacts, { fileName: fileName || 'Import', source: (source || 'csv'), totalRows: updatedContacts.length });
+        
+        // S'assurer qu'il y a toujours au minimum un onglet
+        console.log(`📊 [IMPORT] État des onglets: ${tableTabs.length} onglets, actif: ${activeTableTabId}`);
+        if (tableTabs.length === 0) {
+          // Créer un onglet par défaut si aucun n'existe
+          console.log('🆕 [IMPORT] Création d\'un nouvel onglet par défaut');
+          const defaultTabId = crypto.randomUUID()
+          setTableTabs([{ 
+            id: defaultTabId, 
+            name: 'Contacts', 
+            contacts: updatedContacts 
+          }])
+          setActiveTableTabId(defaultTabId)
+        } else {
+          // Utiliser l'onglet actif existant ou créer un nouveau
+          const targetTabId = activeTableTabId || tableTabs[0]?.id || ''
+          console.log(`🎯 [IMPORT] Onglet cible: ${targetTabId}`);
+          if (targetTabId && tableTabs.some(t => t.id === targetTabId)) {
+            console.log('✅ [IMPORT] Mise à jour de l\'onglet existant');
+            setTableTabs(prev => prev.map(t => t.id === targetTabId ? { ...t, contacts: updatedContacts } : t))
+            setActiveTableTabId(targetTabId)
+          } else {
+            console.log('🆕 [IMPORT] Création d\'un nouvel onglet');
+            const id = crypto.randomUUID()
+            setTableTabs(prev => [...prev, { id, name: `Import (${new Date().toLocaleString()})`, contacts: updatedContacts }])
+            setActiveTableTabId(id)
+          }
+        }
+        
+        setContacts(updatedContacts) // maintenir la liste globale en cohérence
+        setViewMode('table')
+        setCallStates({});
+        setSelectedContact(null);
+        console.log(`✅ [IMPORT] Importation terminée: ${updatedContacts.length} contacts`);
+        showNotification('success', `âœ… ${updatedContacts.length} contacts importés avec succès !`);
+      } catch (error) {
+        console.error('❌ [IMPORT] Erreur lors du traitement de l\'importation:', error);
+      }
+    }
+    
+    window.addEventListener('dimicall-imported-contacts', onImported as any)
+    console.log('👂 [IMPORT] Écouteur d\'événement dimicall-imported-contacts enregistré')
+    
+    return () => {
+      window.removeEventListener('dimicall-imported-contacts', onImported as any)
+      console.log('👂 [IMPORT] Écouteur d\'événement dimicall-imported-contacts supprimé')
+    }
+  }, [tableTabs, activeTableTabId, showNotification]);
+
   useEffect(() => {
     // S'exécuter une seule fois au démarrage
     if (!isInitialized) {
-      // Appliquer des contacts importés depuis le dialogue de mappage
-      const onImported = (e: any) => {
-        try {
-          const { contacts: newContacts, fileName, source } = e.detail || {};
-          if (!newContacts || !Array.isArray(newContacts)) return;
-          const updatedContacts = newContacts.map((c: Contact, idx: number) => ({
-            ...c,
-            numeroLigne: idx + 1,
-            id: c.id || uuidv4()
-          }));
-          saveImportedTable(updatedContacts, { fileName: fileName || 'Import', source: (source || 'csv'), totalRows: updatedContacts.length });
-          // Injecter dans l'onglet actif si des tabs existent
-          if (tableTabs.length > 0) {
-            const targetTabId = activeTableTabId || tableTabs[0]?.id || ''
-            if (targetTabId) {
-              setTableTabs(prev => prev.map(t => t.id === targetTabId ? { ...t, contacts: updatedContacts } : t))
-              setActiveTableTabId(targetTabId)
-            } else {
-              const id = crypto.randomUUID()
-              setTableTabs(prev => [...prev, { id, name: `Import (${new Date().toLocaleString()})`, contacts: updatedContacts }])
-              setActiveTableTabId(id)
-            }
-            setContacts(updatedContacts) // maintenir la liste globale en cohérence
-            setViewMode('table')
-          } else {
-            setContacts(updatedContacts)
-          }
-          setCallStates({});
-          setSelectedContact(null);
-          showNotification('success', `âœ… ${updatedContacts.length} contacts importés avec succès !`);
-        } catch {}
-      }
-      window.addEventListener('dimicall-imported-contacts', onImported as any)
 
       // Vérifier s'il y a une table importée sauvegardée
       if (hasImportedTable()) {
@@ -1402,11 +1474,19 @@ Dimitri MOREL - Arcanis Conseil`;
       
       // Chargement normal si pas de table importée
       refreshData();
-      setIsInitialized(true);
-
-      return () => {
-        try { window.removeEventListener('dimicall-imported-contacts', onImported as any) } catch {}
+      
+      // S'assurer qu'il y a toujours au minimum un onglet
+      if (tableTabs.length === 0) {
+        const defaultTabId = crypto.randomUUID();
+        setTableTabs([{ 
+          id: defaultTabId, 
+          name: 'Contacts', 
+          contacts: [] 
+        }]);
+        setActiveTableTabId(defaultTabId);
       }
+      
+      setIsInitialized(true);
     }
   }, [isInitialized, showNotification]);
 
@@ -2441,7 +2521,10 @@ Dimitri MOREL - Arcanis Conseil`;
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => document.getElementById('fileImporter')?.click()}
+                  onClick={() => {
+                  console.log('🖱️ [IMPORT] Clic sur le bouton Importer');
+                  document.getElementById('fileImporter')?.click();
+                }}
                   className={cn(
                     "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
                     "relative overflow-hidden transition-all duration-300 ease-out",
@@ -2469,7 +2552,25 @@ Dimitri MOREL - Arcanis Conseil`;
                     </span>
                   </div>
                 </Button>
-              <input type="file" id="fileImporter" accept=".csv, .tsv, .xlsx, .xls" className="hidden" onChange={(e) => e.target.files && handleImportFile(e.target.files)} />
+              <input 
+                type="file" 
+                id="fileImporter" 
+                accept=".csv, .tsv, .xlsx, .xls" 
+                className="hidden" 
+                onClick={(e) => {
+                  // Réinitialiser la valeur pour permettre la sélection du même fichier
+                  (e.target as HTMLInputElement).value = '';
+                }}
+                onChange={(e) => {
+                  console.log('📁 [IMPORT] Événement onChange de l\'input file déclenché');
+                  if (e.target.files && e.target.files.length > 0) {
+                    console.log(`📁 [IMPORT] Fichier sélectionné: ${e.target.files[0].name}`);
+                    handleImportFile(e.target.files);
+                  } else {
+                    console.log('❌ [IMPORT] Aucun fichier dans e.target.files');
+                  }
+                }} 
+              />
               
               {/* Bouton Export avec menu déroulant */}
               <DropdownMenu>
@@ -2537,12 +2638,12 @@ Dimitri MOREL - Arcanis Conseil`;
                 </DropdownMenuContent>
               </DropdownMenu>
               
-              {/* Bouton Supprimer */}
+              {/* Bouton Supprimer (onglet actif uniquement) */}
               <Button
                 variant="ghost"
                 size="sm"
                 disabled={contacts.length === 0}
-                onClick={handleClearData}
+                onClick={handleClearActiveTab}
                 className={cn(
                   "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
                   "relative overflow-hidden transition-all duration-300 ease-out",
@@ -3036,26 +3137,38 @@ Dimitri MOREL - Arcanis Conseil`;
                                     <Pencil className="h-3 w-3" />
                                   </Button>
                                   
-                                  {/* Bouton de suppression (si plus d'un onglet) */}
-                                  {tableTabs.length > 1 && (
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
-                                      onClick={(e) => {
-                                        e.stopPropagation()
-                                        setTableTabs(prev => {
-                                          const next = prev.filter(t => t.id !== tab.id)
-                                          if ((activeTableTabId || tableTabs[0]?.id) === tab.id) {
-                                            setActiveTableTabId(next[0]?.id || '')
+                                  {/* Bouton de suppression */}
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setTableTabs(prev => {
+                                        const next = prev.filter(t => t.id !== tab.id)
+                                        
+                                        // Si c'était le dernier onglet, créer un nouvel onglet vide
+                                        if (next.length === 0) {
+                                          const newTabId = crypto.randomUUID()
+                                          const newTab = { 
+                                            id: newTabId, 
+                                            name: 'Nouveau', 
+                                            contacts: [] 
                                           }
-                                          return next
-                                        })
-                                      }}
-                                    >
-                                      <X className="h-3 w-3" />
-                                    </Button>
-                                  )}
+                                          setActiveTableTabId(newTabId)
+                                          return [newTab]
+                                        }
+                                        
+                                        // Sinon, passer à l'onglet suivant
+                                        if ((activeTableTabId || tableTabs[0]?.id) === tab.id) {
+                                          setActiveTableTabId(next[0]?.id || '')
+                                        }
+                                        return next
+                                      })
+                                    }}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </Button>
                                 </div>
                               </DropdownMenuItem>
                             ))}
@@ -3074,6 +3187,16 @@ Dimitri MOREL - Arcanis Conseil`;
                             >
                               <Plus className="h-4 w-4" />
                               Ajouter un onglet
+                            </DropdownMenuItem>
+                            
+                            {/* Bouton de suppression complète */}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={handleClearData}
+                              className="flex items-center gap-2 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Supprimer toutes les données
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
