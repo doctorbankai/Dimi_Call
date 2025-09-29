@@ -216,6 +216,20 @@ const App: React.FC = () => {
   const [activeTableTabId, setActiveTableTabId] = useState<string>(() => {
     try { return localStorage.getItem('dimicall-active-table-tab') || '' } catch { return '' }
   })
+
+  useEffect(() => {
+    if (tableTabs.length === 0) {
+      const defaultTabId = uuidv4()
+      const defaultTab: TableTab = { id: defaultTabId, name: 'Onglet 1', contacts: [] }
+      setTableTabs([defaultTab])
+      setActiveTableTabId(defaultTabId)
+      return
+    }
+
+    if (!activeTableTabId || !tableTabs.some(tab => tab.id === activeTableTabId)) {
+      setActiveTableTabId(tableTabs[0]?.id || '')
+    }
+  }, [tableTabs, activeTableTabId])
   const [editingTabId, setEditingTabId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -2991,29 +3005,33 @@ Dimitri MOREL - Arcanis Conseil`;
                       </div>
                     </div>
                     {/* Contenu des onglets */}
-                    {tableTabs.map((tab) => (
-                      <TabsContent key={tab.id} value={tab.id} className="flex-1 overflow-hidden">
-                        <PaginatedContactTable
-                          ref={contactTableRef}
-                          contacts={tab.contacts}
-                          callStates={callStates}
-                          onSelectContact={handleRowSelection}
-                          selectedContactId={selectedContact?.id || null}
-                          onUpdateContact={updateContact}
-                          onDeleteContact={handleDeleteContact}
-                          activeCallContactId={activeCallContactId}
-                          theme={theme}
-                          visibleColumns={visibleColumns}
-                          columnHeaders={availableColumns.length > 0 ? availableColumns : COLUMN_HEADERS}
-                          contactDataKeys={availableDataKeys.length > 0 ? availableDataKeys : CONTACT_DATA_KEYS as (keyof Contact | null)[]}
-                          onToggleColumnVisibility={toggleColumnVisibility}
-                          availableColumns={availableColumns}
-                          onFileImport={handleSingleFileImport}
-                          initialItemsPerPage={savedItemsPerPage}
-                          pageSizeOptions={[25, 50, 100]}
-                        />
-                      </TabsContent>
-                    ))}
+                    {tableTabs.map((tab) => {
+                      const resolvedContacts = tableTabs.length === 1 && tab.contacts.length === 0 ? filteredContacts : tab.contacts
+
+                      return (
+                        <TabsContent key={tab.id} value={tab.id} className="flex-1 overflow-hidden">
+                          <PaginatedContactTable
+                            ref={contactTableRef}
+                            contacts={resolvedContacts}
+                            callStates={callStates}
+                            onSelectContact={handleRowSelection}
+                            selectedContactId={selectedContact?.id || null}
+                            onUpdateContact={updateContact}
+                            onDeleteContact={handleDeleteContact}
+                            activeCallContactId={activeCallContactId}
+                            theme={theme}
+                            visibleColumns={visibleColumns}
+                            columnHeaders={availableColumns.length > 0 ? availableColumns : COLUMN_HEADERS}
+                            contactDataKeys={availableDataKeys.length > 0 ? availableDataKeys : CONTACT_DATA_KEYS as (keyof Contact | null)[]}
+                            onToggleColumnVisibility={toggleColumnVisibility}
+                            availableColumns={availableColumns}
+                            onFileImport={handleSingleFileImport}
+                            initialItemsPerPage={savedItemsPerPage}
+                            pageSizeOptions={[25, 50, 100]}
+                          />
+                        </TabsContent>
+                      )
+                    })}
                   </Tabs>
                 )}
               </div>
