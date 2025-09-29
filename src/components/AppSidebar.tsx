@@ -42,8 +42,8 @@ export function AppSidebar({
   activeTab,
   onTabChange,
   onSettingsClick,
-  userName = "Paul",
-  userEmail = "paul@example.com",
+  userName,
+  userEmail,
   hasSpecialAccess = true,
   onLogout,
   viewMode,
@@ -56,6 +56,43 @@ export function AppSidebar({
   const [isTicketFormOpen, setIsTicketFormOpen] = useState(false);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const auth = useSupabaseAuth();
+
+  // Extraire les vraies informations utilisateur
+  const realUserEmail = auth.user?.email || userEmail || "Utilisateur";
+  const realUserName = userName || auth.user?.user_metadata?.full_name || 
+    (realUserEmail.includes('@') ? realUserEmail.split('@')[0] : realUserEmail);
+  
+  // Générer les initiales pour l'avatar
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase())
+      .join('')
+      .slice(0, 2);
+  };
+
+  // Générer l'avatar SVG avec les initiales
+  const generateAvatarSVG = (initials: string, email: string) => {
+    const colors = [
+      '#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', 
+      '#1abc9c', '#34495e', '#e67e22', '#8e44ad', '#16a085'
+    ];
+    const colorIndex = email.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) % colors.length;
+    const backgroundColor = colors[colorIndex];
+    
+    const svg = `
+      <svg width="28" height="28" viewBox="0 0 28 28" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="14" cy="14" r="14" fill="${backgroundColor}"/>
+        <text x="14" y="18" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="10" font-weight="600">
+          ${initials}
+        </text>
+      </svg>
+    `;
+    return `data:image/svg+xml;base64,${btoa(svg)}`;
+  };
+
+  const userInitials = getInitials(realUserName);
+  const avatarSrc = generateAvatarSVG(userInitials, realUserEmail);
   const appVersion = packageJson.version;
   const { mode, setMode } = useCallMode();
   const { state, setOpen } = useSidebar();
@@ -192,17 +229,15 @@ export function AppSidebar({
                 <img
                   data-slot="avatar-image"
                   className="aspect-square size-full object-cover"
-                  alt={userEmail}
-                  src={
-                    'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjgiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAyOCAyOCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8Y2lyY2xlIGN4PSIxNCIgY3k9IjE0IiByPSIxNCIgZmlsbD0iIzM0RDM5OSIvPgogIDx0ZXh0IHg9IjE0IiB5PSIxOCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0id2hpdGUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxMCIgZm9udC13ZWlnaHQ9IjYwMCI+CiAgICBQCiAgPC90ZXh0Pgo8L3N2Zz4K'
-                  }
+                  alt={realUserEmail}
+                  src={avatarSrc}
                 />
               </span>
               <div className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full border border-[hsl(var(--background))] bg-green-500 group-data-[collapsible=icon]:w-1.5 group-data-[collapsible=icon]:h-1.5 group-data-[collapsible=icon]:-bottom-0 group-data-[collapsible=icon]:-right-0"></div>
             </div>
             <div className="flex-1 min-w-0 text-left group-data-[collapsible=icon]:hidden">
-              <div className="text-sm font-medium truncate">{userName}</div>
-              <div className="text-xs text-muted-foreground truncate">{userEmail}</div>
+              <div className="text-sm font-medium truncate">{realUserName}</div>
+              <div className="text-xs text-muted-foreground truncate">{realUserEmail}</div>
             </div>
           </div>
         </Button>

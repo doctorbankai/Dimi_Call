@@ -68,7 +68,7 @@ export const EventCalendar: React.FC<Props> = () => {
             ? [
                 ev?.rdv?.length
                   ? [
-                      `RDV (${ev.rdv.length})`,
+                      `📅 RDV (${ev.rdv.length})`,
                       ...ev.rdv
                         .slice()
                         .sort((a, b) => (a.heureRDV || '').localeCompare(b.heureRDV || ''))
@@ -76,13 +76,13 @@ export const EventCalendar: React.FC<Props> = () => {
                           `• ${c.prenom || ''} ${c.nom || ''}`.trim(),
                           c.heureRDV ? `   ⏰ ${c.heureRDV}` : undefined,
                           c.telephone ? `   ☎ ${c.telephone}` : undefined,
-                          (c.commentaire || (c.comment)) ? `   "${c.commentaire || c.comment}"` : undefined,
+                          (c.commentaire || (c.comment)) ? `   💬 "${c.commentaire || c.comment}"` : undefined,
                         ].filter(Boolean).join('\n')),
                     ].join('\n')
                   : '',
                 ev?.rappel?.length
                   ? [
-                      `Rappels (${ev.rappel.length})`,
+                      `⏰ Rappels (${ev.rappel.length})`,
                       ...ev.rappel
                         .slice()
                         .sort((a, b) => (a.heureRappel || '').localeCompare(b.heureRappel || ''))
@@ -90,7 +90,7 @@ export const EventCalendar: React.FC<Props> = () => {
                           `• ${c.prenom || ''} ${c.nom || ''}`.trim(),
                           c.heureRappel ? `   ⏰ ${c.heureRappel}` : undefined,
                           c.telephone ? `   ☎ ${c.telephone}` : undefined,
-                          (c.commentaire || (c.comment)) ? `   "${c.commentaire || c.comment}"` : undefined,
+                          (c.commentaire || (c.comment)) ? `   💬 "${c.commentaire || c.comment}"` : undefined,
                         ].filter(Boolean).join('\n')),
                     ].join('\n')
                   : '',
@@ -117,11 +117,20 @@ export const EventCalendar: React.FC<Props> = () => {
         if (!showTooltip) return btn;
 
         return (
-            <TooltipProvider>
-                <Tooltip>
+            <TooltipProvider delayDuration={0}>
+                <Tooltip delayDuration={0} disableHoverableContent={false}>
                     <TooltipTrigger asChild>{btn}</TooltipTrigger>
-                    <TooltipContent>
-                        <pre className="text-xs leading-4 whitespace-pre-wrap">{tooltipText}</pre>
+                    <TooltipContent 
+                        side="top" 
+                        align="center"
+                        className="max-w-xs p-3 bg-popover text-popover-foreground border shadow-lg"
+                        sideOffset={8}
+                        avoidCollisions={true}
+                        sticky="always"
+                    >
+                        <pre className="text-xs leading-relaxed whitespace-pre-wrap font-mono">
+                            {tooltipText}
+                        </pre>
                     </TooltipContent>
                 </Tooltip>
             </TooltipProvider>

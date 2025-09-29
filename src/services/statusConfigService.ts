@@ -42,6 +42,9 @@ function getCurrentModeFromStorage(): CallMode {
 }
 
 export class StatusConfigService {
+  // Cache pour éviter les logs répétitifs
+  private static warnedStatuses = new Set<string>();
+  
   private static loadAll(): StatusConfigPerMode {
     try {
       const raw = localStorage.getItem(STORAGE_KEY_V2);
@@ -105,7 +108,11 @@ export class StatusConfigService {
     
     // Vérification de sécurité pour éviter les erreurs si le statut n'existe pas
     if (!defaultConfig) {
-      console.warn(`Statut non trouvé dans la configuration par défaut: ${status}`);
+      // Ne logger qu'une seule fois par statut pour éviter le spam
+      if (!this.warnedStatuses.has(status)) {
+        console.debug(`Statut non trouvé dans la configuration par défaut: ${status}`);
+        this.warnedStatuses.add(status);
+      }
       return status; // Retourner le statut tel quel si pas de configuration
     }
     
@@ -119,7 +126,11 @@ export class StatusConfigService {
     
     // Vérification de sécurité pour éviter les erreurs si le statut n'existe pas
     if (!defaultConfig) {
-      console.warn(`Statut non trouvé dans la configuration par défaut: ${status}`);
+      // Ne logger qu'une seule fois par statut pour éviter le spam
+      if (!this.warnedStatuses.has(status)) {
+        console.debug(`Statut non trouvé dans la configuration par défaut: ${status}`);
+        this.warnedStatuses.add(status);
+      }
       return { 
         color: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200', 
         dot: 'bg-gray-400' 
@@ -138,11 +149,22 @@ export class StatusConfigService {
     
     // Vérification de sécurité pour éviter les erreurs si le statut n'existe pas
     if (!defaultConfig) {
-      console.warn(`Statut non trouvé dans la configuration par défaut: ${status}`);
+      // Ne logger qu'une seule fois par statut pour éviter le spam
+      if (!this.warnedStatuses.has(status)) {
+        console.debug(`Statut non trouvé dans la configuration par défaut: ${status}`);
+        this.warnedStatuses.add(status);
+      }
       return true; // Par défaut visible si pas de configuration
     }
     
     return cfg[status]?.visible !== false;
+  }
+
+  /**
+   * Réinitialise le cache des avertissements (utile pour les tests ou le debug)
+   */
+  static resetWarningCache(): void {
+    this.warnedStatuses.clear();
   }
 }
 

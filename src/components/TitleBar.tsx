@@ -218,6 +218,18 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
                   </span>
                 </Badge>
               )}
+              {/* Badge de mise à jour */}
+              {updateState?.downloaded && isUpdateEnabled && (
+                <Badge 
+                  variant="default" 
+                  className="bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20 cursor-pointer transition-all duration-200 hover:scale-105 text-xs h-6 px-2 py-0.5"
+                  onClick={handleUpdateBadgeClick}
+                  title="Mise à jour disponible - Cliquez pour installer"
+                >
+                  <Download className="w-2.5 h-2.5 mr-1" />
+                  Mettre à jour
+                </Badge>
+              )}
             </div>
           </div>
           
@@ -269,6 +281,18 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
                      adbConnectionState.isConnected ? 'ADB' : 
                      adbConnectionState.error ? 'Err' : 'Off'}
                   </span>
+                </Badge>
+              )}
+              {/* Badge de mise à jour */}
+              {updateState?.downloaded && isUpdateEnabled && (
+                <Badge 
+                  variant="default" 
+                  className="bg-blue-500/10 text-blue-600 border-blue-500/20 hover:bg-blue-500/20 cursor-pointer transition-all duration-200 hover:scale-105 text-xs h-6 px-2 py-0.5"
+                  onClick={handleUpdateBadgeClick}
+                  title="Mise à jour disponible - Cliquez pour installer"
+                >
+                  <Download className="w-2.5 h-2.5 mr-1" />
+                  Mettre à jour
                 </Badge>
               )}
             </div>

@@ -60,7 +60,7 @@ import {
   Phone, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck, Linkedin, Globe, ExternalLink,
   Download, Keyboard, RefreshCw, Sun, Moon, Columns, X, Filter, Infinity,
   Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2, Users, Timer, BarChart3, Database,
-  ChevronLeft, ChevronRight, ChevronDown, Plus, Edit, RotateCcw
+  ChevronLeft, ChevronRight, ChevronDown, Plus, Edit, RotateCcw, Pencil, Palette
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -79,6 +79,7 @@ import { ShortcutIndicator } from './components/ShortcutIndicator';
 import { shortcutService } from './services/shortcutService';
 import { SettingsDialog, getSavedColumnConfig } from './components/SettingsDialog';
 import { ChartDashboard } from './components/ChartDashboard';
+import { TabEditDialog } from './components/TabEditDialog';
 import LocalDBViewer from './components/LocalDBViewer';
 import PaginatedEventTable from './components/PaginatedEventTable';
 import {
@@ -213,23 +214,29 @@ const App: React.FC = () => {
       return raw ? JSON.parse(raw) as TableTab[] : []
     } catch { return [] }
   })
+  
+  // États pour l'édition des onglets
+  const [editingTab, setEditingTab] = useState<TableTab | null>(null)
+  const [isTabEditDialogOpen, setIsTabEditDialogOpen] = useState(false)
+
+  // Fonctions pour gérer l'édition des onglets
+  const handleEditTab = (tab: TableTab) => {
+    setEditingTab(tab)
+    setIsTabEditDialogOpen(true)
+  }
+
+  const handleSaveTab = (name: string, color: string) => {
+    if (editingTab) {
+      setTableTabs(prev => prev.map(tab => 
+        tab.id === editingTab.id 
+          ? { ...tab, name, color }
+          : tab
+      ))
+    }
+  }
   const [activeTableTabId, setActiveTableTabId] = useState<string>(() => {
     try { return localStorage.getItem('dimicall-active-table-tab') || '' } catch { return '' }
   })
-
-  useEffect(() => {
-    if (tableTabs.length === 0) {
-      const defaultTabId = uuidv4()
-      const defaultTab: TableTab = { id: defaultTabId, name: 'Onglet 1', contacts: [] }
-      setTableTabs([defaultTab])
-      setActiveTableTabId(defaultTabId)
-      return
-    }
-
-    if (!activeTableTabId || !tableTabs.some(tab => tab.id === activeTableTabId)) {
-      setActiveTableTabId(tableTabs[0]?.id || '')
-    }
-  }, [tableTabs, activeTableTabId])
   const [editingTabId, setEditingTabId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -2963,25 +2970,43 @@ Dimitri MOREL - Arcanis Conseil`;
                               >
                                 <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: tab.color || 'var(--primary)' }} />
                                 <span className="flex-1 truncate">{tab.name}</span>
-                                {tableTabs.length > 1 && (
+                                
+                                {/* Boutons d'action pour l'onglet */}
+                                <div className="flex items-center gap-1">
+                                  {/* Bouton de renommage */}
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6 p-0"
+                                    className="h-6 w-6 p-0 hover:bg-accent-foreground/10"
                                     onClick={(e) => {
                                       e.stopPropagation()
-                                      setTableTabs(prev => {
-                                        const next = prev.filter(t => t.id !== tab.id)
-                                        if ((activeTableTabId || tableTabs[0]?.id) === tab.id) {
-                                          setActiveTableTabId(next[0]?.id || '')
-                                        }
-                                        return next
-                                      })
+                                      handleEditTab(tab)
                                     }}
                                   >
-                                    <X className="h-3 w-3" />
+                                    <Pencil className="h-3 w-3" />
                                   </Button>
-                                )}
+                                  
+                                  {/* Bouton de suppression (si plus d'un onglet) */}
+                                  {tableTabs.length > 1 && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setTableTabs(prev => {
+                                          const next = prev.filter(t => t.id !== tab.id)
+                                          if ((activeTableTabId || tableTabs[0]?.id) === tab.id) {
+                                            setActiveTableTabId(next[0]?.id || '')
+                                          }
+                                          return next
+                                        })
+                                      }}
+                                    >
+                                      <X className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
                               </DropdownMenuItem>
                             ))}
 
@@ -3005,33 +3030,29 @@ Dimitri MOREL - Arcanis Conseil`;
                       </div>
                     </div>
                     {/* Contenu des onglets */}
-                    {tableTabs.map((tab) => {
-                      const resolvedContacts = tableTabs.length === 1 && tab.contacts.length === 0 ? filteredContacts : tab.contacts
-
-                      return (
-                        <TabsContent key={tab.id} value={tab.id} className="flex-1 overflow-hidden">
-                          <PaginatedContactTable
-                            ref={contactTableRef}
-                            contacts={resolvedContacts}
-                            callStates={callStates}
-                            onSelectContact={handleRowSelection}
-                            selectedContactId={selectedContact?.id || null}
-                            onUpdateContact={updateContact}
-                            onDeleteContact={handleDeleteContact}
-                            activeCallContactId={activeCallContactId}
-                            theme={theme}
-                            visibleColumns={visibleColumns}
-                            columnHeaders={availableColumns.length > 0 ? availableColumns : COLUMN_HEADERS}
-                            contactDataKeys={availableDataKeys.length > 0 ? availableDataKeys : CONTACT_DATA_KEYS as (keyof Contact | null)[]}
-                            onToggleColumnVisibility={toggleColumnVisibility}
-                            availableColumns={availableColumns}
-                            onFileImport={handleSingleFileImport}
-                            initialItemsPerPage={savedItemsPerPage}
-                            pageSizeOptions={[25, 50, 100]}
-                          />
-                        </TabsContent>
-                      )
-                    })}
+                    {tableTabs.map((tab) => (
+                      <TabsContent key={tab.id} value={tab.id} className="flex-1 overflow-hidden">
+                        <PaginatedContactTable
+                          ref={contactTableRef}
+                          contacts={tab.contacts}
+                          callStates={callStates}
+                          onSelectContact={handleRowSelection}
+                          selectedContactId={selectedContact?.id || null}
+                          onUpdateContact={updateContact}
+                          onDeleteContact={handleDeleteContact}
+                          activeCallContactId={activeCallContactId}
+                          theme={theme}
+                          visibleColumns={visibleColumns}
+                          columnHeaders={availableColumns.length > 0 ? availableColumns : COLUMN_HEADERS}
+                          contactDataKeys={availableDataKeys.length > 0 ? availableDataKeys : CONTACT_DATA_KEYS as (keyof Contact | null)[]}
+                          onToggleColumnVisibility={toggleColumnVisibility}
+                          availableColumns={availableColumns}
+                          onFileImport={handleSingleFileImport}
+                          initialItemsPerPage={savedItemsPerPage}
+                          pageSizeOptions={[25, 50, 100]}
+                        />
+                      </TabsContent>
+                    ))}
                   </Tabs>
                 )}
               </div>
@@ -3404,6 +3425,17 @@ Dimitri MOREL - Arcanis Conseil`;
         </DialogContent>
       </Dialog>
 
+      {/* Dialog d'édition des onglets */}
+      <TabEditDialog
+        isOpen={isTabEditDialogOpen}
+        onClose={() => {
+          setIsTabEditDialogOpen(false)
+          setEditingTab(null)
+        }}
+        onSave={handleSaveTab}
+        currentName={editingTab?.name || ''}
+        currentColor={editingTab?.color || '#3b82f6'}
+      />
 
         </main>
         </div>
