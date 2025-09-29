@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Résolution de Conflits - DimiCall</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #333;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .test-section h3 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        .conflict-example {
+            background-color: #fff5f5;
+            border: 1px solid #fed7d7;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .conflict-example h4 {
+            color: #e53e3e;
+            margin-top: 0;
+        }
+        .mapping-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .mapping-item:last-child {
+            border-bottom: none;
+        }
+        .column-name {
+            font-weight: bold;
+            color: #495057;
+        }
+        .mapped-to {
+            color: #28a745;
+        }
+        .conflict {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .ignored {
+            color: #6c757d;
+            font-style: italic;
+        }
+        .solution {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .solution h4 {
+            color: #155724;
+            margin-top: 0;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        .status-conflict {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .status-resolved {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-ignored {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Test de Résolution de Conflits - DimiCall</h1>
+            <p>Solution pour éviter les plantages lors de l'importation avec des colonnes en conflit</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🚨 Problème Identifié</h3>
+            <p>Votre fichier contient <strong>59 colonnes</strong> avec <strong>9 colonnes non reconnues</strong> et plusieurs colonnes qui se mappent au même champ, ce qui cause des conflits et des plantages.</p>
+            
+            <div class="conflict-example">
+                <h4>Exemples de Conflits Détectés :</h4>
+                <div class="mapping-item">
+                    <span class="column-name">Date Appel 1</span>
+                    <span class="mapped-to">→ Date Appel</span>
+                    <span class="status-badge status-conflict">CONFLIT</span>
+                </div>
+                <div class="mapping-item">
+                    <span class="column-name">Date Appel 2</span>
+                    <span class="mapped-to">→ Date Appel</span>
+                    <span class="status-badge status-conflict">CONFLIT</span>
+                </div>
+                <div class="mapping-item">
+                    <span class="column-name">Date Appel 3</span>
+                    <span class="mapped-to">→ Date Appel</span>
+                    <span class="status-badge status-conflict">CONFLIT</span>
+                </div>
+                <div class="mapping-item">
+                    <span class="column-name">Date Appel 4</span>
+                    <span class="mapped-to">→ Date Appel</span>
+                    <span class="status-badge status-conflict">CONFLIT</span>
+                </div>
+                <div class="mapping-item">
+                    <span class="column-name">Statut Appel 1</span>
+                    <span class="mapped-to">→ Statut</span>
+                    <span class="status-badge status-conflict">CONFLIT</span>
+                </div>
+                <div class="mapping-item">
+                    <span class="column-name">Statut Appel 2</span>
+                    <span class="mapped-to">→ Statut</span>
+                    <span class="status-badge status-conflict">CONFLIT</span>
+                </div>
+                <div class="mapping-item">
+                    <span class="column-name">Commentaires Appel 1</span>
+                    <span class="mapped-to">→ Commentaire</span>
+                    <span class="status-badge status-conflict">CONFLIT</span>
+                </div>
+                <div class="mapping-item">
+                    <span class="column-name">Commentaires Appel 2</span>
+                    <span class="mapped-to">→ Commentaire</span>
+                    <span class="status-badge status-conflict">CONFLIT</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>✅ Solution Implémentée</h3>
+            <p>La nouvelle version détecte automatiquement les conflits et force l'utilisateur à les résoudre avant l'importation.</p>
+            
+            <div class="solution">
+                <h4>Fonctionnalités Ajoutées :</h4>
+                <ul>
+                    <li><strong>Détection automatique des conflits</strong> : L'interface identifie quand plusieurs colonnes se mappent au même champ</li>
+                    <li><strong>Mise en évidence visuelle</strong> : Les colonnes en conflit sont surlignées en rouge avec une bordure</li>
+                    <li><strong>Validation stricte</strong> : L'importation est bloquée tant que des conflits existent</li>
+                    <li><strong>Résolution automatique</strong> : Bouton "Résoudre conflits" qui garde la première colonne et ignore les autres</li>
+                    <li><strong>Options désactivées</strong> : Les champs déjà utilisés sont désactivés pour éviter les conflits</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎯 Résolution Recommandée</h3>
+            <p>Voici comment résoudre les conflits pour votre fichier :</p>
+            
+            <div class="solution">
+                <h4>Mapping Final Recommandé :</h4>
+                <div class="mapping-item">
+                    <span class="column-name">Date Appel 1</span>
+                    <span class="mapped-to">→ Date Appel</span>
+                    <span class="status-badge status-resolved">GARDÉ</span>
+                </div>
+                <div class="mapping-item">
+                    <span class="column-name">Date Appel 2</span>
+                    <span class="ignored">→ (Ignorer)</span>
+                    <span class="status-badge status-ignored">IGNORÉ</span>
+                </div>
+                <div class="mapping-item">
+                    <span class="column-name">Date Appel 3</span>
+                    <span class="ignored">→ (Ignorer)</span>
+                    <span class="status-badge status-ignored">IGNORÉ</span>
+                </div>
+                <div class="mapping-item">
+                    <span class="column-name">Date Appel 4</span>
+                    <span class="ignored">→ (Ignorer)</span>
+                    <span class="status-badge status-ignored">IGNORÉ</span>
+                </div>
+                <div class="mapping-item">
+                    <span class="column-name">Statut Appel 1</span>
+                    <span class="mapped-to">→ Statut</span>
+                    <span class="status-badge status-resolved">GARDÉ</span>
+                </div>
+                <div class="mapping-item">
+                    <span class="column-name">Statut Appel 2</span>
+                    <span class="ignored">→ (Ignorer)</span>
+                    <span class="status-badge status-ignored">IGNORÉ</span>
+                </div>
+                <div class="mapping-item">
+                    <span class="column-name">Commentaires Appel 1</span>
+                    <span class="mapped-to">→ Commentaire</span>
+                    <span class="status-badge status-resolved">GARDÉ</span>
+                </div>
+                <div class="mapping-item">
+                    <span class="column-name">Commentaires Appel 2</span>
+                    <span class="ignored">→ (Ignorer)</span>
+                    <span class="status-badge status-ignored">IGNORÉ</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🚀 Résultat Final</h3>
+            <div class="solution">
+                <h4>✅ Aucun Plantage Garanti :</h4>
+                <ul>
+                    <li><strong>Conflits résolus</strong> : Seule la première colonne de chaque type est conservée</li>
+                    <li><strong>Colonnes ignorées</strong> : Les colonnes en doublon sont automatiquement ignorées</li>
+                    <li><strong>Validation stricte</strong> : L'importation ne peut pas commencer tant que des conflits existent</li>
+                    <li><strong>Gestion d'erreur robuste</strong> : Try-catch à tous les niveaux pour éviter les plantages</li>
+                    <li><strong>Interface claire</strong> : L'utilisateur voit exactement quelles colonnes sont en conflit</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Instructions d'Utilisation</h3>
+            <ol>
+                <li><strong>Importez votre fichier</strong> - L'interface détectera automatiquement les conflits</li>
+                <li><strong>Résolvez les conflits</strong> - Cliquez sur "Résoudre conflits" ou mappez manuellement</li>
+                <li><strong>Vérifiez le mapping</strong> - Assurez-vous que seules les colonnes essentielles sont mappées</li>
+                <li><strong>Importez en toute sécurité</strong> - L'application ne plantera plus</li>
+            </ol>
+        </div>
+    </div>
+</body>
+</html>

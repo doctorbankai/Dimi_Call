@@ -101,17 +101,47 @@ export class StatusConfigService {
 
   static getLabel(status: ContactStatus, mode?: CallMode): string {
     const cfg = this.getConfig(mode);
-    return cfg[status]?.label ?? status;
+    const defaultConfig = DEFAULT_CONFIG[status];
+    
+    // Vérification de sécurité pour éviter les erreurs si le statut n'existe pas
+    if (!defaultConfig) {
+      console.warn(`Statut non trouvé dans la configuration par défaut: ${status}`);
+      return status; // Retourner le statut tel quel si pas de configuration
+    }
+    
+    return cfg[status]?.label ?? defaultConfig.label;
   }
 
   static getColor(status: ContactStatus, mode?: CallMode): { color: string; dot: string } {
     const cfg = this.getConfig(mode);
     const c = cfg[status];
-    return { color: c?.color || DEFAULT_CONFIG[status].color, dot: c?.dot || DEFAULT_CONFIG[status].dot };
+    const defaultConfig = DEFAULT_CONFIG[status];
+    
+    // Vérification de sécurité pour éviter les erreurs si le statut n'existe pas
+    if (!defaultConfig) {
+      console.warn(`Statut non trouvé dans la configuration par défaut: ${status}`);
+      return { 
+        color: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200', 
+        dot: 'bg-gray-400' 
+      };
+    }
+    
+    return { 
+      color: c?.color || defaultConfig.color, 
+      dot: c?.dot || defaultConfig.dot 
+    };
   }
 
   static isVisible(status: ContactStatus, mode?: CallMode): boolean {
     const cfg = this.getConfig(mode);
+    const defaultConfig = DEFAULT_CONFIG[status];
+    
+    // Vérification de sécurité pour éviter les erreurs si le statut n'existe pas
+    if (!defaultConfig) {
+      console.warn(`Statut non trouvé dans la configuration par défaut: ${status}`);
+      return true; // Par défaut visible si pas de configuration
+    }
+    
     return cfg[status]?.visible !== false;
   }
 }

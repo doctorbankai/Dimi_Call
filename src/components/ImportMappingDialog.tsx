@@ -44,6 +44,18 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
   const rows = previewRows || []
 
   const assignedTargets = useMemo(() => new Set(Object.values(mapping).filter(Boolean)), [mapping])
+  
+  // Détecter les conflits de mapping (plusieurs colonnes mappées au même champ)
+  const conflictingMappings = useMemo(() => {
+    const conflicts: Record<string, string[]> = {}
+    Object.entries(mapping).forEach(([header, target]) => {
+      if (target && target !== 'no-mapping') {
+        if (!conflicts[target]) conflicts[target] = []
+        conflicts[target].push(header)
+      }
+    })
+    return Object.fromEntries(Object.entries(conflicts).filter(([_, headers]) => headers.length > 1))
+  }, [mapping])
 
   // Auto-suggestions basées sur normalizeHeader + liste attendue
   const suggestions = useMemo(() => {
@@ -71,6 +83,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
 
   const unmappedCount = useMemo(() => headers.filter((h) => !mapping[h]).length, [headers, mapping])
   const ignoredCount = useMemo(() => Object.values(mapping).filter(target => target === 'no-mapping').length, [mapping])
+  const conflictCount = useMemo(() => Object.keys(conflictingMappings).length, [conflictingMappings])
 
   const isValid = useMemo(() => {
     // chaque required target doit être mappée par au moins un header
@@ -79,8 +92,9 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
     for (const req of requiredSet) {
       if (!mappedTargets.includes(req)) return false
     }
-    return true
-  }, [mapping, requiredSet])
+    // Il ne doit pas y avoir de conflits de mapping
+    return conflictCount === 0
+  }, [mapping, requiredSet, conflictCount])
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
@@ -116,6 +130,12 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                       <Badge variant={unmappedCount === 0 ? 'default' : 'secondary'} className="h-5 px-2 text-[10px]">
                         {headers.length - unmappedCount}/{headers.length} mappées
                       </Badge>
+                      {conflictCount > 0 && (
+                        <div className="flex items-center gap-1 text-red-600 dark:text-red-400 text-[11px]">
+                          <AlertCircle className="h-3.5 w-3.5" />
+                          <span>{conflictCount} conflit(s)</span>
+                        </div>
+                      )}
                       {ignoredCount > 0 && (
                         <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 text-[11px]">
                           <CheckCircle2 className="h-3.5 w-3.5" />
@@ -138,6 +158,27 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                       >
                         <Sparkles className="h-3.5 w-3.5 mr-1" /> Auto-détection
                       </Button>
+                      {conflictCount > 0 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 px-2 text-[11px] text-red-600 hover:text-red-700"
+                          onClick={() => {
+                            const newMapping = { ...mapping }
+                            Object.entries(conflictingMappings).forEach(([target, headers]) => {
+                              // Garder seulement la première colonne, ignorer les autres
+                              headers.slice(1).forEach(header => {
+                                newMapping[header] = 'no-mapping'
+                              })
+                            })
+                            setMapping(newMapping)
+                          }}
+                          title="Résoudre automatiquement les conflits"
+                        >
+                          <AlertCircle className="h-3.5 w-3.5 mr-1" /> Résoudre conflits
+                        </Button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -146,17 +187,21 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                     {headers.map((h, idx) => {
                       const isUnmapped = !mapping[h]
                       const isIgnored = mapping[h] === 'no-mapping'
+                      const isConflicting = Object.values(conflictingMappings).some(headers => headers.includes(h))
                       return (
                         <div
                           key={idx}
                           className={cn(
                             "grid grid-cols-12 gap-2 p-2 items-center",
+                            isConflicting && "bg-red-50 dark:bg-red-900/10 border-l-4 border-red-500",
                             isUnmapped && "bg-amber-50 dark:bg-amber-900/10",
                             isIgnored && "bg-blue-50 dark:bg-blue-900/10"
                           )}
                         >
                           <div className="col-span-5 truncate flex items-center gap-1" title={h}>
-                            {isIgnored ? (
+                            {isConflicting ? (
+                              <AlertCircle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                            ) : isIgnored ? (
                               <CheckCircle2 className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                             ) : isUnmapped ? (
                               <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
@@ -164,6 +209,11 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                             )}
                             <span>{h || '(vide)'}</span>
+                            {isConflicting && (
+                              <span className="text-xs text-red-600 dark:text-red-400 ml-1">
+                                (conflit)
+                              </span>
+                            )}
                           </div>
                         <div className="col-span-7">
                           <Select
@@ -179,19 +229,24 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="no-mapping">(Ignorer)</SelectItem>
-                              {expectedTargets.map((opt) => (
-                                <SelectItem
-                                  key={opt.value}
-                                  value={opt.value}
-                                  className={cn(
-                                    'text-xs',
-                                    requiredSet.has(opt.value) && 'font-semibold',
-                                    assignedTargets.has(opt.value) && mapping[h] !== opt.value && 'opacity-50'
-                                  )}
-                                >
-                                  {opt.label}
-                                </SelectItem>
-                              ))}
+                              {expectedTargets.map((opt) => {
+                                const isAlreadyAssigned = assignedTargets.has(opt.value) && mapping[h] !== opt.value
+                                return (
+                                  <SelectItem
+                                    key={opt.value}
+                                    value={opt.value}
+                                    disabled={isAlreadyAssigned}
+                                    className={cn(
+                                      'text-xs',
+                                      requiredSet.has(opt.value) && 'font-semibold',
+                                      isAlreadyAssigned && 'opacity-50 cursor-not-allowed'
+                                    )}
+                                  >
+                                    {opt.label}
+                                    {isAlreadyAssigned && ' (déjà utilisé)'}
+                                  </SelectItem>
+                                )
+                              })}
                             </SelectContent>
                           </Select>
                         </div>
@@ -240,7 +295,9 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
 
           <div className="flex items-center justify-between">
             <div className="text-xs text-muted-foreground">
-              {isValid ? 'Prêt à importer' : 'Renseignez au minimum Prénom, Nom et Téléphone.'}
+              {isValid ? 'Prêt à importer' : conflictCount > 0 ? 
+                `Résolvez les ${conflictCount} conflit(s) de mapping en choisissant "(Ignorer)" pour les colonnes en doublon.` : 
+                'Renseignez au minimum Prénom, Nom et Téléphone.'}
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={onClose}>Annuler</Button>
