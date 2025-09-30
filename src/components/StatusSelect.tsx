@@ -73,7 +73,7 @@ const StatusSelect: React.FC<StatusSelectProps> = ({
 
   return (
     <Select value={currentValue} onValueChange={handleChange}>
-      <SelectTrigger size={size} className={cn('w-fit text-xs', triggerClassName)}>
+      <SelectTrigger size={size} className={cn('w-fit text-xs flex items-center justify-center', triggerClassName)}>
         {currentValue ? (
           renderStatusBadge(currentValue)
         ) : (

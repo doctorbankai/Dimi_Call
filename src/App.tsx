@@ -56,9 +56,9 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem
 } from "@/components/ui/dropdown-menu";
-import { 
+import {
   Phone, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck, Linkedin, Globe, ExternalLink,
-  Download, Keyboard, RefreshCw, Sun, Moon, Columns, X, Filter, Infinity,
+  Download, Keyboard, RefreshCw, Sun, Moon, Columns, X, Filter, Infinity, Search, Zap, EyeOff,
   Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2, Users, Timer, BarChart3, Database,
   ChevronLeft, ChevronRight, ChevronDown, Plus, Edit, RotateCcw, Pencil, Palette
 } from 'lucide-react';
@@ -1179,12 +1179,35 @@ Dimitri MOREL - Arcanis Conseil`;
     }
   }, [handleSingleFileImport]);
 
+  // Calcul du nombre de contacts filtrs pour Google Contacts
+  const googleContactsCount = useMemo(() => {
+    return contacts.filter(contact =>
+      contact.statut === ContactStatus.ARappeler ||
+      contact.statut === ContactStatus.DO ||
+      contact.statut === ContactStatus.RO ||
+      contact.statut === ContactStatus.A0
+    ).length;
+  }, [contacts]);
+
+  // Calcul du nombre de contacts avec rappels pour Google Calendar
+  const calendarRemindersCount = useMemo(() => {
+    return contacts.filter(contact =>
+      contact.dateRappel && contact.dateRappel.trim() !== ''
+    ).length;
+  }, [contacts]);
+
+  const [exportOptions, setExportOptions] = useState({
+    table: true,
+    contacts: false,
+    agenda: false,
+  });
+
   const handleExport = useCallback((format: 'csv' | 'xlsx') => {
     if (contacts.length === 0) {
       showNotification('info', 'Aucun contact à exporter');
       return;
     }
-    
+
     try {
       exportContactsToFile(contacts, format);
       try {
@@ -1195,88 +1218,60 @@ Dimitri MOREL - Arcanis Conseil`;
     }
   }, [contacts, showNotification]);
 
-  // Calcul du nombre de contacts filtrs pour Google Contacts
-  const googleContactsCount = useMemo(() => {
-    return contacts.filter(contact => 
-      contact.statut === ContactStatus.ARappeler ||
-      contact.statut === ContactStatus.DO ||
-      contact.statut === ContactStatus.RO ||
-      contact.statut === ContactStatus.A0
-    ).length;
-  }, [contacts]);
+  // Handler unifié pour l'export avec options multiples
+  const handleUnifiedExport = useCallback(() => {
+    const options = Object.entries(exportOptions).filter(([_, enabled]) => enabled);
 
-  // Calcul du nombre de contacts avec rappels pour Google Calendar
-  const calendarRemindersCount = useMemo(() => {
-    return contacts.filter(contact => 
-      contact.dateRappel && contact.dateRappel.trim() !== ''
-    ).length;
-  }, [contacts]);
+    if (options.length === 0) {
+      showNotification('info', 'Veuillez sélectionner au moins une option d\'export');
+      return;
+    }
 
-  // Handler pour l'export Google Contacts
-  const handleGoogleContactsExport = useCallback(() => {
-    try {
-      // Vrification pralable du nombre de contacts
-      if (googleContactsCount === 0) {
-        showNotification('warning', 'Aucun contact  exporter avec les statuts slectionns ( rappeler, DO, RO)');
-        return;
-      }
-      
-      exportGoogleContactsCSV(contacts);
+    let exportCount = 0;
+
+    // Exporter la table si sélectionnée
+    if (exportOptions.table) {
       try {
-        window.dispatchEvent(new CustomEvent('dimicall-toast', { detail: { type: 'success', title: `${googleContactsCount} contacts exports vers Google Contacts` } }))
-      } catch {}
-    } catch (error) {
-      console.error('Erreur lors de l\'export Google Contacts:', error);
-      
-      // Messages d'erreur spcifiques
-      if (error instanceof Error) {
-        if (error.message.includes('Aucun contact à exporter')) {
-          showNotification('warning', 'Aucun contact  exporter avec les statuts slectionns');
-        } else if (error.message.includes('CSV')) {
-          showNotification('error', 'Erreur lors de la gnration du fichier CSV');
-        } else if (error.message.includes('tlchargement')) {
-          showNotification('error', 'Erreur lors du tlchargement du fichier');
-        } else {
-          showNotification('error', `Erreur lors de l'export: ${error.message}`);
-        }
-      } else {
-        showNotification('error', 'Erreur inconnue lors de l\'export');
+        exportContactsToFile(contacts, 'csv');
+        exportCount++;
+      } catch (error) {
+        console.error('Erreur lors de l\'export table:', error);
       }
     }
-  }, [contacts, googleContactsCount, showNotification]);
 
-  // Handler pour l'export Google Calendar
-  const handleGoogleCalendarExport = useCallback(() => {
-    try {
-      // Vrification pralable du nombre de rappels
-      if (calendarRemindersCount === 0) {
-        showNotification('warning', 'Aucun rappel à exporter');
-        return;
-      }
-      
-      exportGoogleCalendarCSV(contacts);
+    // Exporter vers Google Contacts si sélectionné
+    if (exportOptions.contacts) {
       try {
-        window.dispatchEvent(new CustomEvent('dimicall-toast', { detail: { type: 'success', title: `${calendarRemindersCount} rappels exports vers Google Agenda` } }))
-      } catch {}
-    } catch (error) {
-      console.error('Erreur lors de l\'export Google Calendar:', error);
-      
-      // Messages d'erreur spcifiques
-      if (error instanceof Error) {
-        if (error.message.includes('Aucun rappel à exporter')) {
-          showNotification('warning', 'Aucun rappel à exporter');
-        } else if (error.message.includes('CSV')) {
-          showNotification('error', 'Erreur lors de la gnration du fichier CSV');
-        } else if (error.message.includes('tlchargement')) {
-          showNotification('error', 'Erreur lors du tlchargement du fichier');
+        if (googleContactsCount === 0) {
+          showNotification('info', 'Aucun contact à exporter vers Google Contacts (statuts: À rappeler, DO, RO, A0)');
         } else {
-          showNotification('error', `Erreur lors de l'export: ${error.message}`);
+          exportGoogleContactsCSV(contacts);
+          exportCount++;
         }
-      } else {
-        showNotification('error', 'Erreur inconnue lors de l\'export');
+      } catch (error) {
+        console.error('Erreur lors de l\'export Google Contacts:', error);
       }
     }
-  }, [contacts, calendarRemindersCount, showNotification]);
+
+    // Exporter vers Google Calendar si sélectionné
+    if (exportOptions.agenda) {
+      try {
+        if (calendarRemindersCount === 0) {
+          showNotification('info', 'Aucun rappel à exporter vers Google Agenda');
+        } else {
+          exportGoogleCalendarCSV(contacts);
+          exportCount++;
+        }
+      } catch (error) {
+        console.error('Erreur lors de l\'export Google Calendar:', error);
+      }
+    }
+
+    if (exportCount > 0) {
+      showNotification('success', `${exportCount} export(s) effectué(s) avec succès`);
+    }
+  }, [exportOptions, contacts, googleContactsCount, calendarRemindersCount, showNotification]);
+
 
   const makePhoneCall = useCallback(async (contactToCall?: Contact) => {
     console.log('?? [MAKEPHONECALL] Dbut makePhoneCall, contactToCall:', contactToCall);
@@ -2290,8 +2285,6 @@ Dimitri MOREL - Arcanis Conseil`;
             "--sidebar-width-icon": "3rem"
           } as React.CSSProperties}
         >
-          {/* Contenu principal */}
-          <main className="flex flex-col flex-1 w-full min-h-0 min-w-0 overflow-hidden h-full">
           {/* Barre de titre personnalise pour Electron */}
           <TitleBar 
             theme={theme} 
@@ -2325,10 +2318,10 @@ Dimitri MOREL - Arcanis Conseil`;
             onUpdateClick={installUpdate}
             onUpdateConfirmationOpen={() => setIsUpdateConfirmationOpen(true)}
           />
-
-
-      
-      {/* Notifications */}
+          
+          {/* Contenu principal */}
+          <main className="flex flex-col flex-1 w-full min-h-0 min-w-0 overflow-hidden h-full">
+            {/* Notifications */}
       
              {/* 🔧 Indicateur d'appel en cours avec chronomtrage en temps rel - DSACTIV */}
        {/* {activeCallContactId && callStartTime && (
@@ -2387,437 +2380,9 @@ Dimitri MOREL - Arcanis Conseil`;
       
       {/* Main content */}
       <main className={cn(
-        "flex-1 flex flex-col p-2 md:p-3 space-y-2 md:space-y-3 overflow-hidden w-full min-h-0",
+        "flex-1 flex flex-col p-2 md:p-3 space-y-2 md:space-y-3 overflow-hidden w-full min-h-0 mt-8",
         isAuthModalOpen && "pointer-events-none opacity-50"
       )}>
-      {/* Ribbon (visible uniquement en mode Appels) */}
-      {viewMode === 'table' && (
-        <Card className="p-2 md:p-3 ribbon-container mx-auto shadow-md max-w-full overflow-x-auto overflow-y-hidden mt-[2.5rem]">
-          <div className="flex items-stretch justify-start md:justify-center gap-2 md:gap-3 relative flex-nowrap whitespace-nowrap w-max">
-            
-            {/* Communication Group supprim (dplac dans CallControl) */}
-
-            {/* Planification Group */}
-            <div className="flex flex-col items-center shrink-0">
-              <div className="flex gap-2 p-2 border-r border-border pr-4 mr-2 justify-center items-center shrink-0">
-                <RibbonButton 
-                  onClick={() => selectedContact && setIsRappelDialogOpen(true)} 
-                  icon={<Bell />} 
-                  label="Rappel" 
-                  disabled={!selectedContact}
-                  className="min-w-[80px] max-w-[80px] h-12"
-                />
-                <RibbonButton 
-                  onClick={() => selectedContact && setIsRendezVousDialogOpen(true)} 
-                  icon={<Calendar />} 
-                  label="Rdv" 
-                  disabled={!selectedContact}
-                  className="min-w-[80px] max-w-[80px] h-12"
-                />
-                <RibbonButton 
-                  onClick={handleCalendarClick} 
-                  onContextMenu={(e) => e.preventDefault()}
-                  icon={
-                    <div className="relative">
-                      <CalendarSearch />
-                    </div>
-                  } 
-                  label="Cal.com" 
-                  disabled={!selectedContact} 
-                  className="min-w-[80px] max-w-[80px] h-12"
-                />
-              </div>
-              <span className="text-[9px] text-muted-foreground mt-1 font-medium tracking-wider text-center w-full">Planification</span>
-            </div>
-
-            {/* Qualification Group */}
-            <div className="flex flex-col items-center shrink-0">
-              <div className="flex gap-2 p-2 border-r border-border pr-4 mr-2 justify-center items-center shrink-0">
-                <RibbonButton 
-                  onClick={() => selectedContact && setIsQualificationDialogOpen(true)} 
-                  icon={<FileCheck />} 
-                  label="Qualif." 
-                  disabled={!selectedContact}
-                  className="min-w-[80px] max-w-[80px] h-12"
-                />
-              </div>
-              <span className="text-[9px] text-muted-foreground mt-1 font-medium tracking-wider text-center w-full">Qualification</span>
-            </div>
-
-            {/* Recherche Group */}
-            <div className="flex flex-col items-center shrink-0">
-              <div className="flex gap-2 p-2 border-r border-border pr-4 mr-2 justify-center items-center shrink-0">
-                <RibbonButton 
-                  onClick={() => handleLinkedInSearch()} 
-                  icon={<Linkedin />} 
-                  label="LinkedIn" 
-                  disabled={!selectedContact}
-                  className="min-w-[80px] max-w-[80px] h-12"
-                />
-                <RibbonButton 
-                  onClick={() => handleGoogleSearch()} 
-                  icon={<Globe />} 
-                  label="Google" 
-                  disabled={!selectedContact}
-                  className="min-w-[80px] max-w-[80px] h-12"
-                />
-                <RibbonButton 
-                  onClick={() => handleDirectLink()} 
-                  icon={<ExternalLink />} 
-                  label="Lien" 
-                  disabled={!selectedContact || !selectedContact.lien}
-                  className="min-w-[80px] max-w-[80px] h-12"
-                />
-              
-              {/* Dropdown Auto-Search */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className={cn(
-                        "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
-                      "relative overflow-hidden transition-all duration-300 ease-out",
-                      "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
-                      "group cursor-pointer",
-                      "border border-transparent hover:bg-gradient-to-br hover:from-primary/10 hover:to-accent/10 hover:border-primary/30",
-                      "hover:transform hover:rotate-1"
-                    )}
-                  >
-                    {/* Shimmer effect */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
-                    </div>
-                    
-                    {/* Glow effect */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-radial from-primary/20 via-transparent to-transparent blur-xl" />
-                    
-                    {/* Content */}
-                    <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
-                      <div className="w-4 h-4 mb-1 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
-                        {autoSearchMode === 'disabled' ? <X /> :
-                         autoSearchMode === 'linkedin' ? <Linkedin /> :
-                         autoSearchMode === 'google' ? <Globe /> :
-                         <ExternalLink />}
-                      </div>
-                      <span className="text-[10px] leading-tight w-full transition-all duration-300 group-hover:font-semibold text-center">
-                        {autoSearchMode === 'disabled' ? 'Dsactiv' :
-                         autoSearchMode === 'linkedin' ? 'Auto-LinkedIn' :
-                         autoSearchMode === 'google' ? 'Auto-Google' :
-                         'Auto-Lien'}
-                      </span>
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent 
-                  className="w-56 border shadow-lg bg-popover text-popover-foreground z-50" 
-                  align="center"
-                >
-                  <DropdownMenuLabel className="flex items-center gap-2">
-                    <Infinity className="w-4 h-4" />
-                    Mode de recherche automatique
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem 
-                      onClick={() => {
-                        setAutoSearchMode('disabled');
-                        console.log('🔧 [AUTO-SEARCH] Mode chang vers: Dsactiv');
-                      }}
-                      className="cursor-pointer"
-                    >
-                      <X className="mr-2 h-4 w-4 text-red-500" />
-                      <span>Dsactiv</span>
-                      {autoSearchMode === 'disabled' && <span className="ml-auto text-xs opacity-70">Actuel</span>}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => {
-                        setAutoSearchMode('linkedin');
-                        console.log('🔧 [AUTO-SEARCH] Mode chang vers: Auto-LinkedIn');
-                      }}
-                      className="cursor-pointer"
-                    >
-                      <Linkedin className="mr-2 h-4 w-4 text-blue-500" />
-                      <span>Auto-LinkedIn</span>
-                      {autoSearchMode === 'linkedin' && <span className="ml-auto text-xs opacity-70">Actuel</span>}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => {
-                        setAutoSearchMode('google');
-                        console.log('🔧 [AUTO-SEARCH] Mode chang vers: Auto-Google');
-                      }}
-                      className="cursor-pointer"
-                    >
-                      <Globe className="mr-2 h-4 w-4 text-green-500" />
-                      <span>Auto-Google</span>
-                      {autoSearchMode === 'google' && <span className="ml-auto text-xs opacity-70">Actuel</span>}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem 
-                      onClick={() => {
-                        setAutoSearchMode('link');
-                        console.log('🔧 [AUTO-SEARCH] Mode chang vers: Auto-Lien');
-                      }}
-                      className="cursor-pointer"
-                    >
-                      <ExternalLink className="mr-2 h-4 w-4 text-purple-500" />
-                      <span>Auto-Lien</span>
-                      {autoSearchMode === 'link' && <span className="ml-auto text-xs opacity-70">Actuel</span>}
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              </div>
-              <span className="text-[9px] text-muted-foreground mt-1 font-medium tracking-wider text-center w-full">Recherche</span>
-            </div>
-
-            {/* Donnes Group */}
-            <div className="flex flex-col items-center shrink-0">
-              <div className="flex gap-2 p-2 justify-center items-center shrink-0">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                  console.log('??? [IMPORT] Clic sur le bouton Importer');
-                  document.getElementById('fileImporter')?.click();
-                }}
-                  className={cn(
-                    "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
-                    "relative overflow-hidden transition-all duration-300 ease-out",
-                    "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
-                    "group cursor-pointer",
-                    "border border-transparent hover:bg-gradient-to-br hover:from-primary/10 hover:to-accent/10 hover:border-primary/30",
-                    "hover:transform hover:rotate-1"
-                  )}
-                >
-                  {/* Shimmer effect */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
-                  </div>
-                  
-                  {/* Glow effect */}
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-radial from-primary/20 via-transparent to-transparent blur-xl" />
-                  
-                  {/* Content */}
-                  <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
-                    <div className="w-4 h-4 mb-1 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
-                      <Upload />
-                    </div>
-                    <span className="text-[10px] leading-tight w-full transition-all duration-300 group-hover:font-semibold text-center">
-                      Importer
-                    </span>
-                  </div>
-                </Button>
-              <input 
-                type="file" 
-                id="fileImporter" 
-                accept=".csv, .tsv, .xlsx, .xls" 
-                className="hidden" 
-                onClick={(e) => {
-                  // Rinitialiser la valeur pour permettre la slection du mme fichier
-                  (e.target as HTMLInputElement).value = '';
-                }}
-                onChange={(e) => {
-                  console.log('?? [IMPORT] vnement onChange de l\'input file dclench');
-                  if (e.target.files && e.target.files.length > 0) {
-                    console.log(`?? [IMPORT] Fichier slectionn: ${e.target.files[0].name}`);
-                    handleImportFile(e.target.files);
-                  } else {
-                    console.log('? [IMPORT] Aucun fichier dans e.target.files');
-                  }
-                }} 
-              />
-              
-              {/* Bouton Export avec menu droulant */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={contacts.length === 0}
-                    className={cn(
-                        "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
-                      "relative overflow-hidden transition-all duration-300 ease-out",
-                      "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
-                      "group cursor-pointer",
-                      "border border-transparent hover:bg-gradient-to-br hover:from-primary/10 hover:to-accent/10 hover:border-primary/30",
-                      contacts.length > 0 && "hover:transform hover:rotate-1"
-                    )}
-                  >
-                    {/* Shimmer effect */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
-                    </div>
-                    
-                    {/* Glow effect */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-radial from-primary/20 via-transparent to-transparent blur-xl" />
-                    
-                    {/* Content */}
-                    <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
-                      <div className="w-4 h-4 mb-1 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
-                        <Download />
-                      </div>
-                      <span className="text-[10px] leading-tight w-full transition-all duration-300 group-hover:font-semibold text-center">
-                        Export
-                      </span>
-                    </div>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent 
-                  className="w-40 border shadow-lg bg-popover text-popover-foreground z-50" 
-                  align="center"
-                >
-                  <DropdownMenuLabel className="flex items-center gap-2">
-                    <Download className="w-4 h-4" />
-                    Format d'export
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                                         <DropdownMenuItem 
-                       onClick={() => handleExport('csv')}
-                       className="cursor-pointer"
-                       disabled={contacts.length === 0}
-                     >
-                       <span className="mr-2 text-green-600">CSV</span>
-                       <span className="text-xs text-muted-foreground">Fichier texte</span>
-                     </DropdownMenuItem>
-                     <DropdownMenuItem 
-                       onClick={() => handleExport('xlsx')}
-                       className="cursor-pointer"
-                       disabled={contacts.length === 0}
-                     >
-                       <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
-                       <span>Excel</span>
-                       <span className="ml-auto text-xs text-muted-foreground">.xlsx</span>
-                     </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              
-              {/* Bouton Supprimer (onglet actif uniquement) */}
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={contacts.length === 0}
-                onClick={handleClearActiveTab}
-                className={cn(
-                  "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
-                  "relative overflow-hidden transition-all duration-300 ease-out",
-                  "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
-                  "group cursor-pointer",
-                  "border border-transparent hover:bg-gradient-to-br hover:from-primary/10 hover:to-accent/10 hover:border-primary/30",
-                  contacts.length > 0 && "hover:transform hover:rotate-1"
-                )}
-              >
-                {/* Shimmer effect */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
-                </div>
-                
-                {/* Glow effect */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-radial from-primary/20 via-transparent to-transparent blur-xl" />
-                
-                {/* Content */}
-                <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
-                  <div className="w-4 h-4 mb-1 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
-                    <Trash2 />
-                  </div>
-                  <span className="text-[10px] leading-tight w-full transition-all duration-300 group-hover:font-semibold text-center">
-                    Supprimer
-                  </span>
-                </div>
-              </Button>
-
-              {/* Bouton Google Contacts */}
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={googleContactsCount === 0}
-                onClick={handleGoogleContactsExport}
-                title={googleContactsCount > 0 
-                  ? `Exporter ${googleContactsCount} contacts (À rappeler, DO, RO, A0) vers Google Contacts` 
-                  : 'Aucun contact à exporter - Seuls les contacts avec les statuts "À rappeler", "DO", "RO" ou "A0" sont exports'
-                }
-                className={cn(
-                  "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
-                  "relative overflow-hidden transition-all duration-300 ease-out",
-                  "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
-                  "group cursor-pointer",
-                  "border border-transparent hover:bg-gradient-to-br hover:from-primary/10 hover:to-accent/10 hover:border-primary/30",
-                  googleContactsCount > 0 && "hover:transform hover:rotate-1"
-                )}
-              >
-                {/* Shimmer effect */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
-                </div>
-                
-                {/* Glow effect */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-radial from-primary/20 via-transparent to-transparent blur-xl" />
-                
-                {/* Content */}
-                <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
-                  <div className="w-4 h-4 mb-1 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
-                    <Users />
-                  </div>
-                  <span className="text-[10px] leading-tight w-full transition-all duration-300 group-hover:font-semibold text-center">
-                    Contacts
-                  </span>
-                  {googleContactsCount > 0 && (
-                    <Badge variant="secondary" className="absolute -top-1 -right-1 text-[8px] h-4 w-4 p-0 flex items-center justify-center">
-                      {googleContactsCount}
-                    </Badge>
-                  )}
-                </div>
-              </Button>
-
-              {/* Bouton Google Calendar */}
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={calendarRemindersCount === 0}
-                onClick={handleGoogleCalendarExport}
-                title={calendarRemindersCount > 0 
-                  ? `Exporter ${calendarRemindersCount} rappels vers Google Agenda` 
-                  : 'Aucun rappel à exporter - Seuls les contacts avec date de rappel sont exports'
-                }
-                className={cn(
-                  "flex flex-col items-center justify-center min-w-[80px] max-w-[80px] h-12 shrink-0 ribbon-button-modern",
-                  "relative overflow-hidden transition-all duration-300 ease-out",
-                  "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
-                  "group cursor-pointer",
-                  "border border-transparent hover:bg-gradient-to-br hover:from-primary/10 hover:to-accent/10 hover:border-primary/30",
-                  calendarRemindersCount > 0 && "hover:transform hover:rotate-1"
-                )}
-              >
-                {/* Shimmer effect */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
-                </div>
-                
-                {/* Glow effect */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-radial from-primary/20 via-transparent to-transparent blur-xl" />
-                
-                {/* Content */}
-                <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
-                  <div className="w-4 h-4 mb-1 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
-                    <Calendar />
-                  </div>
-                  <span className="text-[10px] leading-tight w-full transition-all duration-300 group-hover:font-semibold text-center">
-                    Agenda
-                  </span>
-                  {calendarRemindersCount > 0 && (
-                    <Badge variant="secondary" className="absolute -top-1 -right-1 text-[8px] h-4 w-4 p-0 flex items-center justify-center">
-                      {calendarRemindersCount}
-                    </Badge>
-                  )}
-                </div>
-              </Button>
-            </div>
-              <span className="text-[9px] text-muted-foreground mt-1 font-medium tracking-wider text-center w-full">Donnes</span>
-            </div>
-          </div>
-        </Card>
-      )}
 
         {/* Search bar area */}
         <div className="flex items-stretch gap-3 w-full justify-between">
@@ -2837,6 +2402,10 @@ Dimitri MOREL - Arcanis Conseil`;
                   onEmail={() => selectedContact && setIsEmailDialogOpen(true)}
                   onSmsMonsieur={() => handleSms('Monsieur')}
                   onSmsMadame={() => handleSms('Madame')}
+                  onRappel={() => selectedContact && setIsRappelDialogOpen(true)}
+                  onRendezVous={() => selectedContact && setIsRendezVousDialogOpen(true)}
+                  onCalCom={() => handleCalendarClick()}
+                  onQualification={() => selectedContact && setIsQualificationDialogOpen(true)}
                   onStatusChange={(newStatus) => {
                     console.log('🔄 [STATUS] Changement de statut demand:', newStatus, 'pour contact:', selectedContact?.id);
                     if (selectedContact) {
@@ -3042,7 +2611,7 @@ Dimitri MOREL - Arcanis Conseil`;
                   <Tabs value={resolvedActiveTabId} onValueChange={setActiveTableTabId} className="flex h-full flex-col">
                     {/* Barre d'onglets en haut */}
                     <div className="flex items-center justify-between px-1.5 py-1.5 border-b bg-card">
-                      {/* Champ de recherche avec bouton colonnes - à gauche */}
+                      {/* Champ de recherche - à gauche */}
                       <div className="flex items-center gap-2 flex-1 min-w-0">
                         <div className="flex-1 max-w-md relative">
                           <Input
@@ -3076,70 +2645,256 @@ Dimitri MOREL - Arcanis Conseil`;
                           </DropdownMenu>
                         </div>
 
-                        {/* Bouton Colonnes */}
+                        {/* Bouton Colonnes simplifié */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant="outline"
-                              className="flex items-center gap-2 px-3 py-1.5 h-9 text-sm"
+                              size="sm"
+                              className="h-9 px-2"
+                              title="Gestion des colonnes"
                             >
                               <Settings2 className="h-4 w-4" />
-                              Colonnes
-                              <Badge variant="secondary" className="ml-2 h-4 px-1 text-xs">
+                              <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">
                                 {availableColumns.filter(col => visibleColumns[col]).length}
                               </Badge>
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-64">
-                            <DropdownMenuLabel className="flex items-center gap-2">
-                              <Eye className="h-4 w-4" />
-                              Gestion des colonnes
+
+                        {/* Bouton Recherche moderne - Actions rapides */}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={!selectedContact}
+                              className="h-9 px-2"
+                              title="Actions de recherche pour le contact sélectionné"
+                            >
+                              <Globe className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            className="w-56 border shadow-lg bg-popover text-popover-foreground z-50"
+                            align="start"
+                          >
+                            {/* Actions principales - plus épurées */}
+                            <DropdownMenuItem
+                              onClick={() => handleLinkedInSearch()}
+                              disabled={!selectedContact}
+                              className="cursor-pointer"
+                            >
+                              <Linkedin className="mr-2 h-4 w-4 text-blue-500" />
+                              <span>LinkedIn</span>
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem
+                              onClick={() => handleGoogleSearch()}
+                              disabled={!selectedContact}
+                              className="cursor-pointer"
+                            >
+                              <Globe className="mr-2 h-4 w-4 text-green-500" />
+                              <span>Google</span>
+                            </DropdownMenuItem>
+
+                            <DropdownMenuItem
+                              onClick={() => handleDirectLink()}
+                              disabled={!selectedContact || !selectedContact.lien}
+                              className="cursor-pointer"
+                            >
+                              <ExternalLink className="mr-2 h-4 w-4 text-purple-500" />
+                              <span>Lien direct</span>
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
+
+                            {/* Mode automatique - simplifié */}
+                            <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1">
+                              Mode automatique
                             </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {availableColumns.map((header) => {
-                              const isEssential = essentialColumns.includes(header);
-                              return (
-                                <DropdownMenuCheckboxItem
-                                  key={header}
-                                  className="flex items-center gap-2"
-                                  checked={visibleColumns[header] || false}
-                                  onCheckedChange={() => toggleColumnVisibility(header)}
-                                  onSelect={(e) => e.preventDefault()}
-                                >
-                                  <span className="flex-1">{header}</span>
-                                  {isEssential && (
-                                    <span className="text-xs text-muted-foreground ml-2">
-                                      (essentielle)
-                                    </span>
-                                  )}
-                                </DropdownMenuCheckboxItem>
-                              );
-                            })}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuCheckboxItem
-                              className="flex items-center gap-2 text-primary"
-                              checked={false}
-                              onCheckedChange={showAllAvailableColumns}
-                              onSelect={(e) => e.preventDefault()}
-                            >
-                              <Eye className="h-4 w-4" />
-                              Afficher toutes les colonnes disponibles
-                            </DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem
-                              className="flex items-center gap-2 text-orange-600 dark:text-orange-400"
-                              checked={false}
-                              onCheckedChange={hideOptionalColumns}
-                              onSelect={(e) => e.preventDefault()}
-                            >
-                              <Eye className="h-4 w-4" />
-                              Masquer les colonnes optionnelles
-                            </DropdownMenuCheckboxItem>
-                            <DropdownMenuSeparator />
-                            <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                              {availableColumns.length} colonne{availableColumns.length > 1 ? 's' : ''} disponible{availableColumns.length > 1 ? 's' : ''} dans les donnes
-                            </div>
+
+                            <DropdownMenuRadioGroup value={autoSearchMode} onValueChange={(value) => setAutoSearchMode(value as any)}>
+                              <DropdownMenuRadioItem value="disabled" className="cursor-pointer">
+                                <X className="mr-2 h-4 w-4" />
+                                <span>Désactivé</span>
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="linkedin" className="cursor-pointer">
+                                <Linkedin className="mr-2 h-4 w-4 text-blue-500" />
+                                <span>LinkedIn</span>
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="google" className="cursor-pointer">
+                                <Globe className="mr-2 h-4 w-4 text-green-500" />
+                                <span>Google</span>
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="link" className="cursor-pointer">
+                                <ExternalLink className="mr-2 h-4 w-4 text-purple-500" />
+                                <span>Lien</span>
+                              </DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
                           </DropdownMenuContent>
                         </DropdownMenu>
+                        <DropdownMenuContent align="end" className="w-64">
+                          <DropdownMenuLabel className="flex items-center gap-2">
+                            <Eye className="h-4 w-4" />
+                            Gestion des colonnes
+                          </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                          {COLUMN_HEADERS.map((header) => (
+                            <DropdownMenuCheckboxItem
+                              key={header}
+                              className="flex items-center gap-2"
+                              checked={visibleColumns[header] || false}
+                              onCheckedChange={() => toggleColumnVisibility(header)}
+                              onSelect={(e) => e.preventDefault()}
+                            >
+                              {header}
+                            </DropdownMenuCheckboxItem>
+                          ))}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuCheckboxItem
+                            className="flex items-center gap-2 text-primary"
+                            checked={false}
+                            onCheckedChange={showAllAvailableColumns}
+                            onSelect={(e) => e.preventDefault()}
+                          >
+                            <Eye className="h-4 w-4" />
+                            Afficher toutes les colonnes disponibles
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
+                            className="flex items-center gap-2 text-orange-600 dark:text-orange-400"
+                            checked={false}
+                            onCheckedChange={hideOptionalColumns}
+                            onSelect={(e) => e.preventDefault()}
+                          >
+                            <EyeOff className="h-4 w-4" />
+                            Masquer les colonnes optionnelles
+                          </DropdownMenuCheckboxItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                      </div>
+
+                      {/* Boutons d'action - à droite */}
+                      <div className="flex items-center gap-1 mr-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            console.log('??? [IMPORT] Clic sur le bouton Importer');
+                            document.getElementById('fileImporter')?.click();
+                          }}
+                          className="h-9 px-2"
+                          title="Importer un fichier CSV/Excel"
+                        >
+                          <Upload className="h-4 w-4" />
+                        </Button>
+                        <input
+                          type="file"
+                          id="fileImporter"
+                          accept=".csv, .tsv, .xlsx, .xls"
+                          className="hidden"
+                          onClick={(e) => {
+                            (e.target as HTMLInputElement).value = '';
+                          }}
+                          onChange={(e) => {
+                            console.log('?? [IMPORT] vnement onChange de l\'input file dclench');
+                            if (e.target.files && e.target.files.length > 0) {
+                              console.log(`?? [IMPORT] Fichier slectionn: ${e.target.files[0].name}`);
+                              handleImportFile(e.target.files);
+                            } else {
+                              console.log('? [IMPORT] Aucun fichier dans e.target.files');
+                            }
+                          }}
+                        />
+
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={contacts.length === 0 && googleContactsCount === 0 && calendarRemindersCount === 0}
+                              className="h-9 px-2"
+                              title="Exporter les données"
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            className="w-56 border shadow-lg bg-popover text-popover-foreground z-50"
+                            align="start"
+                          >
+                            <DropdownMenuLabel className="flex items-center gap-2">
+                              <Download className="w-4 h-4" />
+                              Options d'export
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+
+                            {/* Options d'export avec cases à cocher */}
+                            <DropdownMenuCheckboxItem
+                              checked={exportOptions.table}
+                              onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, table: checked }))}
+                              onSelect={(e) => e.preventDefault()}
+                              disabled={contacts.length === 0}
+                              className="cursor-pointer"
+                            >
+                              <span className="mr-2">📊</span>
+                              <span>Table (CSV)</span>
+                              {contacts.length > 0 && (
+                                <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
+                              )}
+                            </DropdownMenuCheckboxItem>
+
+                            <DropdownMenuCheckboxItem
+                              checked={exportOptions.contacts}
+                              onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, contacts: checked }))}
+                              onSelect={(e) => e.preventDefault()}
+                              disabled={googleContactsCount === 0}
+                              className="cursor-pointer"
+                            >
+                              <Users className="mr-2 h-4 w-4" />
+                              <span>Contacts Google</span>
+                              {googleContactsCount > 0 && (
+                                <span className="ml-auto text-xs text-muted-foreground">({googleContactsCount})</span>
+                              )}
+                            </DropdownMenuCheckboxItem>
+
+                            <DropdownMenuCheckboxItem
+                              checked={exportOptions.agenda}
+                              onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, agenda: checked }))}
+                              onSelect={(e) => e.preventDefault()}
+                              disabled={calendarRemindersCount === 0}
+                              className="cursor-pointer"
+                            >
+                              <Calendar className="mr-2 h-4 w-4" />
+                              <span>Agenda Google</span>
+                              {calendarRemindersCount > 0 && (
+                                <span className="ml-auto text-xs text-muted-foreground">({calendarRemindersCount})</span>
+                              )}
+                            </DropdownMenuCheckboxItem>
+
+                            <DropdownMenuSeparator />
+
+                            {/* Bouton d'export final */}
+                            <DropdownMenuItem
+                              onClick={handleUnifiedExport}
+                              className="cursor-pointer bg-primary/10 hover:bg-primary/20"
+                              disabled={Object.values(exportOptions).every(option => !option)}
+                            >
+                              <Download className="mr-2 h-4 w-4" />
+                              <span className="font-medium">Exporter la sélection</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={contacts.length === 0}
+                          onClick={handleClearActiveTab}
+                          className="h-9 px-2"
+                          title="Supprimer les contacts de l'onglet actif"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
 
                       {/* Dropdown des onglets - à droite */}

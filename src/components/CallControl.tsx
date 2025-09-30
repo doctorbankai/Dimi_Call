@@ -3,7 +3,7 @@ import { Contact, ContactStatus } from '../types';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Phone, PhoneOff, Mail, MessageSquare } from 'lucide-react';
+import { Phone, PhoneOff, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { formatPhoneNumber } from '../services/dataService';
 import StatusSelect from './StatusSelect';
@@ -19,6 +19,10 @@ interface CallControlProps {
   onSmsMonsieur?: () => void;
   onSmsMadame?: () => void;
   onStatusChange?: (status: ContactStatus) => void;
+  onRappel?: () => void;
+  onRendezVous?: () => void;
+  onCalCom?: () => void;
+  onQualification?: () => void;
   adbConnected?: boolean;
 }
 
@@ -44,6 +48,10 @@ const CallControl: React.FC<CallControlProps> = ({
   onSmsMonsieur,
   onSmsMadame,
   onStatusChange,
+  onRappel,
+  onRendezVous,
+  onCalCom,
+  onQualification,
   adbConnected = true,
 }) => {
   const [now, setNow] = useState<number>(Date.now());
@@ -187,6 +195,53 @@ const CallControl: React.FC<CallControlProps> = ({
           </Tooltip>
         </TooltipProvider>
 
+        {/* SMS Dropdown (identique au ruban) */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label="SMS"
+                      title="SMS"
+                      disabled={!contact}
+                      className={cn(
+                        "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                        "border-2 hover:bg-accent hover:text-accent-foreground",
+                        "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                        "disabled:opacity-50 disabled:cursor-not-allowed"
+                      )}
+                    >
+                      <MessageSquare className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-40 border shadow-lg bg-popover text-popover-foreground z-50" align="end">
+                    <DropdownMenuLabel className="flex items-center gap-2">
+                      <MessageSquare className="w-4 h-4" />
+                      Envoyer SMS
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem onClick={() => onSmsMonsieur && onSmsMonsieur()} disabled={!contact} className="cursor-pointer">
+                        Monsieur {contact?.nom || ''}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onSmsMadame && onSmsMadame()} disabled={!contact} className="cursor-pointer">
+                        Madame {contact?.nom || ''}
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Envoyer un SMS</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
         {/* Email */}
         <TooltipProvider>
           <Tooltip>
@@ -214,41 +269,113 @@ const CallControl: React.FC<CallControlProps> = ({
           </Tooltip>
         </TooltipProvider>
 
-        {/* SMS Dropdown (identique au ruban) */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="SMS"
-              title="SMS"
-              disabled={!contact}
-              className={cn(
-                "size-10 rounded-full transition-all duration-200 hover:scale-105",
-                "border-2 hover:bg-accent hover:text-accent-foreground",
-                "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
-                "disabled:opacity-50 disabled:cursor-not-allowed"
-              )}
-            >
-              <MessageSquare className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-40 border shadow-lg bg-popover text-popover-foreground z-50" align="end">
-            <DropdownMenuLabel className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4" />
-              Envoyer SMS
-            </DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => onSmsMonsieur && onSmsMonsieur()} disabled={!contact} className="cursor-pointer">
-                Monsieur {contact?.nom || ''}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSmsMadame && onSmsMadame()} disabled={!contact} className="cursor-pointer">
-                Madame {contact?.nom || ''}
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* Qualification */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Qualification"
+                title="Qualifier le contact"
+                onClick={() => onQualification && onQualification()}
+                disabled={!contact}
+                className={cn(
+                  "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                  "border-2 hover:bg-accent hover:text-accent-foreground",
+                  "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                  "disabled:opacity-50 disabled:cursor-not-allowed"
+                )}
+              >
+                <FileCheck className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Qualifier le contact</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Rappel */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Rappel"
+                title="Programmer un rappel"
+                onClick={() => onRappel && onRappel()}
+                disabled={!contact}
+                className={cn(
+                  "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                  "border-2 hover:bg-accent hover:text-accent-foreground",
+                  "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                  "disabled:opacity-50 disabled:cursor-not-allowed"
+                )}
+              >
+                <Bell className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Programmer un rappel</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Rendez-vous */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Rendez-vous"
+                title="Programmer un rendez-vous"
+                onClick={() => onRendezVous && onRendezVous()}
+                disabled={!contact}
+                className={cn(
+                  "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                  "border-2 hover:bg-accent hover:text-accent-foreground",
+                  "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                  "disabled:opacity-50 disabled:cursor-not-allowed"
+                )}
+              >
+                <Calendar className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Programmer un rendez-vous</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        {/* Cal.com */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="icon"
+                aria-label="Cal.com"
+                title="Ouvrir Cal.com"
+                onClick={() => onCalCom && onCalCom()}
+                disabled={!contact}
+                className={cn(
+                  "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                  "border-2 hover:bg-accent hover:text-accent-foreground",
+                  "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                  "disabled:opacity-50 disabled:cursor-not-allowed"
+                )}
+              >
+                <CalendarSearch className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Ouvrir Cal.com</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
     </div>
   );
