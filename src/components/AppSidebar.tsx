@@ -11,7 +11,7 @@ import {
   SidebarGroupLabel,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Settings, User, Calendar, Crown, Phone, BarChart3, Database, PanelLeft, MailQuestion, HelpCircle } from 'lucide-react';
+import { Settings, User, Calendar, Crown, Phone, BarChart3, Database, PanelLeft, MailQuestion, HelpCircle, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserProfileDialog } from './UserProfileDialog';
 import { TicketForm } from './TicketForm';
@@ -31,8 +31,8 @@ interface AppSidebarProps {
   userEmail?: string;
   hasSpecialAccess?: boolean;
   onLogout?: () => void;
-  viewMode: 'table' | 'graph' | 'db' | 'calendar';
-  onChangeViewMode: (mode: 'table' | 'graph' | 'db' | 'calendar') => void;
+  viewMode: 'table' | 'graph' | 'db' | 'calendar' | 'annuaire';
+  onChangeViewMode: (mode: 'table' | 'graph' | 'db' | 'calendar' | 'annuaire') => void;
   onTicketClick?: () => void;
   onHelpClick?: () => void;
   theme?: Theme;
@@ -159,6 +159,16 @@ export function AppSidebar({
                 >
                   <Database className="w-4 h-4" />
                   <span>Données</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={viewMode === 'annuaire'}
+                  onClick={() => onChangeViewMode('annuaire')}
+                  className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>Annuaire</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

@@ -83,6 +83,7 @@ import { TabEditDialog } from './components/TabEditDialog';
 import LocalDBViewer from './components/LocalDBViewer';
 import PaginatedEventTable from './components/PaginatedEventTable';
 import { FullPageCalendar } from './components/FullPageCalendar';
+import { AnnuairePage } from './components/AnnuairePage';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -214,7 +215,7 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const [isClearDataDialogOpen, setIsClearDataDialogOpen] = useState(false);
 
   const [importProgress, setImportProgress] = useState<{ percentage: number; message: string } | null>(null);
-  const [viewMode, setViewMode] = useState<'table' | 'graph' | 'db' | 'calendar'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'graph' | 'db' | 'calendar' | 'annuaire'>('table');
   // Filtres globaux par vue pour uniformit
   const [graphRange, setGraphRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
   const [dbRange, setDbRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
@@ -3039,6 +3040,14 @@ Dimitri MOREL - Arcanis Conseil`;
                 <FullPageCalendar
                   selectedDate={calendarDate}
                   onDateChange={setCalendarDate}
+                />
+              </div>
+            </div>
+          ) : viewMode === 'annuaire' ? (
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
+              <div className="flex-1 w-full overflow-auto">
+                <AnnuairePage
+                  theme={theme === Theme.Dark ? 'dark' : 'light'}
                 />
               </div>
             </div>
