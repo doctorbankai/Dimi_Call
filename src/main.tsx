@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import ReactDOM from 'react-dom/client'
 import { AnimatePresence } from 'framer-motion'
 import App from './App'
-import ModernLoader from './components/ModernLoader'
+import { LoadingPage } from './components/LoadingPage'
 import { useSupabaseAuth } from './lib/auth-client'
 import './index.css'
 import { ModeProvider } from './context/ModeContext'
@@ -16,9 +16,9 @@ const hideInitialLoadingScreen = () => {
 }
 
 // Wrapper pour l'App avec gestion de l'écran de chargement moderne
-const AppWithModernLoader = () => {
+const AppWithLoadingPage = () => {
   const { isLoading } = useSupabaseAuth();
-  const [showModernLoader, setShowModernLoader] = useState(true);
+  const [showLoadingPage, setShowLoadingPage] = useState(true);
 
   useEffect(() => {
     // Masquer immédiatement l'écran de chargement HTML
@@ -27,21 +27,21 @@ const AppWithModernLoader = () => {
 
   useEffect(() => {
     if (!isLoading) {
-      // Attendre un peu avant de masquer le loader moderne pour une transition fluide
+      // Attendre un peu avant de masquer la page de chargement pour une transition fluide
       setTimeout(() => {
-        setShowModernLoader(false);
-      }, 800);
+        setShowLoadingPage(false);
+      }, 1000);
     }
   }, [isLoading]);
 
   return (
     <>
       <AnimatePresence mode="wait">
-        {showModernLoader && (
-          <ModernLoader key="modern-loader" />
+        {showLoadingPage && (
+          <LoadingPage key="loading-page" onComplete={() => setShowLoadingPage(false)} />
         )}
       </AnimatePresence>
-      {!showModernLoader && <App appKey={(window as any).appUpdateKey || 0} />}
+      {!showLoadingPage && <App appKey={(window as any).appUpdateKey || 0} />}
     </>
   );
 }
@@ -49,7 +49,7 @@ const AppWithModernLoader = () => {
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <ModeProvider>
-      <AppWithModernLoader />
+      <AppWithLoadingPage />
     </ModeProvider>
   </React.StrictMode>
 )
