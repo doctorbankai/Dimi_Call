@@ -207,18 +207,6 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
                             `${startItem}-${endItem} sur ${totalItems}`
                         )}
                     </div>
-                    {/* Graphique de progression */}
-                    <div className="flex-shrink-0">
-                        <div className="relative inline-flex items-center justify-center px-1 py-0.5">
-                            <svg width="24" height="24" className="transform -rotate-90">
-                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" fill="transparent" className="text-muted-foreground/20"></circle>
-                                <circle cx="12" cy="12" r="10" stroke="#3B82F6" strokeWidth="1.5" fill="transparent" strokeDasharray="62.83185307179586" strokeDashoffset="50.26548245743669" className="transition-all duration-300 ease-in-out" strokeLinecap="round"></circle>
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <span className="text-[8px] font-medium text-muted-foreground">20%</span>
-                            </div>
-                        </div>
-                    </div>
                 </div>
             )}
         </div>

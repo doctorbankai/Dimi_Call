@@ -31,8 +31,8 @@ interface AppSidebarProps {
   userEmail?: string;
   hasSpecialAccess?: boolean;
   onLogout?: () => void;
-  viewMode: 'table' | 'graph' | 'db';
-  onChangeViewMode: (mode: 'table' | 'graph' | 'db') => void;
+  viewMode: 'table' | 'graph' | 'db' | 'calendar';
+  onChangeViewMode: (mode: 'table' | 'graph' | 'db' | 'calendar') => void;
   onTicketClick?: () => void;
   onHelpClick?: () => void;
   theme?: Theme;
@@ -129,6 +129,16 @@ export function AppSidebar({
                 >
                   <Phone className="w-4 h-4" />
                   <span>Appels</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={viewMode === 'calendar'}
+                  onClick={() => onChangeViewMode('calendar')}
+                  className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>Calendrier</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

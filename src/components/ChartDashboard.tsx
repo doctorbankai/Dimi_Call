@@ -2,9 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Contact } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, RadialBar, RadialBarChart } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell } from 'recharts';
  
-import EventCalendar from '@/components/EventCalendar';
 
 type ChartDashboardProps = {
   contacts: Contact[];
@@ -159,18 +158,25 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
   const total = contacts.length || 1;
 
   return (
-    <div className="grid w-full grid-cols-1 xl:grid-cols-2 gap-4">
-      <Card className="flex flex-col">
+    <div className="w-full max-w-none" style={{ width: '100%', margin: 0, padding: 0 }}>
+      <Card className="flex flex-col w-full" style={{ width: '100%' }}>
         <CardHeader className="items-center pb-0">
           <CardTitle>Répartition des statuts</CardTitle>
           <CardDescription>Mise à jour sur la sélection actuelle</CardDescription>
         </CardHeader>
-        <CardContent className="flex-1 pb-0">
-          <ChartContainer config={radialConfig as any} className="mx-auto w-full max-w-[420px] aspect-square sm:max-w-[460px] lg:max-w-[520px]">
-            <RadialBarChart data={radialData.map((d) => ({ ...d, [d.label]: d.label }))} innerRadius={30} outerRadius={120}>
-              <ChartTooltip cursor={false} content={<ChartTooltipContent hideLabel nameKey="label" />} />
-              <RadialBar dataKey="value" background />
-            </RadialBarChart>
+        <CardContent className="flex-1 pb-0 w-full" style={{ width: '100%' }}>
+          <ChartContainer config={radialConfig as any} className="w-full h-[500px]" style={{ width: '100%' }}>
+            <BarChart data={radialData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="label" />
+              <YAxis />
+              <ChartTooltip content={<ChartTooltipContent hideLabel nameKey="label" />} />
+              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                {radialData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                ))}
+              </Bar>
+            </BarChart>
           </ChartContainer>
           {/* Légende personnalisée statuts */}
           <div className="flex flex-wrap items-center justify-center gap-4 pt-3 text-xs text-muted-foreground">
@@ -184,19 +190,9 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
           <div className="mt-3 text-xs text-muted-foreground text-center">{contacts.length} contacts</div>
         </CardContent>
       </Card>
-      {/* Carte supprimée selon demande */}
-      <Card className="flex flex-col">
-        <CardHeader>
-          <CardTitle>Agenda RDV & Rappels</CardTitle>
-          <CardDescription>Navigation mensuelle</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <EventCalendar contacts={contacts} />
-        </CardContent>
-      </Card>
 
       {/* KPIs alignés en une ligne sur grands écrans */}
-      <div className="grid w-full grid-cols-1 gap-4 xl:col-span-2 xl:grid-cols-4">
+      <div className="grid w-full grid-cols-1 gap-4 xl:grid-cols-4 mt-4">
         <Card>
           <CardHeader>
             <CardTitle>Durée moyenne d'appel</CardTitle>
@@ -246,7 +242,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
         </Card>
       </div>
 
-      <Card className="xl:col-span-2">
+      <Card className="w-full mt-4">
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <div>
@@ -256,9 +252,9 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
             <div className="flex items-center gap-2"></div>
           </div>
         </CardHeader>
-        <CardContent>
-          <ChartContainer config={callsConfig as any} className="w-full h-[280px] sm:h-[320px] md:h-[360px] xl:h-[420px]">
-            <BarChart data={eventsByDay}>
+        <CardContent className="w-full" style={{ width: '100%' }}>
+          <ChartContainer config={callsConfig as any} className="w-full h-[280px] sm:h-[320px] md:h-[360px] xl:h-[420px]" style={{ width: '100%' }}>
+            <BarChart data={eventsByDay} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} />
               <XAxis dataKey="label" tickLine={false} tickMargin={10} axisLine={false} minTickGap={24} allowDuplicatedCategory={false} />
               <YAxis width={40} />

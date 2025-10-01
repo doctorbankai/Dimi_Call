@@ -5,7 +5,8 @@ import { TablePagination } from '@/components/TablePagination'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Trash2, RefreshCw, Upload, Download, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { Trash2, RefreshCw, Upload, Download, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, FileSpreadsheet } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { Contact, ContactStatus } from '@/types'
@@ -331,14 +332,90 @@ export default function PaginatedEventTable() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
-        {/* Recherche locale */}
-        <div className="flex items-center gap-2 px-2 py-1.5">
-          <Input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Rechercher dans Données…"
-            className="h-8 text-xs max-w-sm"
-          />
+        {/* Recherche locale et contrôles */}
+        <div className="flex items-center justify-between gap-2 px-2 py-1.5">
+          <div className="flex items-center gap-2">
+            <Input
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Rechercher dans Données…"
+              className="h-8 text-xs max-w-sm"
+            />
+          </div>
+
+          <div className="flex items-center gap-2 text-xs">
+            <Button
+              variant="default"
+              size="sm"
+              className="h-8"
+              title="Transférer la sélection vers Appels"
+              disabled={false}
+              onClick={() => {
+                try { window.dispatchEvent(new CustomEvent('dimicall-db-transfer')) } catch {}
+                // Basculer automatiquement vers Appels; App écoutera l'événement pour créer un onglet
+              }}
+            >
+              Transfert
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              title="Supprimer la sélection"
+              disabled={false}
+              onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-delete'))}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8" title="Exporter">
+                  <Download className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-40">
+                <DropdownMenuLabel className="flex items-center gap-2"><Download className="w-4 h-4" />Export</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-export'))}>
+                    <span className="mr-2 text-green-600">CSV</span>
+                    <span className="text-xs text-muted-foreground">Fichier texte</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-export-xlsx'))}>
+                    <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
+                    <span>Excel</span>
+                    <span className="ml-auto text-xs text-muted-foreground">.xlsx</span>
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8" title="Importer">
+                  <Upload className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-44">
+                <DropdownMenuLabel>Importer depuis</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-import'))}>CSV</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-import-xlsx'))}>Excel (.xlsx)</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              title="Rafraîchir"
+              onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-refresh'))}
+            >
+              <RefreshCw className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <Table className="relative w-full table-auto min-w-[560px] md:min-w-0">

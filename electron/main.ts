@@ -771,6 +771,18 @@ app.whenReady().then(async () => {
   })
 
   // Export CSV (écrit un fichier .csv à l'emplacement choisi par l'utilisateur)
+  // Fonction utilitaire pour générer un nom de fichier avec timestamp
+  const generateDynamicFilename = (extension: string) => {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    const hours = String(now.getHours()).padStart(2, '0')
+    const minutes = String(now.getMinutes()).padStart(2, '0')
+    const seconds = String(now.getSeconds()).padStart(2, '0')
+    return `DimiTable_${year}-${month}-${day}-${hours}-${minutes}-${seconds}.${extension}`
+  }
+
   ipcMain.handle('localdb:export-csv', async () => {
     try {
       await ensureLocalDbInitialized()
@@ -779,8 +791,8 @@ app.whenReady().then(async () => {
         : localDbJsonStatic.getAllStatusEvents()
 
       const { canceled, filePath } = await dialog.showSaveDialog({
-        title: 'Exporter events.csv',
-        defaultPath: path.join(app.getPath('downloads'), 'events.csv'),
+        title: 'Exporter DimiTable.csv',
+        defaultPath: path.join(app.getPath('downloads'), generateDynamicFilename('csv')),
         filters: [{ name: 'CSV', extensions: ['csv'] }]
       })
       if (canceled || !filePath) return { success: false, error: 'Annulé' }
@@ -909,8 +921,8 @@ app.whenReady().then(async () => {
         : localDbJsonStatic.getAllStatusEvents()
 
       const { canceled, filePath } = await dialog.showSaveDialog({
-        title: 'Exporter events.xlsx',
-        defaultPath: path.join(app.getPath('downloads'), 'events.xlsx'),
+        title: 'Exporter DimiTable.xlsx',
+        defaultPath: path.join(app.getPath('downloads'), generateDynamicFilename('xlsx')),
         filters: [{ name: 'Excel', extensions: ['xlsx'] }]
       })
       if (canceled || !filePath) return { success: false, error: 'Annulé' }

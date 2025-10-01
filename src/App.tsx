@@ -82,6 +82,7 @@ import { ChartDashboard } from './components/ChartDashboard';
 import { TabEditDialog } from './components/TabEditDialog';
 import LocalDBViewer from './components/LocalDBViewer';
 import PaginatedEventTable from './components/PaginatedEventTable';
+import { FullPageCalendar } from './components/FullPageCalendar';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -213,10 +214,11 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const [isClearDataDialogOpen, setIsClearDataDialogOpen] = useState(false);
 
   const [importProgress, setImportProgress] = useState<{ percentage: number; message: string } | null>(null);
-  const [viewMode, setViewMode] = useState<'table' | 'graph' | 'db'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'graph' | 'db' | 'calendar'>('table');
   // Filtres globaux par vue pour uniformit
   const [graphRange, setGraphRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
   const [dbRange, setDbRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
+  const [calendarDate, setCalendarDate] = useState<Date | undefined>(new Date())
   const [filterPopoverOpen, setFilterPopoverOpen] = useState(false)
   const [filterQuick, setFilterQuick] = useState<'all' | 'today' | 'thisWeek' | 'thisMonth' | 'custom'>('all')
   const [dbSelectedCount, setDbSelectedCount] = useState<number>(0)
@@ -1198,6 +1200,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
   const [exportOptions, setExportOptions] = useState({
     table: true,
+    tableExcel: true,
     contacts: false,
     agenda: false,
   });
@@ -1220,6 +1223,11 @@ Dimitri MOREL - Arcanis Conseil`;
 
   // Handler unifié pour l'export avec options multiples
   const handleUnifiedExport = useCallback(() => {
+    if (contacts.length === 0) {
+      showNotification('info', 'Aucun contact à exporter');
+      return;
+    }
+
     const options = Object.entries(exportOptions).filter(([_, enabled]) => enabled);
 
     if (options.length === 0) {
@@ -1236,6 +1244,45 @@ Dimitri MOREL - Arcanis Conseil`;
         exportCount++;
       } catch (error) {
         console.error('Erreur lors de l\'export table:', error);
+      }
+    }
+
+    // Exporter la table en Excel si sélectionnée
+    if (exportOptions.tableExcel) {
+      console.log('🔄 Début de l\'export Excel...');
+      try {
+        exportContactsToFile(contacts, 'xlsx');
+        exportCount++;
+        console.log('✅ Export Excel réussi, affichage de la notification');
+
+        // Notification personnalisée pour l'export Excel réussi - avec délai pour laisser le temps à l'utilisateur de choisir l'emplacement
+        setTimeout(() => {
+          toast.success('Export Excel réussi', {
+            action: {
+              label: "Ouvrir l'emplacement",
+              onClick: () => {
+                try {
+                  // Ouvrir le dossier de téléchargements
+                  if ((window as any).electronAPI?.shell?.showItemInFolder) {
+                    const os = require('os');
+                    const downloadsPath = os.homedir() + '/Downloads';
+                    (window as any).electronAPI.shell.showItemInFolder(downloadsPath);
+                  } else {
+                    // Fallback pour les navigateurs
+                    window.open('file:///' + require('os').homedir() + '/Downloads', '_blank');
+                  }
+                } catch (error) {
+                  console.error('Erreur lors de l\'ouverture du dossier:', error);
+                  // Fallback simple
+                  window.open('file:///' + require('os').homedir() + '/Downloads', '_blank');
+                }
+              }
+            }
+          });
+        }, 3000); // Délai de 3 secondes pour laisser le temps à l'utilisateur de choisir l'emplacement
+      } catch (error) {
+        console.error('❌ Erreur lors de l\'export table Excel:', error);
+        toast.error('Erreur lors de l\'export Excel');
       }
     }
 
@@ -2421,7 +2468,7 @@ Dimitri MOREL - Arcanis Conseil`;
           )}
 
           {/* Bandeau filtres uniformis pour Graph/BDD (remplace recherche/colonnes/progress) */}
-          {viewMode !== 'table' && (
+          {(viewMode === 'graph' || viewMode === 'db') && (
             <div className="flex-1 w-full bg-card rounded-lg p-3 shadow-sm border">
               <div className="flex flex-wrap items-center justify-center gap-2 w-full">
                 <div className="inline-flex items-center gap-2">
@@ -2501,84 +2548,6 @@ Dimitri MOREL - Arcanis Conseil`;
             </div>
           )}
 
-              {viewMode === 'db' && (
-            <div className="bg-card rounded-lg p-3 shadow-sm border">
-              <div className="flex items-center gap-2 text-xs">
-                <Button
-                  variant="default"
-                  size="sm"
-                  className="h-8"
-                  title="Transfrer la slection vers Appels"
-                  disabled={dbSelectedCount === 0}
-                  onClick={() => {
-                    try { window.dispatchEvent(new CustomEvent('dimicall-db-transfer')) } catch {}
-                    // Basculer automatiquement vers Appels; App coutera l'vnement pour crer un onglet
-                    setViewMode('table')
-                  }}
-                >
-                  Transfrer → Appels
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8"
-                  title="Supprimer la slection"
-                  disabled={dbSelectedCount === 0}
-                  onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-delete'))}
-                >
-                  <Trash2 className="h-4 w-4 mr-1.5" /> Supprimer
-                </Button>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8" title="Exporter">
-                      <Download className="h-4 w-4 mr-1.5" /> Exporter <ChevronDown className="ml-1 h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-40">
-                    <DropdownMenuLabel className="flex items-center gap-2"><Download className="w-4 h-4" />Format d'export</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                      <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-export'))}>
-                        <span className="mr-2 text-green-600">CSV</span>
-                        <span className="text-xs text-muted-foreground">Fichier texte</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-export-xlsx'))}>
-                        <FileSpreadsheet className="mr-2 h-4 w-4 text-green-600" />
-                        <span>Excel</span>
-                        <span className="ml-auto text-xs text-muted-foreground">.xlsx</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8" title="Importer">
-                      <Upload className="h-4 w-4 mr-1.5" /> Importer <ChevronDown className="ml-1 h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-44">
-                    <DropdownMenuLabel>Importer depuis</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-import'))}>CSV</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-import-xlsx'))}>Excel (.xlsx)</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8"
-                  title="Rafrachir"
-                  onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-refresh'))}
-                >
-                  <RefreshCw className="h-4 w-4 mr-1.5" /> Rafrachir
-                </Button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Content area */}
@@ -2836,8 +2805,22 @@ Dimitri MOREL - Arcanis Conseil`;
                               disabled={contacts.length === 0}
                               className="cursor-pointer"
                             >
-                              <span className="mr-2">📊</span>
+                              <BarChart3 className="mr-2 h-4 w-4" />
                               <span>Table (CSV)</span>
+                              {contacts.length > 0 && (
+                                <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
+                              )}
+                            </DropdownMenuCheckboxItem>
+
+                            <DropdownMenuCheckboxItem
+                              checked={exportOptions.tableExcel}
+                              onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, tableExcel: checked }))}
+                              onSelect={(e) => e.preventDefault()}
+                              disabled={contacts.length === 0}
+                              className="cursor-pointer"
+                            >
+                              <FileSpreadsheet className="mr-2 h-4 w-4" />
+                              <span>Table (Excel)</span>
                               {contacts.length > 0 && (
                                 <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
                               )}
@@ -3045,9 +3028,18 @@ Dimitri MOREL - Arcanis Conseil`;
               </div>
             </div>
           ) : viewMode === 'graph' ? (
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
-              <div className="flex-1 w-full bg-card rounded-lg border shadow-sm overflow-auto p-4 min-w-0">
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0 w-full">
+              <div className="flex-1 w-full bg-card rounded-lg border shadow-sm overflow-auto p-2 min-w-0">
                 <ChartDashboard contacts={filteredContacts} />
+              </div>
+            </div>
+          ) : viewMode === 'calendar' ? (
+            <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
+              <div className="flex-1 w-full overflow-auto p-3 md:p-4">
+                <FullPageCalendar
+                  selectedDate={calendarDate}
+                  onDateChange={setCalendarDate}
+                />
               </div>
             </div>
           ) : (
