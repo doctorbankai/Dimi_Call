@@ -546,7 +546,12 @@ export const importContactsFromFile = async (
   const rawPhonesToRemove = options?.phonesToRemove || []
   const normalizedPhones = rawPhonesToRemove.map(normalizePhoneNumber).filter(Boolean) as string[]
   const phonesToExclude = new Set(normalizedPhones)
-  console.log('[importContactsFromFile] 🔍 Exclusion de numéros normalisés', { bruts: rawPhonesToRemove, normalisés: normalizedPhones })
+  console.log('[importContactsFromFile] 🔍 Exclusion de numéros normalisés', { 
+    bruts: JSON.stringify(rawPhonesToRemove), 
+    brutsLength: rawPhonesToRemove.length,
+    normalisés: JSON.stringify(normalizedPhones),
+    normalisésLength: normalizedPhones.length
+  })
 
   if (fileExtension === 'csv' || fileExtension === 'tsv') {
     // Détecter automatiquement le délimiteur

@@ -223,9 +223,11 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
           .map((row) => extractPhoneCandidates(row?.[idx]).map(normalizePhoneNumber).filter(Boolean))
           .flat()
       })
+      console.log('[ImportMappingDialog] 💾 Mise à jour de removedPhones:', JSON.stringify(phoneWarnings.normalized))
       setPreview(filtered)
       setRemovedPhones(phoneWarnings.normalized)
-      onPreviewUpdate?.(filtered)
+      // NE PAS appeler onPreviewUpdate ici car cela déclenche un re-render qui réinitialise removedPhones
+      // onPreviewUpdate?.(filtered)
       onRemovedPhonesChange?.(phoneWarnings.normalized)
     } else {
       const isolated = (previewRows || []).filter((row, rowIdx) => {
@@ -240,7 +242,8 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
       console.log('[ImportMappingDialog] 🔍 Isolation des lignes détectées', { lignesIsolées: isolated.length })
       setPreview(isolated)
       setRemovedPhones([])
-      onPreviewUpdate?.(isolated)
+      // NE PAS appeler onPreviewUpdate ici car cela déclenche un re-render qui réinitialise l'état
+      // onPreviewUpdate?.(isolated)
       onRemovedPhonesChange?.([])
     }
   }
@@ -252,7 +255,8 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
     setPreview(restored)
     setRemovedPhones([])
     setStatusMessage('')
-    onPreviewUpdate?.(restored)
+    // NE PAS appeler onPreviewUpdate ici car cela déclenche un re-render qui réinitialise l'état
+    // onPreviewUpdate?.(restored)
     onRemovedPhonesChange?.([])
   }
 
@@ -299,15 +303,15 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1400px] w-full max-h-[90vh] overflow-hidden flex flex-col p-4 sm:p-6">
-          <DialogHeader>
+        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1400px] w-full max-h-[95vh] overflow-hidden flex flex-col p-3 sm:p-4 lg:p-6">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Importer et mapper les colonnes</DialogTitle>
             <DialogDescription>
               {fileName ? `Fichier: ${fileName}` : 'Sélectionnez la correspondance entre vos colonnes et les champs attendus.'}
             </DialogDescription>
           </DialogHeader>
 
-        <div className="grid grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 overflow-y-auto flex-1 min-h-0">
           <div className="bg-muted/40 rounded-md border p-3 text-sm">
             <div className="font-medium mb-1">Règles d’import</div>
             <div className="text-muted-foreground">
@@ -457,7 +461,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                     </div>
                   </div>
                 </div>
-                <ScrollArea className="h-[350px] sm:h-[450px] max-h-[50vh] sm:max-h-[60vh]">
+                <ScrollArea className="h-[250px] sm:h-[300px] max-h-[30vh]">
                   <div className="divide-y">
                     {headers.map((h, idx) => {
                       const isUnmapped = !mapping[h]
@@ -568,7 +572,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
             </TabsContent>
           </Tabs>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 flex-shrink-0 pt-3 sm:pt-4 border-t mt-3 sm:mt-4">
             <div className="text-[10px] sm:text-xs text-muted-foreground">
               {filterMode === 'remove' && removedPhones.length > 0
                 ? `${removedPhones.length} numéro(s) seront ignorés lors de l’import.`
@@ -583,11 +587,22 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
             <div className="flex gap-2 w-full sm:w-auto">
               <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none text-xs sm:text-sm h-8 sm:h-9">Annuler</Button>
               <Button disabled={!isValid} onClick={() => {
-                const normalizedPhones = Array.from(supabaseMatchesSet)
-                const options = filterMode === 'remove'
-                  ? { phonesToRemove: normalizedPhones }
+                console.log('[ImportMappingDialog] 📊 État avant validation:', {
+                  filterMode,
+                  removedPhonesLength: removedPhones.length,
+                  removedPhones: JSON.stringify(removedPhones),
+                  phoneWarningsNormalized: JSON.stringify(phoneWarnings.normalized)
+                })
+                
+                const options = filterMode === 'remove' && removedPhones.length > 0
+                  ? { phonesToRemove: removedPhones }
                   : {}
-                console.log('[ImportMappingDialog] 🚀 Validation import', { filterMode, removedPhones: normalizedPhones, options })
+                
+                console.log('[ImportMappingDialog] 🚀 Validation import', { 
+                  filterMode, 
+                  removedPhonesCount: removedPhones.length,
+                  optionsPhonesToRemove: options.phonesToRemove ? JSON.stringify(options.phonesToRemove) : 'undefined'
+                })
                 onConfirm(mapping, options)
               }} className="flex-1 sm:flex-none text-xs sm:text-sm h-8 sm:h-9">Importer</Button>
             </div>
