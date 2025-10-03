@@ -544,7 +544,9 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
     file?: File | null;
     headers: string[];
     preview: string[][];
-  }>({ open: false, file: null, headers: [], preview: [] });
+    originalPreview: string[][];
+    phonesRemoved: string[];
+  }>({ open: false, file: null, headers: [], preview: [], originalPreview: [], phonesRemoved: [] });
 
   // État pour le dialog de rappel
   const [reminderDialog, setReminderDialog] = useState<{
@@ -1078,10 +1080,10 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
       const ws = wb.Sheets[wb.SheetNames[0]];
       const aoa = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
       headers = (aoa[0] as string[]).map((h) => (h ? String(h) : ''));
-      preview = (aoa.slice(1, 6) as string[][]) || [];
+      preview = (aoa.slice(1) as string[][]) || [];
     }
 
-    setMappingDialog({ open: true, file, headers, preview });
+    setMappingDialog({ open: true, file, headers, preview, originalPreview: preview, phonesRemoved: [] });
   };
 
   const expectedTargets = useMemo(() => {
@@ -1499,16 +1501,17 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
         previewRows={mappingDialog.preview}
         expectedTargets={expectedTargets}
         requiredTargets={requiredTargets}
-        onConfirm={async (mapping) => {
+        onPreviewUpdate={(updatedRows) => setMappingDialog((s) => ({ ...s, preview: updatedRows }))}
+        onRemovedPhonesChange={(phones) => setMappingDialog((s) => ({ ...s, phonesRemoved: phones }))}
+        onConfirm={async (mapping, options) => {
           try {
             if (!mappingDialog.file) {
               console.log('❌ [MAPPING] Aucun fichier dans le dialogue');
               return;
             }
             console.log('🔄 [MAPPING] Début de l\'importation avec mapping:', mapping);
-            // Import en utilisant le mapping défini par l'utilisateur
-            const imported = await importContactsFromFile(mappingDialog.file, mapping);
-            console.log(`📥 [MAPPING] ${imported.length} contacts importés`);
+            const imported = await importContactsFromFile(mappingDialog.file, mapping, options);
+            console.log(`📥 [MAPPING] ${imported.length} contacts importés (après exclusion éventuelle)`);
             // Signal global pour injection dans l'onglet actif
             try {
               const ext = mappingDialog.file.name.split('.').pop()?.toLowerCase();
@@ -1526,7 +1529,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
               console.error('❌ [MAPPING] Erreur lors du déclenchement de l\'événement:', error);
             }
             // Fermer le dialog
-            setMappingDialog({ open: false, file: null, headers: [], preview: [] });
+            setMappingDialog({ open: false, file: null, headers: [], preview: [], originalPreview: [], phonesRemoved: [] });
             console.log('🔒 [MAPPING] Dialogue fermé');
           } catch (e) {
             console.error('❌ [MAPPING] Erreur lors de l\'importation:', e);

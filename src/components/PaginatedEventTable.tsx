@@ -10,6 +10,7 @@ import { Trash2, RefreshCw, Upload, Download, Calendar as CalendarIcon, ArrowUpD
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { Contact, ContactStatus } from '@/types'
+import { SupabaseShareDialog } from '@/components/SupabaseShareDialog'
 
 type StatusEvent = {
   id: number
@@ -42,6 +43,7 @@ export default function PaginatedEventTable() {
   const [searchTerm, setSearchTerm] = useState<string>('')
   const [sortKey, setSortKey] = useState<keyof StatusEvent | 'id'>('id')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [shareDialogOpen, setShareDialogOpen] = useState(false)
 
   const loadAll = async () => {
     setIsLoading(true)
@@ -344,6 +346,15 @@ export default function PaginatedEventTable() {
           </div>
 
           <div className="flex items-center gap-2 text-xs">
+            <SupabaseShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={() => setShareDialogOpen(true)}
+            >
+              Supabase
+            </Button>
             <Button
               variant="default"
               size="sm"

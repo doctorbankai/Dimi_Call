@@ -102,6 +102,10 @@ const DonutChart: React.FC<{ progress: number; size?: number }> = ({ progress, s
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
   
+  if (auth.isLoading) {
+    return null;
+  }
+
   return (
     <div className="relative inline-flex items-center justify-center">
       <svg width={size} height={size} className="transform -rotate-90">
@@ -2295,13 +2299,6 @@ Dimitri MOREL - Arcanis Conseil`;
   }, [selectedContact, showNotification]);
 
   // Debug log pour l'tat du modal - Supabase supprim
-
-  // JSX Return
-  // Si l'authentification est en cours de chargement, ne rien afficher
-  // L'cran de chargement sera gr par main.tsx
-  if (auth.isLoading) {
-    return null;
-  }
 
   return (
     <SidebarProvider>

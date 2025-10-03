@@ -2,8 +2,11 @@ import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabas
 import { Contact, ContactStatus } from '../types';
 
 // Configuration Supabase - À configurer via variables d'environnement ou interface utilisateur
-const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
+const DEFAULT_SUPABASE_URL = 'https://oqnagwoqlhqtnhfiakom.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9xbmFnd29xbGhxdG5oZmlha29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk0MTY5MzAsImV4cCI6MjA2NDk5MjkzMH0.8IjJYZRT9B8PRsP40S7-wvY2achfwoZ6NEaZSFNHRgY';
+
+const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+const SUPABASE_ANON_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
 
 
 
@@ -38,23 +41,18 @@ class SupabaseService {
   private idColumnName: string = 'id'; // Nom de la colonne d'identité détectée
 
   constructor() {
-    this.checkConfiguration();
+    this.bootstrapConfiguration();
   }
 
-  private checkConfiguration() {
-    // Essayer de charger depuis localStorage d'abord (comme supabase_config.json)
-    const savedConfig = this.loadConfigFromStorage();
-    if (savedConfig.url && savedConfig.key) {
-      this.configure(savedConfig.url, savedConfig.key);
+  private bootstrapConfiguration() {
+    const stored = this.loadConfigFromStorage();
+    if (stored.url && stored.key) {
+      this.configure(stored.url, stored.key);
       return;
     }
-    
-    // Fallback vers variables d'environnement
-    const url = SUPABASE_URL;
-    const anonKey = SUPABASE_ANON_KEY;
 
-    if (url && anonKey) {
-      this.configure(url, anonKey);
+    if (SUPABASE_URL && SUPABASE_ANON_KEY) {
+      this.configure(SUPABASE_URL, SUPABASE_ANON_KEY);
     }
   }
 
@@ -109,19 +107,36 @@ class SupabaseService {
   }
 
   configure(url: string, anonKey: string) {
+    if (!url || !anonKey) {
+      console.warn('⚠️ Configuration Supabase incomplète')
+      this.isConfigured = false
+      this.client = undefined as any
+      this.currentUrl = ''
+      this.currentKey = ''
+      return
+    }
+
     try {
-      this.client = createClient(url, anonKey);
-      this.isConfigured = true;
-      this.currentUrl = url;
-      this.currentKey = anonKey;
+      this.client = createClient(url, anonKey)
+      this.isConfigured = true
+      this.currentUrl = url
+      this.currentKey = anonKey
     } catch (error) {
-      console.error('❌ Erreur configuration client:', error);
-      this.isConfigured = false;
+      console.error('❌ Erreur configuration client:', error)
+      this.isConfigured = false
+      this.client = undefined as any
     }
   }
 
   isReady(): boolean {
-    return this.isConfigured && !!this.client;
+    return this.isConfigured && !!this.client
+  }
+
+  ensureConfigured(): boolean {
+    if (this.isReady()) return true
+
+    this.bootstrapConfiguration()
+    return this.isReady()
   }
 
   getConnectionInfo(): { url: string; configured: boolean } {
@@ -134,55 +149,97 @@ class SupabaseService {
   async testConnection(): Promise<{ success: boolean; error?: string; details?: any }> {
     console.log('📡 Test de connexion Supabase...');
     
-    if (!this.isReady()) {
+    if (!this.ensureConfigured()) {
       const error = 'Client Supabase non configuré';
       console.log('❌', error);
       return { success: false, error };
     }
 
     try {
-      // Test simple : récupérer 1 enregistrement pour découvrir la structure
-      console.log('🔄 Test avec table DimiTable...');
-      const { data, error, count } = await this.client
-        .from('DimiTable')
-        .select('*', { count: 'exact' })
-        .limit(1);
+      const tablesToProbe: Array<{ name: string; fallbackColumns?: string[] }> = [
+        { name: 'DimiTable', fallbackColumns: ['id', 'contact_id', 'new_status', 'applied_at'] },
+        { name: 'shared_phone_numbers', fallbackColumns: ['id', 'phone_number', 'normalized_phone', 'metadata'] },
+        { name: 'shared_blacklist_numbers', fallbackColumns: ['id', 'phone_number', 'normalized_phone', 'reason', 'metadata'] },
+      ];
 
-      if (error) {
-        console.log('❌ Erreur Supabase:', error);
-        return { 
-          success: false, 
-          error: `Erreur de chargement`, 
-          details: {
-            code: error.code,
-            message: error.message,
-            details: error.details,
-            hint: error.hint
+      let lastError: any = null;
+      let permissionDenied = false;
+
+      for (const table of tablesToProbe) {
+        console.log(`🔄 Test avec table ${table.name}...`);
+        const { data, error, count } = await this.client
+          .from(table.name)
+          .select('*', { count: 'exact' })
+          .limit(1);
+
+        if (error) {
+          lastError = error;
+          if (error.code === '42501' || error.code === 'PGRST301') {
+            // Permission denied (RLS). Continuer avec une table alternative.
+            permissionDenied = true;
+            console.warn(`⚠️ Accès restreint à ${table.name} (RLS). Tentative avec une autre table...`, error);
+            continue;
           }
+          console.log('❌ Erreur Supabase:', error);
+          break;
+        }
+
+        // Découvrir les colonnes disponibles
+        if (data && data.length > 0) {
+          this.discoveredColumns = Object.keys(data[0]);
+        } else if (table.fallbackColumns) {
+          this.discoveredColumns = table.fallbackColumns;
+        } else {
+          this.discoveredColumns = [];
+        }
+        console.log('✅ Colonnes découvertes:', this.discoveredColumns);
+
+        console.log('✅ Connexion Supabase réussie');
+        console.log('📊 Statistiques:', {
+          tableTested: table.name,
+          totalCount: count,
+          sampleData: data?.length || 0,
+          columns: this.discoveredColumns.length,
+        });
+
+        this.connectionTested = true;
+        return {
+          success: true,
+          details: {
+            tableTested: table.name,
+            totalCount: count,
+            sampleData: data?.length || 0,
+            columns: this.discoveredColumns,
+            limitedAccess: permissionDenied,
+          },
         };
       }
 
-      // Découvrir les colonnes disponibles
-      if (data && data.length > 0) {
-        this.discoveredColumns = Object.keys(data[0]);
-        console.log('✅ Colonnes découvertes:', this.discoveredColumns);
+      if (permissionDenied && !lastError) {
+        // Nous avons uniquement rencontré des refus d'accès mais aucune erreur critique
+        this.connectionTested = true;
+        return {
+          success: true,
+          details: {
+            tableTested: null,
+            limitedAccess: true,
+          },
+        };
       }
 
-      console.log('✅ Connexion Supabase réussie');
-      console.log('📊 Statistiques:', { 
-        totalCount: count, 
-        sampleData: data?.length || 0,
-        columns: this.discoveredColumns.length
-      });
+      const errorDetails = lastError
+        ? {
+            code: lastError.code,
+            message: lastError.message,
+            details: lastError.details,
+            hint: lastError.hint,
+          }
+        : undefined;
 
-      this.connectionTested = true;
-      return { 
-        success: true, 
-        details: { 
-          totalCount: count, 
-          sampleData: data?.length || 0,
-          columns: this.discoveredColumns
-        }
+      return {
+        success: false,
+        error: lastError?.message || 'Erreur de chargement',
+        details: errorDetails,
       };
 
     } catch (error: any) {
@@ -268,7 +325,7 @@ class SupabaseService {
   }> {
     console.log('🔄 Récupération contacts:', { page, pageSize, tableName });
 
-    if (!this.isReady()) {
+    if (!this.isConfigured) {
       throw new Error('Service Supabase non configuré');
     }
 

@@ -526,7 +526,8 @@ const detectDelimiter = async (file: File): Promise<string> => {
 // Import contacts from file (CSV or Excel)
 export const importContactsFromFile = async (
   file: File,
-  headerMapping?: Record<string, string>
+  headerMapping?: Record<string, string>,
+  options?: { phonesToRemove?: string[] }
 ): Promise<Contact[]> => {
   // 🔍 Vérification préliminaire de la taille du fichier
   const fileSizeInMB = file.size / (1024 * 1024);
@@ -542,6 +543,11 @@ export const importContactsFromFile = async (
   
   const fileExtension = file.name.split('.').pop()?.toLowerCase();
   
+  const rawPhonesToRemove = options?.phonesToRemove || []
+  const normalizedPhones = rawPhonesToRemove.map(normalizePhoneNumber).filter(Boolean) as string[]
+  const phonesToExclude = new Set(normalizedPhones)
+  console.log('[importContactsFromFile] 🔍 Exclusion de numéros normalisés', { bruts: rawPhonesToRemove, normalisés: normalizedPhones })
+
   if (fileExtension === 'csv' || fileExtension === 'tsv') {
     // Détecter automatiquement le délimiteur
     const delimiter = await detectDelimiter(file);
@@ -614,6 +620,15 @@ export const importContactsFromFile = async (
 
                 // Format phone number after mapping
                 if (contactData.telephone) {
+                  const normalizedPhone = normalizePhoneNumber(contactData.telephone)
+                  if (normalizedPhone && phonesToExclude.has(normalizedPhone)) {
+                    console.log('[importContactsFromFile] 🚫 Ligne supprimée (CSV/TSV)', {
+                      numeroOriginal: contactData.telephone,
+                      numeroNormalise: normalizedPhone,
+                      ligne: rowIndex
+                    })
+                    return null
+                  }
                   contactData.telephone = formatPhoneNumber(contactData.telephone);
                 }
 
@@ -646,7 +661,7 @@ export const importContactsFromFile = async (
               }
             });
             
-            contacts.push(...chunkContacts);
+            contacts.push(...chunkContacts.filter(Boolean) as Contact[]);
             
             // Donner une pause à l'UI entre les chunks
             if (contacts.length % 500 === 0) {
@@ -750,6 +765,8 @@ export const importContactsFromFile = async (
                   numeroLigne: i + j,
                 };
 
+                let shouldSkip = false;
+
                 // Mapper chaque colonne en utilisant l'en-tête original pour récupérer la valeur
                 // et l'en-tête normalisé pour l'assigner au bon champ
                 originalHeaders.forEach((originalHeader, index) => {
@@ -780,8 +797,20 @@ export const importContactsFromFile = async (
 
                 // Format phone number after mapping
                 if (contactData.telephone) {
-                  contactData.telephone = formatPhoneNumber(String(contactData.telephone));
+                  const normalizedPhone = normalizePhoneNumber(String(contactData.telephone));
+                  if (normalizedPhone && phonesToExclude.has(normalizedPhone)) {
+                    console.log('[importContactsFromFile] 🚫 Ligne supprimée (Excel)', {
+                      numeroOriginal: contactData.telephone,
+                      numeroNormalise: normalizedPhone,
+                      ligne: i + j
+                    });
+                    shouldSkip = true;
+                  } else {
+                    contactData.telephone = formatPhoneNumber(String(contactData.telephone));
+                  }
                 }
+
+                if (shouldSkip) continue;
 
                 // Set default status if not provided
                 if (!contactData.statut) {
@@ -1644,3 +1673,28 @@ export const exportGoogleCalendarCSV = (contacts: Contact[]): void => {
   // Nettoyer l'URL pour libérer la mémoire
   URL.revokeObjectURL(url);
 };
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+  const result: T[][] = []
+  for (let i = 0; i < arr.length; i += size) {
+    result.push(arr.slice(i, i + size))
+  }
+  return result
+}
+
+export const normalizePhoneNumber = (phone: string): string | null => {
+  if (!phone) return null
+  let cleaned = phone.replace(/[^0-9+]/g, '')
+  if (!cleaned) return null
+  if (cleaned.startsWith('00')) {
+    cleaned = `+${cleaned.slice(2)}`
+  }
+  if (!cleaned.startsWith('+')) {
+    if (cleaned.startsWith('0') && cleaned.length === 10) {
+      cleaned = `+33${cleaned.slice(1)}`
+    } else {
+      cleaned = `+${cleaned}`
+    }
+  }
+  return cleaned
+}
