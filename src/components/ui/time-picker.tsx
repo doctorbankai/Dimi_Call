@@ -15,6 +15,7 @@ interface TimePickerProps {
   id?: string;
   'aria-label'?: string;
   'aria-describedby'?: string;
+  container?: HTMLElement | null;
 }
 
 export const TimePicker: React.FC<TimePickerProps> = ({
@@ -26,6 +27,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   id,
   'aria-label': ariaLabel,
   'aria-describedby': ariaDescribedBy,
+  container,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -39,20 +41,16 @@ export const TimePicker: React.FC<TimePickerProps> = ({
     (i * 5).toString().padStart(2, '0')
   );
 
-  const handleTimeSelect = (hour: string, minute: string) => {
-    const timeString = `${hour}:${minute}`;
-    onChange(timeString);
-    setIsOpen(false);
-  };
-
   const handleHourSelect = (hour: string) => {
     const currentMinute = value ? value.split(':')[1] : '00';
-    handleTimeSelect(hour, currentMinute);
+    const timeString = `${hour}:${currentMinute}`;
+    onChange(timeString);
   };
 
   const handleMinuteSelect = (minute: string) => {
     const currentHour = value ? value.split(':')[0] : '00';
-    handleTimeSelect(currentHour, minute);
+    const timeString = `${currentHour}:${minute}`;
+    onChange(timeString);
   };
 
   const currentHour = value ? value.split(':')[0] : '';
@@ -77,7 +75,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
             {value || placeholder}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-4" align="start">
+        <PopoverContent className="w-auto p-4 z-[250]" align="start" container={container}>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="text-sm font-medium mb-2">Heures</div>

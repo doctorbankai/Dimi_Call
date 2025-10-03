@@ -1570,16 +1570,17 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent showCloseButton={false} className="max-w-7xl h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="p-4 border-b flex-row items-center justify-between">
-          <DialogTitle className="flex items-center gap-2">
-            <Settings className="w-5 h-5" />
-            Réglages de l'application
+      <DialogContent showCloseButton={false} className="max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1400px] xl:max-w-7xl w-full h-[95vh] sm:h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="p-3 sm:p-4 border-b flex-row items-center justify-between gap-2">
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="hidden sm:inline">Réglages de l'application</span>
+            <span className="sm:hidden">Réglages</span>
           </DialogTitle>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             {/* Toggle mode Client / Mandataire */}
-            <div className="flex items-center gap-2">
-              <Badge variant={callMode === CallMode.Client ? 'default' : 'secondary'} className="text-xs">Client</Badge>
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Badge variant={callMode === CallMode.Client ? 'default' : 'secondary'} className="text-[10px] sm:text-xs px-1.5 sm:px-2">Client</Badge>
               <Switch
                 checked={callMode === CallMode.Mandataire}
                 onCheckedChange={(checked) => {
@@ -1587,27 +1588,28 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                   setCallMode(newMode);
                   try { localStorage.setItem(MODE_STORAGE_KEY, newMode); } catch {}
                 }}
+                className="scale-75 sm:scale-100"
               />
-              <Badge variant={callMode === CallMode.Mandataire ? 'default' : 'secondary'} className="text-xs">Mandataire</Badge>
+              <Badge variant={callMode === CallMode.Mandataire ? 'default' : 'secondary'} className="text-[10px] sm:text-xs px-1.5 sm:px-2 hidden xs:inline-flex">Mandataire</Badge>
             </div>
             <button onClick={onClose} className="p-1 rounded-full hover:bg-muted">
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
           </div>
         </DialogHeader>
 
         <div className="flex flex-1 overflow-hidden min-h-0">
           {/* Sidebar de navigation */}
-          <div className="w-64 border-r bg-muted/30 p-4 flex-shrink-0 h-full overflow-y-auto">
-            <div className="pb-4">
+          <div className="w-48 sm:w-56 md:w-64 border-r bg-muted/30 p-2 sm:p-3 md:p-4 flex-shrink-0 h-full overflow-y-auto">
+            <div className="pb-3 sm:pb-4 hidden sm:block">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-md bg-foreground/10 flex items-center justify-center">
-                  <Settings className="w-4 h-4" />
+                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-md bg-foreground/10 flex items-center justify-center">
+                  <Settings className="w-3 h-3 sm:w-4 sm:h-4" />
                 </div>
-                <span className="font-semibold">Réglages</span>
+                <span className="font-semibold text-sm sm:text-base">Réglages</span>
               </div>
             </div>
-            <nav className="space-y-1">
+            <nav className="space-y-0.5 sm:space-y-1">
               {getCategories(devToolsEnabled, isUpdateEnabled).map((category) => (
                 <button
                   key={category.id}
@@ -1619,11 +1621,11 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                       : "hover:bg-accent hover:text-accent-foreground"
                   )}
                 >
-                  <div className="flex items-center gap-3 p-3">
-                    <category.icon className={cn("w-4 h-4", activeCategory !== category.id && "text-muted-foreground")} aria-hidden="true" />
-                    <div>
-                      <div className="text-sm font-medium">{category.label}</div>
-                      <div className={cn("text-xs", activeCategory === category.id ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                  <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3">
+                    <category.icon className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0", activeCategory !== category.id && "text-muted-foreground")} aria-hidden="true" />
+                    <div className="min-w-0">
+                      <div className="text-xs sm:text-sm font-medium truncate">{category.label}</div>
+                      <div className={cn("text-[10px] sm:text-xs truncate hidden sm:block", activeCategory === category.id ? "text-primary-foreground/80" : "text-muted-foreground")}>
                         {category.description}
                       </div>
                     </div>
@@ -1634,16 +1636,16 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           </div>
 
           {/* Contenu principal */}
-          <div className="flex-1 p-6 overflow-y-auto">
+          <div className="flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto">
             {renderCategory()}
           </div>
         </div>
         
         {/* Pied de page avec boutons */}
-        <div className="p-4 border-t flex justify-end gap-3 bg-muted/30">
-          <Button variant="ghost" onClick={handleReset}>Réinitialiser les changements</Button>
-          <Button onClick={handleSave} disabled={!hasChanges}>
-            <Save className="w-4 h-4 mr-2" />
+        <div className="p-3 sm:p-4 border-t flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 bg-muted/30">
+          <Button variant="ghost" onClick={handleReset} className="text-xs sm:text-sm h-8 sm:h-9">Réinitialiser</Button>
+          <Button onClick={handleSave} disabled={!hasChanges} className="text-xs sm:text-sm h-8 sm:h-9">
+            <Save className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
             Sauvegarder
           </Button>
         </div>

@@ -98,7 +98,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
-      <DialogContent className="max-w-5xl">
+      <DialogContent className="max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1400px] w-full max-h-[90vh] overflow-hidden flex flex-col p-4 sm:p-6">
         <DialogHeader>
           <DialogTitle>Importer et mapper les colonnes</DialogTitle>
           <DialogDescription>
@@ -122,48 +122,55 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
 
             <TabsContent value="mapping" className="mt-2">
               <div className="rounded-lg border">
-                <div className="grid grid-cols-12 gap-2 p-2 bg-muted/50 text-xs font-medium">
-                  <div className="col-span-5">Colonne détectée</div>
-                  <div className="col-span-7 flex items-center justify-between">
-                    <span>Associer à</span>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={unmappedCount === 0 ? 'default' : 'secondary'} className="h-5 px-2 text-[10px]">
+                <div className="bg-muted/50 rounded-t-lg">
+                  {/* Ligne 1 : Titres des colonnes */}
+                  <div className="grid grid-cols-12 gap-2 sm:gap-4 p-2 sm:p-3 border-b">
+                    <div className="col-span-5 font-medium text-xs sm:text-sm">Colonne détectée</div>
+                    <div className="col-span-7 font-medium text-xs sm:text-sm">Associer à</div>
+                  </div>
+                  
+                  {/* Ligne 2 : Badges et actions */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 p-2 sm:p-3">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                      <Badge variant={unmappedCount === 0 ? 'default' : 'secondary'} className="h-5 px-2 text-xs">
                         {headers.length - unmappedCount}/{headers.length} mappées
                       </Badge>
                       {conflictCount > 0 && (
-                        <div className="flex items-center gap-1 text-red-600 dark:text-red-400 text-[11px]">
+                        <div className="flex items-center gap-1 text-red-600 dark:text-red-400 text-xs">
                           <AlertCircle className="h-3.5 w-3.5" />
                           <span>{conflictCount} conflit(s)</span>
                         </div>
                       )}
                       {ignoredCount > 0 && (
-                        <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 text-[11px]">
+                        <div className="flex items-center gap-1 text-blue-600 dark:text-blue-400 text-xs">
                           <CheckCircle2 className="h-3.5 w-3.5" />
                           <span>{ignoredCount} ignorée(s)</span>
                         </div>
                       )}
                       {unmappedCount > 0 && (
-                        <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 text-[11px]">
+                        <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 text-xs">
                           <AlertCircle className="h-3.5 w-3.5" />
                           <span>{unmappedCount} non reconnue(s)</span>
                         </div>
                       )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="h-7 px-2 text-[11px]"
+                        className="h-7 px-1.5 sm:px-2 text-[10px] sm:text-xs"
                         onClick={() => setMapping((prev) => ({ ...prev, ...suggestions }))}
                         title="Tenter l'auto-détection"
                       >
-                        <Sparkles className="h-3.5 w-3.5 mr-1" /> Auto-détection
+                        <Sparkles className="h-3 w-3 sm:h-3.5 sm:w-3.5 sm:mr-1" /> <span className="hidden sm:inline">Auto-détection</span>
                       </Button>
                       {conflictCount > 0 && (
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="h-7 px-2 text-[11px] text-red-600 hover:text-red-700"
+                          className="h-7 px-1.5 sm:px-2 text-[10px] sm:text-xs text-red-600 hover:text-red-700"
                           onClick={() => {
                             const newMapping = { ...mapping }
                             Object.entries(conflictingMappings).forEach(([target, headers]) => {
@@ -176,13 +183,13 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                           }}
                           title="Résoudre automatiquement les conflits"
                         >
-                          <AlertCircle className="h-3.5 w-3.5 mr-1" /> Résoudre conflits
+                          <AlertCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5 sm:mr-1" /> <span className="hidden sm:inline">Résoudre conflits</span>
                         </Button>
                       )}
                     </div>
                   </div>
                 </div>
-                <ScrollArea className="h-[320px]">
+                <ScrollArea className="h-[350px] sm:h-[450px] max-h-[50vh] sm:max-h-[60vh]">
                   <div className="divide-y">
                     {headers.map((h, idx) => {
                       const isUnmapped = !mapping[h]
@@ -192,13 +199,13 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                         <div
                           key={idx}
                           className={cn(
-                            "grid grid-cols-12 gap-2 p-2 items-center",
-                            isConflicting && "bg-red-50 dark:bg-red-900/10 border-l-4 border-red-500",
+                            "grid grid-cols-12 gap-2 sm:gap-4 p-2 sm:p-3 items-center",
+                            isConflicting && "bg-red-50 dark:bg-red-900/10 border-l-2 sm:border-l-4 border-red-500",
                             isUnmapped && "bg-amber-50 dark:bg-amber-900/10",
                             isIgnored && "bg-blue-50 dark:bg-blue-900/10"
                           )}
                         >
-                          <div className="col-span-5 truncate flex items-center gap-1" title={h}>
+                          <div className="col-span-5 truncate flex items-center gap-1 sm:gap-2 text-xs sm:text-sm" title={h}>
                             {isConflicting ? (
                               <AlertCircle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
                             ) : isIgnored ? (
@@ -208,9 +215,9 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                             ) : (
                               <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                             )}
-                            <span>{h || '(vide)'}</span>
+                            <span className="truncate">{h || '(vide)'}</span>
                             {isConflicting && (
-                              <span className="text-xs text-red-600 dark:text-red-400 ml-1">
+                              <span className="text-[10px] sm:text-xs text-red-600 dark:text-red-400 ml-0.5 sm:ml-1 shrink-0">
                                 (conflit)
                               </span>
                             )}
@@ -224,7 +231,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                               return next
                             })}
                           >
-                            <SelectTrigger className="h-8 text-xs">
+                            <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm w-full max-w-full sm:max-w-md">
                               <SelectValue placeholder="Choisir un champ" />
                             </SelectTrigger>
                             <SelectContent>
@@ -237,7 +244,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                                     value={opt.value}
                                     disabled={isAlreadyAssigned}
                                     className={cn(
-                                      'text-xs',
+                                      'text-sm',
                                       requiredSet.has(opt.value) && 'font-semibold',
                                       isAlreadyAssigned && 'opacity-50 cursor-not-allowed'
                                     )}
@@ -268,7 +275,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{h || '(vide)'}</span>
                             {mapping[h] && (
-                              <span className="inline-flex items-center text-[10px] px-1 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
+                              <span className="inline-flex items-center text-xs px-1 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">
                                 {mapping[h]}
                               </span>
                             )}
@@ -293,15 +300,15 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
             </TabsContent>
           </Tabs>
 
-          <div className="flex items-center justify-between">
-            <div className="text-xs text-muted-foreground">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
+            <div className="text-[10px] sm:text-xs text-muted-foreground">
               {isValid ? 'Prêt à importer' : conflictCount > 0 ? 
                 `Résolvez les ${conflictCount} conflit(s) de mapping en choisissant "(Ignorer)" pour les colonnes en doublon.` : 
                 'Renseignez au minimum Prénom, Nom et Téléphone.'}
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={onClose}>Annuler</Button>
-              <Button disabled={!isValid} onClick={() => onConfirm(mapping)}>Importer</Button>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none text-xs sm:text-sm h-8 sm:h-9">Annuler</Button>
+              <Button disabled={!isValid} onClick={() => onConfirm(mapping)} className="flex-1 sm:flex-none text-xs sm:text-sm h-8 sm:h-9">Importer</Button>
             </div>
           </div>
         </div>

@@ -4,6 +4,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Import des styles de la barre d'actions responsive */
+@import "./styles/contact-action-bar.css";
+
 /* Variables CSS personnalisées pour le design ultra moderne */
 :root {
   /* Couleurs principales ultra modernes - AMÉLIORÉES POUR LE MODE CLAIR */

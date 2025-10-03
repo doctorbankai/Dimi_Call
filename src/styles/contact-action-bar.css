@@ -1,0 +1,262 @@
+/* ============================================
+   Contact Action Bar - Styles Responsive
+   ============================================ */
+
+/* Conteneur principal de la barre d'actions */
+.action-bar-container {
+  @apply flex items-center bg-card rounded-lg shadow-sm border;
+  @apply w-full mx-auto;
+  @apply p-2 gap-1.5;
+  
+  /* Optimisations de performance */
+  contain: layout style paint;
+  
+  /* Responsive breakpoints */
+  @screen sm {
+    @apply p-2.5 gap-2;
+  }
+  
+  @screen md {
+    @apply p-3 gap-3;
+  }
+}
+
+/* Zone scrollable horizontale */
+.action-bar-scroll {
+  @apply flex items-center gap-1.5;
+  @apply overflow-x-auto overflow-y-hidden;
+  @apply scroll-smooth;
+  
+  /* Optimisations GPU */
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  will-change: scroll-position;
+  
+  /* Responsive gaps */
+  @screen sm {
+    @apply gap-2;
+  }
+  
+  @screen md {
+    @apply gap-3;
+  }
+}
+
+/* Section informations du contact */
+.contact-info-section {
+  @apply flex items-center gap-1.5 flex-shrink-0;
+  
+  @screen sm {
+    @apply gap-2;
+  }
+  
+  @screen md {
+    @apply gap-3;
+  }
+}
+
+/* Avatar du contact - responsive */
+.contact-avatar {
+  @apply size-8 flex-shrink-0 rounded-full;
+  @apply overflow-hidden;
+  
+  @screen sm {
+    @apply size-9;
+  }
+  
+  @screen md {
+    @apply size-10;
+  }
+}
+
+/* Fallback avatar avec initiales */
+.contact-avatar-fallback {
+  @apply bg-muted flex size-full items-center justify-center;
+  @apply text-xs font-medium;
+  
+  @screen sm {
+    @apply text-sm;
+  }
+}
+
+/* Conteneur des informations textuelles */
+.contact-text-info {
+  @apply flex flex-col min-w-0;
+}
+
+/* Nom du contact - responsive avec troncature */
+.contact-name {
+  @apply text-xs font-medium whitespace-nowrap truncate;
+  @apply max-w-[100px];
+  
+  @screen xs {
+    @apply max-w-[120px];
+  }
+  
+  @screen sm {
+    @apply text-sm max-w-[150px];
+  }
+  
+  @screen md {
+    @apply max-w-[200px];
+  }
+  
+  @screen lg {
+    @apply max-w-none;
+  }
+}
+
+/* Téléphone du contact - masqué sur très petits écrans */
+.contact-phone {
+  @apply text-[10px] text-muted-foreground whitespace-nowrap truncate;
+  @apply hidden;
+  
+  @screen xs {
+    @apply block;
+  }
+  
+  @screen sm {
+    @apply text-xs;
+  }
+}
+
+/* Séparateurs visuels - masqués sur très petits écrans */
+.action-bar-separator {
+  @apply text-muted-foreground/50 text-sm;
+  @apply hidden;
+  
+  @screen xs {
+    @apply block;
+  }
+}
+
+/* Section du sélecteur de statut */
+.status-selector-section {
+  @apply flex items-center gap-1.5 flex-shrink-0;
+  
+  @screen sm {
+    @apply gap-2;
+  }
+}
+
+/* Label du statut - masqué sur petits écrans */
+.status-label {
+  @apply text-xs text-muted-foreground whitespace-nowrap;
+  @apply hidden;
+  
+  @screen sm {
+    @apply block;
+  }
+}
+
+/* Sélecteur de statut - responsive */
+.status-selector {
+  @apply w-[100px];
+  @apply text-[10px];
+  
+  @screen sm {
+    @apply w-[120px] text-xs;
+  }
+  
+  @screen md {
+    @apply w-[140px];
+  }
+}
+
+/* Section des boutons d'action */
+.action-buttons-section {
+  @apply flex items-center gap-1.5 flex-shrink-0;
+  
+  @screen sm {
+    @apply gap-2;
+  }
+  
+  @screen md {
+    @apply gap-3;
+  }
+}
+
+/* Boutons d'action - responsive */
+.action-button {
+  @apply size-8 rounded-full;
+  @apply transition-all duration-200;
+  @apply flex-shrink-0;
+  @apply inline-flex items-center justify-center;
+  
+  /* Effet hover */
+  @apply hover:scale-105;
+  
+  @screen sm {
+    @apply size-9;
+  }
+  
+  @screen md {
+    @apply size-10;
+  }
+}
+
+/* Bouton d'appel principal (vert) */
+.action-button-call {
+  @apply bg-green-500 hover:bg-green-600 text-white shadow-lg;
+  @apply focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2;
+}
+
+/* Boutons secondaires */
+.action-button-secondary {
+  @apply bg-background shadow-xs border-2;
+  @apply hover:bg-accent hover:text-accent-foreground;
+  @apply focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2;
+  @apply dark:bg-input/30 dark:border-input dark:hover:bg-input/50;
+}
+
+/* Icônes dans les boutons - responsive */
+.action-button-icon {
+  @apply h-3.5 w-3.5;
+  
+  @screen sm {
+    @apply h-4 w-4;
+  }
+}
+
+/* Support du prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .action-bar-scroll,
+  .action-button {
+    @apply transition-none;
+    scroll-behavior: auto;
+  }
+  
+  .action-bar-scroll {
+    will-change: auto;
+  }
+}
+
+/* Scrollbar personnalisée pour WebKit */
+.action-bar-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.action-bar-scroll::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+.action-bar-scroll::-webkit-scrollbar-thumb {
+  @apply bg-muted rounded-full;
+}
+
+.action-bar-scroll::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/50;
+}
+
+/* Breakpoint personnalisé pour xs (très petits écrans) */
+@media (min-width: 480px) {
+  .xs\:block {
+    display: block;
+  }
+  
+  .xs\:max-w-\[120px\] {
+    max-width: 120px;
+  }
+}

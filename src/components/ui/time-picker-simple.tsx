@@ -13,6 +13,7 @@ interface TimePickerSimpleProps {
   id?: string;
   'aria-label'?: string;
   'aria-describedby'?: string;
+  container?: HTMLElement | null;
 }
 
 export const TimePickerSimple: React.FC<TimePickerSimpleProps> = ({
@@ -24,6 +25,7 @@ export const TimePickerSimple: React.FC<TimePickerSimpleProps> = ({
   id,
   'aria-label': ariaLabel,
   'aria-describedby': ariaDescribedBy,
+  container,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -70,7 +72,7 @@ export const TimePickerSimple: React.FC<TimePickerSimpleProps> = ({
           {value || placeholder}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-4" align="start">
+      <PopoverContent className="w-auto p-4 z-[250]" align="start" container={container}>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <div className="text-sm font-medium mb-2">Heures</div>

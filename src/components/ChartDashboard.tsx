@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Contact } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell, Pie, PieChart, Label } from 'recharts';
  
 
 type ChartDashboardProps = {
@@ -74,11 +74,59 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
 
   const radialConfig = useMemo(() => {
     const base: any = { value: { label: 'Contacts' } };
-    radialData.forEach((d, i) => {
+    radialData.forEach((d) => {
       base[d.label] = { label: d.label, color: d.fill };
     });
     return base;
   }, [radialData]);
+
+  // Données d'entonnoir de conversion
+  const funnelData = useMemo(() => {
+    // Définition des règles d'agrégation
+    const statusMapping = {
+      'Contacté': ['Mauvais num', 'Répondeur', 'À rappeler', 'Pas intéressé', 'Argumenté', 'D0', 'R0'],
+      'Décroché': ['À rappeler', 'Pas intéressé', 'Argumenté', 'D0', 'R0'],
+      'Argumenté': ['Argumenté', 'D0', 'R0'],
+      'Pris': ['D0', 'R0']
+    };
+
+    // Initialisation des compteurs
+    const counts = {
+      'Contacté': 0,
+      'Décroché': 0,
+      'Argumenté': 0,
+      'Pris': 0
+    };
+
+    // Parcours des événements locaux
+    localEvents.forEach((event) => {
+      const status = String(event.new_status || event.newStatus || '');
+      
+      // Comptage pour chaque catégorie applicable
+      Object.entries(statusMapping).forEach(([category, statuses]) => {
+        if (statuses.includes(status)) {
+          counts[category as keyof typeof counts]++;
+        }
+      });
+    });
+
+    // Transformation en format pour Recharts
+    return [
+      { category: 'Contacté', value: counts['Contacté'], fill: 'var(--chart-1)' },
+      { category: 'Décroché', value: counts['Décroché'], fill: 'var(--chart-2)' },
+      { category: 'Argumenté', value: counts['Argumenté'], fill: 'var(--chart-3)' },
+      { category: 'Pris', value: counts['Pris'], fill: 'var(--chart-4)' }
+    ];
+  }, [localEvents]);
+
+  // Configuration du graphique d'entonnoir
+  const funnelConfig = {
+    value: { label: 'Événements' },
+    'Contacté': { label: 'Contacté', color: 'var(--chart-1)' },
+    'Décroché': { label: 'Décroché', color: 'var(--chart-2)' },
+    'Argumenté': { label: 'Argumenté', color: 'var(--chart-3)' },
+    'Pris': { label: 'Pris', color: 'var(--chart-4)' }
+  } as const;
 
   // KPIs globaux basés sur la base locale (événements)
   const totalRDV = useMemo(() => localEvents.filter((e) => !!e.dateRDV).length, [localEvents]);
@@ -190,6 +238,82 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
           <div className="mt-3 text-xs text-muted-foreground text-center">{contacts.length} contacts</div>
         </CardContent>
       </Card>
+
+      {/* Graphique d'entonnoir de conversion */}
+      {localEvents.length === 0 ? (
+        <Card className="w-full mt-4">
+          <CardHeader className="items-center pb-0">
+            <CardTitle>Entonnoir de conversion</CardTitle>
+            <CardDescription>Progression des contacts par étape</CardDescription>
+          </CardHeader>
+          <CardContent className="flex items-center justify-center py-12">
+            <p className="text-muted-foreground">Aucune donnée disponible</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="w-full mt-4">
+          <CardHeader className="items-center pb-0">
+            <CardTitle>Entonnoir de conversion</CardTitle>
+            <CardDescription>Progression des contacts par étape</CardDescription>
+          </CardHeader>
+          <CardContent className="flex-1 pb-0">
+            <ChartContainer config={funnelConfig as any} className="mx-auto aspect-square max-h-[400px]">
+              <PieChart>
+                <ChartTooltip 
+                  cursor={false}
+                  content={<ChartTooltipContent hideLabel />} 
+                />
+                <Pie
+                  data={funnelData}
+                  dataKey="value"
+                  nameKey="category"
+                  innerRadius={60}
+                  strokeWidth={5}
+                >
+                  <Label
+                    content={({ viewBox }) => {
+                      if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                        const total = funnelData.reduce((acc, d) => acc + d.value, 0);
+                        return (
+                          <text
+                            x={viewBox.cx}
+                            y={viewBox.cy}
+                            textAnchor="middle"
+                            dominantBaseline="middle"
+                          >
+                            <tspan
+                              x={viewBox.cx}
+                              y={viewBox.cy}
+                              className="fill-foreground text-3xl font-bold"
+                            >
+                              {total.toLocaleString()}
+                            </tspan>
+                            <tspan
+                              x={viewBox.cx}
+                              y={(viewBox.cy || 0) + 24}
+                              className="fill-muted-foreground"
+                            >
+                              Événements
+                            </tspan>
+                          </text>
+                        );
+                      }
+                    }}
+                  />
+                </Pie>
+              </PieChart>
+            </ChartContainer>
+            <div className="flex flex-wrap items-center justify-center gap-4 pt-3 text-xs text-muted-foreground">
+              {funnelData.map((d) => (
+                <div key={d.category} className="flex items-center gap-1.5">
+                  <div className="h-2 w-2 shrink-0 rounded-[2px]" style={{ backgroundColor: d.fill }} />
+                  <span>{d.category}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* KPIs alignés en une ligne sur grands écrans */}
       <div className="grid w-full grid-cols-1 gap-4 xl:grid-cols-4 mt-4">

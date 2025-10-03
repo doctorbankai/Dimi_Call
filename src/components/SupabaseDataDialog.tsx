@@ -771,8 +771,17 @@ export const SupabaseDataDialog: React.FC<SupabaseDataDialogProps> = ({ isOpen, 
                       placeholder="Rechercher..."
                       value={globalFilter}
                       onChange={(e) => setGlobalFilter(e.target.value)}
-                      className="pl-10 w-full"
+                      className="pl-10 pr-9 w-full"
                     />
+                    {globalFilter && (
+                      <button
+                        onClick={() => setGlobalFilter('')}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                        aria-label="Effacer la recherche"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 

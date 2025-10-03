@@ -2326,9 +2326,10 @@ Dimitri MOREL - Arcanis Conseil`;
           theme={theme}
         />
         <div
-          className="flex-1 min-w-0 relative transition-all duration-200 ease-linear"
+          className="min-w-0 transition-all duration-200 ease-linear"
           style={{
-            marginLeft: "var(--sidebar-width-icon)",
+            position: "fixed",
+            inset: "2rem 0 0 var(--sidebar-width-icon)",
             "--sidebar-width": "16rem",
             "--sidebar-width-icon": "3rem"
           } as React.CSSProperties}
@@ -2589,7 +2590,7 @@ Dimitri MOREL - Arcanis Conseil`;
                             placeholder="Rechercher..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="text-sm h-9 pl-9 border-border/50 focus:border-primary"
+                            className="text-sm h-9 pl-9 pr-9 border-border/50 focus:border-primary"
                           />
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -2613,6 +2614,15 @@ Dimitri MOREL - Arcanis Conseil`;
                               </DropdownMenuRadioGroup>
                             </DropdownMenuContent>
                           </DropdownMenu>
+                          {searchTerm && (
+                            <button
+                              onClick={() => setSearchTerm('')}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                              aria-label="Effacer la recherche"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
 
                         {/* Bouton Colonnes simplifié */}
@@ -3030,7 +3040,7 @@ Dimitri MOREL - Arcanis Conseil`;
             </div>
           ) : viewMode === 'graph' ? (
             <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0 w-full">
-              <div className="flex-1 w-full bg-card rounded-lg border shadow-sm overflow-auto p-2 min-w-0">
+              <div className="flex-1 w-full bg-card rounded-lg border shadow-sm overflow-auto p-3 sm:p-4 md:p-6 min-w-0">
                 <ChartDashboard contacts={filteredContacts} />
               </div>
             </div>

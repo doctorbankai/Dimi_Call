@@ -250,6 +250,7 @@ interface RendezVousDialogProps {
 const RendezVousDialog: React.FC<RendezVousDialogProps> = ({ isOpen, onClose, contact, onSave }) => {
   const [date, setDate] = useState(contact?.dateRDV || '');
   const [time, setTime] = useState(contact?.heureRDV || '');
+  const modalContentRef = React.useRef<HTMLDivElement>(null);
 
   const handleSave = () => {
     onSave(date, time);
@@ -257,13 +258,18 @@ const RendezVousDialog: React.FC<RendezVousDialogProps> = ({ isOpen, onClose, co
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Programmer un Rendez-vous" size="sm">
-      <div className="space-y-4">
+      <div className="space-y-4" ref={modalContentRef}>
         <p className="text-sm text-muted-foreground">
           Contact: <strong>{contact?.prenom} {contact?.nom}</strong>
         </p>
         <div className="grid grid-cols-2 gap-4">
           <Input value={date} onChange={(e) => setDate(e.target.value)} placeholder="YYYY-MM-DD" type="date" />
-          <TimePickerSimple value={time} onChange={setTime} placeholder="HH:mm" />
+          <TimePickerSimple 
+            value={time} 
+            onChange={setTime} 
+            placeholder="HH:mm"
+            container={modalContentRef.current}
+          />
         </div>
         <div className="flex justify-end space-x-3 pt-4">
           <Button variant="ghost" onClick={onClose}>Annuler</Button>

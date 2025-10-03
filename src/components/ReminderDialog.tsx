@@ -33,6 +33,8 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
   initialTime = '',
   onSave
 }) => {
+  const dialogContentRef = React.useRef<HTMLDivElement>(null);
+  
   const [state, setState] = useState<ReminderDialogState>({
     selectedDate: initialDate,
     selectedTime: initialTime,
@@ -166,6 +168,7 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent 
+        ref={dialogContentRef}
         className="sm:max-w-md max-h-[85vh] overflow-y-auto w-[95vw] sm:w-full"
         aria-describedby="reminder-description"
       >
@@ -238,6 +241,7 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
                     )}
                     aria-label="Heure du rappel (optionnelle)"
                     aria-describedby={errors.time ? "time-error" : "time-help"}
+                    container={dialogContentRef.current}
                   />
                   <span className="absolute -top-2 right-2 text-xs text-muted-foreground bg-background px-1">
                     optionnelle

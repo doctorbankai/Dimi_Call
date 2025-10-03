@@ -98,50 +98,50 @@ const CallControl: React.FC<CallControlProps> = ({
   const canHangUp = isCalling;
 
   return (
-    <div className="flex items-center bg-card rounded-lg p-3 shadow-sm border min-w-[280px] w-fit mx-auto">
-      <div className="flex items-center gap-3 min-w-0">
-        <Avatar className="h-8 w-8 flex-shrink-0">
-          <AvatarFallback>{initials}</AvatarFallback>
-        </Avatar>
-        <div className="flex flex-col min-w-0">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-sm font-medium truncate max-w-[160px] md:max-w-[200px]" title={displayName}>{displayName}</span>
+    <div className="w-full overflow-x-auto">
+      <div className="flex items-center bg-card rounded-lg p-3 shadow-sm border min-w-[280px] w-max mx-auto gap-3">
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <Avatar className="h-8 w-8 flex-shrink-0">
+            <AvatarFallback>{initials}</AvatarFallback>
+          </Avatar>
+          <div className="flex flex-col">
+            <span className="text-sm font-medium whitespace-nowrap" title={displayName}>{displayName}</span>
+            <span className="text-xs text-muted-foreground whitespace-nowrap" title={phone}>{phone}</span>
           </div>
-          <span className="text-xs text-muted-foreground truncate max-w-[180px] md:max-w-[220px]" title={phone}>{phone}</span>
         </div>
-      </div>
-      <div className="ml-auto flex items-center gap-3 pl-2 md:pl-3 flex-shrink-0">
+        
+        <div className="flex items-center gap-3 flex-shrink-0">
         {/* Séparateur après les infos contact */}
         <div className="text-muted-foreground/50 text-sm">|</div>
 
-        {/* Email affiché dans les infos contact */}
-        {email && (
-          <>
-            <span className="text-xs text-muted-foreground truncate max-w-[180px] md:max-w-[220px]" title={email}>{email}</span>
-            <div className="text-muted-foreground/50 text-sm">|</div>
-          </>
-        )}
+          {/* Email affiché dans les infos contact */}
+          {email && (
+            <>
+              <span className="text-xs text-muted-foreground whitespace-nowrap" title={email}>{email}</span>
+              <div className="text-muted-foreground/50 text-sm">|</div>
+            </>
+          )}
 
-        {/* Sélecteur de statut */}
-        {contact && (
-          <>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Statut:</span>
-              <StatusSelect
-                value={contact.statut}
-                onChange={(newStatus) => onStatusChange?.(newStatus)}
-                triggerClassName="w-[140px]"
-                contentClassName="text-xs"
-                size="sm"
-              />
-            </div>
-            <div className="text-muted-foreground/50 text-sm">|</div>
-          </>
-        )}
+          {/* Sélecteur de statut */}
+          {contact && (
+            <>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <span className="text-xs text-muted-foreground whitespace-nowrap">Statut:</span>
+                <StatusSelect
+                  value={contact.statut}
+                  onChange={(newStatus) => onStatusChange?.(newStatus)}
+                  triggerClassName="w-[140px]"
+                  contentClassName="text-xs"
+                  size="sm"
+                />
+              </div>
+              <div className="text-muted-foreground/50 text-sm">|</div>
+            </>
+          )}
 
-        {isCalling && (
-          <span className="text-xs text-muted-foreground select-none" aria-live="polite">{duration}</span>
-        )}
+          {isCalling && (
+            <span className="text-xs text-muted-foreground select-none whitespace-nowrap" aria-live="polite">{duration}</span>
+          )}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -376,6 +376,7 @@ const CallControl: React.FC<CallControlProps> = ({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+        </div>
       </div>
     </div>
   );
