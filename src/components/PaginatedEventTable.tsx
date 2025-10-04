@@ -10,29 +10,11 @@ import { Trash2, RefreshCw, Upload, Download, Calendar as CalendarIcon, ArrowUpD
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { Contact, ContactStatus } from '@/types'
+import type { StatusEventRecord } from '@/types/statusEvent'
+import { localDbService } from '@/services/localDbService'
 import { SupabaseShareDialog } from '@/components/SupabaseShareDialog'
 
-type StatusEvent = {
-  id: number
-  contact_id: string
-  old_status?: string | null
-  new_status: string
-  applied_at: string
-  prenom?: string | null
-  nom?: string | null
-  telephone?: string | null
-  email?: string | null
-  commentaire?: string | null
-  dateRappel?: string | null
-  heureRappel?: string | null
-  dateRDV?: string | null
-  heureRDV?: string | null
-  dateAppel?: string | null
-  heureAppel?: string | null
-  dureeAppel?: string | null
-  dateEntree?: string | null
-  heureEntree?: string | null
-}
+type StatusEvent = StatusEventRecord
 
 export default function PaginatedEventTable() {
   const [events, setEvents] = useState<StatusEvent[]>([])
@@ -48,12 +30,8 @@ export default function PaginatedEventTable() {
   const loadAll = async () => {
     setIsLoading(true)
     try {
-      if (typeof window !== 'undefined' && (window as any).electronAPI?.localdb) {
-        const res = await (window as any).electronAPI.localdb.getAll()
-        if (res?.success) {
-          setEvents(res.data || [])
-        }
-      }
+      const data = await localDbService.getAll()
+      setEvents(data)
     } finally {
       setIsLoading(false)
     }
@@ -77,7 +55,7 @@ export default function PaginatedEventTable() {
       const ids = selectedIds.size > 0 ? Array.from(selectedIds) : (selectedId ? [selectedId] : [])
       for (const id of ids) { await handleDelete(id) }
       setSelectedIds(new Set())
-      try { window.dispatchEvent(new CustomEvent('dimicall-db-selection', { detail: { count: 0 } })) } catch {}
+      localDbService.dispatchSelectionCount(0)
     }
     const onExport = async () => { await handleExportCsv() }
     const onImport = async () => { await handleImportCsv() }
@@ -101,13 +79,8 @@ export default function PaginatedEventTable() {
   }, [selectedId, selectedIds])
 
   const handleDelete = async (id: number) => {
-    try {
-      if (typeof window !== 'undefined' && (window as any).electronAPI?.localdb) {
-        await (window as any).electronAPI.localdb.delete(id)
-        // Optimiste: enlever localement
-        setEvents((prev) => prev.filter((e) => e.id !== id))
-      }
-    } catch {}
+    await localDbService.deleteByIds([id])
+    setEvents((prev) => prev.filter((e) => e.id !== id))
   }
 
   const commitEdit = async () => {
@@ -196,7 +169,7 @@ export default function PaginatedEventTable() {
       const next = new Set(prev)
       if (checked) next.add(id); else next.delete(id)
       // informer App pour activer/désactiver le bouton Supprimer
-      try { window.dispatchEvent(new CustomEvent('dimicall-db-selection', { detail: { count: next.size } })) } catch {}
+      localDbService.dispatchSelectionCount(next.size)
       return next
     })
   }
@@ -206,48 +179,31 @@ export default function PaginatedEventTable() {
     setSelectedIds(prev => {
       const next = new Set(prev)
       paginatedData.forEach(e => { if (checked) next.add(e.id); else next.delete(e.id) })
+      localDbService.dispatchSelectionCount(next.size)
       return next
     })
   }
 
   const handleExportCsv = async () => {
-    try {
-      const res = await (window as any).electronAPI?.localdb?.exportCsv()
-      if (res?.success) {
-        try {
-          window.dispatchEvent(new CustomEvent('dimicall-toast', { detail: { type: 'success', title: 'Export CSV réussi', path: res.path } }))
-        } catch {}
-      }
-    } catch {}
+    await localDbService.exportCsv()
   }
 
   const handleImportCsv = async () => {
-    try {
-      const res = await (window as any).electronAPI?.localdb?.importCsv()
-      if (res?.success) {
-        await loadAll()
-      }
-    } catch {}
+    const success = await localDbService.importCsv()
+    if (success) {
+      await loadAll()
+    }
   }
 
   const handleExportXlsx = async () => {
-    try {
-      const res = await (window as any).electronAPI?.localdb?.exportXlsx()
-      if (res?.success) {
-        try {
-          window.dispatchEvent(new CustomEvent('dimicall-toast', { detail: { type: 'success', title: 'Export Excel réussi', path: res.path } }))
-        } catch {}
-      }
-    } catch {}
+    await localDbService.exportXlsx()
   }
 
   const handleImportXlsx = async () => {
-    try {
-      const res = await (window as any).electronAPI?.localdb?.importXlsx()
-      if (res?.success) {
-        await loadAll()
-      }
-    } catch {}
+    const success = await localDbService.importXlsx()
+    if (success) {
+      await loadAll()
+    }
   }
 
   // Filtres de date pilotés depuis la barre supérieure (App)
@@ -260,10 +216,8 @@ export default function PaginatedEventTable() {
   const applyListFilter = async (s?: string, e?: string) => {
     setIsLoading(true)
     try {
-      const start = s ? `${s} 00:00:00` : undefined
-      const end = e ? `${e} 23:59:59` : undefined
-      const res = await (window as any).electronAPI?.localdb?.listStatus(start, end)
-      if (res?.success) setEvents(res.data || [])
+      const data = await localDbService.listByDateRange(s, e)
+      setEvents(data)
     } finally {
       setIsLoading(false)
     }

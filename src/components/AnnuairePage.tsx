@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
+import { SupabaseShareDialog } from '@/components/SupabaseShareDialog';
+import { localDbService } from '@/services/localDbService';
+import { Contact, ContactStatus } from '@/types';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as DateRangeCalendar } from '@/components/ui/calendar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   Search,
   Phone,
@@ -16,40 +23,23 @@ import {
   Calendar,
   Clock,
   History,
-  Filter,
-  SortAsc,
-  SortDesc,
   Bell,
   MessageSquare,
+  Download,
+  Upload,
+  RefreshCw,
+  Trash2,
+  FileSpreadsheet,
+  ArrowUpNarrowWide,
+  Funnel,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import type { StatusEventRecord } from '@/types/statusEvent';
 import { formatPhoneNumber } from '../services/dataService';
 
 type HistoryType = 'appel' | 'rappel' | 'rdv' | 'statut';
 
-interface StatusEventRecord {
-  id?: number;
-  contact_id?: string | null;
-  old_status?: string | null;
-  new_status?: string | null;
-  applied_at?: string | null;
-  prenom?: string | null;
-  nom?: string | null;
-  telephone?: string | null;
-  email?: string | null;
-  mail?: string | null;
-  commentaire?: string | null;
-  comment?: string | null;
-  dateRappel?: string | null;
-  heureRappel?: string | null;
-  dateRDV?: string | null;
-  heureRDV?: string | null;
-  dateAppel?: string | null;
-  heureAppel?: string | null;
-  dureeAppel?: string | null;
-  dateEntree?: string | null;
-  heureEntree?: string | null;
-}
+type QuickFilterKey = 'all' | 'today' | 'thisWeek' | 'thisMonth' | 'custom';
 
 interface HistoryMetaItem {
   label: string;
@@ -288,7 +278,7 @@ const buildHistoryMeta = (event: StatusEventRecord): HistoryMetaItem[] => {
   }
   const telephone = safeTrim(event.telephone);
   if (telephone) {
-    meta.push({ label: 'Téléphone', value: formatPhoneNumber(telephone) });
+    meta.push({ label: 'Telephone', value: formatPhoneNumber(telephone) });
   }
   const email = safeTrim(event.email) || safeTrim(event.mail);
   if (email) {
@@ -421,21 +411,17 @@ const transformEventsToContacts = (events: StatusEventRecord[]): DirectoryContac
     })
     .map((contact, index) => ({ ...contact, numeroLigne: index + 1 }));
 };
-const loadEventsFromSQLite = async (): Promise<StatusEventRecord[]> => {
+const loadEventsFromSQLite = async (start?: string, end?: string): Promise<StatusEventRecord[]> => {
   try {
-    if (typeof window !== 'undefined' && (window as any).electronAPI?.localdb) {
-      const res = await (window as any).electronAPI.localdb.getAll();
-      if (res?.success && Array.isArray(res.data)) {
-        return res.data as StatusEventRecord[];
-      }
-      console.error('[Annuaire] Impossible de récupérer les données SQLite', res?.error);
-      return [];
+    const normalizedStart = start?.trim() ?? ''
+    const normalizedEnd = end?.trim() ?? ''
+    if (normalizedStart || normalizedEnd) {
+      return await localDbService.listByDateRange(normalizedStart, normalizedEnd)
     }
-    console.warn('[Annuaire] API localdb indisponible');
-    return [];
+    return await localDbService.getAll()
   } catch (error) {
-    console.error('[Annuaire] Erreur lors du chargement SQLite', error);
-    return [];
+    console.error('[Annuaire] Erreur lors du chargement SQLite', error)
+    return []
   }
 };
 
@@ -449,36 +435,333 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
   const [sortBy, setSortBy] = useState<'name' | 'phone' | 'lastCall'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  useEffect(() => {
-    let isMounted = true;
+  const [filterQuick, setFilterQuick] = useState<QuickFilterKey>('all');
+  const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
 
-    const fetchContacts = async () => {
-      setLoading(true);
-      const events = await loadEventsFromSQLite();
-      if (!isMounted) return;
+  const selectedContacts = useMemo(
+    () => contacts.filter((contact) => selectedContactIds.has(contact.id)),
+    [contacts, selectedContactIds]
+  );
+  const selectedCount = selectedContacts.length;
+  const hasSelection = selectedCount > 0;
+
+  const visibleContactCount = filteredContacts.length;
+
+  const fetchContacts = useCallback(async (range: { start: string; end: string }) => {
+    setLoading(true);
+    try {
+      const events = await loadEventsFromSQLite(range.start, range.end);
       const contactsFromEvents = transformEventsToContacts(events);
       setContacts(contactsFromEvents);
       setFilteredContacts(contactsFromEvents);
+      setSelectedContactIds((prev) => {
+        if (prev.size === 0) {
+          return prev;
+        }
+        const next = new Set<string>();
+        contactsFromEvents.forEach((contact) => {
+          if (prev.has(contact.id)) {
+            next.add(contact.id);
+          }
+        });
+        if (next.size !== prev.size) {
+          localDbService.dispatchSelectionCount(next.size);
+          return next;
+        }
+        return prev;
+      });
+    } catch (error) {
+      console.error('[Annuaire] Impossible de charger les contacts', error);
+      setContacts([]);
+      setFilteredContacts([]);
+      setSelectedContactIds(() => {
+        localDbService.dispatchSelectionCount(0);
+        return new Set();
+      });
+    } finally {
       setLoading(false);
-    };
+    }
+  }, []);
 
-    fetchContacts();
+  const quickFilters = useMemo(() => [
+    { key: 'all', label: 'Tout' as const },
+    { key: 'today', label: "Aujourd'hui" as const },
+    { key: 'thisWeek', label: 'Cette semaine' as const },
+    { key: 'thisMonth', label: 'Ce mois' as const },
+  ], []);
 
+  const sortFieldLabel = useMemo(() => {
+    switch (sortBy) {
+      case 'phone':
+        return 'Telephone';
+      case 'lastCall':
+        return 'Dernier appel';
+      default:
+        return 'Nom';
+    }
+  }, [sortBy]);
+
+  const handleSortOrderToggle = useCallback(() => {
+    setSortOrder((previous) => (previous === 'asc' ? 'desc' : 'asc'));
+  }, []);
+
+  const handleSortFieldToggle = useCallback(() => {
+    setSortBy((previous) => {
+      if (previous === 'name') {
+        return 'phone';
+      }
+      if (previous === 'phone') {
+        return 'lastCall';
+      }
+      return 'name';
+    });
+  }, []);
+
+  const rangeLabel = useMemo(() => {
+    if (!dateRange.start && !dateRange.end) {
+      return 'Plage';
+    }
+    if (dateRange.start && dateRange.start === dateRange.end) {
+      return dateRange.start;
+    }
+    const startLabel = dateRange.start || '…';
+    const endLabel = dateRange.end || '…';
+    return `${startLabel} → ${endLabel}`;
+  }, [dateRange]);
+
+  const formatDateToYMD = (date?: Date | null): string => {
+    if (!date) {
+      return '';
+    }
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const applyDateFilter = useCallback((range: { start: string; end: string }, key: QuickFilterKey) => {
+    setFilterQuick(key);
+    setDateRange(range);
+    setIsDatePickerOpen(false);
+  }, []);
+
+  const handleQuickFilter = useCallback((key: QuickFilterKey) => {
+    switch (key) {
+      case 'all': {
+        applyDateFilter({ start: '', end: '' }, 'all');
+        break;
+      }
+      case 'today': {
+        const today = new Date();
+        const ymd = formatDateToYMD(today);
+        applyDateFilter({ start: ymd, end: ymd }, 'today');
+        break;
+      }
+      case 'thisWeek': {
+        const today = new Date();
+        const dayOfWeek = (today.getDay() + 6) % 7;
+        const startDate = new Date(today);
+        startDate.setDate(today.getDate() - dayOfWeek);
+        const endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6);
+        applyDateFilter({ start: formatDateToYMD(startDate), end: formatDateToYMD(endDate) }, 'thisWeek');
+        break;
+      }
+      case 'thisMonth': {
+        const today = new Date();
+        const startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        const endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+        applyDateFilter({ start: formatDateToYMD(startDate), end: formatDateToYMD(endDate) }, 'thisMonth');
+        break;
+      }
+      default:
+        break;
+    }
+  }, [applyDateFilter]);
+
+  const handleCustomRange = useCallback((range: { from?: Date; to?: Date } | undefined) => {
+    if (!range) {
+      return;
+    }
+    const start = formatDateToYMD(range.from ?? null);
+    const end = formatDateToYMD(range.to ?? range.from ?? null);
+    if (!start && !end) {
+      return;
+    }
+    applyDateFilter({ start, end }, 'custom');
+  }, [applyDateFilter]);
+
+  const toggleContactSelection = useCallback((contactId: string, value: boolean | 'indeterminate') => {
+    const checked = value === 'indeterminate' ? true : Boolean(value);
+    setSelectedContactIds((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(contactId);
+      } else {
+        next.delete(contactId);
+      }
+      if (next.size !== prev.size) {
+        localDbService.dispatchSelectionCount(next.size);
+      }
+      return next;
+    });
+  }, []);
+
+  const bulkSelectionState = useMemo<boolean | 'indeterminate'>(() => {
+    if (visibleContactCount === 0 || selectedCount === 0) {
+      return false;
+    }
+    if (selectedCount === visibleContactCount) {
+      return true;
+    }
+    return 'indeterminate';
+  }, [visibleContactCount, selectedCount]);
+
+  const handleToggleSelectAll = useCallback((value: boolean | 'indeterminate') => {
+    const shouldSelectAll = value === true || value === 'indeterminate';
+    setSelectedContactIds(() => {
+      if (!shouldSelectAll) {
+        localDbService.dispatchSelectionCount(0);
+        return new Set();
+      }
+      const next = new Set<string>();
+      filteredContacts.forEach((contact) => next.add(contact.id));
+      localDbService.dispatchSelectionCount(next.size);
+      return next;
+    });
+  }, [filteredContacts]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedContactIds(() => {
+      localDbService.dispatchSelectionCount(0);
+      return new Set();
+    });
+  }, []);
+
+  const handleDeleteSelected = useCallback(async () => {
+    if (!hasSelection) {
+      return;
+    }
+    const eventIds = selectedContacts.flatMap((contact) =>
+      contact.events
+        .map((event) => event.id)
+        .filter((id): id is number => typeof id === 'number')
+    );
+    if (eventIds.length === 0) {
+      clearSelection();
+      return;
+    }
+    await localDbService.deleteByIds(eventIds);
+    clearSelection();
+    await fetchContacts(dateRange);
+  }, [clearSelection, dateRange, fetchContacts, hasSelection, selectedContacts]);
+
+  const handleTransferSelected = useCallback(() => {
+    if (!hasSelection) {
+      return;
+    }
+    const payload: Contact[] = selectedContacts.map((contact, index) => {
+      const statusValue = contact.status;
+      const status = (Object.values(ContactStatus) as string[]).includes(statusValue)
+        ? (statusValue as ContactStatus)
+        : ContactStatus.NonDefini;
+      const numeroLigne = contact.numeroLigne || index + 1;
+      return {
+        id: contact.id || `annuaire-${numeroLigne}`,
+        numeroLigne,
+        prenom: contact.prenom,
+        nom: contact.nom,
+        telephone: contact.telephone,
+        email: contact.email || '',
+        source: 'Données',
+        statut: status,
+        commentaire: contact.commentaire || '',
+        dateRappel: contact.reminder?.date || '',
+        heureRappel: contact.reminder?.time || '',
+        dateRDV: contact.rdv?.date || '',
+        heureRDV: contact.rdv?.time || '',
+        dateAppel: contact.lastCall?.date || '',
+        heureAppel: contact.lastCall?.time || '',
+        dureeAppel: contact.lastCall?.duration || '',
+        lien: '',
+      };
+    });
+    const name = `Selection Annuaire (${new Date().toLocaleString('fr-FR')})`;
+    try {
+      localStorage.setItem('dimicall-db-transfer-data', JSON.stringify({ contacts: payload, name }));
+    } catch {
+      // Ignored
+    }
+    window.dispatchEvent(
+      new CustomEvent('dimicall-db-transferred', {
+        detail: { contacts: payload, name },
+      })
+    );
+    clearSelection();
+  }, [clearSelection, hasSelection, selectedContacts]);
+
+  const handleExportCsv = useCallback(async () => {
+    await localDbService.exportCsv();
+  }, []);
+
+  const handleExportXlsx = useCallback(async () => {
+    await localDbService.exportXlsx();
+  }, []);
+
+  const handleImportCsv = useCallback(async () => {
+    const success = await localDbService.importCsv();
+    if (success) {
+      await fetchContacts(dateRange);
+    }
+  }, [dateRange, fetchContacts]);
+
+  const handleImportXlsx = useCallback(async () => {
+    const success = await localDbService.importXlsx();
+    if (success) {
+      await fetchContacts(dateRange);
+    }
+  }, [dateRange, fetchContacts]);
+
+  const handleRefresh = useCallback(async () => {
+    await fetchContacts(dateRange);
+  }, [dateRange, fetchContacts]);
+
+  useEffect(() => {
+    fetchContacts(dateRange);
+  }, [fetchContacts, dateRange]);
+
+  useEffect(() => {
     const handleLocalDbUpdate = () => {
-      fetchContacts();
+      fetchContacts(dateRange);
     };
-
     if (typeof window !== 'undefined') {
       window.addEventListener('localdb-updated', handleLocalDbUpdate as any);
     }
-
     return () => {
-      isMounted = false;
       if (typeof window !== 'undefined') {
         window.removeEventListener('localdb-updated', handleLocalDbUpdate as any);
       }
     };
-  }, []);
+  }, [fetchContacts, dateRange]);
+
+  useEffect(() => {
+    const handleExternalFilter = (event: CustomEvent<{ scope?: string; start?: string; end?: string }>) => {
+      const detail = event.detail || {};
+      if (detail.scope === 'db') {
+        const startValue = typeof detail.start === 'string' ? detail.start : '';
+        const endValue = typeof detail.end === 'string' ? detail.end : '';
+        const isEmpty = !startValue && !endValue;
+        applyDateFilter({ start: startValue, end: endValue }, isEmpty ? 'all' : 'custom');
+      }
+    };
+    window.addEventListener('dimicall-date-filter', handleExternalFilter as EventListener);
+    return () => {
+      window.removeEventListener('dimicall-date-filter', handleExternalFilter as EventListener);
+    };
+  }, [applyDateFilter]);
 
   useEffect(() => {
     if (!selectedContact) return;
@@ -557,12 +840,17 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
         <div className="flex flex-col gap-0.5">
           <h1 className="text-xl font-semibold text-foreground">Annuaire</h1>
           <p className="text-sm text-muted-foreground">
-            {filteredContacts.length} contact{filteredContacts.length > 1 ? 's' : ''} unique
-            {filteredContacts.length > 1 ? 's' : ''}
+            {visibleContactCount} contact{visibleContactCount > 1 ? 's' : ''} unique
+            {visibleContactCount > 1 ? 's' : ''}
+            {hasSelection && (
+              <span className="ml-2 text-xs font-medium text-primary">
+                {selectedCount} selectionne{selectedCount > 1 ? 's' : ''}
+              </span>
+            )}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[200px]">
+          <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Rechercher un contact..."
@@ -571,20 +859,118 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
               className="pl-10 h-9"
             />
           </div>
-          <Button variant="outline" size="sm" className="h-9" onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
-            {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
-          </Button>
           <Button
             variant="outline"
             size="sm"
             className="h-9"
-            onClick={() =>
-              setSortBy(sortBy === 'name' ? 'phone' : sortBy === 'phone' ? 'lastCall' : 'name')
-            }
+            onClick={handleSortOrderToggle}
+            title={sortOrder === 'asc' ? 'Tri croissant' : 'Tri décroissant'}
           >
-            <Filter className="mr-2 h-4 w-4" />
-            {sortBy === 'name' ? 'Nom' : sortBy === 'phone' ? 'Téléphone' : 'Dernier appel'}
+            <ArrowUpNarrowWide className="h-4 w-4" />
           </Button>
+          <Button variant="outline" size="sm" className="h-9" onClick={handleSortFieldToggle}>
+            <Funnel className="mr-2 h-4 w-4" />
+            {sortFieldLabel}
+          </Button>
+        </div>
+      </div>
+
+      {/* Filters & actions */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/60 px-4 py-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex items-center gap-2">
+            {quickFilters.map(({ key, label }) => (
+              <Button
+                key={key}
+                size="sm"
+                variant={filterQuick === key ? 'default' : 'outline'}
+                className="h-8"
+                onClick={() => handleQuickFilter(key)}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+          <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8">
+                <Calendar className="h-4 w-4 mr-2" />
+                {rangeLabel}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="p-2" align="start">
+              <DateRangeCalendar
+                mode="range"
+                selected={{
+                  from: dateRange.start ? new Date(dateRange.start) : undefined,
+                  to: dateRange.end ? new Date(dateRange.end) : undefined,
+                }}
+                onSelect={handleCustomRange}
+                numberOfMonths={2}
+              />
+            </PopoverContent>
+          </Popover>
+          <Button variant="outline" size="sm" className="h-8" onClick={handleRefresh}>
+            <RefreshCw className="h-4 w-4 mr-2" /> Rafraîchir
+          </Button>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <div className="flex items-center gap-2">
+            <Checkbox checked={bulkSelectionState} onCheckedChange={handleToggleSelectAll} />
+            <span className="text-muted-foreground">Selection</span>
+          </div>
+          <SupabaseShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} />
+          <Button variant="outline" size="sm" className="h-8" onClick={() => setShareDialogOpen(true)}>
+            Supabase
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            className="h-8"
+            title="Transférer la sélection vers Appels"
+            disabled={!hasSelection}
+            onClick={handleTransferSelected}
+          >
+            Transfert
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8"
+            title="Supprimer la sélection"
+            disabled={!hasSelection}
+            onClick={handleDeleteSelected}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8" title="Exporter">
+                <Download className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-44">
+              <DropdownMenuLabel>Exporter</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleExportCsv}>CSV</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportXlsx}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel (.xlsx)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-8" title="Importer">
+                <Upload className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuLabel>Importer depuis</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleImportCsv}>CSV</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleImportXlsx}>Excel (.xlsx)</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
@@ -619,82 +1005,89 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredContacts.map((contact) => (
-            <Card
-              key={contact.id}
-              className="cursor-pointer transition-shadow hover:shadow-lg"
-              onClick={() => handleContactClick(contact)}
-            >
-              <CardContent className="space-y-4 p-6">
-                <div className="flex items-start gap-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src="" alt={contact.fullName} />
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {getInitials(contact)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <h3 className="truncate text-lg font-semibold">{contact.fullName}</h3>
-                    <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                      {contact.telephone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4" />
-                          <span className="truncate">{formatPhoneNumber(contact.telephone)}</span>
-                        </div>
-                      )}
-                      {contact.email && (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4" />
-                          <span className="truncate">{contact.email}</span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      <Badge className={getStatusColor(contact.status)}>{contact.status}</Badge>
-                      {contact.lastUpdatedLabel && (
+          {filteredContacts.map((contact) => {
+            const isSelected = selectedContactIds.has(contact.id);
+            return (
+              <Card
+                key={contact.id}
+                className={`cursor-pointer transition-shadow hover:shadow-lg ${isSelected ? 'border-primary ring-1 ring-primary/40' : ''}`}
+                onClick={() => handleContactClick(contact)}
+              >
+                <CardContent className="space-y-4 p-6">
+                  <div className="flex items-start gap-4">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={(value) => toggleContactSelection(contact.id, value)}
+                      onClick={(event) => event.stopPropagation()}
+                      className="mt-1"
+                    />
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src="" alt={contact.fullName} />
+                      <AvatarFallback className="bg-primary text-primary-foreground">
+                        {getInitials(contact)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-lg font-semibold">{contact.fullName}</h3>
+                      <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                        {contact.telephone && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4" />
+                            <span className="truncate">{formatPhoneNumber(contact.telephone)}</span>
+                          </div>
+                        )}
+                        {contact.email && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" />
+                            <span className="truncate">{contact.email}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Badge className={getStatusColor(contact.status)}>{contact.status}</Badge>
+                        {contact.lastUpdatedLabel && (
+                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {contact.lastUpdatedLabel}
+                          </span>
+                        )}
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {contact.lastUpdatedLabel}
+                          <History className="h-3 w-3" />
+                          {contact.totalEvents} événement{contact.totalEvents > 1 ? 's' : ''}
                         </span>
-                      )}
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <History className="h-3 w-3" />
-                        {contact.totalEvents} évènement{contact.totalEvents > 1 ? 's' : ''}
-                      </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {contact.commentaire && (
-                  <p className="text-xs text-muted-foreground line-clamp-2">{contact.commentaire}</p>
-                )}
+                  {contact.commentaire && (
+                    <p className="text-xs text-muted-foreground line-clamp-2">{contact.commentaire}</p>
+                  )}
 
-                <div className="space-y-1 text-xs text-muted-foreground">
-                  {contact.reminder && contact.reminder.label && (
-                    <div className="flex items-center gap-1">
-                      <Bell className="h-3 w-3" />
-                      <span>Rappel : {contact.reminder.label}</span>
-                    </div>
-                  )}
-                  {contact.rdv && contact.rdv.label && (
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      <span>RDV : {contact.rdv.label}</span>
-                    </div>
-                  )}
-                  {contact.lastCall && contact.lastCall.label && (
-                    <div className="flex items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      <span>
-                        Dernier appel : {contact.lastCall.label}
-                        {contact.lastCall.duration ? ` (${contact.lastCall.duration})` : ''}
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="space-y-1 text-xs text-muted-foreground">
+                    {contact.reminder?.label && (
+                      <div className="flex items-center gap-1">
+                        <Bell className="h-3 w-3" />
+                        <span>Rappel : {contact.reminder.label}</span>
+                      </div>
+                    )}
+                    {contact.rdv?.label && (
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        <span>RDV : {contact.rdv.label}</span>
+                      </div>
+                    )}
+                    {contact.lastCall?.label && (
+                      <div className="flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        <span>Dernier appel : {contact.lastCall.label}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+
         </div>
       )}
 
@@ -739,7 +1132,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <InfoField
                       icon={Phone}
-                      label="Téléphone"
+                      label="Telephone"
                       value={
                         selectedContact.telephone
                           ? formatPhoneNumber(selectedContact.telephone)
