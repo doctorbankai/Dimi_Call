@@ -2427,7 +2427,7 @@ Dimitri MOREL - Arcanis Conseil`;
       
       {/* Main content */}
       <main className={cn(
-        "flex-1 flex flex-col p-2 md:p-3 space-y-2 md:space-y-3 overflow-hidden w-full min-h-0 mt-8",
+        "flex-1 flex flex-col p-1 md:p-1.5 space-y-1 md:space-y-1.5 overflow-hidden w-full min-h-0",
         isAuthModalOpen && "pointer-events-none opacity-50"
       )}>
 
@@ -2470,7 +2470,11 @@ Dimitri MOREL - Arcanis Conseil`;
           {/* Bandeau filtres uniformis pour Graph/BDD (remplace recherche/colonnes/progress) */}
           {(viewMode === 'graph' || viewMode === 'db') && (
             <div className="flex-1 w-full bg-card rounded-lg p-3 shadow-sm border">
-              <div className="flex flex-wrap items-center justify-center gap-2 w-full">
+              <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+                <h1 className="text-xl font-semibold text-foreground">
+                  {viewMode === 'graph' ? 'Graphiques' : 'Données'}
+                </h1>
+                <div className="flex flex-wrap items-center justify-center gap-2">
                 <div className="inline-flex items-center gap-2">
                   <Button size="sm" variant={filterQuick==='all'?'default':'outline'} onClick={() => {
                     setFilterQuick('all')
@@ -2544,6 +2548,7 @@ Dimitri MOREL - Arcanis Conseil`;
                     <RefreshCw className="h-4 w-4 mr-2" /> Actualiser
                   </Button>
                 )}
+                </div>
               </div>
             </div>
           )}
@@ -2580,49 +2585,8 @@ Dimitri MOREL - Arcanis Conseil`;
                   <Tabs value={resolvedActiveTabId} onValueChange={setActiveTableTabId} className="flex h-full flex-col">
                     {/* Barre d'onglets en haut */}
                     <div className="flex items-center justify-between px-1.5 py-1.5 border-b bg-card">
-                      {/* Champ de recherche - à gauche */}
+                      {/* Actions - à gauche */}
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className="flex-1 max-w-md relative">
-                          <Input
-                            type="text"
-                            placeholder="Rechercher..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="text-sm h-9 pl-9 pr-9 border-border/50 focus:border-primary"
-                          />
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button
-                                type="button"
-                                aria-label="Choisir la colonne de recherche"
-                                className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground outline-none hover:text-foreground"
-                              >
-                                <Filter className="h-4 w-4" />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="start" className="w-56">
-                              <DropdownMenuLabel>Rechercher dans</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuRadioGroup value={String(searchColumn)} onValueChange={(val) => setSearchColumn(val as keyof Contact | 'all')}>
-                                {searchColumnsOptions.map((opt) => (
-                                  <DropdownMenuRadioItem key={String(opt.value)} value={String(opt.value)}>
-                                    {opt.label}
-                                  </DropdownMenuRadioItem>
-                                ))}
-                              </DropdownMenuRadioGroup>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                          {searchTerm && (
-                            <button
-                              onClick={() => setSearchTerm('')}
-                              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                              aria-label="Effacer la recherche"
-                            >
-                              <X className="h-4 w-4" />
-                            </button>
-                          )}
-                        </div>
-
                         {/* Bouton Colonnes simplifié */}
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -3078,30 +3042,22 @@ Dimitri MOREL - Arcanis Conseil`;
             />
           ) : viewMode === 'graph' ? (
             <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0 w-full">
-              <div className="flex-1 w-full bg-card rounded-lg border shadow-sm overflow-auto p-3 sm:p-4 md:p-6 min-w-0">
+              <div className="flex-1 w-full overflow-auto min-w-0">
                 <ChartDashboard contacts={filteredContacts} />
               </div>
             </div>
           ) : viewMode === 'calendar' ? (
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
-              <div className="flex-1 w-full overflow-auto p-3 md:p-4">
-                <FullPageCalendar
-                  selectedDate={calendarDate}
-                  onDateChange={setCalendarDate}
-                />
-              </div>
-            </div>
+            <FullPageCalendar
+              selectedDate={calendarDate}
+              onDateChange={setCalendarDate}
+            />
           ) : viewMode === 'annuaire' ? (
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
-              <div className="flex-1 w-full overflow-auto">
-                <AnnuairePage
-                  theme={theme === Theme.Dark ? 'dark' : 'light'}
-                />
-              </div>
-            </div>
+            <AnnuairePage
+              theme={theme === Theme.Dark ? 'dark' : 'light'}
+            />
           ) : (
             <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
-              <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-hidden">
+              <div className="flex-1 overflow-hidden">
                 <PaginatedEventTable />
               </div>
             </div>

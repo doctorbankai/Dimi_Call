@@ -551,47 +551,45 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
     </div>
   );
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Annuaire</h1>
-          <p className="text-muted-foreground">
+    <div className="flex h-full flex-col gap-4 w-full overflow-hidden">
+      {/* Navbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/70 px-6 py-3 backdrop-blur-sm shadow-sm">
+        <div className="flex flex-col gap-0.5">
+          <h1 className="text-xl font-semibold text-foreground">Annuaire</h1>
+          <p className="text-sm text-muted-foreground">
             {filteredContacts.length} contact{filteredContacts.length > 1 ? 's' : ''} unique
             {filteredContacts.length > 1 ? 's' : ''}
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher un contact..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 h-9"
+            />
+          </div>
+          <Button variant="outline" size="sm" className="h-9" onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
+            {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9"
+            onClick={() =>
+              setSortBy(sortBy === 'name' ? 'phone' : sortBy === 'phone' ? 'lastCall' : 'name')
+            }
+          >
+            <Filter className="mr-2 h-4 w-4" />
+            {sortBy === 'name' ? 'Nom' : sortBy === 'phone' ? 'Téléphone' : 'Dernier appel'}
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        <CardContent className="p-6">
-          <div className="flex flex-col gap-4 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher un contact..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}>
-                {sortOrder === 'asc' ? <SortAsc className="h-4 w-4" /> : <SortDesc className="h-4 w-4" />}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setSortBy(sortBy === 'name' ? 'phone' : sortBy === 'phone' ? 'lastCall' : 'name')
-                }
-              >
-                <Filter className="mr-2 h-4 w-4" />
-                {sortBy === 'name' ? 'Nom' : sortBy === 'phone' ? 'Téléphone' : 'Dernier appel'}
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Contenu principal */}
+      <div className="flex-1 overflow-auto space-y-6">
 
       {loading ? (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -885,6 +883,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
           )}
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

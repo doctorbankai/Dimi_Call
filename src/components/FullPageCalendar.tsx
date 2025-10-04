@@ -13,14 +13,23 @@ interface FullPageCalendarProps {
 
 export function FullPageCalendar({ selectedDate, onDateChange }: FullPageCalendarProps) {
   return (
-    <div className="flex h-full gap-6 w-full">
-      {/* Récapitulatif des événements - côté gauche */}
-      <div className="w-80 flex-shrink-0">
-        <EventsSummary selectedDate={selectedDate} />
+    <div className="flex h-full flex-col gap-4 w-full overflow-hidden">
+      {/* Navbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/70 px-6 py-3 backdrop-blur-sm shadow-sm">
+        <div className="flex flex-col gap-0.5">
+          <h1 className="text-xl font-semibold text-foreground">Calendrier</h1>
+        </div>
       </div>
 
-      {/* Calendrier principal - côté droit */}
-      <div className="flex-1 flex flex-col gap-6 min-w-0 w-full">
+      {/* Contenu principal */}
+      <div className="flex flex-1 gap-6 w-full min-h-0 overflow-hidden">
+        {/* Récapitulatif des événements - côté gauche */}
+        <div className="w-80 flex-shrink-0">
+          <EventsSummary selectedDate={selectedDate} />
+        </div>
+
+        {/* Calendrier principal - côté droit */}
+        <div className="flex-1 flex flex-col gap-6 min-w-0 w-full">
         <Card className="flex-1 overflow-hidden border shadow-lg w-full">
           <CardContent className="h-full w-full p-6">
             <div className="flex h-full w-full items-center justify-center">
@@ -55,6 +64,7 @@ export function FullPageCalendar({ selectedDate, onDateChange }: FullPageCalenda
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );
