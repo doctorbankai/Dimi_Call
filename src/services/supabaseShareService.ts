@@ -233,7 +233,7 @@ async function runSync(target: SyncTarget, reason: string) {
   }
 }
 
-async function performSync(target: SyncTarget): Promise<{ processed: number; shared: number; filtered: number }> {
+async function performSync(target: SyncTarget): Promise<{ processed: number; shared: number; filtered: number; withMetadata?: number }> {
   const events = await fetchLocalEvents()
   if (target === 'phone') {
     return syncSharedPhoneNumbers(events)
@@ -254,7 +254,7 @@ async function fetchLocalEvents(): Promise<any[]> {
   return Array.isArray(result.data) ? result.data : []
 }
 
-async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: number; shared: number; filtered: number }> {
+async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number }> {
   const client = supabaseService.getClient()
   const nowIso = new Date().toISOString()
   const aggregate = new Map<string, {
@@ -265,6 +265,7 @@ async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: numbe
       contactId?: string
       prenom?: string
       nom?: string
+      source?: string
       statut?: string
       commentaire?: string
     }
@@ -289,6 +290,7 @@ async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: numbe
       contactId: extractString(row, ['contact_id', 'contactId', 'id']),
       prenom: extractString(row, ['prenom', 'firstName']),
       nom: extractString(row, ['nom', 'lastName']),
+      source: extractString(row, ['source', 'origine', 'provenance']) || 'Données',
       statut: extractStatus(row),
       commentaire: extractString(row, ['commentaire', 'comment']),
     }
@@ -312,19 +314,25 @@ async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: numbe
   const payload = Array.from(aggregate.values()).map((entry) => ({
     phone_number: entry.phoneNumber,
     normalized_phone: entry.normalized,
+    prenom: entry.sample.prenom || null,
+    nom: entry.sample.nom || null,
+    source: entry.sample.source || 'Données',
     updated_at: nowIso,
   }))
 
   await chunkedUpsert(client, 'shared_phone_numbers', payload, 'normalized_phone')
 
+  const withMetadata = payload.filter(entry => entry.prenom && entry.nom && entry.source).length
+
   return {
     processed: events.length,
     shared: payload.length,
     filtered,
+    withMetadata,
   }
 }
 
-async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: number; shared: number; filtered: number }> {
+async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number }> {
   const client = supabaseService.getClient()
   const nowIso = new Date().toISOString()
 
@@ -337,6 +345,7 @@ async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: n
       contactId?: string
       prenom?: string
       nom?: string
+      source?: string
       statut?: string
       commentaire?: string
     }
@@ -370,6 +379,7 @@ async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: n
       contactId: extractString(row, ['contact_id', 'contactId', 'id']),
       prenom: extractString(row, ['prenom', 'firstName']),
       nom: extractString(row, ['nom', 'lastName']),
+      source: extractString(row, ['source', 'origine', 'provenance']) || 'Données',
       statut: status,
       commentaire: extractString(row, ['commentaire', 'comment']),
     }
@@ -395,15 +405,21 @@ async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: n
   const payload = Array.from(aggregate.values()).map((entry) => ({
     phone_number: entry.phoneNumber,
     normalized_phone: entry.normalized,
+    prenom: entry.sample.prenom || null,
+    nom: entry.sample.nom || null,
+    source: entry.sample.source || 'Données',
     updated_at: nowIso,
   }))
 
   await chunkedUpsert(client, 'shared_blacklist_numbers', payload, 'normalized_phone')
 
+  const withMetadata = payload.filter(entry => entry.prenom && entry.nom && entry.source).length
+
   return {
     processed,
     shared: payload.length,
     filtered,
+    withMetadata,
   }
 }
 
