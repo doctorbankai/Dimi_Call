@@ -5,6 +5,7 @@ import { useCallMode } from './context/ModeContext';
 import { APP_NAME, COLUMN_HEADERS, CONTACT_DATA_KEYS, headerIcons } from './constants';
 import { ContactTable, ContactTableRef } from './components/ContactTable';
 import { PaginatedContactTable } from './components/PaginatedContactTable';
+import { AppelsCardsView } from './components/AppelsCardsView';
 import { EmailDialog, RappelDialog, RendezVousDialog, QualificationDialog, GenericInfoDialog } from './components/Dialogs';
 
 
@@ -219,7 +220,7 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const [isClearDataDialogOpen, setIsClearDataDialogOpen] = useState(false);
 
   const [importProgress, setImportProgress] = useState<{ percentage: number; message: string } | null>(null);
-  const [viewMode, setViewMode] = useState<'table' | 'graph' | 'db' | 'calendar' | 'annuaire'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'appels-cards' | 'graph' | 'db' | 'calendar' | 'annuaire'>('table');
   // Filtres globaux par vue pour uniformit
   const [graphRange, setGraphRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
   const [dbRange, setDbRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
@@ -3035,6 +3036,46 @@ Dimitri MOREL - Arcanis Conseil`;
                 )}
               </div>
             </div>
+          ) : viewMode === 'appels-cards' ? (
+            <AppelsCardsView
+              contacts={filteredContacts}
+              selectedContactId={selectedContact?.id || null}
+              onSelectContact={handleRowSelection}
+              onUpdateContact={updateContact}
+              callStates={callStates}
+              activeCallContactId={activeCallContactId}
+              callStartTime={callStartTime}
+              adbConnected={adbConnectionState.isConnected}
+              onCall={() => makePhoneCall()}
+              onHangUp={() => adbEndCall()}
+              onEmail={() => selectedContact && setIsEmailDialogOpen(true)}
+              onSmsMonsieur={() => handleSms('Monsieur')}
+              onSmsMadame={() => handleSms('Madame')}
+              onRappel={() => selectedContact && setIsRappelDialogOpen(true)}
+              onRendezVous={() => selectedContact && setIsRendezVousDialogOpen(true)}
+              onCalCom={() => handleCalendarClick()}
+              onQualification={() => selectedContact && setIsQualificationDialogOpen(true)}
+              onLinkedInSearch={() => handleLinkedInSearch()}
+              onGoogleSearch={() => handleGoogleSearch()}
+              onDirectLink={() => handleDirectLink()}
+              onExport={() => handleUnifiedExport()}
+              onClearActiveTab={handleClearActiveTab}
+              searchQuery={searchTerm}
+              onSearch={(value) => setSearchTerm(value)}
+              onImportDialog={() => {
+                const input = document.createElement('input')
+                input.type = 'file'
+                input.accept = '.csv,.tsv,.xlsx,.xls'
+                input.onchange = (event) => {
+                  const files = (event.target as HTMLInputElement).files
+                  if (files && files.length > 0) {
+                    handleImportFile(files)
+                  }
+                }
+                input.click()
+              }}
+              onExportDialog={() => handleUnifiedExport()}
+            />
           ) : viewMode === 'graph' ? (
             <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0 w-full">
               <div className="flex-1 w-full bg-card rounded-lg border shadow-sm overflow-auto p-3 sm:p-4 md:p-6 min-w-0">

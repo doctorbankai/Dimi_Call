@@ -24,6 +24,9 @@ interface CallControlProps {
   onCalCom?: () => void;
   onQualification?: () => void;
   adbConnected?: boolean;
+  className?: string;
+  variant?: 'detailed' | 'compact';
+  displayMode?: 'full' | 'actions-only';
 }
 
 const formatDuration = (ms: number): string => {
@@ -53,6 +56,9 @@ const CallControl: React.FC<CallControlProps> = ({
   onCalCom,
   onQualification,
   adbConnected = true,
+  className,
+  variant = 'detailed',
+  displayMode = 'full',
 }) => {
   const [now, setNow] = useState<number>(Date.now());
   useEffect(() => {
@@ -96,286 +102,333 @@ const CallControl: React.FC<CallControlProps> = ({
 
   const canCall = !!contact && !isCalling && adbConnected;
   const canHangUp = isCalling;
+  const isDetailed = displayMode === 'full' && variant === 'detailed';
+
+  const renderActionButtons = () => (
+    <>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            {isCalling ? (
+              <Button
+                variant="destructive"
+                size="icon"
+                aria-label="Raccrocher l'appel"
+                title="Raccrocher l'appel"
+                onClick={() => onHangUp()}
+                disabled={!canHangUp}
+                className={cn(
+                  "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                  "bg-red-500 hover:bg-red-600 text-white shadow-lg",
+                  "focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                )}
+              >
+                <PhoneOff className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                size="icon"
+                aria-label="Appeler"
+                title={contact ? "Appeler" : "Sélectionnez un contact"}
+                onClick={() => onCall()}
+                disabled={!canCall}
+                className={cn(
+                  "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                  "bg-green-500 hover:bg-green-600 text-white shadow-lg",
+                  "focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2",
+                  "disabled:opacity-50 disabled:cursor-not-allowed",
+                )}
+              >
+                <Phone className="h-4 w-4" />
+              </Button>
+            )}
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>
+              {isCalling
+                ? "Raccrocher"
+                : contact
+                ? adbConnected
+                  ? "Appeler ce contact"
+                  : "Connectez l'appareil ADB pour appeler"
+                : "Aucun contact sélectionné"}
+            </p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    aria-label="SMS"
+                    title="SMS"
+                    disabled={!contact}
+                    className={cn(
+                      "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                      "border-2 hover:bg-accent hover:text-accent-foreground",
+                      "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                      "disabled:opacity-50 disabled:cursor-not-allowed",
+                    )}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  className="z-50 w-40 border bg-popover text-popover-foreground shadow-lg"
+                  align="end"
+                >
+                  <DropdownMenuLabel className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4" />
+                    Envoyer SMS
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem
+                      onClick={() => onSmsMonsieur && onSmsMonsieur()}
+                      disabled={!contact}
+                      className="cursor-pointer"
+                    >
+                      Monsieur {contact?.nom || ""}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => onSmsMadame && onSmsMadame()}
+                      disabled={!contact}
+                      className="cursor-pointer"
+                    >
+                      Madame {contact?.nom || ""}
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Envoyer un SMS</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Email"
+              title="Email"
+              onClick={() => onEmail && onEmail()}
+              disabled={!contact || !contact.email}
+              className={cn(
+                "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                "border-2 hover:bg-accent hover:text-accent-foreground",
+                "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+              )}
+            >
+              <Mail className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Ouvrir l'email</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Qualification"
+              title="Qualifier le contact"
+              onClick={() => onQualification && onQualification()}
+              disabled={!contact}
+              className={cn(
+                "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                "border-2 hover:bg-accent hover:text-accent-foreground",
+                "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+              )}
+            >
+              <FileCheck className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Qualifier le contact</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Rappel"
+              title="Programmer un rappel"
+              onClick={() => onRappel && onRappel()}
+              disabled={!contact}
+              className={cn(
+                "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                "border-2 hover:bg-accent hover:text-accent-foreground",
+                "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+              )}
+            >
+              <Bell className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Programmer un rappel</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Rendez-vous"
+              title="Programmer un rendez-vous"
+              onClick={() => onRendezVous && onRendezVous()}
+              disabled={!contact}
+              className={cn(
+                "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                "border-2 hover:bg-accent hover:text-accent-foreground",
+                "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+              )}
+            >
+              <Calendar className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Programmer un rendez-vous</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="Cal.com"
+              title="Ouvrir Cal.com"
+              onClick={() => onCalCom && onCalCom()}
+              disabled={!contact}
+              className={cn(
+                "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                "border-2 hover:bg-accent hover:text-accent-foreground",
+                "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+              )}
+            >
+              <CalendarSearch className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>Ouvrir Cal.com</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    </>
+  );
+
+  if (displayMode === 'actions-only') {
+    return (
+      <div className={cn('flex flex-wrap items-center justify-end gap-2', className)}>
+        {isCalling && (
+          <span className="text-xs text-muted-foreground select-none whitespace-nowrap" aria-live="polite">
+            {duration}
+          </span>
+        )}
+        {renderActionButtons()}
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full overflow-x-auto">
-      <div className="flex items-center bg-card rounded-lg p-3 shadow-sm border min-w-[280px] w-max mx-auto gap-3">
-        <div className="flex items-center gap-3 flex-shrink-0">
-          <Avatar className="h-8 w-8 flex-shrink-0">
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col">
-            <span className="text-sm font-medium whitespace-nowrap" title={displayName}>{displayName}</span>
-            <span className="text-xs text-muted-foreground whitespace-nowrap" title={phone}>{phone}</span>
+    <div className={cn('w-full overflow-x-auto', className)}>
+      <div
+        className={cn(
+          'flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3 shadow-sm min-w-[280px]',
+          !isDetailed && 'min-w-0 w-full border-none bg-transparent p-0 shadow-none gap-2'
+        )}
+      >
+        {isDetailed && (
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <Avatar className="h-8 w-8 flex-shrink-0">
+              <AvatarFallback>{initials}</AvatarFallback>
+            </Avatar>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium whitespace-nowrap" title={displayName}>
+                {displayName}
+              </span>
+              <span className="text-xs text-muted-foreground whitespace-nowrap" title={phone}>
+                {phone}
+              </span>
+            </div>
           </div>
-        </div>
-        
-        <div className="flex items-center gap-3 flex-shrink-0">
-        {/* Séparateur après les infos contact */}
-        <div className="text-muted-foreground/50 text-sm">|</div>
+        )}
 
-          {/* Email affiché dans les infos contact */}
-          {email && (
-            <>
-              <span className="text-xs text-muted-foreground whitespace-nowrap" title={email}>{email}</span>
-              <div className="text-muted-foreground/50 text-sm">|</div>
-            </>
+        <div
+          className={cn(
+            'flex flex-wrap items-center gap-2',
+            isDetailed ? 'ml-auto justify-end' : 'w-full justify-end'
           )}
-
-          {/* Sélecteur de statut */}
-          {contact && (
+        >
+          {isDetailed && (
             <>
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <span className="text-xs text-muted-foreground whitespace-nowrap">Statut:</span>
-                <StatusSelect
-                  value={contact.statut}
-                  onChange={(newStatus) => onStatusChange?.(newStatus)}
-                  triggerClassName="w-[140px]"
-                  contentClassName="text-xs"
-                  size="sm"
-                />
-              </div>
-              <div className="text-muted-foreground/50 text-sm">|</div>
+              <div className="hidden text-muted-foreground/50 text-sm sm:block">|</div>
+              {email && (
+                <>
+                  <span className="text-xs text-muted-foreground whitespace-nowrap" title={email}>
+                    {email}
+                  </span>
+                  <div className="hidden text-muted-foreground/50 text-sm sm:block">|</div>
+                </>
+              )}
+              {contact && (
+                <>
+                  <div className="hidden items-center gap-2 sm:flex">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">Statut:</span>
+                    <StatusSelect
+                      value={contact.statut}
+                      onChange={(newStatus) => onStatusChange?.(newStatus)}
+                      triggerClassName="w-[140px]"
+                      contentClassName="text-xs"
+                      size="sm"
+                    />
+                  </div>
+                  <div className="hidden text-muted-foreground/50 text-sm sm:block">|</div>
+                </>
+              )}
             </>
           )}
 
           {isCalling && (
-            <span className="text-xs text-muted-foreground select-none whitespace-nowrap" aria-live="polite">{duration}</span>
+            <span className="text-xs text-muted-foreground select-none whitespace-nowrap" aria-live="polite">
+              {duration}
+            </span>
           )}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              {isCalling ? (
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  aria-label="Raccrocher l'appel"
-                  title="Raccrocher l'appel"
-                  onClick={() => onHangUp()}
-                  disabled={!canHangUp}
-                  className={cn(
-                    "size-10 rounded-full transition-all duration-200 hover:scale-105",
-                    "bg-red-500 hover:bg-red-600 text-white shadow-lg",
-                    "focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2",
-                    "disabled:opacity-50 disabled:cursor-not-allowed"
-                  )}
-                >
-                  <PhoneOff className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button
-                  variant="default"
-                  size="icon"
-                  aria-label="Appeler"
-                  title={contact ? 'Appeler' : 'Sélectionnez un contact'}
-                  onClick={() => onCall()}
-                  disabled={!canCall}
-                  className={cn(
-                    "size-10 rounded-full transition-all duration-200 hover:scale-105",
-                    "bg-green-500 hover:bg-green-600 text-white shadow-lg",
-                    "focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2",
-                    "disabled:opacity-50 disabled:cursor-not-allowed"
-                  )}
-                >
-                  <Phone className="h-4 w-4" />
-                </Button>
-              )}
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>
-                {isCalling
-                  ? 'Raccrocher'
-                  : contact
-                  ? adbConnected
-                    ? 'Appeler ce contact'
-                    : "Connectez l'appareil ADB pour appeler"
-                  : 'Aucun contact sélectionné'}
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
 
-        {/* SMS Dropdown (identique au ruban) */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      aria-label="SMS"
-                      title="SMS"
-                      disabled={!contact}
-                      className={cn(
-                        "size-10 rounded-full transition-all duration-200 hover:scale-105",
-                        "border-2 hover:bg-accent hover:text-accent-foreground",
-                        "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
-                        "disabled:opacity-50 disabled:cursor-not-allowed"
-                      )}
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-40 border shadow-lg bg-popover text-popover-foreground z-50" align="end">
-                    <DropdownMenuLabel className="flex items-center gap-2">
-                      <MessageSquare className="w-4 h-4" />
-                      Envoyer SMS
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuGroup>
-                      <DropdownMenuItem onClick={() => onSmsMonsieur && onSmsMonsieur()} disabled={!contact} className="cursor-pointer">
-                        Monsieur {contact?.nom || ''}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => onSmsMadame && onSmsMadame()} disabled={!contact} className="cursor-pointer">
-                        Madame {contact?.nom || ''}
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Envoyer un SMS</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        {/* Email */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label="Email"
-                title="Email"
-                onClick={() => onEmail && onEmail()}
-                disabled={!contact || !contact.email}
-                className={cn(
-                  "size-10 rounded-full transition-all duration-200 hover:scale-105",
-                  "border-2 hover:bg-accent hover:text-accent-foreground",
-                  "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
-                  "disabled:opacity-50 disabled:cursor-not-allowed"
-                )}
-              >
-                <Mail className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Ouvrir l'email</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        {/* Qualification */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label="Qualification"
-                title="Qualifier le contact"
-                onClick={() => onQualification && onQualification()}
-                disabled={!contact}
-                className={cn(
-                  "size-10 rounded-full transition-all duration-200 hover:scale-105",
-                  "border-2 hover:bg-accent hover:text-accent-foreground",
-                  "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
-                  "disabled:opacity-50 disabled:cursor-not-allowed"
-                )}
-              >
-                <FileCheck className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Qualifier le contact</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        {/* Rappel */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label="Rappel"
-                title="Programmer un rappel"
-                onClick={() => onRappel && onRappel()}
-                disabled={!contact}
-                className={cn(
-                  "size-10 rounded-full transition-all duration-200 hover:scale-105",
-                  "border-2 hover:bg-accent hover:text-accent-foreground",
-                  "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
-                  "disabled:opacity-50 disabled:cursor-not-allowed"
-                )}
-              >
-                <Bell className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Programmer un rappel</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        {/* Rendez-vous */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label="Rendez-vous"
-                title="Programmer un rendez-vous"
-                onClick={() => onRendezVous && onRendezVous()}
-                disabled={!contact}
-                className={cn(
-                  "size-10 rounded-full transition-all duration-200 hover:scale-105",
-                  "border-2 hover:bg-accent hover:text-accent-foreground",
-                  "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
-                  "disabled:opacity-50 disabled:cursor-not-allowed"
-                )}
-              >
-                <Calendar className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Programmer un rendez-vous</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-
-        {/* Cal.com */}
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                size="icon"
-                aria-label="Cal.com"
-                title="Ouvrir Cal.com"
-                onClick={() => onCalCom && onCalCom()}
-                disabled={!contact}
-                className={cn(
-                  "size-10 rounded-full transition-all duration-200 hover:scale-105",
-                  "border-2 hover:bg-accent hover:text-accent-foreground",
-                  "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
-                  "disabled:opacity-50 disabled:cursor-not-allowed"
-                )}
-              >
-                <CalendarSearch className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>Ouvrir Cal.com</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+          <div className="flex items-center gap-2">
+            {renderActionButtons()}
+          </div>
         </div>
       </div>
     </div>
