@@ -7,6 +7,7 @@ import { ContactTable, ContactTableRef } from './components/ContactTable';
 import { PaginatedContactTable } from './components/PaginatedContactTable';
 import { AppelsCardsView } from './components/AppelsCardsView';
 import { EmailDialog, RappelDialog, RendezVousDialog, QualificationDialog, GenericInfoDialog } from './components/Dialogs';
+import Calendar2 from './pages/Calendar2';
 
 
 import { TitleBar } from './components/TitleBar';
@@ -220,7 +221,7 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const [isClearDataDialogOpen, setIsClearDataDialogOpen] = useState(false);
 
   const [importProgress, setImportProgress] = useState<{ percentage: number; message: string } | null>(null);
-  const [viewMode, setViewMode] = useState<'table' | 'appels-cards' | 'graph' | 'db' | 'calendar' | 'annuaire'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'appels-cards' | 'graph' | 'db' | 'calendar' | 'calendar-2' | 'annuaire'>('table');
   // Filtres globaux par vue pour uniformit
   const [graphRange, setGraphRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
   const [dbRange, setDbRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
@@ -3051,6 +3052,8 @@ Dimitri MOREL - Arcanis Conseil`;
               selectedDate={calendarDate}
               onDateChange={setCalendarDate}
             />
+          ) : viewMode === 'calendar-2' ? (
+            <Calendar2 />
           ) : viewMode === 'annuaire' ? (
             <AnnuairePage
               theme={theme === Theme.Dark ? 'dark' : 'light'}

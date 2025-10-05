@@ -31,8 +31,8 @@ interface AppSidebarProps {
   userEmail?: string;
   hasSpecialAccess?: boolean;
   onLogout?: () => void;
-  viewMode: 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar' | 'annuaire';
-  onChangeViewMode: (mode: 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar' | 'annuaire') => void;
+  viewMode: 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar' | 'calendar-2' | 'annuaire';
+  onChangeViewMode: (mode: 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar' | 'calendar-2' | 'annuaire') => void;
   onTicketClick?: () => void;
   onHelpClick?: () => void;
   theme?: Theme;
@@ -149,6 +149,16 @@ export function AppSidebar({
                 >
                   <Calendar className="w-4 h-4" />
                   <span>Calendrier</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={viewMode === 'calendar-2'}
+                  onClick={() => onChangeViewMode('calendar-2')}
+                  className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>Calendrier 2</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
