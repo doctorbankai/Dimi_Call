@@ -1,4 +1,4 @@
-﻿import React, { useState, useCallback, useMemo, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Contact, ContactStatus, CallStates, Theme, CallMode } from '../types';
 import { QUICK_COMMENTS, TABLE_HEADER_ICONS } from '../constants';
 import { cn } from '../lib/utils';

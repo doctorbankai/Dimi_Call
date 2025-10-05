@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Contact } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell, Pie, PieChart, Label } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell } from 'recharts';
  
 
 type ChartDashboardProps = {
@@ -257,51 +257,27 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
             <CardDescription>Progression des contacts par étape</CardDescription>
           </CardHeader>
           <CardContent className="flex-1 pb-0">
-            <ChartContainer config={funnelConfig as any} className="mx-auto aspect-square max-h-[400px]">
-              <PieChart>
-                <ChartTooltip 
-                  cursor={false}
-                  content={<ChartTooltipContent hideLabel />} 
+            <ChartContainer config={funnelConfig as any} className="w-full h-[400px]">
+              <BarChart 
+                accessibilityLayer 
+                data={funnelData}
+                margin={{ top: 20, right: 30, left: 20, bottom: 60 }}
+              >
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="category"
+                  tickLine={false}
+                  tickMargin={10}
+                  axisLine={false}
                 />
-                <Pie
-                  data={funnelData}
-                  dataKey="value"
-                  nameKey="category"
-                  innerRadius={60}
-                  strokeWidth={5}
-                >
-                  <Label
-                    content={({ viewBox }) => {
-                      if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                        const total = funnelData.reduce((acc, d) => acc + d.value, 0);
-                        return (
-                          <text
-                            x={viewBox.cx}
-                            y={viewBox.cy}
-                            textAnchor="middle"
-                            dominantBaseline="middle"
-                          >
-                            <tspan
-                              x={viewBox.cx}
-                              y={viewBox.cy}
-                              className="fill-foreground text-3xl font-bold"
-                            >
-                              {total.toLocaleString()}
-                            </tspan>
-                            <tspan
-                              x={viewBox.cx}
-                              y={(viewBox.cy || 0) + 24}
-                              className="fill-muted-foreground"
-                            >
-                              Événements
-                            </tspan>
-                          </text>
-                        );
-                      }
-                    }}
-                  />
-                </Pie>
-              </PieChart>
+                <YAxis />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                  {funnelData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
             </ChartContainer>
             <div className="flex flex-wrap items-center justify-center gap-4 pt-3 text-xs text-muted-foreground">
               {funnelData.map((d) => (
@@ -310,6 +286,9 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
                   <span>{d.category}</span>
                 </div>
               ))}
+            </div>
+            <div className="mt-3 text-xs text-muted-foreground text-center">
+              {funnelData.reduce((acc, d) => acc + d.value, 0)} Événements
             </div>
           </CardContent>
         </Card>
