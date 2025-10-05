@@ -238,44 +238,48 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   }
 
   // Callback de confirmation d'import
-  const handleImportConfirm = async (_mapping: Record<string, string>, _options: { phonesToRemove?: string[] }) => {
+  const handleImportConfirm = async (mapping: Record<string, string>, options: { phonesToRemove?: string[] }) => {
     try {
-      setMappingDialog(prev => ({ ...prev, open: false }))
-      setImportProgress({ percentage: 0, message: 'Préparation de l\'import...' })
-
-      // Simuler la progression (dans une vraie implémentation, cela viendrait du service d'import)
-      const progressInterval = setInterval(() => {
-        setImportProgress(prev => {
-          if (!prev) return null
-          const newPercentage = Math.min(prev.percentage + 10, 90)
-          return {
-            percentage: newPercentage,
-            message: `Import en cours... ${newPercentage}%`
-          }
-        })
-      }, 200)
-
-      // Ici, vous devriez appeler votre service d'import
-      // const result = await importContactsFromFile(mappingDialog.file, mapping, options)
+      if (!mappingDialog.file) {
+        console.log('❌ [MAPPING] Aucun fichier dans le dialogue')
+        return
+      }
       
-      // Pour l'instant, on simule un succès après 2 secondes
-      setTimeout(() => {
-        clearInterval(progressInterval)
-        setImportProgress({ percentage: 100, message: 'Import terminé !' })
-        
-        toast.success('Import réussi', {
-          description: 'Les contacts ont été importés avec succès'
-        })
-
-        // Masquer la barre de progression après 2 secondes
-        setTimeout(() => {
-          setImportProgress(null)
-        }, 2000)
-      }, 2000)
+      console.log('🔄 [MAPPING] Début de l\'importation avec mapping:', mapping)
+      
+      // Import réel des contacts
+      const { importContactsFromFile } = await import('../services/dataService')
+      const imported = await importContactsFromFile(mappingDialog.file, mapping, options)
+      console.log(`📥 [MAPPING] ${imported.length} contacts importés (après exclusion éventuelle)`)
+      
+      // Déclencher l'événement global pour que App.tsx mette à jour la liste
+      try {
+        const ext = mappingDialog.file.name.split('.').pop()?.toLowerCase()
+        const source = (ext === 'xlsx' || ext === 'xls') ? 'xlsx' : (ext === 'csv' || ext === 'tsv') ? 'csv' : 'csv'
+        console.log('📡 [MAPPING] Déclenchement de l\'événement dimicall-imported-contacts')
+        window.dispatchEvent(new CustomEvent('dimicall-imported-contacts', {
+          detail: {
+            contacts: imported,
+            fileName: mappingDialog.file.name,
+            source
+          }
+        }))
+        console.log('✅ [MAPPING] Événement déclenché avec succès')
+      } catch (error) {
+        console.error('❌ [MAPPING] Erreur lors du déclenchement de l\'événement:', error)
+      }
+      
+      // Fermer le dialogue
+      setMappingDialog({ open: false, file: null, headers: [], preview: [] })
+      console.log('🔒 [MAPPING] Dialogue fermé')
+      
+      toast.success('Import réussi', {
+        description: `${imported.length} contacts importés avec succès`
+      })
 
     } catch (error) {
-      console.error('Erreur lors de l\'import:', error)
-      setImportProgress(null)
+      console.error('❌ [MAPPING] Erreur lors de l\'import:', error)
+      setMappingDialog(prev => ({ ...prev, open: false }))
       toast.error('Erreur d\'import', {
         description: error instanceof Error ? error.message : 'Une erreur est survenue'
       })
