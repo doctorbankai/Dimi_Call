@@ -1,6 +1,7 @@
-Ôªøimport React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,6 +13,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { SupabaseShareDialog } from '@/components/SupabaseShareDialog';
 import { localDbService } from '@/services/localDbService';
+import { usePagination } from '@/hooks/usePagination';
+import { TablePagination } from '@/components/TablePagination';
 import { Contact, ContactStatus } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as DateRangeCalendar } from '@/components/ui/calendar';
@@ -37,7 +40,8 @@ import type { LucideIcon } from 'lucide-react';
 import type { StatusEventRecord } from '@/types/statusEvent';
 import { formatPhoneNumber } from '../services/dataService';
 import { ViewSwitcher, type ViewMode } from './ViewSwitcher';
-import { AnnuaireTable } from './AnnuaireTable';
+import { AnnuaireTable, AnnuaireEditableField } from './AnnuaireTable';
+import StatusSelect from './StatusSelect';
 
 type HistoryType = 'appel' | 'rappel' | 'rdv' | 'statut';
 
@@ -78,6 +82,18 @@ interface DirectoryContact {
   lastUpdatedLabel?: string;
   totalEvents: number;
   numeroLigne: number;
+}
+
+interface ContactDetailDraft {
+  status: ContactStatus;
+  reminderDate: string;
+  reminderTime: string;
+  rdvDate: string;
+  rdvTime: string;
+  callDate: string;
+  callTime: string;
+  callDuration: string;
+  commentaire: string;
 }
 
 interface AnnuairePageProps {
@@ -130,19 +146,19 @@ const statusKey = (value?: string | null): string => {
 const normalizeStatusLabel = (status?: string | null): string => {
   const trimmed = safeTrim(status);
   if (!trimmed) {
-    return 'Non d√©fini';
+    return 'Non dÈfini';
   }
   const key = statusKey(trimmed);
-  if (key.startsWith('nondefin')) return 'Non d√©fini';
+  if (key.startsWith('nondefin')) return 'Non dÈfini';
   if (key.includes('mauvais')) return 'Mauvais num';
-  if (key.includes('repondeur')) return 'R√©pondeur';
-  if (key.includes('rappeler')) return '√Ä rappeler';
-  if (key.includes('pasinter')) return 'Pas int√©ress√©';
-  if (key.includes('argument')) return 'Argument√©';
+  if (key.includes('repondeur')) return 'RÈpondeur';
+  if (key.includes('rappeler')) return '¿ rappeler';
+  if (key.includes('pasinter')) return 'Pas intÈressÈ';
+  if (key.includes('argument')) return 'ArgumentÈ';
   if (key === 'do') return 'DO';
   if (key === 'ro') return 'RO';
   if (key.includes('listenoi')) return 'Liste noire';
-  if (key.includes('prematur')) return 'Pr√©matur√©';
+  if (key.includes('prematur')) return 'PrÈmaturÈ';
   if (key === 'a0') return 'A0';
   return trimmed;
 };
@@ -180,7 +196,17 @@ const getStatusColor = (status: string): string => {
     return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300';
   }
   return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+};const resolveContactStatusValue = (value?: string | null): ContactStatus => {
+  const trimmed = safeTrim(value);
+  if (!trimmed) {
+    return ContactStatus.NonDefini;
+  }
+  const normalized = trimmed.toLowerCase();
+  const match = Object.values(ContactStatus).find((candidate) => candidate.toLowerCase() === normalized);
+  return match ?? ContactStatus.NonDefini;
 };
+
+
 
 const buildFullName = (prenom?: string, nom?: string): string => {
   return [safeTrim(prenom), safeTrim(nom)].filter(Boolean).join(' ').trim();
@@ -207,12 +233,12 @@ const formatDateAndTime = (date?: string | null, time?: string | null): string =
   if (parsed && !Number.isNaN(parsed.getTime())) {
     const dateText = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(parsed);
     if (timeValue) {
-      return `${dateText} √† ${timeValue}`;
+      return `${dateText} ‡ ${timeValue}`;
     }
     return dateText;
   }
   if (dateValue && timeValue) {
-    return `${dateValue} √† ${timeValue}`;
+    return `${dateValue} ‡ ${timeValue}`;
   }
   return dateValue || timeValue;
 };
@@ -267,8 +293,8 @@ const buildHistoryMeta = (event: StatusEventRecord): HistoryMetaItem[] => {
     const parts: string[] = [];
     if (callInfo) parts.push(callInfo);
     const duration = safeTrim(event.dureeAppel);
-    if (duration) parts.push(`Dur√©e ${duration}`);
-    meta.push({ label: 'Appel', value: parts.join(' ‚Ä¢ ') || '‚Äî' });
+    if (duration) parts.push(`DurÈe ${duration}`);
+    meta.push({ label: 'Appel', value: parts.join(' ï ') || 'ó' });
   }
   const reminderInfo = formatDateAndTime(event.dateRappel, event.heureRappel);
   if (reminderInfo) {
@@ -352,11 +378,11 @@ const buildDirectoryContact = (events: StatusEventRecord[]): DirectoryContact | 
 
   const reminder =
     reminderDate || reminderTime
-      ? { date: reminderDate, time: reminderTime, label: formatDateAndTime(reminderDate, reminderTime) || 'Non renseign√©' }
+      ? { date: reminderDate, time: reminderTime, label: formatDateAndTime(reminderDate, reminderTime) || 'Non renseignÈ' }
       : undefined;
   const rdv =
     rdvDate || rdvTime
-      ? { date: rdvDate, time: rdvTime, label: formatDateAndTime(rdvDate, rdvTime) || 'Non renseign√©' }
+      ? { date: rdvDate, time: rdvTime, label: formatDateAndTime(rdvDate, rdvTime) || 'Non renseignÈ' }
       : undefined;
   const lastCall =
     lastCallDate || lastCallTime || lastCallDuration
@@ -366,7 +392,7 @@ const buildDirectoryContact = (events: StatusEventRecord[]): DirectoryContact | 
           duration: lastCallDuration,
           label:
             formatDateAndTime(lastCallDate, lastCallTime) ||
-            (lastCallDuration ? `Dur√©e ${lastCallDuration}` : 'Non renseign√©'),
+            (lastCallDuration ? `DurÈe ${lastCallDuration}` : 'Non renseignÈ'),
         }
       : undefined;
 
@@ -425,13 +451,29 @@ const loadEventsFromSQLite = async (start?: string, end?: string): Promise<Statu
     console.error('[Annuaire] Erreur lors du chargement SQLite', error)
     return []
   }
+};const EVENT_FIELD_MAP: Record<AnnuaireEditableField, keyof StatusEventRecord | 'new_status'> = {
+  prenom: 'prenom',
+  nom: 'nom',
+  email: 'email',
+  commentaire: 'commentaire',
+  status: 'new_status',
+  dateRappel: 'dateRappel',
+  heureRappel: 'heureRappel',
+  dateRDV: 'dateRDV',
+  heureRDV: 'heureRDV',
+  dateAppel: 'dateAppel',
+  heureAppel: 'heureAppel',
+  dureeAppel: 'dureeAppel',
 };
+
+
 
 export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
   const [contacts, setContacts] = useState<DirectoryContact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<DirectoryContact[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedContact, setSelectedContact] = useState<DirectoryContact | null>(null);
+  const [detailDraft, setDetailDraft] = useState<ContactDetailDraft | null>(null);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'name' | 'phone' | 'lastCall'>('name');
@@ -460,6 +502,245 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
   const hasSelection = selectedCount > 0;
 
   const visibleContactCount = filteredContacts.length;
+
+  const savedItemsPerPage = useMemo(() => {
+    try {
+      const stored = Number(localStorage.getItem('dimicall-items-per-page'));
+      return Number.isFinite(stored) && stored > 0 ? stored : 50;
+    } catch {
+      return 50;
+    }
+  }, []);
+
+  const initialPage = useMemo(() => {
+    try {
+      const stored = Number(localStorage.getItem('dimicall-events-current-page'));
+      return Number.isFinite(stored) && stored > 0 ? stored : 1;
+    } catch {
+      return 1;
+    }
+  }, []);
+
+  const {
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    paginatedData: paginatedContacts,
+    totalItems,
+    goToPage,
+    setItemsPerPage,
+  } = usePagination<DirectoryContact>({
+    data: filteredContacts,
+    initialItemsPerPage: savedItemsPerPage,
+    initialPage,
+  });
+
+  const updateContactField = useCallback(
+    async (contactId: string, field: AnnuaireEditableField, value: string) => {
+      const contact = contacts.find((entry) => entry.id === contactId);
+      if (!contact || contact.events.length === 0) {
+        console.warn('[Annuaire] updateContactField target not found', { contactId, field });
+        return;
+      }
+
+      const latestEvent = contact.events[0];
+      if (typeof latestEvent.id !== 'number') {
+        console.warn('[Annuaire] updateContactField missing event id', { contactId, field });
+        return;
+      }
+
+      const payloadKey = EVENT_FIELD_MAP[field];
+      if (!payloadKey) {
+        console.warn('[Annuaire] updateContactField unsupported field', field);
+        return;
+      }
+
+      const updater = (window as any)?.electronAPI?.localdb?.update;
+      if (typeof updater !== 'function') {
+        console.error('[Annuaire] localdb.update unavailable');
+        return;
+      }
+
+      try {
+        await updater({ id: latestEvent.id, [payloadKey]: value });
+      } catch (error) {
+        console.error('[Annuaire] updateContactField failed', { field, error });
+        return;
+      }
+
+      const applyUpdate = (entry: DirectoryContact): DirectoryContact => {
+        if (entry.id !== contactId) {
+          return entry;
+        }
+
+        const updatedEvents = entry.events.map((event, index) =>
+          index === 0 ? { ...event, [payloadKey]: value } : event
+        );
+
+        const next: DirectoryContact = { ...entry, events: updatedEvents };
+
+        switch (field) {
+          case 'prenom':
+            next.prenom = value;
+            next.fullName = buildFullName(value, next.nom) || next.telephone || 'Contact';
+            break;
+          case 'nom':
+            next.nom = value;
+            next.fullName = buildFullName(next.prenom, value) || next.telephone || 'Contact';
+            break;
+          case 'email':
+            next.email = value;
+            break;
+          case 'commentaire':
+            next.commentaire = value;
+            break;
+          case 'status': {
+            const normalized = normalizeStatusLabel(value);
+            if (normalized !== next.status) {
+              next.previousStatus = next.status;
+              next.status = normalized;
+            }
+            break;
+          }
+          case 'dateRappel':
+          case 'heureRappel': {
+            const dateValue = field === 'dateRappel' ? value : next.reminder?.date ?? '';
+            const timeValue = field === 'heureRappel' ? value : next.reminder?.time ?? '';
+            next.reminder =
+              dateValue || timeValue
+                ? {
+                    date: dateValue,
+                    time: timeValue,
+                    label: formatDateAndTime(dateValue, timeValue) || 'Non renseign?',
+                  }
+                : undefined;
+            break;
+          }
+          case 'dateRDV':
+          case 'heureRDV': {
+            const dateValue = field === 'dateRDV' ? value : next.rdv?.date ?? '';
+            const timeValue = field === 'heureRDV' ? value : next.rdv?.time ?? '';
+            next.rdv =
+              dateValue || timeValue
+                ? {
+                    date: dateValue,
+                    time: timeValue,
+                    label: formatDateAndTime(dateValue, timeValue) || 'Non renseign?',
+                  }
+                : undefined;
+            break;
+          }
+          case 'dateAppel':
+          case 'heureAppel':
+          case 'dureeAppel': {
+            const dateValue = field === 'dateAppel' ? value : next.lastCall?.date ?? '';
+            const timeValue = field === 'heureAppel' ? value : next.lastCall?.time ?? '';
+            const durationValue = field === 'dureeAppel' ? value : next.lastCall?.duration ?? '';
+            next.lastCall =
+              dateValue || timeValue || durationValue
+                ? {
+                    date: dateValue,
+                    time: timeValue,
+                    duration: durationValue,
+                    label:
+                      formatDateAndTime(dateValue, timeValue) ||
+                      (durationValue ? `Duree ${durationValue}` : 'Non renseigne'),
+                  }
+                : undefined;
+            break;
+          }
+          default:
+            break;
+        }
+
+        return next;
+      };
+
+      setContacts((prev) => prev.map(applyUpdate));
+      setFilteredContacts((prev) => prev.map(applyUpdate));
+      setSelectedContact((prev) => (prev && prev.id === contactId ? applyUpdate(prev) : prev));
+    },
+    [contacts]
+  );
+
+  const handleStatusChange = useCallback(
+    (nextStatus: ContactStatus) => {
+      setDetailDraft((previous) => (previous ? { ...previous, status: nextStatus } : previous));
+      if (selectedContact) {
+        void updateContactField(selectedContact.id, 'status', nextStatus);
+      }
+    },
+    [selectedContact, updateContactField]
+  );
+
+  const updateDetailDraft = useCallback((patch: Partial<ContactDetailDraft>) => {
+    setDetailDraft((previous) => (previous ? { ...previous, ...patch } : previous));
+  }, []);
+
+  const persistDetailField = useCallback(
+    (field: AnnuaireEditableField, value: string) => {
+      if (!selectedContact) {
+        return;
+      }
+
+      const currentValue = (() => {
+        switch (field) {
+          case 'prenom':
+            return selectedContact.prenom;
+          case 'nom':
+            return selectedContact.nom;
+          case 'email':
+            return selectedContact.email ?? '';
+          case 'commentaire':
+            return selectedContact.commentaire ?? '';
+          case 'status':
+            return selectedContact.status;
+          case 'dateRappel':
+            return selectedContact.reminder?.date ?? '';
+          case 'heureRappel':
+            return selectedContact.reminder?.time ?? '';
+          case 'dateRDV':
+            return selectedContact.rdv?.date ?? '';
+          case 'heureRDV':
+            return selectedContact.rdv?.time ?? '';
+          case 'dateAppel':
+            return selectedContact.lastCall?.date ?? '';
+          case 'heureAppel':
+            return selectedContact.lastCall?.time ?? '';
+          case 'dureeAppel':
+            return selectedContact.lastCall?.duration ?? '';
+          default:
+            return '';
+        }
+      })();
+
+      if (currentValue === value) {
+        return;
+      }
+
+      void updateContactField(selectedContact.id, field, value);
+    },
+    [selectedContact, updateContactField]
+  );
+
+  useEffect(() => {
+    if (!selectedContact) {
+      setDetailDraft(null);
+      return;
+    }
+
+    setDetailDraft({
+      status: resolveContactStatusValue(selectedContact.status),
+      reminderDate: selectedContact.reminder?.date ?? '',
+      reminderTime: selectedContact.reminder?.time ?? '',
+      rdvDate: selectedContact.rdv?.date ?? '',
+      rdvTime: selectedContact.rdv?.time ?? '',
+      callDate: selectedContact.lastCall?.date ?? '',
+      callTime: selectedContact.lastCall?.time ?? '',
+      callDuration: selectedContact.lastCall?.duration ?? '',
+      commentaire: selectedContact.commentaire ?? '',
+    });
+  }, [selectedContact]);
 
   const fetchContacts = useCallback(async (range: { start: string; end: string }) => {
     setLoading(true);
@@ -538,9 +819,9 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
     if (dateRange.start && dateRange.start === dateRange.end) {
       return dateRange.start;
     }
-    const startLabel = dateRange.start || '‚Ä¶';
-    const endLabel = dateRange.end || '‚Ä¶';
-    return `${startLabel} ‚Üí ${endLabel}`;
+    const startLabel = dateRange.start || 'Ö';
+    const endLabel = dateRange.end || 'Ö';
+    return `${startLabel} ? ${endLabel}`;
   }, [dateRange]);
 
   const formatDateToYMD = (date?: Date | null): string => {
@@ -621,29 +902,62 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
     });
   }, []);
 
+  const pageSelectedCount = useMemo(
+    () => paginatedContacts.filter((contact) => selectedContactIds.has(contact.id)).length,
+    [paginatedContacts, selectedContactIds]
+  );
+
   const bulkSelectionState = useMemo<boolean | 'indeterminate'>(() => {
-    if (visibleContactCount === 0 || selectedCount === 0) {
+    if (paginatedContacts.length === 0 || pageSelectedCount === 0) {
       return false;
     }
-    if (selectedCount === visibleContactCount) {
+    if (pageSelectedCount === paginatedContacts.length) {
       return true;
     }
     return 'indeterminate';
-  }, [visibleContactCount, selectedCount]);
+  }, [paginatedContacts, pageSelectedCount]);
 
   const handleToggleSelectAll = useCallback((value: boolean | 'indeterminate') => {
     const shouldSelectAll = value === true || value === 'indeterminate';
-    setSelectedContactIds(() => {
-      if (!shouldSelectAll) {
-        localDbService.dispatchSelectionCount(0);
-        return new Set();
+    setSelectedContactIds((previous) => {
+      const next = new Set(previous);
+      if (shouldSelectAll) {
+        paginatedContacts.forEach((contact) => next.add(contact.id));
+      } else {
+        paginatedContacts.forEach((contact) => next.delete(contact.id));
       }
-      const next = new Set<string>();
-      filteredContacts.forEach((contact) => next.add(contact.id));
-      localDbService.dispatchSelectionCount(next.size);
+      if (next.size !== previous.size) {
+        localDbService.dispatchSelectionCount(next.size);
+      }
       return next;
     });
-  }, [filteredContacts]);
+  }, [paginatedContacts]);
+
+  const handlePageChange = useCallback(
+    (page: number) => {
+      const normalized = Math.max(1, Math.min(page, totalPages || 1));
+      try {
+        localStorage.setItem('dimicall-events-current-page', String(normalized));
+      } catch {
+        // Ignored
+      }
+      goToPage(normalized);
+    },
+    [goToPage, totalPages]
+  );
+
+  const handleItemsPerPageChange = useCallback(
+    (pageSize: number) => {
+      const normalized = pageSize > 0 ? pageSize : itemsPerPage;
+      try {
+        localStorage.setItem('dimicall-items-per-page', String(normalized));
+      } catch {
+        // Ignored
+      }
+      setItemsPerPage(normalized);
+    },
+    [itemsPerPage, setItemsPerPage]
+  );
 
   const clearSelection = useCallback(() => {
     setSelectedContactIds(() => {
@@ -687,7 +1001,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
         nom: contact.nom,
         telephone: contact.telephone,
         email: contact.email || '',
-        source: 'Donn√©es',
+        source: 'DonnÈes',
         statut: status,
         commentaire: contact.commentaire || '',
         dateRappel: contact.reminder?.date || '',
@@ -745,7 +1059,74 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
     try {
       localStorage.setItem('annuaire-view-mode', newView);
     } catch (error) {
-      console.warn('[Annuaire] Impossible de sauvegarder la pr√©f√©rence de vue', error);
+      console.warn('[Annuaire] Impossible de sauvegarder la prÈfÈrence de vue', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const handleDeleteEvent: EventListener = () => {
+      void handleDeleteSelected();
+    };
+    const handleExportCsvEvent: EventListener = () => {
+      void handleExportCsv();
+    };
+    const handleExportXlsxEvent: EventListener = () => {
+      void handleExportXlsx();
+    };
+    const handleImportCsvEvent: EventListener = () => {
+      void handleImportCsv();
+    };
+    const handleImportXlsxEvent: EventListener = () => {
+      void handleImportXlsx();
+    };
+    const handleRefreshEvent: EventListener = () => {
+      void handleRefresh();
+    };
+    const handleTransferEvent: EventListener = () => {
+      handleTransferSelected();
+    };
+
+    const listeners: Array<[string, EventListener]> = [
+      ['dimicall-db-delete', handleDeleteEvent],
+      ['dimicall-db-export', handleExportCsvEvent],
+      ['dimicall-db-export-xlsx', handleExportXlsxEvent],
+      ['dimicall-db-import', handleImportCsvEvent],
+      ['dimicall-db-import-xlsx', handleImportXlsxEvent],
+      ['dimicall-db-refresh', handleRefreshEvent],
+      ['dimicall-db-transfer', handleTransferEvent],
+    ];
+
+    listeners.forEach(([eventName, listener]) => {
+      window.addEventListener(eventName, listener);
+    });
+
+    return () => {
+      listeners.forEach(([eventName, listener]) => {
+        window.removeEventListener(eventName, listener);
+      });
+    };
+  }, [
+    handleDeleteSelected,
+    handleExportCsv,
+    handleExportXlsx,
+    handleImportCsv,
+    handleImportXlsx,
+    handleRefresh,
+    handleTransferSelected,
+  ]);
+
+  const dispatchLocalDbEvent = useCallback((eventName: string) => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    try {
+      window.dispatchEvent(new CustomEvent(eventName));
+    } catch (error) {
+      console.warn('[Annuaire] dispatchLocalDbEvent failed', { eventName, error });
     }
   }, []);
 
@@ -757,12 +1138,14 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
     const handleLocalDbUpdate = () => {
       fetchContacts(dateRange);
     };
+
     if (typeof window !== 'undefined') {
-      window.addEventListener('localdb-updated', handleLocalDbUpdate as any);
+      window.addEventListener('localdb-updated', handleLocalDbUpdate as EventListener);
     }
+
     return () => {
       if (typeof window !== 'undefined') {
-        window.removeEventListener('localdb-updated', handleLocalDbUpdate as any);
+        window.removeEventListener('localdb-updated', handleLocalDbUpdate as EventListener);
       }
     };
   }, [fetchContacts, dateRange]);
@@ -777,14 +1160,23 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
         applyDateFilter({ start: startValue, end: endValue }, isEmpty ? 'all' : 'custom');
       }
     };
-    window.addEventListener('dimicall-date-filter', handleExternalFilter as EventListener);
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('dimicall-date-filter', handleExternalFilter as EventListener);
+    }
+
     return () => {
-      window.removeEventListener('dimicall-date-filter', handleExternalFilter as EventListener);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('dimicall-date-filter', handleExternalFilter as EventListener);
+      }
     };
   }, [applyDateFilter]);
 
   useEffect(() => {
-    if (!selectedContact) return;
+    if (!selectedContact) {
+      return;
+    }
+
     const refreshed = contacts.find((contact) => contact.id === selectedContact.id);
     if (refreshed && refreshed !== selectedContact) {
       setSelectedContact(refreshed);
@@ -824,6 +1216,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
     setFilteredContacts(sorted);
   }, [contacts, searchTerm, sortBy, sortOrder]);
 
+
   const handleContactClick = (contact: DirectoryContact) => {
     setSelectedContact(contact);
     setIsContactDialogOpen(true);
@@ -849,7 +1242,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
       <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
       <div className="flex items-center gap-2 text-sm text-foreground">
         <Icon className="h-4 w-4 text-muted-foreground" />
-        <span className="truncate">{value || '‚Äî'}</span>
+        <span className="truncate">{value || 'ó'}</span>
       </div>
     </div>
   );
@@ -887,7 +1280,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
             size="sm"
             className="h-9"
             onClick={handleSortOrderToggle}
-            title={sortOrder === 'asc' ? 'Tri croissant' : 'Tri d√©croissant'}
+            title={sortOrder === 'asc' ? 'Tri croissant' : 'Tri dÈcroissant'}
           >
             <ArrowUpNarrowWide className="h-4 w-4" />
           </Button>
@@ -933,8 +1326,8 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
               />
             </PopoverContent>
           </Popover>
-          <Button variant="outline" size="sm" className="h-8" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4 mr-2" /> Rafra√Æchir
+          <Button variant="outline" size="sm" className="h-8" onClick={() => dispatchLocalDbEvent('dimicall-db-refresh')}>
+            <RefreshCw className="h-4 w-4 mr-2" /> RafraÓchir
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -950,9 +1343,9 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
             variant="default"
             size="sm"
             className="h-8"
-            title="Transf√©rer la s√©lection vers Appels"
+            title="TransfÈrer la sÈlection vers Appels"
             disabled={!hasSelection}
-            onClick={handleTransferSelected}
+            onClick={() => dispatchLocalDbEvent('dimicall-db-transfer')}
           >
             Transfert
           </Button>
@@ -960,9 +1353,9 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
             variant="outline"
             size="sm"
             className="h-8"
-            title="Supprimer la s√©lection"
+            title="Supprimer la sÈlection"
             disabled={!hasSelection}
-            onClick={handleDeleteSelected}
+            onClick={() => dispatchLocalDbEvent('dimicall-db-delete')}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -975,8 +1368,8 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
             <DropdownMenuContent align="end" className="w-44">
               <DropdownMenuLabel>Exporter</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleExportCsv}>CSV</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportXlsx}>
+              <DropdownMenuItem onClick={() => dispatchLocalDbEvent('dimicall-db-export')}>CSV</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => dispatchLocalDbEvent('dimicall-db-export-xlsx')}>
                 <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel (.xlsx)
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -990,8 +1383,8 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuLabel>Importer depuis</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={handleImportCsv}>CSV</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleImportXlsx}>Excel (.xlsx)</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => dispatchLocalDbEvent('dimicall-db-import')}>CSV</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => dispatchLocalDbEvent('dimicall-db-import-xlsx')}>Excel (.xlsx)</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
@@ -1000,16 +1393,29 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
       {/* Contenu principal */}
       <div className="flex-1 overflow-auto space-y-6">
         {viewMode === 'table' ? (
-          <div className="animate-in fade-in duration-200">
+          <div className="animate-in fade-in duration-200 space-y-4">
             <AnnuaireTable
-              contacts={filteredContacts}
+              contacts={paginatedContacts}
               selectedIds={selectedContactIds}
               onToggleSelection={toggleContactSelection}
               onToggleSelectAll={handleToggleSelectAll}
               onContactClick={handleContactClick}
               loading={loading}
               theme={theme}
+              onUpdateField={updateContactField}
             />
+            <div className="mt-2 border-t border-border/60 pt-2">
+              <TablePagination
+                className="w-full"
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                itemsPerPage={itemsPerPage}
+                onPageChange={handlePageChange}
+                onItemsPerPageChange={handleItemsPerPageChange}
+                pageSizeOptions={[25, 50, 100]}
+              />
+            </div>
           </div>
         ) : (
           <div className="animate-in fade-in duration-200">
@@ -1036,7 +1442,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
               <Card>
                 <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center text-muted-foreground">
                   <History className="h-8 w-8" />
-                  <p>Aucun contact trouv√© dans la base locale.</p>
+                  <p>Aucun contact trouvÈ dans la base locale.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -1089,7 +1495,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
                         )}
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
                           <History className="h-3 w-3" />
-                          {contact.totalEvents} √©v√©nement{contact.totalEvents > 1 ? 's' : ''}
+                          {contact.totalEvents} ÈvÈnement{contact.totalEvents > 1 ? 's' : ''}
                         </span>
                       </div>
                     </div>
@@ -1169,28 +1575,29 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <InfoField
                       icon={Phone}
-                      label="Telephone"
+                      label="T?l?phone"
                       value={
                         selectedContact.telephone
                           ? formatPhoneNumber(selectedContact.telephone)
-                          : 'Non renseign√©'
+                          : 'Non renseign?'
                       }
                     />
-                    {selectedContact.email && (
-                      <InfoField icon={Mail} label="Email" value={selectedContact.email} />
-                    )}
+                    <InfoField icon={Mail} label="Email" value={selectedContact.email || 'Non renseign?'} />
                     <div className="space-y-2">
                       <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         Statut actuel
                       </span>
-                      <Badge className={getStatusColor(selectedContact.status)}>
-                        {selectedContact.status}
-                      </Badge>
+                      <StatusSelect
+                        value={detailDraft?.status ?? resolveContactStatusValue(selectedContact.status)}
+                        onChange={handleStatusChange}
+                        size="sm"
+                        triggerClassName="w-full md:w-[200px]"
+                      />
                     </div>
                     {selectedContact.previousStatus && (
                       <div className="space-y-2">
                         <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Statut pr√©c√©dent
+                          Statut pr?c?dent
                         </span>
                         <Badge variant="outline" className="text-xs text-muted-foreground">
                           {selectedContact.previousStatus}
@@ -1199,52 +1606,116 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
                     )}
                   </div>
 
-                  <Separator />
-
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <InfoField
                       icon={Clock}
-                      label="Derni√®re mise √† jour"
-                      value={selectedContact.lastUpdatedLabel || 'Non renseign√©'}
+                      label="Derni?re mise ? jour"
+                      value={selectedContact.lastUpdatedLabel || 'Non renseign?'}
                     />
                     <InfoField
                       icon={History}
-                      label="√âv√®nements enregistr√©s"
-                      value={`${selectedContact.totalEvents}`}
-                    />
-                    <InfoField
-                      icon={Bell}
-                      label="Prochain rappel"
-                      value={selectedContact.reminder?.label || 'Non renseign√©'}
-                    />
-                    <InfoField icon={Calendar} label="RDV" value={selectedContact.rdv?.label || 'Non renseign√©'} />
-                    <InfoField
-                      icon={Phone}
-                      label="Dernier appel"
-                      value={
-                        selectedContact.lastCall
-                          ? `${selectedContact.lastCall.label}${
-                              selectedContact.lastCall.duration ? ` (${selectedContact.lastCall.duration})` : ''
-                            }`
-                          : 'Non renseign√©'
-                      }
+                      label="?v?nements enregistr?s"
+                      value={selectedContact.totalEvents}
                     />
                   </div>
 
-                  {selectedContact.commentaire && (
-                    <>
-                      <Separator />
-                      <div className="space-y-2">
-                        <h3 className="flex items-center gap-2 text-sm font-semibold">
-                          <MessageSquare className="h-4 w-4" />
-                          Derni√®re note
-                        </h3>
-                        <p className="whitespace-pre-wrap text-sm text-muted-foreground">
-                          {selectedContact.commentaire}
-                        </p>
+                  <Separator />
+
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Prochain rappel
+                      </span>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <Input
+                          type="date"
+                          value={detailDraft?.reminderDate ?? ''}
+                          onChange={(event) => updateDetailDraft({ reminderDate: event.target.value })}
+                          onBlur={(event) => detailDraft && persistDetailField('dateRappel', event.currentTarget.value)}
+                          disabled={!detailDraft}
+                        />
+                        <Input
+                          type="time"
+                          value={detailDraft?.reminderTime ?? ''}
+                          onChange={(event) => updateDetailDraft({ reminderTime: event.target.value })}
+                          onBlur={(event) => detailDraft && persistDetailField('heureRappel', event.currentTarget.value)}
+                          disabled={!detailDraft}
+                        />
                       </div>
-                    </>
-                  )}
+                    </div>
+                    <div className="space-y-2">
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        RDV
+                      </span>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <Input
+                          type="date"
+                          value={detailDraft?.rdvDate ?? ''}
+                          onChange={(event) => updateDetailDraft({ rdvDate: event.target.value })}
+                          onBlur={(event) => detailDraft && persistDetailField('dateRDV', event.currentTarget.value)}
+                          disabled={!detailDraft}
+                        />
+                        <Input
+                          type="time"
+                          value={detailDraft?.rdvTime ?? ''}
+                          onChange={(event) => updateDetailDraft({ rdvTime: event.target.value })}
+                          onBlur={(event) => detailDraft && persistDetailField('heureRDV', event.currentTarget.value)}
+                          disabled={!detailDraft}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Dernier appel
+                      </span>
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-1">
+                          <Input
+                            type="date"
+                            value={detailDraft?.callDate ?? ''}
+                            onChange={(event) => updateDetailDraft({ callDate: event.target.value })}
+                            onBlur={(event) => detailDraft && persistDetailField('dateAppel', event.currentTarget.value)}
+                            disabled={!detailDraft}
+                          />
+                          <Input
+                            type="time"
+                            value={detailDraft?.callTime ?? ''}
+                            onChange={(event) => updateDetailDraft({ callTime: event.target.value })}
+                            onBlur={(event) => detailDraft && persistDetailField('heureAppel', event.currentTarget.value)}
+                            disabled={!detailDraft}
+                          />
+                        </div>
+                        <Input
+                          value={detailDraft?.callDuration ?? ''}
+                          onChange={(event) => updateDetailDraft({ callDuration: event.target.value })}
+                          onBlur={(event) => detailDraft && persistDetailField('dureeAppel', event.currentTarget.value)}
+                          placeholder="Dur?e (mm:ss)"
+                          disabled={!detailDraft}
+                          className="w-full sm:w-[180px]"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="space-y-2">
+                    <h3 className="flex items-center gap-2 text-sm font-semibold">
+                      <MessageSquare className="h-4 w-4" />
+                      Notes
+                    </h3>
+                    <Textarea
+                      value={detailDraft?.commentaire ?? ''}
+                      onChange={(event) => updateDetailDraft({ commentaire: event.target.value })}
+                      onBlur={(event) => detailDraft && persistDetailField('commentaire', event.currentTarget.value)}
+                      placeholder="Ajouter une note?"
+                      rows={4}
+                      disabled={!detailDraft}
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="history" className="space-y-4">
                 </TabsContent>
 
                 <TabsContent value="history" className="space-y-4">

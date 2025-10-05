@@ -1,10 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import StatusSelect from '@/components/StatusSelect';
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { formatPhoneNumber } from '@/services/dataService';
+import { ContactStatus } from '@/types';
 
 interface DirectoryContact {
   id: string;
@@ -27,6 +28,20 @@ interface DirectoryContact {
   numeroLigne: number;
 }
 
+export type AnnuaireEditableField =
+  | 'prenom'
+  | 'nom'
+  | 'email'
+  | 'commentaire'
+  | 'status'
+  | 'dateRappel'
+  | 'heureRappel'
+  | 'dateRDV'
+  | 'heureRDV'
+  | 'dateAppel'
+  | 'heureAppel'
+  | 'dureeAppel';
+
 interface AnnuaireTableProps {
   contacts: DirectoryContact[];
   selectedIds: Set<string>;
@@ -35,7 +50,9 @@ interface AnnuaireTableProps {
   onContactClick: (contact: DirectoryContact) => void;
   loading: boolean;
   theme?: 'dark' | 'light';
+  onUpdateField: (contactId: string, field: AnnuaireEditableField, value: string) => Promise<void>;
 }
+
 
 type SortKey = keyof DirectoryContact | 'fullName';
 
@@ -49,40 +66,16 @@ const statusKey = (value?: string | null): string => {
     .toLowerCase();
 };
 
-const getStatusColor = (status: string): string => {
-  const key = statusKey(status);
-  if (key.startsWith('nondefin')) {
-    return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+const toContactStatus = (value: string | undefined): ContactStatus => {
+  if (!value) {
+    return ContactStatus.NonDefini;
   }
-  if (key.includes('mauvais')) {
-    return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-  }
-  if (key.includes('repondeur')) {
-    return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300';
-  }
-  if (key.includes('rappeler')) {
-    return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300';
-  }
-  if (key.includes('pasinter')) {
-    return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-  }
-  if (key.includes('argument')) {
-    return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300';
-  }
-  if (key === 'do' || key === 'ro') {
-    return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300';
-  }
-  if (key.includes('listenoi')) {
-    return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300';
-  }
-  if (key.includes('prematur')) {
-    return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300';
-  }
-  if (key === 'a0') {
-    return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300';
-  }
-  return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
+  const normalized = value.trim().toLowerCase();
+  const match = Object.values(ContactStatus).find((status) => status.toLowerCase() === normalized);
+  return match ?? ContactStatus.NonDefini;
 };
+
+
 
 export function AnnuaireTable({
   contacts,
@@ -91,6 +84,7 @@ export function AnnuaireTable({
   onToggleSelectAll,
   onContactClick,
   loading,
+  onUpdateField,
 }: AnnuaireTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('numeroLigne');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -141,15 +135,22 @@ export function AnnuaireTable({
     setEditing({ id, field, value: String(value ?? '') });
   };
 
-  const commitEdit = () => {
-    if (!editing) return;
-    // TODO: Implement update logic via localDbService
+  const commitEdit = useCallback(async () => {
+    if (!editing) {
+      return;
+    }
+    const { id, field, value } = editing;
+    await onUpdateField(id, field as AnnuaireEditableField, value);
     setEditing(null);
-  };
+  }, [editing, onUpdateField]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') commitEdit();
-    if (e.key === 'Escape') setEditing(null);
+    if (e.key === 'Enter') {
+      void commitEdit();
+    }
+    if (e.key === 'Escape') {
+      setEditing(null);
+    }
   };
 
   if (loading) {
@@ -295,7 +296,7 @@ export function AnnuaireTable({
                           value={editing.value}
                           autoFocus
                           onChange={(e) => setEditing({ ...editing, value: e.target.value })}
-                          onBlur={commitEdit}
+                          onBlur={() => void commitEdit()}
                           onKeyDown={onKeyDown}
                           onClick={(e) => e.stopPropagation()}
                         />
@@ -316,7 +317,7 @@ export function AnnuaireTable({
                           value={editing.value}
                           autoFocus
                           onChange={(e) => setEditing({ ...editing, value: e.target.value })}
-                          onBlur={commitEdit}
+                          onBlur={() => void commitEdit()}
                           onKeyDown={onKeyDown}
                           onClick={(e) => e.stopPropagation()}
                         />
@@ -340,7 +341,7 @@ export function AnnuaireTable({
                           value={editing.value}
                           autoFocus
                           onChange={(e) => setEditing({ ...editing, value: e.target.value })}
-                          onBlur={commitEdit}
+                          onBlur={() => void commitEdit()}
                           onKeyDown={onKeyDown}
                           onClick={(e) => e.stopPropagation()}
                         />
@@ -350,8 +351,19 @@ export function AnnuaireTable({
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
-                      <Badge className={getStatusColor(contact.status)}>{contact.status}</Badge>
+                    <TableCell
+                      className="px-2 py-1.5 text-xs text-center whitespace-nowrap"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <StatusSelect
+                        value={toContactStatus(contact.status)}
+                        onChange={(nextStatus) => {
+                          void onUpdateField(contact.id, 'status', nextStatus);
+                        }}
+                        size="sm"
+                        triggerClassName="min-w-[120px]"
+                        contentClassName="min-w-[200px]"
+                      />
                     </TableCell>
                     <TableCell
                       className="px-2 py-1.5 text-xs text-center whitespace-nowrap"
@@ -366,7 +378,7 @@ export function AnnuaireTable({
                           value={editing.value}
                           autoFocus
                           onChange={(e) => setEditing({ ...editing, value: e.target.value })}
-                          onBlur={commitEdit}
+                          onBlur={() => void commitEdit()}
                           onKeyDown={onKeyDown}
                           onClick={(e) => e.stopPropagation()}
                         />
@@ -376,26 +388,158 @@ export function AnnuaireTable({
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
-                      {contact.reminder?.date || ''}
+                    <TableCell
+                      className="px-2 py-1.5 text-xs text-center whitespace-nowrap"
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(contact.id, 'dateRappel', contact.reminder?.date ?? '');
+                      }}
+                    >
+                      {editing?.id === contact.id && editing.field === 'dateRappel' ? (
+                        <input
+                          type="date"
+                          className="h-7 px-2 text-xs border rounded w-full"
+                          value={editing.value}
+                          autoFocus
+                          onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+                          onBlur={() => void commitEdit()}
+                          onKeyDown={onKeyDown}
+                          onClick={(event) => event.stopPropagation()}
+                        />
+                      ) : (
+                        contact.reminder?.date || ''
+                      )}
                     </TableCell>
-                    <TableCell className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
-                      {contact.reminder?.time || ''}
+                    <TableCell
+                      className="px-2 py-1.5 text-xs text-center whitespace-nowrap"
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(contact.id, 'heureRappel', contact.reminder?.time ?? '');
+                      }}
+                    >
+                      {editing?.id === contact.id && editing.field === 'heureRappel' ? (
+                        <input
+                          type="time"
+                          className="h-7 px-2 text-xs border rounded w-full"
+                          value={editing.value}
+                          autoFocus
+                          onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+                          onBlur={() => void commitEdit()}
+                          onKeyDown={onKeyDown}
+                          onClick={(event) => event.stopPropagation()}
+                        />
+                      ) : (
+                        contact.reminder?.time || ''
+                      )}
                     </TableCell>
-                    <TableCell className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
-                      {contact.rdv?.date || ''}
+                    <TableCell
+                      className="px-2 py-1.5 text-xs text-center whitespace-nowrap"
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(contact.id, 'dateRDV', contact.rdv?.date ?? '');
+                      }}
+                    >
+                      {editing?.id === contact.id && editing.field === 'dateRDV' ? (
+                        <input
+                          type="date"
+                          className="h-7 px-2 text-xs border rounded w-full"
+                          value={editing.value}
+                          autoFocus
+                          onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+                          onBlur={() => void commitEdit()}
+                          onKeyDown={onKeyDown}
+                          onClick={(event) => event.stopPropagation()}
+                        />
+                      ) : (
+                        contact.rdv?.date || ''
+                      )}
                     </TableCell>
-                    <TableCell className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
-                      {contact.rdv?.time || ''}
+                    <TableCell
+                      className="px-2 py-1.5 text-xs text-center whitespace-nowrap"
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(contact.id, 'heureRDV', contact.rdv?.time ?? '');
+                      }}
+                    >
+                      {editing?.id === contact.id && editing.field === 'heureRDV' ? (
+                        <input
+                          type="time"
+                          className="h-7 px-2 text-xs border rounded w-full"
+                          value={editing.value}
+                          autoFocus
+                          onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+                          onBlur={() => void commitEdit()}
+                          onKeyDown={onKeyDown}
+                          onClick={(event) => event.stopPropagation()}
+                        />
+                      ) : (
+                        contact.rdv?.time || ''
+                      )}
                     </TableCell>
-                    <TableCell className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
-                      {contact.lastCall?.date || ''}
+                    <TableCell
+                      className="px-2 py-1.5 text-xs text-center whitespace-nowrap"
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(contact.id, 'dateAppel', contact.lastCall?.date ?? '');
+                      }}
+                    >
+                      {editing?.id === contact.id && editing.field === 'dateAppel' ? (
+                        <input
+                          type="date"
+                          className="h-7 px-2 text-xs border rounded w-full"
+                          value={editing.value}
+                          autoFocus
+                          onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+                          onBlur={() => void commitEdit()}
+                          onKeyDown={onKeyDown}
+                          onClick={(event) => event.stopPropagation()}
+                        />
+                      ) : (
+                        contact.lastCall?.date || ''
+                      )}
                     </TableCell>
-                    <TableCell className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
-                      {contact.lastCall?.time || ''}
+                    <TableCell
+                      className="px-2 py-1.5 text-xs text-center whitespace-nowrap"
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(contact.id, 'heureAppel', contact.lastCall?.time ?? '');
+                      }}
+                    >
+                      {editing?.id === contact.id && editing.field === 'heureAppel' ? (
+                        <input
+                          type="time"
+                          className="h-7 px-2 text-xs border rounded w-full"
+                          value={editing.value}
+                          autoFocus
+                          onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+                          onBlur={() => void commitEdit()}
+                          onKeyDown={onKeyDown}
+                          onClick={(event) => event.stopPropagation()}
+                        />
+                      ) : (
+                        contact.lastCall?.time || ''
+                      )}
                     </TableCell>
-                    <TableCell className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
-                      {contact.lastCall?.duration || ''}
+                    <TableCell
+                      className="px-2 py-1.5 text-xs text-center whitespace-nowrap"
+                      onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        startEdit(contact.id, 'dureeAppel', contact.lastCall?.duration ?? '');
+                      }}
+                    >
+                      {editing?.id === contact.id && editing.field === 'dureeAppel' ? (
+                        <input
+                          className="h-7 px-2 text-xs border rounded w-full"
+                          value={editing.value}
+                          autoFocus
+                          onChange={(e) => setEditing({ ...editing, value: e.target.value })}
+                          onBlur={() => void commitEdit()}
+                          onKeyDown={onKeyDown}
+                          onClick={(event) => event.stopPropagation()}
+                        />
+                      ) : (
+                        contact.lastCall?.duration || ''
+                      )}
                     </TableCell>
                   </TableRow>
                 );
