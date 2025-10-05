@@ -554,6 +554,9 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           <Tabs value={autoSearchMode} onValueChange={(value) => setAutoSearchMode(value as any)} className="w-auto">
             <TabsList className="h-9">
+              <TabsTrigger value="disabled" className="text-xs">
+                Désactivé
+              </TabsTrigger>
               <TabsTrigger value="linkedin" className="text-xs">
                 <Linkedin className="h-3.5 w-3.5 mr-1.5" />
                 LinkedIn
@@ -588,14 +591,14 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   Autocall
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-sm">
+              <TooltipContent side="bottom" className="max-w-sm bg-popover text-popover-foreground border-border">
                 <div className="space-y-2">
-                  <p className="font-semibold">Mode Autocall</p>
-                  <p className="text-xs">Active l'appel automatique du contact suivant après application d'un statut.</p>
+                  <p className="font-semibold text-foreground">Mode Autocall</p>
+                  <p className="text-xs text-muted-foreground">Active l'appel automatique du contact suivant après application d'un statut.</p>
                   <div className="mt-2 space-y-1 text-xs">
-                    <p className="font-medium">Raccourcis clavier :</p>
-                    <p>• <kbd className="px-1 py-0.5 bg-muted rounded">F1</kbd> : Appeler le contact</p>
-                    <p>• <kbd className="px-1 py-0.5 bg-muted rounded">F2-F10</kbd> : Appliquer un statut</p>
+                    <p className="font-medium text-foreground">Raccourcis clavier :</p>
+                    <p className="text-foreground">• <kbd className="px-1 py-0.5 bg-muted text-foreground rounded">F1</kbd> : Appeler le contact</p>
+                    <p className="text-foreground">• <kbd className="px-1 py-0.5 bg-muted text-foreground rounded">F2-F10</kbd> : Appliquer un statut</p>
                     <p className="text-muted-foreground mt-1">En mode Autocall, appliquer un statut (F2-F10) passe automatiquement au contact suivant et lance l'appel.</p>
                   </div>
                 </div>
@@ -639,22 +642,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={onExportDialog}>
                   <Download className="mr-2 h-4 w-4" />
-                  Exporter tout (Excel)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  // Export Google Contacts
-                  toast.info('Export Google Contacts en cours...')
-                  // Appeler la fonction d'export si disponible
-                }}>
-                  <Mail className="mr-2 h-4 w-4" />
-                  Google Contacts
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => {
-                  // Export Google Calendar
-                  toast.info('Export Google Calendar en cours...')
-                }}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  Google Calendar
+                  Exporter (Excel uniquement)
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -668,8 +656,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
           </Button>
         </div>
       </div>
-      <div className="flex h-full w-full gap-4 overflow-hidden">
-        <div className="hidden xl:flex xl:w-[360px] 2xl:w-[420px] flex-col rounded-xl border bg-card/70 backdrop-blur-sm shadow-sm">
+      <div className="flex h-full w-full gap-4 overflow-hidden flex-col lg:flex-row">
+        <div className="flex w-full lg:w-[320px] xl:w-[360px] 2xl:w-[420px] flex-col rounded-xl border bg-card/70 backdrop-blur-sm shadow-sm max-h-[300px] lg:max-h-none">
           <div className="border-b px-4 py-2.5 space-y-2.5">
             <div className="flex items-center justify-between">
               <h2 className="text-sm font-medium text-muted-foreground">Contacts</h2>

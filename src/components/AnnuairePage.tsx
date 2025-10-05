@@ -36,6 +36,8 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import type { StatusEventRecord } from '@/types/statusEvent';
 import { formatPhoneNumber } from '../services/dataService';
+import { ViewSwitcher, type ViewMode } from './ViewSwitcher';
+import { AnnuaireTable } from './AnnuaireTable';
 
 type HistoryType = 'appel' | 'rappel' | 'rdv' | 'statut';
 
@@ -435,6 +437,15 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
   const [sortBy, setSortBy] = useState<'name' | 'phone' | 'lastCall'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      const saved = localStorage.getItem('annuaire-view-mode');
+      return saved === 'table' ? 'table' : 'cards';
+    } catch {
+      return 'cards';
+    }
+  });
+
   const [filterQuick, setFilterQuick] = useState<QuickFilterKey>('all');
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
@@ -729,6 +740,15 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
     await fetchContacts(dateRange);
   }, [dateRange, fetchContacts]);
 
+  const handleViewChange = useCallback((newView: ViewMode) => {
+    setViewMode(newView);
+    try {
+      localStorage.setItem('annuaire-view-mode', newView);
+    } catch (error) {
+      console.warn('[Annuaire] Impossible de sauvegarder la préférence de vue', error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchContacts(dateRange);
   }, [fetchContacts, dateRange]);
@@ -837,17 +857,20 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
     <div className="flex h-full flex-col gap-4 w-full overflow-hidden">
       {/* Navbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/70 px-6 py-3 backdrop-blur-sm shadow-sm">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="text-xl font-semibold text-foreground">Annuaire</h1>
-          <p className="text-sm text-muted-foreground">
-            {visibleContactCount} contact{visibleContactCount > 1 ? 's' : ''} unique
-            {visibleContactCount > 1 ? 's' : ''}
-            {hasSelection && (
-              <span className="ml-2 text-xs font-medium text-primary">
-                {selectedCount} selectionne{selectedCount > 1 ? 's' : ''}
-              </span>
-            )}
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-0.5">
+            <h1 className="text-xl font-semibold text-foreground">Annuaire</h1>
+            <p className="text-sm text-muted-foreground">
+              {visibleContactCount} contact{visibleContactCount > 1 ? 's' : ''} unique
+              {visibleContactCount > 1 ? 's' : ''}
+              {hasSelection && (
+                <span className="ml-2 text-xs font-medium text-primary">
+                  {selectedCount} selectionne{selectedCount > 1 ? 's' : ''}
+                </span>
+              )}
+            </p>
+          </div>
+          <ViewSwitcher currentView={viewMode} onViewChange={handleViewChange} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[220px]">
@@ -976,35 +999,48 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
 
       {/* Contenu principal */}
       <div className="flex-1 overflow-auto space-y-6">
-
-      {loading ? (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, index) => (
-            <Card key={index} className="border-dashed">
-              <CardContent className="space-y-4 p-6">
-                <div className="flex items-start gap-4">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="flex-1 space-y-3">
-                    <Skeleton className="h-4 w-2/3" />
-                    <Skeleton className="h-3 w-1/2" />
-                    <Skeleton className="h-3 w-1/3" />
+        {viewMode === 'table' ? (
+          <div className="animate-in fade-in duration-200">
+            <AnnuaireTable
+              contacts={filteredContacts}
+              selectedIds={selectedContactIds}
+              onToggleSelection={toggleContactSelection}
+              onToggleSelectAll={handleToggleSelectAll}
+              onContactClick={handleContactClick}
+              loading={loading}
+              theme={theme}
+            />
+          </div>
+        ) : (
+          <div className="animate-in fade-in duration-200">
+            {loading ? (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Card key={index} className="border-dashed">
+                <CardContent className="space-y-4 p-6">
+                  <div className="flex items-start gap-4">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div className="flex-1 space-y-3">
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-3 w-1/2" />
+                      <Skeleton className="h-3 w-1/3" />
+                    </div>
                   </div>
-                </div>
-                <Skeleton className="h-3 w-full" />
-                <Skeleton className="h-3 w-3/4" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : filteredContacts.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center text-muted-foreground">
-            <History className="h-8 w-8" />
-            <p>Aucun contact trouvé dans la base locale.</p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-3/4" />
+                </CardContent>
+              </Card>
+            ))}
+              </div>
+            ) : filteredContacts.length === 0 ? (
+              <Card>
+                <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center text-muted-foreground">
+                  <History className="h-8 w-8" />
+                  <p>Aucun contact trouvé dans la base locale.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredContacts.map((contact) => {
             const isSelected = selectedContactIds.has(contact.id);
             return (
@@ -1087,11 +1123,12 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
               </Card>
             );
           })}
+              </div>
+            )}
+          </div>
+        )}
 
-        </div>
-      )}
-
-      <Dialog
+        <Dialog
         open={isContactDialogOpen}
         onOpenChange={(open) => {
           setIsContactDialogOpen(open);
@@ -1275,7 +1312,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
             </>
           )}
         </DialogContent>
-      </Dialog>
+        </Dialog>
       </div>
     </div>
   );
