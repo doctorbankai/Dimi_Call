@@ -146,19 +146,19 @@ const statusKey = (value?: string | null): string => {
 const normalizeStatusLabel = (status?: string | null): string => {
   const trimmed = safeTrim(status);
   if (!trimmed) {
-    return 'Non défini';
+    return 'Non dÃ©fini';
   }
   const key = statusKey(trimmed);
-  if (key.startsWith('nondefin')) return 'Non défini';
+  if (key.startsWith('nondefin')) return 'Non dÃ©fini';
   if (key.includes('mauvais')) return 'Mauvais num';
-  if (key.includes('repondeur')) return 'Répondeur';
-  if (key.includes('rappeler')) return 'À rappeler';
-  if (key.includes('pasinter')) return 'Pas intéressé';
-  if (key.includes('argument')) return 'Argumenté';
+  if (key.includes('repondeur')) return 'RÃ©pondeur';
+  if (key.includes('rappeler')) return 'Ã€ rappeler';
+  if (key.includes('pasinter')) return 'Pas intÃ©ressÃ©';
+  if (key.includes('argument')) return 'ArgumentÃ©';
   if (key === 'do') return 'DO';
   if (key === 'ro') return 'RO';
   if (key.includes('listenoi')) return 'Liste noire';
-  if (key.includes('prematur')) return 'Prématuré';
+  if (key.includes('prematur')) return 'PrÃ©maturÃ©';
   if (key === 'a0') return 'A0';
   return trimmed;
 };
@@ -233,12 +233,12 @@ const formatDateAndTime = (date?: string | null, time?: string | null): string =
   if (parsed && !Number.isNaN(parsed.getTime())) {
     const dateText = new Intl.DateTimeFormat('fr-FR', { dateStyle: 'medium' }).format(parsed);
     if (timeValue) {
-      return `${dateText} à ${timeValue}`;
+      return `${dateText} Ã  ${timeValue}`;
     }
     return dateText;
   }
   if (dateValue && timeValue) {
-    return `${dateValue} à ${timeValue}`;
+    return `${dateValue} Ã  ${timeValue}`;
   }
   return dateValue || timeValue;
 };
@@ -293,8 +293,8 @@ const buildHistoryMeta = (event: StatusEventRecord): HistoryMetaItem[] => {
     const parts: string[] = [];
     if (callInfo) parts.push(callInfo);
     const duration = safeTrim(event.dureeAppel);
-    if (duration) parts.push(`Durée ${duration}`);
-    meta.push({ label: 'Appel', value: parts.join(' • ') || '—' });
+    if (duration) parts.push(`DurÃ©e ${duration}`);
+    meta.push({ label: 'Appel', value: parts.join(' â€¢ ') || 'â€”' });
   }
   const reminderInfo = formatDateAndTime(event.dateRappel, event.heureRappel);
   if (reminderInfo) {
@@ -306,7 +306,7 @@ const buildHistoryMeta = (event: StatusEventRecord): HistoryMetaItem[] => {
   }
   const telephone = safeTrim(event.telephone);
   if (telephone) {
-    meta.push({ label: 'Telephone', value: formatPhoneNumber(telephone) });
+    meta.push({ label: 'TÃ©lÃ©phone', value: formatPhoneNumber(telephone) });
   }
   const email = safeTrim(event.email) || safeTrim(event.mail);
   if (email) {
@@ -378,11 +378,11 @@ const buildDirectoryContact = (events: StatusEventRecord[]): DirectoryContact | 
 
   const reminder =
     reminderDate || reminderTime
-      ? { date: reminderDate, time: reminderTime, label: formatDateAndTime(reminderDate, reminderTime) || 'Non renseigné' }
+      ? { date: reminderDate, time: reminderTime, label: formatDateAndTime(reminderDate, reminderTime) || 'Non renseignÃ©' }
       : undefined;
   const rdv =
     rdvDate || rdvTime
-      ? { date: rdvDate, time: rdvTime, label: formatDateAndTime(rdvDate, rdvTime) || 'Non renseigné' }
+      ? { date: rdvDate, time: rdvTime, label: formatDateAndTime(rdvDate, rdvTime) || 'Non renseignÃ©' }
       : undefined;
   const lastCall =
     lastCallDate || lastCallTime || lastCallDuration
@@ -392,7 +392,7 @@ const buildDirectoryContact = (events: StatusEventRecord[]): DirectoryContact | 
           duration: lastCallDuration,
           label:
             formatDateAndTime(lastCallDate, lastCallTime) ||
-            (lastCallDuration ? `Durée ${lastCallDuration}` : 'Non renseigné'),
+            (lastCallDuration ? `DurÃ©e ${lastCallDuration}` : 'Non renseignÃ©'),
         }
       : undefined;
 
@@ -611,7 +611,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
                 ? {
                     date: dateValue,
                     time: timeValue,
-                    label: formatDateAndTime(dateValue, timeValue) || 'Non renseign?',
+                    label: formatDateAndTime(dateValue, timeValue) || 'Non renseignÃ©',
                   }
                 : undefined;
             break;
@@ -625,7 +625,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
                 ? {
                     date: dateValue,
                     time: timeValue,
-                    label: formatDateAndTime(dateValue, timeValue) || 'Non renseign?',
+                    label: formatDateAndTime(dateValue, timeValue) || 'Non renseignÃ©',
                   }
                 : undefined;
             break;
@@ -644,7 +644,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
                     duration: durationValue,
                     label:
                       formatDateAndTime(dateValue, timeValue) ||
-                      (durationValue ? `Duree ${durationValue}` : 'Non renseigne'),
+                      (durationValue ? `DurÃ©e ${durationValue}` : 'Non renseignÃ©'),
                   }
                 : undefined;
             break;
@@ -788,7 +788,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
   const sortFieldLabel = useMemo(() => {
     switch (sortBy) {
       case 'phone':
-        return 'Telephone';
+        return 'TÃ©lÃ©phone';
       case 'lastCall':
         return 'Dernier appel';
       default:
@@ -819,9 +819,9 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
     if (dateRange.start && dateRange.start === dateRange.end) {
       return dateRange.start;
     }
-    const startLabel = dateRange.start || '…';
-    const endLabel = dateRange.end || '…';
-    return `${startLabel} ? ${endLabel}`;
+    const startLabel = dateRange.start || 'â€”';
+    const endLabel = dateRange.end || 'â€”';
+    return `${startLabel} Ã  ${endLabel}`;
   }, [dateRange]);
 
   const formatDateToYMD = (date?: Date | null): string => {
@@ -1001,7 +1001,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
         nom: contact.nom,
         telephone: contact.telephone,
         email: contact.email || '',
-        source: 'Données',
+        source: 'DonnÃ©es',
         statut: status,
         commentaire: contact.commentaire || '',
         dateRappel: contact.reminder?.date || '',
@@ -1059,7 +1059,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
     try {
       localStorage.setItem('annuaire-view-mode', newView);
     } catch (error) {
-      console.warn('[Annuaire] Impossible de sauvegarder la préférence de vue', error);
+      console.warn('[Annuaire] Impossible de sauvegarder la prÃ©fÃ©rence de vue', error);
     }
   }, []);
 
@@ -1242,7 +1242,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
       <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
       <div className="flex items-center gap-2 text-sm text-foreground">
         <Icon className="h-4 w-4 text-muted-foreground" />
-        <span className="truncate">{value || '—'}</span>
+        <span className="truncate">{value || 'â€”'}</span>
       </div>
     </div>
   );
@@ -1280,7 +1280,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
             size="sm"
             className="h-9"
             onClick={handleSortOrderToggle}
-            title={sortOrder === 'asc' ? 'Tri croissant' : 'Tri décroissant'}
+            title={sortOrder === 'asc' ? 'Tri croissant' : 'Tri dÃ©croissant'}
           >
             <ArrowUpNarrowWide className="h-4 w-4" />
           </Button>
@@ -1327,7 +1327,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
             </PopoverContent>
           </Popover>
           <Button variant="outline" size="sm" className="h-8" onClick={() => dispatchLocalDbEvent('dimicall-db-refresh')}>
-            <RefreshCw className="h-4 w-4 mr-2" /> Rafraîchir
+            <RefreshCw className="h-4 w-4 mr-2" /> RafraÃ®chir
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -1343,7 +1343,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
             variant="default"
             size="sm"
             className="h-8"
-            title="Transférer la sélection vers Appels"
+            title="TransfÃ©rer la sÃ©lection vers Appels"
             disabled={!hasSelection}
             onClick={() => dispatchLocalDbEvent('dimicall-db-transfer')}
           >
@@ -1353,7 +1353,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
             variant="outline"
             size="sm"
             className="h-8"
-            title="Supprimer la sélection"
+            title="Supprimer la sÃ©lection"
             disabled={!hasSelection}
             onClick={() => dispatchLocalDbEvent('dimicall-db-delete')}
           >
@@ -1442,7 +1442,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
               <Card>
                 <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center text-muted-foreground">
                   <History className="h-8 w-8" />
-                  <p>Aucun contact trouvé dans la base locale.</p>
+                  <p>Aucun contact trouvÃ© dans la base locale.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -1495,7 +1495,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
                         )}
                         <span className="flex items-center gap-1 text-xs text-muted-foreground">
                           <History className="h-3 w-3" />
-                          {contact.totalEvents} événement{contact.totalEvents > 1 ? 's' : ''}
+                          {contact.totalEvents} Ã©vÃ©nement{contact.totalEvents > 1 ? 's' : ''}
                         </span>
                       </div>
                     </div>
@@ -1579,10 +1579,10 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
                       value={
                         selectedContact.telephone
                           ? formatPhoneNumber(selectedContact.telephone)
-                          : 'Non renseign?'
+                          : 'Non renseignÃ©'
                       }
                     />
-                    <InfoField icon={Mail} label="Email" value={selectedContact.email || 'Non renseign?'} />
+                    <InfoField icon={Mail} label="Email" value={selectedContact.email || 'Non renseignÃ©'} />
                     <div className="space-y-2">
                       <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         Statut actuel
@@ -1609,8 +1609,8 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <InfoField
                       icon={Clock}
-                      label="Derni?re mise ? jour"
-                      value={selectedContact.lastUpdatedLabel || 'Non renseign?'}
+                      label="DerniÃ¨re mise Ã  jour"
+                      value={selectedContact.lastUpdatedLabel || 'Non renseignÃ©'}
                     />
                     <InfoField
                       icon={History}
