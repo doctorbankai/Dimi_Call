@@ -150,6 +150,8 @@ const contactsEqualById = (a: Contact[], b: Contact[]) => {
 };
 
 
+type ViewMode = 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar-2' | 'annuaire';
+
 const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const { mode } = useCallMode();
   // Authentication hook
@@ -222,7 +224,17 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const [isClearDataDialogOpen, setIsClearDataDialogOpen] = useState(false);
 
   const [importProgress, setImportProgress] = useState<{ percentage: number; message: string } | null>(null);
-  const [viewMode, setViewMode] = useState<'table' | 'appels-cards' | 'graph' | 'db' | 'calendar-2' | 'annuaire'>('table');
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    try {
+      const saved = localStorage.getItem('dimicall-view-mode') as ViewMode | null
+      if (saved === 'table' || saved === 'appels-cards' || saved === 'graph' || saved === 'db' || saved === 'calendar-2' || saved === 'annuaire') {
+        return saved
+      }
+    } catch (error) {
+      console.warn('Impossible de charger le mode de vue sauvegardé', error)
+    }
+    return 'appels-cards'
+  });
   // Filtres globaux par vue pour uniformit
   const [graphRange, setGraphRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
   const [dbRange, setDbRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
@@ -647,6 +659,22 @@ Dimitri MOREL - Arcanis Conseil`;
   useEffect(() => {
     try { localStorage.setItem('dimicall-split-panel-open', String(splitPanelOpen)); } catch {}
   }, [splitPanelOpen]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dimicall-view-mode', viewMode)
+    } catch (error) {
+      console.warn('Impossible de sauvegarder le mode de vue', error)
+    }
+  }, [viewMode])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('dimicall-view-mode', viewMode)
+    } catch (error) {
+      console.warn('Impossible de sauvegarder le mode de vue', error)
+    }
+  }, [viewMode])
 
   // Effect pour synchroniser les DevTools au dmarrage
   useEffect(() => {

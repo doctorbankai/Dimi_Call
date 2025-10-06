@@ -364,16 +364,16 @@ export const STATUS_OPTIONS: ContactStatus[] = Object.values(ContactStatus);
 
 export const STATUS_COLORS: Record<ContactStatus, { bg: string; text: string; darkBg: string; darkText: string }> = {
   [ContactStatus.NonDefini]: { bg: "bg-gray-200", text: "text-gray-700", darkBg: "dark:bg-neutral-700", darkText: "dark:text-neutral-300" },
-  [ContactStatus.MauvaisNum]: { bg: "bg-red-200", text: "text-red-700", darkBg: "dark:bg-red-700", darkText: "dark:text-red-100" },
-  [ContactStatus.Repondeur]: { bg: "bg-yellow-200", text: "text-yellow-700", darkBg: "dark:bg-yellow-600", darkText: "dark:text-yellow-100" },
-  [ContactStatus.ARappeler]: { bg: "bg-amber-200", text: "text-amber-700", darkBg: "dark:bg-amber-500", darkText: "dark:text-amber-900" },
-  [ContactStatus.PasInteresse]: { bg: "bg-slate-200", text: "text-slate-700", darkBg: "dark:bg-slate-600", darkText: "dark:text-slate-100" },
-  [ContactStatus.Argumente]: { bg: "bg-blue-200", text: "text-blue-700", darkBg: "dark:bg-blue-600", darkText: "dark:text-blue-100" },
-  [ContactStatus.DO]: { bg: "bg-green-200", text: "text-green-700", darkBg: "dark:bg-green-600", darkText: "dark:text-green-100" },
-  [ContactStatus.RO]: { bg: "bg-emerald-200", text: "text-emerald-700", darkBg: "dark:bg-emerald-700", darkText: "dark:text-emerald-100" },
-  [ContactStatus.ListeNoire]: { bg: "bg-zinc-800", text: "text-zinc-200", darkBg: "dark:bg-black", darkText: "dark:text-gray-400" },
-  [ContactStatus.Premature]: { bg: "bg-pink-200", text: "text-pink-700", darkBg: "dark:bg-pink-600", darkText: "dark:text-pink-100" },
-  [ContactStatus.A0]: { bg: "bg-purple-200", text: "text-purple-700", darkBg: "dark:bg-purple-600", darkText: "dark:text-purple-100" },
+  [ContactStatus.MauvaisNum]: { bg: "bg-red-100", text: "text-red-800", darkBg: "dark:bg-red-900/30", darkText: "dark:text-red-200" },
+  [ContactStatus.Repondeur]: { bg: "bg-orange-100", text: "text-orange-800", darkBg: "dark:bg-orange-900/30", darkText: "dark:text-orange-200" },
+  [ContactStatus.ARappeler]: { bg: "bg-yellow-100", text: "text-yellow-800", darkBg: "dark:bg-yellow-900/30", darkText: "dark:text-yellow-200" },
+  [ContactStatus.PasInteresse]: { bg: "bg-red-100", text: "text-red-800", darkBg: "dark:bg-red-900/30", darkText: "dark:text-red-200" },
+  [ContactStatus.Argumente]: { bg: "bg-blue-100", text: "text-blue-800", darkBg: "dark:bg-blue-900/30", darkText: "dark:text-blue-200" },
+  [ContactStatus.DO]: { bg: "bg-emerald-100", text: "text-emerald-800", darkBg: "dark:bg-emerald-900/30", darkText: "dark:text-emerald-200" },
+  [ContactStatus.RO]: { bg: "bg-green-100", text: "text-green-800", darkBg: "dark:bg-green-900/30", darkText: "dark:text-green-200" },
+  [ContactStatus.ListeNoire]: { bg: "bg-gray-800", text: "text-gray-100", darkBg: "dark:bg-gray-700", darkText: "dark:text-gray-100" },
+  [ContactStatus.Premature]: { bg: "bg-purple-100", text: "text-purple-800", darkBg: "dark:bg-purple-900/30", darkText: "dark:text-purple-200" },
+  [ContactStatus.A0]: { bg: "bg-indigo-100", text: "text-indigo-800", darkBg: "dark:bg-indigo-900/30", darkText: "dark:text-indigo-200" },
 };
 
 export const QUICK_COMMENTS = ["Accompagné", "Du métier", "Prospection", "Non exploitable", "Bloqué ?"];
