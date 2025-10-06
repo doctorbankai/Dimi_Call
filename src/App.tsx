@@ -773,40 +773,90 @@ Dimitri MOREL - Arcanis Conseil`;
       console.warn('chec d\'enregistrement local du statut:', e);
     }
 
-    // Journaliser aussi les modifications de champs (commentaire, dates, etc.) comme vnements
+    // Journaliser aussi les modifications de champs (commentaire, dates, etc.) comme evenements
     try {
       if (typeof window !== 'undefined' && window.electronAPI?.localdb && updatedContact) {
-        const fieldsToSync: any = {}
-        const syncKeys = ['commentaire','comment','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','email','telephone','prenom','nom'] as const
-        for (const k of syncKeys) {
-          if (k in updatedFields) {
-            fieldsToSync[k] = (updatedFields as any)[k]
+        const syncKeys = [
+          'commentaire',
+          'comment',
+          'dateRappel',
+          'heureRappel',
+          'dateRDV',
+          'heureRDV',
+          'dateAppel',
+          'heureAppel',
+          'dureeAppel',
+          'email',
+          'telephone',
+          'prenom',
+          'nom',
+        ] as const;
+
+        const hasRelevantUpdate = syncKeys.some((key) => key in updatedFields);
+        if (hasRelevantUpdate) {
+          const resolvedComment =
+            (updatedFields as any).commentaire ??
+            (updatedFields as any).comment ??
+            updatedContact.commentaire ??
+            null;
+
+          const eventFields = {
+            prenom: updatedFields.prenom ?? updatedContact.prenom ?? null,
+            nom: updatedFields.nom ?? updatedContact.nom ?? null,
+            telephone: updatedFields.telephone ?? updatedContact.telephone ?? null,
+            email: updatedFields.email ?? updatedContact.email ?? null,
+            commentaire: resolvedComment,
+            dateRappel: updatedFields.dateRappel ?? updatedContact.dateRappel ?? null,
+            heureRappel: updatedFields.heureRappel ?? updatedContact.heureRappel ?? null,
+            dateRDV: updatedFields.dateRDV ?? updatedContact.dateRDV ?? null,
+            heureRDV: updatedFields.heureRDV ?? updatedContact.heureRDV ?? null,
+            dateAppel: updatedFields.dateAppel ?? updatedContact.dateAppel ?? null,
+            heureAppel: updatedFields.heureAppel ?? updatedContact.heureAppel ?? null,
+            dureeAppel: updatedFields.dureeAppel ?? updatedContact.dureeAppel ?? null,
+            newStatus: updatedContact.statut ?? null,
+          };
+
+          let updatedEventSuccessfully = false;
+
+          if (window.electronAPI.localdb.updateLatestForContact) {
+            try {
+              const updateResult = await window.electronAPI.localdb.updateLatestForContact(
+                updatedContact.id,
+                eventFields
+              );
+              if (updateResult?.success && updateResult.data) {
+                updatedEventSuccessfully = true;
+              }
+            } catch (updateError) {
+              console.warn('[UPDATE] updateLatestForContact failed, fallback to insert', updateError);
+            }
           }
-        }
-        // Si pas de champs à synchroniser, ne rien faire
-        if (Object.keys(fieldsToSync).length > 0) {
-          await window.electronAPI.localdb.insertStatus({
-            contactId: updatedContact.id,
-            oldStatus: previousStatusBeforeUpdate,
-            newStatus: updatedContact.statut,
-            prenom: updatedContact.prenom,
-            nom: updatedContact.nom,
-            telephone: updatedContact.telephone,
-            email: 'email' in fieldsToSync ? fieldsToSync.email : updatedContact.email,
-            commentaire: ('commentaire' in fieldsToSync ? fieldsToSync.commentaire : (('comment' in fieldsToSync) ? fieldsToSync.comment : updatedContact.commentaire)),
-            dateRappel: 'dateRappel' in fieldsToSync ? fieldsToSync.dateRappel : updatedContact.dateRappel,
-            heureRappel: 'heureRappel' in fieldsToSync ? fieldsToSync.heureRappel : updatedContact.heureRappel,
-            dateRDV: 'dateRDV' in fieldsToSync ? fieldsToSync.dateRDV : updatedContact.dateRDV,
-            heureRDV: 'heureRDV' in fieldsToSync ? fieldsToSync.heureRDV : updatedContact.heureRDV,
-            dateAppel: 'dateAppel' in fieldsToSync ? fieldsToSync.dateAppel : updatedContact.dateAppel,
-            heureAppel: 'heureAppel' in fieldsToSync ? fieldsToSync.heureAppel : updatedContact.heureAppel,
-            dureeAppel: 'dureeAppel' in fieldsToSync ? fieldsToSync.dureeAppel : updatedContact.dureeAppel,
-          })
+
+          if (!updatedEventSuccessfully) {
+            await window.electronAPI.localdb.insertStatus({
+              contactId: updatedContact.id,
+              oldStatus: previousStatusBeforeUpdate,
+              newStatus: updatedContact.statut,
+              prenom: eventFields.prenom,
+              nom: eventFields.nom,
+              telephone: eventFields.telephone,
+              email: eventFields.email,
+              commentaire: eventFields.commentaire,
+              dateRappel: eventFields.dateRappel,
+              heureRappel: eventFields.heureRappel,
+              dateRDV: eventFields.dateRDV,
+              heureRDV: eventFields.heureRDV,
+              dateAppel: eventFields.dateAppel,
+              heureAppel: eventFields.heureAppel,
+              dureeAppel: eventFields.dureeAppel,
+            });
+          }
+
           try { window.dispatchEvent(new CustomEvent('localdb-updated')); } catch {}
         }
       }
     } catch (e) {
-      console.warn('chec de mise à jour de l\'vnement local:', e)
+      console.warn('chec de mise a jour de l\'evenement local:', e);
     }
 
   }, [selectedContact, showNotification]); // Retir 'contacts' car on utilise setContacts avec fonction
