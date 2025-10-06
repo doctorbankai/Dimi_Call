@@ -29,7 +29,8 @@ import {
   formatPhoneNumber,
   generateGmailComposeUrl,
   exportGoogleContactsCSV,
-  exportGoogleCalendarCSV
+  exportGoogleCalendarCSV,
+  reorderContactsColumns
 } from './services/dataService';
 
 import { useAdb } from './hooks/useAdb';
@@ -1189,7 +1190,10 @@ Dimitri MOREL - Arcanis Conseil`;
         }
         // Maintenir les colonnes dtectes en mettant aussi  jour le global
         setContacts(updatedContacts);
-        setViewMode('table');
+        // Ne pas changer de vue si on est déjà sur "Appels 2" (appels-cards)
+        if (viewMode !== 'appels-cards') {
+          setViewMode('table');
+        }
       } else {
         setContacts(updatedContacts);
       }
@@ -1545,7 +1549,11 @@ Dimitri MOREL - Arcanis Conseil`;
           return;
         }
         console.log(`?? [IMPORT] ${newContacts.length} contacts reus pour importation`);
-        const updatedContacts = newContacts.map((c: Contact, idx: number) => ({
+        
+        // Réordonner les colonnes selon l'ordre souhaité
+        const reorderedContacts = reorderContactsColumns(newContacts);
+        
+        const updatedContacts = reorderedContacts.map((c: Contact, idx: number) => ({
           ...c,
           numeroLigne: idx + 1,
           id: c.id || uuidv4()
@@ -1581,7 +1589,10 @@ Dimitri MOREL - Arcanis Conseil`;
         }
         
         setContacts(updatedContacts) // maintenir la liste globale en cohrence
-        setViewMode('table')
+        // Ne pas changer de vue si on est déjà sur "Appels 2" (appels-cards)
+        if (viewMode !== 'appels-cards') {
+          setViewMode('table')
+        }
         setCallStates({});
         setSelectedContact(null);
         console.log(`? [IMPORT] Importation termine: ${updatedContacts.length} contacts`);

@@ -37,6 +37,8 @@ import { importContactsFromFile, normalizeHeader } from '../services/dataService
 
 // Clés de stockage pour la persistance des préférences de table
 const COLUMN_ORDER_STORAGE_KEY = 'dimicall-column-order';
+const COLUMN_ORDER_VERSION_KEY = 'dimicall-column-order-version';
+const COLUMN_ORDER_VERSION = '2.0'; // Incrémenter pour forcer la réinitialisation
 const SORT_CONFIG_STORAGE_KEY = 'dimicall-sort-config';
 
 // Configuration des colonnes
@@ -500,8 +502,20 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
   useEffect(() => {
     if (dynamicColumns.length === 0) return;
     try {
+      // Vérifier la version de l'ordre des colonnes
+      const savedVersion = localStorage.getItem(COLUMN_ORDER_VERSION_KEY);
       const saved = localStorage.getItem(COLUMN_ORDER_STORAGE_KEY);
       const dynamicIds = dynamicColumns.map(col => col.id);
+      
+      // Si la version a changé, réinitialiser l'ordre
+      if (savedVersion !== COLUMN_ORDER_VERSION) {
+        console.log('[ContactTable] Version de l\'ordre des colonnes changée, réinitialisation...');
+        localStorage.setItem(COLUMN_ORDER_VERSION_KEY, COLUMN_ORDER_VERSION);
+        localStorage.removeItem(COLUMN_ORDER_STORAGE_KEY);
+        setColumnOrder(dynamicColumns.map(col => col.id));
+        return;
+      }
+      
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {

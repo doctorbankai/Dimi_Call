@@ -1703,3 +1703,53 @@ export const normalizePhoneNumber = (phone: string): string | null => {
   }
   return cleaned
 }
+
+/*
+*
+ * Réordonne les colonnes d'un contact selon l'ordre spécifié
+ * Utilisé après l'import pour organiser les colonnes dans la vue Table
+ */
+export const reorderContactColumns = (contact: Contact): Contact => {
+  // Ordre souhaité des colonnes
+  const columnOrder = [
+    'prenom',
+    'nom',
+    'telephone',
+    'email',
+    'source',
+    'type',
+    'qualite',
+    'lien',
+    'dateRappel',
+    'heureRappel',
+    'dateAppel',
+    'heureAppel',
+    'statut',
+    // Le reste des colonnes suivra dans l'ordre original
+  ];
+
+  const reordered: any = {};
+  
+  // D'abord, ajouter les colonnes dans l'ordre spécifié
+  columnOrder.forEach(key => {
+    if (key in contact) {
+      reordered[key] = (contact as any)[key];
+    }
+  });
+  
+  // Ensuite, ajouter les colonnes restantes qui ne sont pas dans l'ordre spécifié
+  Object.keys(contact).forEach(key => {
+    if (!columnOrder.includes(key) && !(key in reordered)) {
+      reordered[key] = (contact as any)[key];
+    }
+  });
+  
+  return reordered as Contact;
+};
+
+/**
+ * Réordonne les colonnes de tous les contacts d'un tableau
+ */
+export const reorderContactsColumns = (contacts: Contact[]): Contact[] => {
+  return contacts.map(reorderContactColumns);
+};
