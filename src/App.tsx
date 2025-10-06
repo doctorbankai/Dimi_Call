@@ -970,44 +970,7 @@ Dimitri MOREL - Arcanis Conseil`;
     }
   }, [activeCallContactId, callStartTime]);
 
-  // Search handlers
-  const handleLinkedInSearch = useCallback((contact?: Contact) => {
-    const target = contact || selectedContact;
-    if (!target) {
-      showNotification('info', "Slectionnez un contact pour la recherche LinkedIn.");
-      return;
-    }
-    searchLinkedIn(target.prenom, target.nom);
-  }, [selectedContact, showNotification]);
-
-  const handleGoogleSearch = useCallback((contact?: Contact) => {
-    const target = contact || selectedContact;
-    if (!target) {
-      showNotification('info', "Slectionnez un contact pour la recherche Google.");
-      return;
-    }
-    searchGoogle(target.prenom, target.nom);
-  }, [selectedContact, showNotification]);
-
-  const handleDirectLink = useCallback((contact?: Contact) => {
-    const target = contact || selectedContact;
-    if (!target) {
-      showNotification('info', "Slectionnez un contact pour ouvrir le lien.");
-      return;
-    }
-    
-    if (!target.lien) {
-        showNotification('warning', "Ce contact n'a pas de lien associ.");
-      return;
-    }
-
-    try {
-      openDirectLink(target.lien);
-      showNotification('success', 'Lien ouvert avec succs', 2000);
-    } catch (error) {
-      showNotification('error', 'Erreur lors de l\'ouverture du lien');
-    }
-  }, [selectedContact, showNotification]);
+  // Search handlers - Supprimés, voir plus bas pour les nouvelles versions avec type et source
 
   const handleSms = useCallback(async (civilite?: string, contact?: Contact) => {
     const target = contact || selectedContact;
@@ -1380,6 +1343,52 @@ Dimitri MOREL - Arcanis Conseil`;
     }
   }, [exportOptions, contacts, googleContactsCount, calendarRemindersCount, showNotification]);
 
+  // Handlers pour les recherches LinkedIn et Google
+  const handleLinkedInSearch = useCallback((contact?: Contact) => {
+    const targetContact = contact || selectedContact;
+    if (!targetContact) {
+      showNotification('error', 'Veuillez sélectionner un contact');
+      return;
+    }
+    
+    const prenom = targetContact.prenom || '';
+    const nom = targetContact.nom || '';
+    const type = (targetContact as any).type || '';
+    const source = targetContact.source || '';
+    
+    searchLinkedIn(prenom, nom, type, source);
+  }, [selectedContact, showNotification]);
+
+  const handleGoogleSearch = useCallback((contact?: Contact) => {
+    const targetContact = contact || selectedContact;
+    if (!targetContact) {
+      showNotification('error', 'Veuillez sélectionner un contact');
+      return;
+    }
+    
+    const prenom = targetContact.prenom || '';
+    const nom = targetContact.nom || '';
+    const type = (targetContact as any).type || '';
+    const source = targetContact.source || '';
+    
+    searchGoogle(prenom, nom, type, source);
+  }, [selectedContact, showNotification]);
+
+  const handleDirectLink = useCallback((contact?: Contact) => {
+    const targetContact = contact || selectedContact;
+    if (!targetContact) {
+      showNotification('error', 'Veuillez sélectionner un contact');
+      return;
+    }
+    
+    const lien = targetContact.lien || '';
+    if (!lien) {
+      showNotification('error', 'Ce contact n\'a pas de lien défini');
+      return;
+    }
+    
+    openDirectLink(lien);
+  }, [selectedContact, showNotification]);
 
   const makePhoneCall = useCallback(async (contactToCall?: Contact) => {
     console.log('?? [MAKEPHONECALL] Dbut makePhoneCall, contactToCall:', contactToCall);
@@ -2757,7 +2766,7 @@ Dimitri MOREL - Arcanis Conseil`;
                           <DropdownMenuSeparator />
                           <DropdownMenuCheckboxItem
                             className="flex items-center gap-2 text-primary"
-                            checked={false}
+                            checked={availableColumns.every(header => visibleColumns[header])}
                             onCheckedChange={showAllAvailableColumns}
                             onSelect={(e) => e.preventDefault()}
                           >
@@ -2766,7 +2775,7 @@ Dimitri MOREL - Arcanis Conseil`;
                           </DropdownMenuCheckboxItem>
                           <DropdownMenuCheckboxItem
                             className="flex items-center gap-2 text-orange-600 dark:text-orange-400"
-                            checked={false}
+                            checked={availableColumns.every(header => essentialColumns.includes(header) ? visibleColumns[header] : !visibleColumns[header])}
                             onCheckedChange={hideOptionalColumns}
                             onSelect={(e) => e.preventDefault()}
                           >
@@ -2779,6 +2788,43 @@ Dimitri MOREL - Arcanis Conseil`;
 
                       {/* Boutons d'action - à droite */}
                       <div className="flex items-center gap-1 mr-3">
+                        {/* Boutons de recherche LinkedIn et Google */}
+                        <div className="flex flex-wrap items-center gap-2 mr-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleLinkedInSearch()}
+                            disabled={!selectedContact}
+                            className="h-8 gap-1.5 px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2]"
+                            title="Rechercher sur LinkedIn"
+                          >
+                            <Linkedin className="h-4 w-4" />
+                            LinkedIn
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleGoogleSearch()}
+                            disabled={!selectedContact}
+                            className="h-8 gap-1.5 px-3 bg-[#4285F4] hover:bg-[#357AE8] text-white border-[#4285F4]"
+                            title="Rechercher sur Google"
+                          >
+                            <Globe className="h-4 w-4" />
+                            Google
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDirectLink()}
+                            disabled={!selectedContact || !selectedContact.lien}
+                            className="h-8 gap-1.5 px-3"
+                            title="Ouvrir le lien direct"
+                          >
+                            <Eye className="h-4 w-4" />
+                            Lien direct
+                          </Button>
+                        </div>
+                        
                         <Button
                           variant="outline"
                           size="sm"

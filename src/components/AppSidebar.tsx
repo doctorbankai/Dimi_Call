@@ -56,6 +56,22 @@ export function AppSidebar({
   const [isTicketFormOpen, setIsTicketFormOpen] = useState(false);
   const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
   const auth = useSupabaseAuth();
+  
+  // Charger la visibilité des pages
+  const [pagesVisibility, setPagesVisibility] = useState<{
+    showAppelsPage: boolean;
+    showDonneesPage: boolean;
+  }>(() => {
+    try {
+      const saved = localStorage.getItem('dimicall_pages_visibility');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement de la visibilité des pages:', error);
+    }
+    return { showAppelsPage: false, showDonneesPage: false };
+  });
 
   // Extraire les vraies informations utilisateur
   const realUserEmail = auth.user?.email || userEmail || "Utilisateur";
@@ -96,6 +112,23 @@ export function AppSidebar({
   const appVersion = packageJson.version;
   const { mode, setMode } = useCallMode();
   const { state, setOpen } = useSidebar();
+  
+  // Écouter les changements de visibilité des pages
+  React.useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const saved = localStorage.getItem('dimicall_pages_visibility');
+        if (saved) {
+          setPagesVisibility(JSON.parse(saved));
+        }
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour de la visibilité des pages:', error);
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
   return (
     <div
       className="fixed left-0 top-8 h-[calc(100vh-2rem)] z-[10001] transition-[width] duration-200 ease-linear"
@@ -121,16 +154,18 @@ export function AppSidebar({
           <SidebarGroup>
             <SidebarGroupLabel>Modes</SidebarGroupLabel>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={viewMode === 'table'}
-                  onClick={() => onChangeViewMode('table')}
-                  className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
-                >
-                  <Phone className="w-4 h-4" />
-                  <span>Appels</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {pagesVisibility.showAppelsPage && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={viewMode === 'table'}
+                    onClick={() => onChangeViewMode('table')}
+                    className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
+                  >
+                    <Phone className="w-4 h-4" />
+                    <span>Appels</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={viewMode === 'appels-cards'}
@@ -138,7 +173,7 @@ export function AppSidebar({
                   className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <Phone className="w-4 h-4" />
-                  <span>Appels 2</span>
+                  <span>Appels</span>
                   <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0 h-4 group-data-[collapsible=icon]:hidden">Preview</Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -162,16 +197,18 @@ export function AppSidebar({
                   <span>Graphiques</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  isActive={viewMode === 'db'}
-                  onClick={() => onChangeViewMode('db')}
-                  className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
-                >
-                  <Database className="w-4 h-4" />
-                  <span>Données</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {pagesVisibility.showDonneesPage && (
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={viewMode === 'db'}
+                    onClick={() => onChangeViewMode('db')}
+                    className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
+                  >
+                    <Database className="w-4 h-4" />
+                    <span>Données</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={viewMode === 'annuaire'}

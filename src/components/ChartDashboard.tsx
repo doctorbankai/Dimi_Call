@@ -59,7 +59,8 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
     const map = new Map<string, number>();
     for (const ev of localEvents) {
       const k = String(ev.new_status || ev.newStatus || '');
-      if (!k) continue;
+      // Exclure les statuts vides ou "Non défini"
+      if (!k || k === 'Non défini') continue;
       map.set(k, (map.get(k) || 0) + 1);
     }
     const entries = Array.from(map.entries()).map(([label, value]) => ({ label, value }));
@@ -105,12 +106,12 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
 
   // Données d'entonnoir de conversion
   const funnelData = useMemo(() => {
-    // Définition des règles d'agrégation
+    // Définition des règles d'agrégation (DO et RO au lieu de D0 et R0)
     const statusMapping = {
-      'Contacté': ['Mauvais num', 'Répondeur', 'À rappeler', 'Pas intéressé', 'Argumenté', 'D0', 'R0'],
-      'Décroché': ['À rappeler', 'Pas intéressé', 'Argumenté', 'D0', 'R0'],
-      'Argumenté': ['Argumenté', 'D0', 'R0'],
-      'Pris': ['D0', 'R0']
+      'Contacté': ['Mauvais num', 'Répondeur', 'À rappeler', 'Pas intéressé', 'Argumenté', 'DO', 'RO'],
+      'Décroché': ['À rappeler', 'Pas intéressé', 'Argumenté', 'DO', 'RO'],
+      'Argumenté': ['Argumenté', 'DO', 'RO'],
+      'Pris': ['DO', 'RO']
     };
 
     // Initialisation des compteurs
@@ -293,7 +294,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
                   tickMargin={10}
                   axisLine={false}
                 />
-                <YAxis />
+                <YAxis allowDecimals={false} />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="value" radius={[8, 8, 0, 0]}>
                   {funnelData.map((entry, index) => (

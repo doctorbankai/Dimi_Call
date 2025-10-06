@@ -50,6 +50,7 @@ import type { StatusEventRecord } from '@/types/statusEvent';
 import { formatPhoneNumber } from '../services/dataService';
 import { ViewSwitcher, type ViewMode } from './ViewSwitcher';
 import { AnnuaireTable, AnnuaireEditableField } from './AnnuaireTable';
+import { AnnuaireCardsView } from './AnnuaireCardsView';
 import StatusSelect from './StatusSelect';
 import ImportMappingDialog from './ImportMappingDialog';
 import * as XLSX from 'xlsx';
@@ -1563,30 +1564,57 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
             </PopoverContent>
           </Popover>
         </div>
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <div className="flex items-center gap-2">
-            <Checkbox 
-              checked={bulkSelectionState === 'indeterminate' ? false : bulkSelectionState} 
-              onCheckedChange={handleToggleSelectAll} 
-            />
-            <span className="text-muted-foreground">Selection</span>
-          </div>
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="default"
             size="sm"
-            className="h-8"
-            title="Transférer la sélection vers Appels"
-            disabled={!hasSelection}
-            onClick={() => dispatchLocalDbEvent('dimicall-db-transfer')}
+            className="h-9 bg-neutral-900 hover:bg-black text-white border-neutral-900 dark:bg-neutral-800 dark:hover:bg-neutral-900"
+            onClick={() => dispatchLocalDbEvent('dimicall-db-import')}
+            title="Importer un fichier CSV/Excel"
           >
-            Transfert
+            <Upload className="h-4 w-4 mr-2" />
+            Importer
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="default"
+                size="sm" 
+                disabled={contacts.length === 0}
+                className="h-9 bg-neutral-900 hover:bg-black text-white border-neutral-900 dark:bg-neutral-800 dark:hover:bg-neutral-900"
+                title="Exporter les données"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Exporter
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56 border shadow-lg bg-popover text-popover-foreground z-50">
+              <DropdownMenuLabel className="flex items-center gap-2">
+                <Download className="w-4 h-4" />
+                Options d'export
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => dispatchLocalDbEvent('dimicall-db-export')}>
+                CSV
+                {contacts.length > 0 && (
+                  <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
+                )}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => dispatchLocalDbEvent('dimicall-db-export-xlsx')}>
+                <FileSpreadsheet className="mr-2 h-4 w-4" />
+                Excel (.xlsx)
+                {contacts.length > 0 && (
+                  <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8"
+                className="h-9"
                 title="Supprimer la sélection"
                 disabled={!hasSelection}
               >
@@ -1611,51 +1639,25 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8" title="Exporter">
-                <Download className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuLabel>Exporter</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => dispatchLocalDbEvent('dimicall-db-export')}>CSV</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => dispatchLocalDbEvent('dimicall-db-export-xlsx')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" /> Excel (.xlsx)
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8" title="Importer">
-                <Upload className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel>Importer depuis</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => dispatchLocalDbEvent('dimicall-db-import')}>CSV</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => dispatchLocalDbEvent('dimicall-db-import-xlsx')}>Excel (.xlsx)</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
       </div>
 
       {/* Contenu principal */}
-      <div className="flex-1 overflow-auto space-y-6">
+      <div className="flex-1 overflow-hidden">
         {viewMode === 'table' ? (
-          <div className="animate-in fade-in duration-200 space-y-4">
-            <AnnuaireTable
-              contacts={paginatedContacts}
-              selectedIds={selectedContactIds}
-              onToggleSelection={toggleContactSelection}
-              onToggleSelectAll={handleToggleSelectAll}
-              onContactClick={handleContactClick}
-              loading={loading}
-              theme={theme}
-              onUpdateField={updateContactField}
-            />
+          <div className="animate-in fade-in duration-200 space-y-4 h-full flex flex-col">
+            <div className="flex-1 overflow-auto">
+              <AnnuaireTable
+                contacts={paginatedContacts}
+                selectedIds={selectedContactIds}
+                onToggleSelection={toggleContactSelection}
+                onToggleSelectAll={handleToggleSelectAll}
+                onContactClick={handleContactClick}
+                loading={loading}
+                theme={theme}
+                onUpdateField={updateContactField}
+              />
+            </div>
             <div className="mt-2 border-t border-border/60 pt-2">
               <TablePagination
                 className="w-full"
@@ -1668,6 +1670,16 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
                 pageSizeOptions={[25, 50, 100]}
               />
             </div>
+          </div>
+        ) : viewMode === 'cards' ? (
+          <div className="animate-in fade-in duration-200 h-full">
+            <AnnuaireCardsView
+              contacts={filteredContacts}
+              selectedContactId={selectedContact?.id || null}
+              onSelectContact={(contact) => setSelectedContact(contact)}
+              searchTerm={searchTerm}
+              onSearchChange={setSearchTerm}
+            />
           </div>
         ) : (
           <div className="animate-in fade-in duration-200">

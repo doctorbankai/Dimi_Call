@@ -14,6 +14,7 @@ import {
   Clock,
   Download,
   Eye,
+  EyeOff,
   FileCheck,
   Globe,
   History,
@@ -213,6 +214,21 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       return 'cards';
     }
   })
+  // Charger la configuration des colonnes essentielles depuis les paramètres
+  const getEssentialColumns = (): string[] => {
+    const saved = localStorage.getItem('dimicall_column_config');
+    if (saved) {
+      try {
+        const config = JSON.parse(saved);
+        return Object.keys(config).filter(key => config[key] === true);
+      } catch (error) {
+        console.error('Erreur lors du chargement de la config des colonnes:', error);
+      }
+    }
+    // Configuration par défaut si rien n'est sauvegardé
+    return ['#', 'Prénom', 'Nom', 'Commentaire'];
+  };
+
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => {
     const defaultVisible: Record<string, boolean> = {};
     COLUMN_HEADERS.forEach(header => {
@@ -1422,18 +1438,60 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             </Badge>
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" side="bottom" sideOffset={5} className="ml-16">
-                          <DropdownMenuLabel>Colonnes visibles</DropdownMenuLabel>
+                        <DropdownMenuContent align="start" side="bottom" sideOffset={5} className="w-64">
+                          <DropdownMenuLabel className="flex items-center gap-2">
+                            <Eye className="h-4 w-4" />
+                            Gestion des colonnes
+                          </DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           {COLUMN_HEADERS.map((header) => (
                             <DropdownMenuCheckboxItem
                               key={header}
                               checked={visibleColumns[header]}
                               onCheckedChange={() => toggleColumnVisibility(header)}
+                              className="flex items-center gap-2"
                             >
                               {header}
                             </DropdownMenuCheckboxItem>
                           ))}
+                          <DropdownMenuSeparator />
+                          <DropdownMenuCheckboxItem
+                            checked={Object.values(visibleColumns).every(Boolean)}
+                            onCheckedChange={() => {
+                              const newVisibility: Record<string, boolean> = {}
+                              COLUMN_HEADERS.forEach(header => {
+                                newVisibility[header] = true
+                              })
+                              setVisibleColumns(newVisibility)
+                              localStorage.setItem('appels2-visible-columns', JSON.stringify(newVisibility))
+                            }}
+                            className="flex items-center gap-2 text-primary"
+                          >
+                            <Eye className="h-4 w-4" />
+                            Afficher toutes les colonnes disponibles
+                          </DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem
+                            checked={(() => {
+                              const essentialCols = getEssentialColumns();
+                              return COLUMN_HEADERS.every(header => 
+                                essentialCols.includes(header) ? visibleColumns[header] : !visibleColumns[header]
+                              );
+                            })()}
+                            onCheckedChange={() => {
+                              const essentialCols = getEssentialColumns();
+                              const newVisibility: Record<string, boolean> = {}
+                              COLUMN_HEADERS.forEach(header => {
+                                // Garder les colonnes essentielles visibles, masquer les optionnelles
+                                newVisibility[header] = essentialCols.includes(header);
+                              })
+                              setVisibleColumns(newVisibility)
+                              localStorage.setItem('appels2-visible-columns', JSON.stringify(newVisibility))
+                            }}
+                            className="flex items-center gap-2 text-orange-600 dark:text-orange-400"
+                          >
+                            <EyeOff className="h-4 w-4" />
+                            Masquer les colonnes optionnelles
+                          </DropdownMenuCheckboxItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                       <Tabs value={autoSearchMode} onValueChange={(value) => setAutoSearchMode(value as any)} className="w-auto">
@@ -1468,6 +1526,44 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         </TabsList>
                       </Tabs>
                     </div>
+                    
+                    {/* Boutons de recherche manuelle LinkedIn/Google/Lien */}
+                    <div className="flex flex-wrap items-center gap-2 mr-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onLinkedInSearch}
+                        disabled={!selectedContactId}
+                        className="h-8 gap-1.5 px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2]"
+                        title="Rechercher sur LinkedIn"
+                      >
+                        <Linkedin className="h-4 w-4" />
+                        LinkedIn
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onGoogleSearch}
+                        disabled={!selectedContactId}
+                        className="h-8 gap-1.5 px-3 bg-[#4285F4] hover:bg-[#357AE8] text-white border-[#4285F4]"
+                        title="Rechercher sur Google"
+                      >
+                        <Globe className="h-4 w-4" />
+                        Google
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onDirectLink}
+                        disabled={!selectedContactId}
+                        className="h-8 gap-1.5 px-3"
+                        title="Ouvrir le lien direct"
+                      >
+                        <Eye className="h-4 w-4" />
+                        Lien direct
+                      </Button>
+                    </div>
+                    
                     <div className="flex items-center gap-1 mr-3">
                       <Button
                         variant="outline"

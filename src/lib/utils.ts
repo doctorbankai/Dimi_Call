@@ -95,13 +95,17 @@ export const openGoogleWindow = (url: string): void => {
  * Génère une URL de recherche LinkedIn et l'ouvre dans la fenêtre dédiée
  * @param prenom - Prénom de la personne à rechercher (peut contenir des accents)
  * @param nom - Nom de la personne à rechercher (peut contenir des accents)
+ * @param type - Type du contact (optionnel)
+ * @param source - Source du contact (optionnel)
  */
-export const searchLinkedIn = (prenom: string, nom: string): void => {
+export const searchLinkedIn = (prenom: string, nom: string, type?: string, source?: string): void => {
   // Normaliser les accents avant de créer la requête
   const normalizedPrenom = removeAccents(prenom);
   const normalizedNom = removeAccents(nom);
+  const normalizedType = type ? removeAccents(type) : '';
+  const normalizedSource = source ? removeAccents(source) : '';
   
-  const query = filterAndJoin(normalizedPrenom, normalizedNom);
+  const query = filterAndJoin(normalizedPrenom, normalizedNom, normalizedType, normalizedSource);
   if (!query) {
     console.warn('Aucune valeur valide pour la recherche LinkedIn');
     return;
@@ -114,9 +118,11 @@ export const searchLinkedIn = (prenom: string, nom: string): void => {
  * Génère une URL de recherche Google et l'ouvre dans la fenêtre dédiée
  * @param prenom - Prénom de la personne à rechercher
  * @param nom - Nom de la personne à rechercher
+ * @param type - Type du contact (optionnel)
+ * @param source - Source du contact (optionnel)
  */
-export const searchGoogle = (prenom: string, nom: string): void => {
-  const query = filterAndJoin(prenom, nom);
+export const searchGoogle = (prenom: string, nom: string, type?: string, source?: string): void => {
+  const query = filterAndJoin(prenom, nom, type, source);
   if (!query) {
     console.warn('Aucune valeur valide pour la recherche Google');
     return;
