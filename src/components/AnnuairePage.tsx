@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,7 +11,6 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
-import { SupabaseShareDialog } from '@/components/SupabaseShareDialog';
 import { localDbService } from '@/services/localDbService';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
@@ -19,6 +18,17 @@ import { Contact, ContactStatus } from '@/types';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as DateRangeCalendar } from '@/components/ui/calendar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import {
   Search,
   Phone,
@@ -30,7 +40,6 @@ import {
   MessageSquare,
   Download,
   Upload,
-  RefreshCw,
   Trash2,
   FileSpreadsheet,
   ArrowUpNarrowWide,
@@ -42,6 +51,9 @@ import { formatPhoneNumber } from '../services/dataService';
 import { ViewSwitcher, type ViewMode } from './ViewSwitcher';
 import { AnnuaireTable, AnnuaireEditableField } from './AnnuaireTable';
 import StatusSelect from './StatusSelect';
+import ImportMappingDialog from './ImportMappingDialog';
+import * as XLSX from 'xlsx';
+import { toast } from 'sonner';
 
 type HistoryType = 'appel' | 'rappel' | 'rdv' | 'statut';
 
@@ -270,7 +282,7 @@ const resolveEventTimestamp = (event: StatusEventRecord): string | null => {
 const pickFirstNonEmpty = (events: StatusEventRecord[], ...keys: (keyof StatusEventRecord)[]): string => {
   for (const key of keys) {
     for (const event of events) {
-      const value = safeTrim((event as Record<string, unknown>)[key]);
+      const value = safeTrim((event as any)[key]);
       if (value) {
         return value;
       }
@@ -491,8 +503,18 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
   const [filterQuick, setFilterQuick] = useState<QuickFilterKey>('all');
   const [dateRange, setDateRange] = useState<{ start: string; end: string }>({ start: '', end: '' });
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
+  const [mappingDialog, setMappingDialog] = useState<{
+    open: boolean;
+    file: File | null;
+    headers: string[];
+    preview: string[][];
+  }>({
+    open: false,
+    file: null,
+    headers: [],
+    preview: []
+  });
 
   const selectedContacts = useMemo(
     () => contacts.filter((contact) => selectedContactIds.has(contact.id)),
@@ -723,6 +745,178 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
     [selectedContact, updateContactField]
   );
 
+  // Fonction pour analyser un fichier et extraire headers/preview
+  const analyzeAndOpenMappingDialog = useCallback(async (file: File) => {
+    try {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result;
+          if (!data) return;
+
+          let headers: string[] = [];
+          let preview: string[][] = [];
+
+          const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+
+          if (extension === '.csv' || extension === '.tsv') {
+            // Parse CSV/TSV
+            const text = data as string;
+            const delimiter = extension === '.tsv' ? '\t' : ',';
+            const lines = text.split('\n').filter(line => line.trim());
+            
+            if (lines.length > 0) {
+              headers = lines[0].split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
+              preview = lines.slice(1, 6).map(line => 
+                line.split(delimiter).map(cell => cell.trim().replace(/^["']|["']$/g, ''))
+              );
+            }
+          } else {
+            // Parse Excel
+            const workbook = XLSX.read(data, { type: 'binary' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as string[][];
+            
+            if (jsonData.length > 0) {
+              headers = jsonData[0].map(h => String(h || '').trim());
+              preview = jsonData.slice(1, 6);
+            }
+          }
+
+          setMappingDialog({
+            open: true,
+            file,
+            headers,
+            preview
+          });
+        } catch (error) {
+          console.error('Erreur lors de l\'analyse du fichier:', error);
+          toast.error('Erreur d\'analyse', {
+            description: 'Impossible de lire le fichier'
+          });
+        }
+      };
+
+      if (file.name.endsWith('.csv') || file.name.endsWith('.tsv')) {
+        reader.readAsText(file);
+      } else {
+        reader.readAsBinaryString(file);
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ouverture du fichier:', error);
+      toast.error('Erreur', {
+        description: 'Impossible d\'ouvrir le fichier'
+      });
+    }
+  }, []);
+
+  const fetchContactsRef = useRef<((range: { start: string; end: string }) => Promise<void>) | null>(null);
+
+  // Gestion des événements d'import/export
+  useEffect(() => {
+    const handleImport = () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.csv,.tsv,.xlsx,.xls';
+      input.onchange = async (e) => {
+        const files = (e.target as HTMLInputElement).files;
+        if (files && files.length > 0) {
+          await analyzeAndOpenMappingDialog(files[0]);
+        }
+      };
+      input.click();
+    };
+
+    const handleImportXlsx = () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.xlsx,.xls';
+      input.onchange = async (e) => {
+        const files = (e.target as HTMLInputElement).files;
+        if (files && files.length > 0) {
+          await analyzeAndOpenMappingDialog(files[0]);
+        }
+      };
+      input.click();
+    };
+
+    const handleExport = async () => {
+      try {
+        const dataToExport = hasSelection ? selectedContacts : contacts;
+        const csvContent = [
+          ['Prénom', 'Nom', 'Téléphone', 'Email', 'Statut', 'Commentaire', 'Date Rappel', 'Heure Rappel', 'Date RDV', 'Heure RDV'].join(','),
+          ...dataToExport.map(contact => [
+            contact.prenom,
+            contact.nom,
+            contact.telephone,
+            contact.email || '',
+            contact.status,
+            contact.commentaire || '',
+            contact.reminder?.date || '',
+            contact.reminder?.time || '',
+            contact.rdv?.date || '',
+            contact.rdv?.time || ''
+          ].map(v => `"${v}"`).join(','))
+        ].join('\n');
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `annuaire_${new Date().toISOString().split('T')[0]}.csv`;
+        link.click();
+        
+        toast.success('Export réussi', {
+          description: `${dataToExport.length} contacts exportés`
+        });
+      } catch (error) {
+        console.error('Erreur lors de l\'export:', error);
+        toast.error('Erreur d\'export');
+      }
+    };
+
+    const handleExportXlsx = async () => {
+      try {
+        const dataToExport = hasSelection ? selectedContacts : contacts;
+        const worksheet = XLSX.utils.json_to_sheet(dataToExport.map(contact => ({
+          'Prénom': contact.prenom,
+          'Nom': contact.nom,
+          'Téléphone': contact.telephone,
+          'Email': contact.email || '',
+          'Statut': contact.status,
+          'Commentaire': contact.commentaire || '',
+          'Date Rappel': contact.reminder?.date || '',
+          'Heure Rappel': contact.reminder?.time || '',
+          'Date RDV': contact.rdv?.date || '',
+          'Heure RDV': contact.rdv?.time || ''
+        })));
+        
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Annuaire');
+        XLSX.writeFile(workbook, `annuaire_${new Date().toISOString().split('T')[0]}.xlsx`);
+        
+        toast.success('Export réussi', {
+          description: `${dataToExport.length} contacts exportés`
+        });
+      } catch (error) {
+        console.error('Erreur lors de l\'export:', error);
+        toast.error('Erreur d\'export');
+      }
+    };
+
+    window.addEventListener('dimicall-db-import', handleImport);
+    window.addEventListener('dimicall-db-import-xlsx', handleImportXlsx);
+    window.addEventListener('dimicall-db-export', handleExport);
+    window.addEventListener('dimicall-db-export-xlsx', handleExportXlsx);
+
+    return () => {
+      window.removeEventListener('dimicall-db-import', handleImport);
+      window.removeEventListener('dimicall-db-import-xlsx', handleImportXlsx);
+      window.removeEventListener('dimicall-db-export', handleExport);
+      window.removeEventListener('dimicall-db-export-xlsx', handleExportXlsx);
+    };
+  }, [analyzeAndOpenMappingDialog, contacts, selectedContacts, hasSelection]);
+
   useEffect(() => {
     if (!selectedContact) {
       setDetailDraft(null);
@@ -777,6 +971,48 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
       setLoading(false);
     }
   }, []);
+
+  // Stocker fetchContacts dans une ref pour l'utiliser dans handleImportConfirm
+  useEffect(() => {
+    fetchContactsRef.current = fetchContacts;
+  }, [fetchContacts]);
+
+  // Callback de confirmation d'import
+  const handleImportConfirm = useCallback(async (mapping: Record<string, string>, options: { phonesToRemove?: string[] }) => {
+    try {
+      if (!mappingDialog.file) {
+        console.log('❌ [MAPPING] Aucun fichier dans le dialogue');
+        return;
+      }
+      
+      console.log('🔄 [MAPPING] Début de l\'importation avec mapping:', mapping);
+      
+      // Import réel des contacts via localDbService
+      const { importContactsFromFile } = await import('../services/dataService');
+      const imported = await importContactsFromFile(mappingDialog.file, mapping, options);
+      console.log(`📥 [MAPPING] ${imported.length} contacts importés (après exclusion éventuelle)`);
+      
+      // Recharger les contacts
+      if (fetchContactsRef.current) {
+        await fetchContactsRef.current(dateRange);
+      }
+      
+      // Fermer le dialogue
+      setMappingDialog({ open: false, file: null, headers: [], preview: [] });
+      console.log('🔒 [MAPPING] Dialogue fermé');
+      
+      toast.success('Import réussi', {
+        description: `${imported.length} contacts importés avec succès`
+      });
+
+    } catch (error) {
+      console.error('❌ [MAPPING] Erreur lors de l\'import:', error);
+      setMappingDialog(prev => ({ ...prev, open: false }));
+      toast.error('Erreur d\'import', {
+        description: error instanceof Error ? error.message : 'Une erreur est survenue'
+      });
+    }
+  }, [mappingDialog.file, dateRange]);
 
   const quickFilters = useMemo(() => [
     { key: 'all', label: 'Tout' as const },
@@ -1301,7 +1537,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
                 size="sm"
                 variant={filterQuick === key ? 'default' : 'outline'}
                 className="h-8"
-                onClick={() => handleQuickFilter(key)}
+                onClick={() => handleQuickFilter(key as QuickFilterKey)}
               >
                 {label}
               </Button>
@@ -1326,19 +1562,15 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
               />
             </PopoverContent>
           </Popover>
-          <Button variant="outline" size="sm" className="h-8" onClick={() => dispatchLocalDbEvent('dimicall-db-refresh')}>
-            <RefreshCw className="h-4 w-4 mr-2" /> Rafraîchir
-          </Button>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <div className="flex items-center gap-2">
-            <Checkbox checked={bulkSelectionState} onCheckedChange={handleToggleSelectAll} />
+            <Checkbox 
+              checked={bulkSelectionState === 'indeterminate' ? false : bulkSelectionState} 
+              onCheckedChange={handleToggleSelectAll} 
+            />
             <span className="text-muted-foreground">Selection</span>
           </div>
-          <SupabaseShareDialog open={shareDialogOpen} onOpenChange={setShareDialogOpen} />
-          <Button variant="outline" size="sm" className="h-8" onClick={() => setShareDialogOpen(true)}>
-            Supabase
-          </Button>
           <Button
             variant="default"
             size="sm"
@@ -1349,16 +1581,36 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
           >
             Transfert
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8"
-            title="Supprimer la sélection"
-            disabled={!hasSelection}
-            onClick={() => dispatchLocalDbEvent('dimicall-db-delete')}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                title="Supprimer la sélection"
+                disabled={!hasSelection}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Êtes-vous sûr de vouloir supprimer {selectedCount} contact{selectedCount > 1 ? 's' : ''} sélectionné{selectedCount > 1 ? 's' : ''} ? Cette action est irréversible.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={() => dispatchLocalDbEvent('dimicall-db-delete')}
+                  className="bg-red-500 hover:bg-red-600 text-white"
+                >
+                  Supprimer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-8" title="Exporter">
@@ -1457,12 +1709,13 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
               >
                 <CardContent className="space-y-4 p-6">
                   <div className="flex items-start gap-4">
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={(value) => toggleContactSelection(contact.id, value)}
-                      onClick={(event) => event.stopPropagation()}
-                      className="mt-1"
-                    />
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={(value) => toggleContactSelection(contact.id, value)}
+                        className="mt-1"
+                      />
+                    </div>
                     <Avatar className="h-12 w-12">
                       <AvatarImage src="" alt={contact.fullName} />
                       <AvatarFallback className="bg-primary text-primary-foreground">
@@ -1784,6 +2037,31 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
           )}
         </DialogContent>
         </Dialog>
+
+        {/* Dialogue de mapping des colonnes */}
+        <ImportMappingDialog
+          isOpen={mappingDialog.open}
+          onClose={() => {
+            setMappingDialog({ open: false, file: null, headers: [], preview: [] });
+          }}
+          fileName={mappingDialog.file?.name}
+          detectedHeaders={mappingDialog.headers}
+          previewRows={mappingDialog.preview}
+          expectedTargets={[
+            { label: 'Prénom', value: 'prenom' },
+            { label: 'Nom', value: 'nom' },
+            { label: 'Téléphone', value: 'telephone' },
+            { label: 'Email', value: 'email' },
+            { label: 'Statut', value: 'statut' },
+            { label: 'Commentaire', value: 'commentaire' },
+            { label: 'Date Rappel', value: 'dateRappel' },
+            { label: 'Heure Rappel', value: 'heureRappel' },
+            { label: 'Date RDV', value: 'dateRDV' },
+            { label: 'Heure RDV', value: 'heureRDV' },
+          ]}
+          requiredTargets={['telephone']}
+          onConfirm={handleImportConfirm}
+        />
       </div>
     </div>
   );

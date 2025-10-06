@@ -1152,7 +1152,16 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                 size="sm" 
                 onClick={() => {
                   console.log('🖱️ [IMPORT] Clic sur le bouton Importer des contacts');
-                  document.getElementById('fileImporter')?.click();
+                  const input = document.createElement('input');
+                  input.type = 'file';
+                  input.accept = '.csv,.tsv,.xlsx,.xls';
+                  input.onchange = async (e) => {
+                    const files = (e.target as HTMLInputElement).files;
+                    if (files && files.length > 0 && onFileImport) {
+                      await onFileImport(files[0]);
+                    }
+                  };
+                  input.click();
                 }}
               >
                 Importer des contacts

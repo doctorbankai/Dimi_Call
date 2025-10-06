@@ -222,7 +222,7 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const [isClearDataDialogOpen, setIsClearDataDialogOpen] = useState(false);
 
   const [importProgress, setImportProgress] = useState<{ percentage: number; message: string } | null>(null);
-  const [viewMode, setViewMode] = useState<'table' | 'appels-cards' | 'graph' | 'db' | 'calendar' | 'calendar-2' | 'annuaire'>('table');
+  const [viewMode, setViewMode] = useState<'table' | 'appels-cards' | 'graph' | 'db' | 'calendar-2' | 'annuaire'>('table');
   // Filtres globaux par vue pour uniformit
   const [graphRange, setGraphRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
   const [dbRange, setDbRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
@@ -3108,11 +3108,6 @@ Dimitri MOREL - Arcanis Conseil`;
                 <ChartDashboard contacts={filteredContacts} />
               </div>
             </div>
-          ) : viewMode === 'calendar' ? (
-            <FullPageCalendar
-              selectedDate={calendarDate}
-              onDateChange={setCalendarDate}
-            />
           ) : viewMode === 'calendar-2' ? (
             <Calendar2 />
           ) : viewMode === 'annuaire' ? (

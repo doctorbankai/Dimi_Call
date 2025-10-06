@@ -68,8 +68,31 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
     const others = sorted.slice(6);
     const othersSum = others.reduce((acc, d) => acc + d.value, 0);
     const withOthers = othersSum > 0 ? [...top, { label: 'Autres', value: othersSum }] : top;
-    const palette = ['var(--chart-1)', 'var(--chart-2)', 'var(--chart-3)', 'var(--chart-4)', 'var(--chart-5)', 'var(--chart-6)'];
-    return withOthers.map((d, i) => ({ label: d.label, value: d.value, fill: palette[i % palette.length] }));
+    
+    // Utiliser les couleurs des badges de statuts
+    const getStatusColorFromLabel = (label: string): string => {
+      // Mapping des labels vers les ContactStatus
+      const statusMap: Record<string, string> = {
+        'Non défini': 'hsl(var(--muted))',
+        'Mauvais num': 'hsl(0 84.2% 60.2%)',
+        'Répondeur': 'hsl(45 93.4% 47.5%)',
+        'À rappeler': 'hsl(43 96.4% 56.3%)',
+        'Pas intéressé': 'hsl(215.4 16.3% 46.9%)',
+        'Argumenté': 'hsl(221.2 83.2% 53.3%)',
+        'DO': 'hsl(142.1 76.2% 36.3%)',
+        'RO': 'hsl(160 84.1% 39.4%)',
+        'Liste noire': 'hsl(240 5.9% 10%)',
+        'Prématuré': 'hsl(280 87.3% 65.1%)',
+        'A0': 'hsl(239 84.3% 67.8%)',
+      };
+      return statusMap[label] || 'hsl(var(--chart-1))';
+    };
+    
+    return withOthers.map((d) => ({ 
+      label: d.label, 
+      value: d.value, 
+      fill: getStatusColorFromLabel(d.label) 
+    }));
   }, [localEvents]);
 
   const radialConfig = useMemo(() => {

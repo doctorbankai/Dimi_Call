@@ -893,6 +893,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           "rounded-full px-1.5 py-0 text-[9px] font-medium capitalize shrink-0",
                           statusConfig?.bg,
                           statusConfig?.text,
+                          statusConfig?.darkBg,
+                          statusConfig?.darkText,
                         )}
                       >
                         {contact.statut ?? ContactStatus.NonDefini}
@@ -1420,7 +1422,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             </Badge>
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent>
+                        <DropdownMenuContent align="start" side="bottom" sideOffset={5} className="ml-16">
                           <DropdownMenuLabel>Colonnes visibles</DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           {COLUMN_HEADERS.map((header) => (
@@ -1434,35 +1436,37 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           ))}
                         </DropdownMenuContent>
                       </DropdownMenu>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-9 px-2"
-                            disabled={!selectedContact}
-                            title="Actions de recherche pour le contact sélectionné"
+                      <Tabs value={autoSearchMode} onValueChange={(value) => setAutoSearchMode(value as any)} className="w-auto">
+                        <TabsList className="h-9">
+                          <TabsTrigger 
+                            value="disabled" 
+                            className="text-xs data-[state=active]:bg-neutral-900 data-[state=active]:text-white dark:data-[state=active]:bg-neutral-100 dark:data-[state=active]:text-neutral-900"
                           >
-                            <Globe className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start">
-                          <DropdownMenuLabel>Actions de recherche</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => selectedContact && onLinkedInSearch()}>
-                            <Linkedin className="mr-2 h-4 w-4 text-blue-500" />
+                            Désactivé
+                          </TabsTrigger>
+                          <TabsTrigger 
+                            value="linkedin" 
+                            className="text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white dark:data-[state=active]:bg-blue-500"
+                          >
+                            <Linkedin className="h-3.5 w-3.5 mr-1.5" />
                             LinkedIn
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => selectedContact && onGoogleSearch()}>
-                            <Globe className="mr-2 h-4 w-4 text-green-500" />
+                          </TabsTrigger>
+                          <TabsTrigger 
+                            value="google" 
+                            className="text-xs data-[state=active]:bg-green-600 data-[state=active]:text-white dark:data-[state=active]:bg-green-500"
+                          >
+                            <Globe className="h-3.5 w-3.5 mr-1.5" />
                             Google
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => selectedContact && onDirectLink()}>
-                            <Eye className="mr-2 h-4 w-4 text-purple-500" />
-                            Lien direct
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                          </TabsTrigger>
+                          <TabsTrigger 
+                            value="link" 
+                            className="text-xs data-[state=active]:bg-purple-600 data-[state=active]:text-white dark:data-[state=active]:bg-purple-500"
+                          >
+                            <Eye className="h-3.5 w-3.5 mr-1.5" />
+                            Lien
+                          </TabsTrigger>
+                        </TabsList>
+                      </Tabs>
                     </div>
                     <div className="flex items-center gap-1 mr-3">
                       <Button
@@ -1672,6 +1676,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       contactDataKeys={CONTACT_DATA_KEYS as (keyof Contact | null)[]}
                       onToggleColumnVisibility={toggleColumnVisibility}
                       availableColumns={COLUMN_HEADERS}
+                      onFileImport={analyzeAndOpenMappingDialog}
                       initialItemsPerPage={25}
                       pageSizeOptions={[25, 50, 100]}
                     />

@@ -35,7 +35,7 @@ const STORAGE_KEY = 'dimicall_supabase_share_preferences'
 const hasWindow = typeof window !== 'undefined'
 
 const defaultTargetState: ShareTargetState = {
-  enabled: false,
+  enabled: true,
   status: 'idle',
 }
 

@@ -31,8 +31,8 @@ interface AppSidebarProps {
   userEmail?: string;
   hasSpecialAccess?: boolean;
   onLogout?: () => void;
-  viewMode: 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar' | 'calendar-2' | 'annuaire';
-  onChangeViewMode: (mode: 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar' | 'calendar-2' | 'annuaire') => void;
+  viewMode: 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar-2' | 'annuaire';
+  onChangeViewMode: (mode: 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar-2' | 'annuaire') => void;
   onTicketClick?: () => void;
   onHelpClick?: () => void;
   theme?: Theme;
@@ -144,23 +144,12 @@ export function AppSidebar({
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive={viewMode === 'calendar'}
-                  onClick={() => onChangeViewMode('calendar')}
-                  className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
-                >
-                  <Calendar className="w-4 h-4" />
-                  <span>Calendrier</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
                   isActive={viewMode === 'calendar-2'}
                   onClick={() => onChangeViewMode('calendar-2')}
                   className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <Calendar className="w-4 h-4" />
-                  <span>Calendrier 2</span>
-                  <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0 h-4 group-data-[collapsible=icon]:hidden">Preview</Badge>
+                  <span>Calendrier</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>

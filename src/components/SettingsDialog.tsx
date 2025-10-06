@@ -19,6 +19,8 @@ import { EmailType, Civility, Theme, ContactStatus, CallMode } from '../types';
 import { shortcutService, ShortcutConfig } from '../services/shortcutService';
 import { cn } from '../lib/utils';
 import { StatusConfigService, StatusConfigMap } from '../services/statusConfigService';
+import { useSupabaseShare } from '@/hooks/useSupabaseShare';
+import { Server, ShieldAlert } from 'lucide-react';
 
 interface SettingsDialogProps {
   isOpen: boolean;
@@ -86,7 +88,7 @@ const DEFAULT_COLUMN_CONFIG = {
   'Source': { isEssential: false, label: 'Source du contact' }
 };
 
-type SettingsCategory = 'email' | 'sms' | 'calcom' | 'appearance' | 'shortcuts' | 'update' | 'columns' | 'statuses' | 'logs';
+type SettingsCategory = 'email' | 'sms' | 'calcom' | 'appearance' | 'shortcuts' | 'update' | 'columns' | 'statuses' | 'data-sharing' | 'logs';
 
 const getCategories = (devToolsEnabled: boolean, updateEnabled: boolean = true) => [
   { 
@@ -130,6 +132,12 @@ const getCategories = (devToolsEnabled: boolean, updateEnabled: boolean = true) 
     label: 'Statuts',
     icon: FileText,
     description: 'Noms et couleurs des statuts'
+  },
+  {
+    id: 'data-sharing' as SettingsCategory,
+    label: 'Partage des données',
+    icon: Settings,
+    description: 'Configuration du partage Supabase'
   },
   // Section Mise à jour visible uniquement si les mises à jour sont activées
   ...(updateEnabled ? [{
@@ -233,6 +241,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
   // Hooks pour les paramètres de mise à jour (déplacés ici pour éviter les erreurs de hooks conditionnels)
   const { betaPreferences, setBetaPreferences, revertToStable, isUpdateEnabled, manualUpdateInfo } = useAutoUpdate();
+  
+  // Hook pour le partage Supabase
+  const { state: supabaseState, setEnabled: setSupabaseEnabled, triggerSync: triggerSupabaseSync, refreshSupabaseStatus, downloadLogs } = useSupabaseShare();
 
   // Log pour debug des mises à jour
   useEffect(() => {
@@ -893,6 +904,170 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
   const renderLogsSettings = () => {
     return <LogsViewer />;
+  };
+
+  const renderDataSharingSettings = () => {
+    const renderStatusBadge = (status: string) => {
+      switch (status) {
+        case 'syncing':
+          return (
+            <Badge variant="outline" className="gap-1 text-xs text-amber-600 border-amber-500">
+              <Settings className="w-3 h-3 animate-spin" />
+              Synchronisation…
+            </Badge>
+          )
+        case 'success':
+          return (
+            <Badge variant="outline" className="gap-1 text-xs text-emerald-600 border-emerald-500">
+              <CheckCircle className="w-3 h-3" />
+              À jour
+            </Badge>
+          )
+        case 'error':
+          return (
+            <Badge variant="outline" className="gap-1 text-xs text-red-600 border-red-500">
+              <X className="w-3 h-3" />
+              Erreur
+            </Badge>
+          )
+        default:
+          return (
+            <Badge variant="secondary" className="text-xs text-muted-foreground">
+              Inactif
+            </Badge>
+          )
+      }
+    }
+
+    const renderStats = (stats?: { processed: number; shared: number; filtered: number }) => {
+      if (!stats) return null
+      return (
+        <div className="text-xs text-muted-foreground grid gap-1 mt-2">
+          <span>
+            <span className="font-medium text-foreground">{stats.shared}</span> éléments envoyés
+          </span>
+          <span>
+            <span className="font-medium text-foreground">{stats.processed}</span> lignes analysées,
+            <span className="font-medium text-foreground"> {stats.filtered}</span> ignorées
+          </span>
+        </div>
+      )
+    }
+
+    const renderError = (error?: string) => {
+      if (!error) return null
+      return (
+        <div className="flex items-start gap-2 text-xs text-red-600 bg-red-100/40 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md px-3 py-2 mt-2">
+          <ShieldAlert className="w-4 h-4 mt-0.5" />
+          <div className="grid gap-1">
+            <span className="font-medium">Synchronisation interrompue</span>
+            <span>{error}</span>
+          </div>
+        </div>
+      )
+    }
+
+    const connectionOk = supabaseState.supabaseReady
+
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Partage Supabase</CardTitle>
+            <CardDescription>
+              Choisissez ce que vous souhaitez partager avec Supabase pour vos autres utilisateurs.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <section className="rounded-md border bg-muted/40 px-3 py-3 flex items-start gap-3">
+              <Server className={`w-5 h-5 mt-0.5 ${connectionOk ? 'text-emerald-600' : 'text-amber-600 animate-pulse'}`} />
+              <div className="grid gap-1 text-sm">
+                <div className="font-medium">Statut connexion</div>
+                {connectionOk ? (
+                  <span className="text-muted-foreground">Supabase configuré et prêt à recevoir les données.</span>
+                ) : (
+                  <span className="text-amber-600">Supabase non configuré ou indisponible.</span>
+                )}
+                <div className="flex gap-2 mt-1">
+                  <Button variant="outline" size="sm" onClick={() => refreshSupabaseStatus()} className="h-7">
+                    <RotateCcw className="w-3 h-3 mr-1" /> Vérifier
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => downloadLogs()} className="h-7">
+                    Télécharger les logs
+                  </Button>
+                </div>
+              </div>
+            </section>
+
+            <div className="grid gap-4">
+              <div className="rounded-md border px-4 py-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="font-medium flex items-center gap-2">
+                      Partager les numéros de téléphone
+                      {renderStatusBadge(supabaseState.phone.status)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Synchronise les numéros de téléphone de la table locale vers Supabase (`shared_phone_numbers`).
+                      Utilisé pour éviter les doublons entre utilisateurs.
+                    </p>
+                    {renderStats(supabaseState.phone.stats)}
+                    {renderError(supabaseState.phone.lastError)}
+                  </div>
+                  <Switch
+                    checked={supabaseState.phone.enabled}
+                    onCheckedChange={(checked) => setSupabaseEnabled('phone', !!checked)}
+                  />
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!supabaseState.phone.enabled || supabaseState.phone.status === 'syncing'}
+                    onClick={() => triggerSupabaseSync('phone', 'manual')}
+                    className="h-7"
+                  >
+                    <RotateCcw className="w-3 h-3 mr-1" /> Relancer la synchro
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-md border px-4 py-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="font-medium flex items-center gap-2">
+                      Partager les listes noires
+                      {renderStatusBadge(supabaseState.blacklist.status)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Envoie uniquement les numéros dont le statut est « Liste noire » vers `shared_blacklist_numbers`.
+                      Permet de bloquer les contacts indésirables sur toute l'application.
+                    </p>
+                    {renderStats(supabaseState.blacklist.stats)}
+                    {renderError(supabaseState.blacklist.lastError)}
+                  </div>
+                  <Switch
+                    checked={supabaseState.blacklist.enabled}
+                    onCheckedChange={(checked) => setSupabaseEnabled('blacklist', !!checked)}
+                  />
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!supabaseState.blacklist.enabled || supabaseState.blacklist.status === 'syncing'}
+                    onClick={() => triggerSupabaseSync('blacklist', 'manual')}
+                    className="h-7"
+                  >
+                    <RotateCcw className="w-3 h-3 mr-1" /> Relancer la synchro
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
   };
 
   const renderEmailSettings = () => {
@@ -1561,6 +1736,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         return renderColumnSettings();
       case 'statuses':
         return renderStatusEditor();
+      case 'data-sharing':
+        return renderDataSharingSettings();
       case 'logs':
         return renderLogsSettings();
       default:

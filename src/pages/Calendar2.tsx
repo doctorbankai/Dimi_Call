@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { CalendarProvider } from '@/calendar/contexts/calendar-context';
 import { ClientContainer } from '@/calendar/components/client-container';
+import { TodayEventsCard } from '@/calendar/components/sidebar/today-events-card';
+import { UpcomingEventsCard } from '@/calendar/components/sidebar/upcoming-events-card';
 import { USERS_MOCK } from '@/calendar/mocks';
 import { calendarEventsService } from '@/services/calendarEventsService';
 import type { IEvent } from '@/calendar/interfaces';
@@ -56,7 +58,18 @@ export default function Calendar2() {
   return (
     <div className="h-screen flex flex-col">
       <CalendarProvider events={events} users={USERS_MOCK}>
-        <ClientContainer />
+        <div className="flex gap-4 p-4 h-full overflow-hidden">
+          {/* Sidebar gauche avec les cartes */}
+          <div className="w-80 flex-shrink-0 space-y-4 overflow-y-auto">
+            <TodayEventsCard />
+            <UpcomingEventsCard />
+          </div>
+          
+          {/* Calendrier principal */}
+          <div className="flex-1 overflow-hidden">
+            <ClientContainer />
+          </div>
+        </div>
       </CalendarProvider>
     </div>
   );
