@@ -2701,6 +2701,44 @@ Dimitri MOREL - Arcanis Conseil`;
                               </Badge>
                             </Button>
                           </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-64">
+                            <DropdownMenuLabel className="flex items-center gap-2">
+                              <Eye className="h-4 w-4" />
+                              Gestion des colonnes
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {COLUMN_HEADERS.map((header) => (
+                              <DropdownMenuCheckboxItem
+                                key={header}
+                                className="flex items-center gap-2"
+                                checked={visibleColumns[header] || false}
+                                onCheckedChange={() => toggleColumnVisibility(header)}
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                {header}
+                              </DropdownMenuCheckboxItem>
+                            ))}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuCheckboxItem
+                              className="flex items-center gap-2 text-primary"
+                              checked={availableColumns.every(header => visibleColumns[header])}
+                              onCheckedChange={showAllAvailableColumns}
+                              onSelect={(e) => e.preventDefault()}
+                            >
+                              <Eye className="h-4 w-4" />
+                              Afficher toutes les colonnes disponibles
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                              className="flex items-center gap-2 text-orange-600 dark:text-orange-400"
+                              checked={availableColumns.every(header => essentialColumns.includes(header) ? visibleColumns[header] : !visibleColumns[header])}
+                              onCheckedChange={hideOptionalColumns}
+                              onSelect={(e) => e.preventDefault()}
+                            >
+                              <EyeOff className="h-4 w-4" />
+                              Masquer les colonnes optionnelles
+                            </DropdownMenuCheckboxItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
 
                         {/* Bouton Recherche moderne - Actions rapides */}
                         <DropdownMenu>
@@ -2774,44 +2812,6 @@ Dimitri MOREL - Arcanis Conseil`;
                             </DropdownMenuRadioGroup>
                           </DropdownMenuContent>
                         </DropdownMenu>
-                        <DropdownMenuContent align="end" className="w-64">
-                          <DropdownMenuLabel className="flex items-center gap-2">
-                            <Eye className="h-4 w-4" />
-                            Gestion des colonnes
-                          </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                          {COLUMN_HEADERS.map((header) => (
-                            <DropdownMenuCheckboxItem
-                              key={header}
-                              className="flex items-center gap-2"
-                              checked={visibleColumns[header] || false}
-                              onCheckedChange={() => toggleColumnVisibility(header)}
-                              onSelect={(e) => e.preventDefault()}
-                            >
-                              {header}
-                            </DropdownMenuCheckboxItem>
-                          ))}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuCheckboxItem
-                            className="flex items-center gap-2 text-primary"
-                            checked={availableColumns.every(header => visibleColumns[header])}
-                            onCheckedChange={showAllAvailableColumns}
-                            onSelect={(e) => e.preventDefault()}
-                          >
-                            <Eye className="h-4 w-4" />
-                            Afficher toutes les colonnes disponibles
-                          </DropdownMenuCheckboxItem>
-                          <DropdownMenuCheckboxItem
-                            className="flex items-center gap-2 text-orange-600 dark:text-orange-400"
-                            checked={availableColumns.every(header => essentialColumns.includes(header) ? visibleColumns[header] : !visibleColumns[header])}
-                            onCheckedChange={hideOptionalColumns}
-                            onSelect={(e) => e.preventDefault()}
-                          >
-                            <EyeOff className="h-4 w-4" />
-                            Masquer les colonnes optionnelles
-                          </DropdownMenuCheckboxItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
                       </div>
 
                       {/* Boutons d'action - à droite */}

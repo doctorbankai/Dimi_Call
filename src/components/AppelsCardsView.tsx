@@ -1449,6 +1449,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                               key={header}
                               checked={visibleColumns[header]}
                               onCheckedChange={() => toggleColumnVisibility(header)}
+                              onSelect={(e) => e.preventDefault()}
                               className="flex items-center gap-2"
                             >
                               {header}
@@ -1465,6 +1466,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                               setVisibleColumns(newVisibility)
                               localStorage.setItem('appels2-visible-columns', JSON.stringify(newVisibility))
                             }}
+                            onSelect={(e) => e.preventDefault()}
                             className="flex items-center gap-2 text-primary"
                           >
                             <Eye className="h-4 w-4" />
@@ -1487,6 +1489,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                               setVisibleColumns(newVisibility)
                               localStorage.setItem('appels2-visible-columns', JSON.stringify(newVisibility))
                             }}
+                            onSelect={(e) => e.preventDefault()}
                             className="flex items-center gap-2 text-orange-600 dark:text-orange-400"
                           >
                             <EyeOff className="h-4 w-4" />
