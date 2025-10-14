@@ -34,7 +34,7 @@ import {
   BarChart3,
   FileSpreadsheet,
 } from "lucide-react"
-import { STATUS_COLORS, STATUS_OPTIONS, COLUMN_HEADERS, CONTACT_DATA_KEYS } from "../constants"
+import { STATUS_COLORS, STATUS_OPTIONS, COLUMN_HEADERS, CONTACT_DATA_KEYS, DEFAULT_COLUMN_ORDER } from "../constants"
 import CallControl from "./CallControl"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
@@ -236,6 +236,56 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     });
     return defaultVisible;
   })
+
+  // Ordre des colonnes - utilise l'ordre par défaut si disponible
+  const orderedColumnHeaders = useMemo(() => {
+    // Créer un ordre basé sur DEFAULT_COLUMN_ORDER
+    const ordered: string[] = [];
+    const remainingHeaders = new Set(COLUMN_HEADERS);
+    
+    // Ajouter d'abord les colonnes dans l'ordre par défaut si elles existent
+    DEFAULT_COLUMN_ORDER.forEach(header => {
+      if (remainingHeaders.has(header)) {
+        ordered.push(header);
+        remainingHeaders.delete(header);
+      }
+    });
+    
+    // Ajouter les colonnes restantes (comme "#" et "Actions") à la fin
+    remainingHeaders.forEach(header => {
+      ordered.push(header);
+    });
+    
+    return ordered;
+  }, [])
+
+  // Créer les clés de données correspondantes dans le même ordre
+  const orderedContactDataKeys = useMemo(() => {
+    const keyMap: Record<string, keyof Contact | 'actions' | null> = {
+      '#': 'numeroLigne',
+      'Sexe': 'sexe',
+      'Prénom': 'prenom',
+      'Nom': 'nom',
+      'Téléphone': 'telephone',
+      'Mail': 'email',
+      'Statut': 'statut',
+      'Commentaire': 'commentaire',
+      'Source': 'source',
+      'Type': 'type',
+      'Qualité': 'qualite',
+      'Lien': 'lien',
+      'Date Rappel': 'dateRappel',
+      'Heure Rappel': 'heureRappel',
+      'Date RDV': 'dateRDV',
+      'Heure RDV': 'heureRDV',
+      'Date Appel': 'dateAppel',
+      'Heure Appel': 'heureAppel',
+      'Durée Appel': 'dureeAppel',
+      'Actions': 'actions'
+    };
+    
+    return orderedColumnHeaders.map(header => keyMap[header] || null);
+  }, [orderedColumnHeaders])
   const [isDragOver, setIsDragOver] = useState(false)
   const [isDragActive, setIsDragActive] = useState(false)
   const [importProgress, setImportProgress] = useState<{ percentage: number; message: string } | null>(null)
@@ -1444,7 +1494,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             Gestion des colonnes
                           </DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          {COLUMN_HEADERS.map((header) => (
+                          {orderedColumnHeaders.map((header) => (
                             <DropdownMenuCheckboxItem
                               key={header}
                               checked={visibleColumns[header]}
@@ -1460,7 +1510,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             checked={Object.values(visibleColumns).every(Boolean)}
                             onCheckedChange={() => {
                               const newVisibility: Record<string, boolean> = {}
-                              COLUMN_HEADERS.forEach(header => {
+                              orderedColumnHeaders.forEach(header => {
                                 newVisibility[header] = true
                               })
                               setVisibleColumns(newVisibility)
@@ -1475,14 +1525,14 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           <DropdownMenuCheckboxItem
                             checked={(() => {
                               const essentialCols = getEssentialColumns();
-                              return COLUMN_HEADERS.every(header => 
+                              return orderedColumnHeaders.every(header => 
                                 essentialCols.includes(header) ? visibleColumns[header] : !visibleColumns[header]
                               );
                             })()}
                             onCheckedChange={() => {
                               const essentialCols = getEssentialColumns();
                               const newVisibility: Record<string, boolean> = {}
-                              COLUMN_HEADERS.forEach(header => {
+                              orderedColumnHeaders.forEach(header => {
                                 // Garder les colonnes essentielles visibles, masquer les optionnelles
                                 newVisibility[header] = essentialCols.includes(header);
                               })
@@ -1771,10 +1821,10 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       activeCallContactId={activeCallContactId}
                       theme={'light' as any}
                       visibleColumns={visibleColumns}
-                      columnHeaders={COLUMN_HEADERS}
-                      contactDataKeys={CONTACT_DATA_KEYS as (keyof Contact | null)[]}
+                      columnHeaders={orderedColumnHeaders}
+                      contactDataKeys={orderedContactDataKeys as (keyof Contact | null)[]}
                       onToggleColumnVisibility={toggleColumnVisibility}
-                      availableColumns={COLUMN_HEADERS}
+                      availableColumns={orderedColumnHeaders}
                       onFileImport={analyzeAndOpenMappingDialog}
                       initialItemsPerPage={25}
                       pageSizeOptions={[25, 50, 100]}

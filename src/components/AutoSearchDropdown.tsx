@@ -89,7 +89,7 @@ export const AutoSearchDropdown: React.FC<AutoSearchDropdownProps> = ({
     }, 300)
 
     return () => clearTimeout(timeoutId)
-  }, [selectedContact?.id, autoSearchMode])
+  }, [selectedContact?.id])
 
   return (
     <DropdownMenu>

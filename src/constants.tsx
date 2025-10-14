@@ -332,6 +332,29 @@ export const COLUMN_HEADERS = [
   'Actions',
 ];
 
+// Ordre par défaut des colonnes pour la page Appels (mode table)
+// Ordre demandé : Sexe Prénom Nom Numéro Mail Statut Appel Commentaires Source Type Qualité Lien Date Rappel Heure Rappel Date RDV Heure RDV Date Appel Heure Appel Durée Appel
+export const DEFAULT_COLUMN_ORDER = [
+  'Sexe',
+  'Prénom',
+  'Nom',
+  'Téléphone',
+  'Mail',
+  'Statut',
+  'Commentaire',
+  'Source',
+  'Type',
+  'Qualité',
+  'Lien',
+  'Date Rappel',
+  'Heure Rappel',
+  'Date RDV',
+  'Heure RDV',
+  'Date Appel',
+  'Heure Appel',
+  'Durée Appel',
+];
+
 export const CONTACT_DATA_KEYS = [
   'numeroLigne',
   'prenom',

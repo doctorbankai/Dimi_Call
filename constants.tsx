@@ -319,10 +319,14 @@ export const IconDotsVertical = ({ className = "w-5 h-5" }: { className?: string
 
 
 // Add "Actions" to COLUMN_HEADERS and a corresponding 'null' or specific key to CONTACT_DATA_KEYS
-export const COLUMN_HEADERS = ["#", "Prénom", "Nom", "Téléphone", "Mail", "Source", "Statut", "Commentaire", "Date Rappel", "Heure Rappel", "Date RDV", "Heure RDV", "Date Appel", "Heure Appel", "Durée Appel", "Actions"];
+export const COLUMN_HEADERS = ["#", "Sexe", "Prénom", "Nom", "Téléphone", "Mail", "Statut", "Commentaire", "Source", "Type", "Qualité", "Lien", "Date Rappel", "Heure Rappel", "Date RDV", "Heure RDV", "Date Appel", "Heure Appel", "Durée Appel", "Actions"];
+
+// Ordre par défaut des colonnes pour la page Appels
+export const DEFAULT_COLUMN_ORDER = ["Sexe", "Prénom", "Nom", "Téléphone", "Mail", "Statut", "Commentaire", "Source", "Type", "Qualité", "Lien", "Date Rappel", "Heure Rappel", "Date RDV", "Heure RDV", "Date Appel", "Heure Appel", "Durée Appel"];
+
 export const CONTACT_DATA_KEYS: (keyof import('./types').Contact | 'actions' | null)[] = [
-    'numeroLigne', 'prenom', 'nom', 'telephone', 'email', 'source', 'statut', 
-    'commentaire', 'dateRappel', 'heureRappel', 'dateRDV', 'heureRDV', 
+    'numeroLigne', 'sexe', 'prenom', 'nom', 'telephone', 'email', 'statut', 
+    'commentaire', 'source', 'type', 'qualite', 'lien', 'dateRappel', 'heureRappel', 'dateRDV', 'heureRDV', 
     'dateAppel', 'heureAppel', 'dureeAppel', 'actions' // 'actions' key for the new column
   ];
 
@@ -347,7 +351,8 @@ export const STATUS_COLORS: Record<ContactStatus, { bg: string; text: string; da
 export const QUICK_COMMENTS = ["Accompagné", "Du métier", "Prospection", "Non exploitable", "Bloqué ?"];
 
 export const TABLE_HEADER_ICONS: Record<string, React.ReactNode> = {
-  "#": <LucideHash className="w-3.5 h-3.5 text-muted-foreground" />, 
+  "#": <LucideHash className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Sexe": <LucideUser className="w-3.5 h-3.5 text-muted-foreground" />,
   "Prénom": <LucideUser className="w-3.5 h-3.5 text-muted-foreground" />,
   "Nom": <LucideUser className="w-3.5 h-3.5 text-muted-foreground" />,
   "Téléphone": <LucidePhone className="w-3.5 h-3.5 text-muted-foreground" />,
@@ -355,6 +360,9 @@ export const TABLE_HEADER_ICONS: Record<string, React.ReactNode> = {
   "Source": <LucideFolder className="w-3.5 h-3.5 text-muted-foreground" />,
   "Statut": <LucideFileText className="w-3.5 h-3.5 text-muted-foreground" />,
   "Commentaire": <LucideMessageSquare className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Type": <LucideFileText className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Qualité": <LucideFileText className="w-3.5 h-3.5 text-muted-foreground" />,
+  "Lien": <LucideFileText className="w-3.5 h-3.5 text-muted-foreground" />,
   "Date Rappel": <LucideCalendar className="w-3.5 h-3.5 text-muted-foreground" />,
   "Heure Rappel": <LucideClock className="w-3.5 h-3.5 text-muted-foreground" />,
   "Date RDV": <LucideCalendar className="w-3.5 h-3.5 text-muted-foreground" />,
