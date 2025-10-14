@@ -49,6 +49,7 @@ export interface Contact {
   uid?: string; // New UID field
   uid_supabase?: string; // For potential future Supabase integration mapping
   utilisateur?: string; // Nom complet de l'utilisateur connecté
+  actions?: string; // Actions field for import purposes
   // Nouveaux champs pour les itérations Supabase
   statutAppel?: string; // Statut des appels (statut_appel_X)
   statutRDV?: string; // Statut des RDV (statut_r*_*)

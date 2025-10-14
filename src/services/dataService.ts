@@ -418,7 +418,32 @@ export const normalizeHeader = (header: string): string => {
     'siteweb': 'lien',
     'siteinternet': 'lien',
     'webpage': 'lien',
-    'weblink': 'lien'
+    'weblink': 'lien',
+    
+    // DON - toutes variantes
+    'don': 'don',
+    'donation': 'don',
+    'montant': 'don',
+    'amount': 'don',
+    'contribution': 'don',
+    
+    // DATE - toutes variantes
+    'date': 'date',
+    'dategeneral': 'date',
+    'generaldate': 'date',
+    
+    // UID - toutes variantes
+    'uid': 'uid',
+    'id': 'uid',
+    'identifier': 'uid',
+    'identifiant': 'uid',
+    'uniqueid': 'uid',
+    
+    // ACTIONS - toutes variantes
+    'actions': 'actions',
+    'action': 'actions',
+    'activites': 'actions',
+    'activities': 'actions'
   };
   
   // Recherche directe
