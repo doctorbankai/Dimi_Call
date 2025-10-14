@@ -53,6 +53,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
@@ -1358,8 +1360,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
           {/* Action Bar */}
           <div className="flex items-stretch gap-3 w-full justify-between">
             <div className="flex-grow">
-              <div className="w-full overflow-x-auto">
-                <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3 shadow-sm min-w-[280px]">
+              <div className="w-full overflow-x-auto flex justify-center">
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3 shadow-sm min-w-[280px] w-fit">
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <span data-slot="avatar" className="relative flex size-8 shrink-0 overflow-hidden rounded-full h-8 w-8 flex-shrink-0">
                       <span data-slot="avatar-fallback" className="bg-muted flex size-full items-center justify-center rounded-full">
@@ -1598,7 +1600,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         </DropdownMenuContent>
                       </DropdownMenu>
                       <Tabs value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)} className="w-auto">
-                        <TabsList className="h-9">
+                        <TabsList className="h-9 hidden">
                           <TabsTrigger 
                             value="disabled" 
                             className="text-xs data-[state=active]:bg-neutral-900 data-[state=active]:text-white dark:data-[state=active]:bg-neutral-100 dark:data-[state=active]:text-neutral-900"
@@ -1628,6 +1630,55 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           </TabsTrigger>
                         </TabsList>
                       </Tabs>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-9 px-2"
+                            title="Mode de recherche automatique"
+                          >
+                            {autoSearchMode === 'linkedin' && <Linkedin className="h-4 w-4 text-blue-600" />}
+                            {autoSearchMode === 'google' && <Globe className="h-4 w-4 text-green-600" />}
+                            {autoSearchMode === 'link' && <Eye className="h-4 w-4 text-purple-600" />}
+                            {autoSearchMode === 'disabled' && <X className="h-4 w-4" />}
+                            <span className="sr-only">Changer le mode automatique</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" side="bottom" sideOffset={5} className="w-56">
+                          <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1">
+                            Mode automatique
+                          </DropdownMenuLabel>
+                          <DropdownMenuRadioGroup value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)}>
+                            <DropdownMenuRadioItem value="disabled" className="cursor-pointer">
+                              <X className="mr-2 h-4 w-4" />
+                              <span>Désactivé</span>
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="linkedin" className="cursor-pointer">
+                              <Linkedin className="mr-2 h-4 w-4 text-blue-600" />
+                              <span>LinkedIn</span>
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="google" className="cursor-pointer">
+                              <Globe className="mr-2 h-4 w-4 text-green-600" />
+                              <span>Google</span>
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="link" className="cursor-pointer">
+                              <Eye className="mr-2 h-4 w-4 text-purple-600" />
+                              <span>Lien</span>
+                            </DropdownMenuRadioItem>
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      <div className="relative w-[220px] sm:w-[260px] md:w-[300px]">
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Rechercher dans la table..."
+                          value={searchQuery}
+                          onChange={(e) => onSearch(e.target.value)}
+                          className="pl-9 h-9"
+                        />
+                      </div>
                     </div>
                     
                     {/* Boutons de recherche manuelle LinkedIn/Google/Lien */}

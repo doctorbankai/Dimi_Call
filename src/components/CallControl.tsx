@@ -362,10 +362,11 @@ const CallControl: React.FC<CallControlProps> = ({
   }
 
   return (
-    <div className={cn('w-full overflow-x-auto', className)}>
+    <div className={cn('w-full overflow-x-auto', isDetailed && 'flex justify-center', className)}>
       <div
         className={cn(
           'flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3 shadow-sm min-w-[280px]',
+          isDetailed && 'w-fit',
           !isDetailed && 'min-w-0 w-full border-none bg-transparent p-0 shadow-none gap-2'
         )}
       >

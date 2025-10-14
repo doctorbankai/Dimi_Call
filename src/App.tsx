@@ -1716,15 +1716,46 @@ Dimitri MOREL - Arcanis Conseil`;
 
   const filteredContacts = useMemo(() => {
     if (!searchTerm) return contacts;
-    const lowerSearchTerm = searchTerm.toLowerCase();
-    return contacts.filter(contact => {
-      if (searchColumn === 'all') {
-        return Object.values(contact).some(value =>
-          String(value).toLowerCase().includes(lowerSearchTerm)
-        );
+
+    const normalize = (value: any) => {
+      try {
+        return String(value)
+          .toLowerCase()
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '') // Remove accents
+          .replace(/[^\w@.\-+ ]+/g, ' ') // Drop punctuation except common symbols
+          .trim();
+      } catch {
+        return '';
       }
-      const contactValue = contact[searchColumn as keyof Contact];
-      return String(contactValue).toLowerCase().includes(lowerSearchTerm);
+    };
+
+    const digitsOnly = (value: any) => String(value ?? '').replace(/\D+/g, '');
+
+    const tokens: string[] = [];
+    const re = /"([^"]+)"|(\S+)/g; // quoted phrases or words
+    let match: RegExpExecArray | null;
+    while ((match = re.exec(searchTerm))) {
+      const token = match[1] || match[2];
+      if (token) tokens.push(token);
+    }
+    const normTokens = tokens.map(normalize).filter(Boolean);
+
+    return contacts.filter(contact => {
+      const values = searchColumn === 'all'
+        ? Object.values(contact)
+        : [contact[searchColumn as keyof Contact]];
+
+      const haystack = normalize(values.join(' '));
+      const phoneDigits = digitsOnly((contact as any).telephone);
+
+      return normTokens.every(t => {
+        // If token looks like a phone fragment (>=3 digits), match against digits only
+        if (/^\d{3,}$/.test(t)) {
+          return phoneDigits.includes(t);
+        }
+        return haystack.includes(t);
+      });
     });
   }, [contacts, searchTerm, searchColumn]);
 
