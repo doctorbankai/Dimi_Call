@@ -545,6 +545,9 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
 
   // Ref pour le conteneur de scroll
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Ref pour tracker si le scroll doit être automatique (uniquement au clic)
+  const shouldAutoScrollRef = useRef(false);
 
   // États pour le drag & drop
   const [isDragOver, setIsDragOver] = useState(false);
@@ -683,12 +686,14 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
     }
   }), [scrollToContact]);
 
-  // Scroll automatique quand le contact sélectionné change
+  // Scroll automatique uniquement lors d'un clic sur une ligne
   useEffect(() => {
-    if (selectedContactId) {
-      // Délai pour laisser le temps au DOM de se mettre Ã  jour
+    if (selectedContactId && shouldAutoScrollRef.current) {
+      // Délai pour laisser le temps au DOM de se mettre à jour
       const timeoutId = setTimeout(() => {
         scrollToContact(selectedContactId);
+        // Réinitialiser le flag après le scroll
+        shouldAutoScrollRef.current = false;
       }, 100);
       
       return () => clearTimeout(timeoutId);
@@ -1460,7 +1465,10 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                                   : "bg-green-100 hover:bg-green-200")
                               : "")
                           )}
-                          onClick={() => onSelectContact(contact)}
+                          onClick={() => {
+                            shouldAutoScrollRef.current = true;
+                            onSelectContact(contact);
+                          }}
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ 

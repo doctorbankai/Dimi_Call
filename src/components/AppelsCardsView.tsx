@@ -11,6 +11,7 @@ import {
   CalendarSearch,
   Calendar as CalendarIcon,
   ChevronDown,
+  ChevronUp,
   Clock,
   Download,
   Eye,
@@ -206,6 +207,9 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   const [visibleCount, setVisibleCount] = useState(40)
   const [autoSearchMode, setAutoSearchMode] = useState<'disabled' | 'linkedin' | 'google' | 'link'>(() => loadAutoSearchMode())
   const [activeFilter, setActiveFilter] = useState<'all' | 'rappel' | 'rdv' | 'status'>('all')
+  
+  // Ref pour tracker si le scroll doit être automatique (uniquement au clic)
+  const shouldAutoScrollRef = useRef(false)
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     try {
       const saved = localStorage.getItem('appels-2-view-mode');
@@ -477,6 +481,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   )
   const [noteDraft, setNoteDraft] = useState("")
   const scrollRef = useRef<HTMLDivElement>(null)
+  const contactTableRef = useRef<ContactTableRef>(null)
 
   useEffect(() => {
     setFormState(getInitialFormState(selectedContact))
@@ -528,9 +533,9 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     [filteredContacts, visibleCount],
   )
 
-  // Scroll automatique vers le contact sélectionné
+  // Scroll automatique uniquement lors d'un clic sur une card
   useEffect(() => {
-    if (!selectedContactId) return
+    if (!selectedContactId || !shouldAutoScrollRef.current) return
     
     // Petit délai pour laisser le DOM se mettre à jour
     const timeoutId = setTimeout(() => {
@@ -550,12 +555,17 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
             }
           }, 200)
         }
+        // Réinitialiser le flag
+        shouldAutoScrollRef.current = false;
         return
       }
       
       // Vérifier si le contact est déjà visible
       const container = scrollRef.current
-      if (!container) return
+      if (!container) {
+        shouldAutoScrollRef.current = false;
+        return
+      }
       
       const containerRect = container.getBoundingClientRect()
       const nodeRect = node.getBoundingClientRect()
@@ -568,6 +578,9 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       if (!isVisible) {
         node.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
+      
+      // Réinitialiser le flag après le scroll
+      shouldAutoScrollRef.current = false;
     }, 100)
     
     return () => clearTimeout(timeoutId)
@@ -761,6 +774,37 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      size="sm"
+                      onClick={() => {
+                        // Trouver le premier contact sans statut ou avec statut "Non défini"
+                        const firstWithoutStatus = filteredContacts.find(c => 
+                          !c.statut || c.statut === ContactStatus.NonDefini
+                        );
+                        
+                        if (firstWithoutStatus) {
+                          shouldAutoScrollRef.current = true;
+                          onSelectContact(firstWithoutStatus);
+                          toast.info('Retour au premier contact sans statut');
+                        } else {
+                          toast.info('Aucun contact sans statut trouvé');
+                        }
+                      }}
+                      className="h-9 bg-primary/10 hover:bg-primary/20 text-primary border-primary/30"
+                      disabled={!filteredContacts.some(c => !c.statut || c.statut === ContactStatus.NonDefini)}
+                    >
+                      <ChevronUp className="mr-2 h-4 w-4" />
+                      Premier sans statut
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p>Revenir au premier contact sans statut</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <ButtonGroup>
                 <Button 
                   size="sm"
@@ -930,7 +974,10 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         "overflow-hidden rounded-lg border bg-card/80 transition-all duration-200 cursor-pointer",
                         isSelected ? "border-primary shadow-sm" : "hover:border-primary/40",
                       )}
-                    onClick={() => onSelectContact(contact)}
+                    onClick={() => {
+                      shouldAutoScrollRef.current = true;
+                      onSelectContact(contact);
+                    }}
                   >
                     <CardHeader className="p-0 px-3 py-1.5 flex flex-row items-center gap-2 space-y-0">
                       <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -1617,6 +1664,43 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       </Button>
                     </div>
                     
+                    {/* Bouton pour revenir au premier contact sans statut */}
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button 
+                            size="sm"
+                            onClick={() => {
+                              // Trouver le premier contact sans statut ou avec statut "Non défini"
+                              const firstWithoutStatus = filteredContacts.find(c => 
+                                !c.statut || c.statut === ContactStatus.NonDefini
+                              );
+                              
+                              if (firstWithoutStatus) {
+                                // Sélectionner le contact
+                                onSelectContact(firstWithoutStatus);
+                                // Utiliser la méthode scrollToContact de ContactTable via la ref
+                                setTimeout(() => {
+                                  contactTableRef.current?.scrollToContact(firstWithoutStatus.id);
+                                }, 150);
+                                toast.info('Retour au premier contact sans statut');
+                              } else {
+                                toast.info('Aucun contact sans statut trouvé');
+                              }
+                            }}
+                            className="h-8 gap-1.5 px-3 bg-primary/10 hover:bg-primary/20 text-primary border-primary/30"
+                            disabled={!filteredContacts.some(c => !c.statut || c.statut === ContactStatus.NonDefini)}
+                          >
+                            <ChevronUp className="h-4 w-4" />
+                            Premier sans statut
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>Revenir au premier contact sans statut</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    
                     <div className="flex items-center gap-1 mr-3">
                       <Button
                         variant="outline"
@@ -1812,6 +1896,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   {/* Table Content */}
                   <div data-state="active" data-orientation="horizontal" role="tabpanel" className="outline-none flex-1 overflow-hidden">
                     <PaginatedContactTable
+                      ref={contactTableRef}
                       contacts={filteredContacts}
                       callStates={callStates}
                       onSelectContact={onSelectContact}
