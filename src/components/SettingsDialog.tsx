@@ -67,38 +67,41 @@ const defaultTemplates: EmailTemplates = {
 
 interface SmsTemplates {
   [SmsType.PremierContact]: string;
-  [SmsType.Relance]: string;
-  [SmsType.Confirmation]: string;
+  [SmsType.D0Visio]: string;
+  [SmsType.R0Interne]: string;
+  [SmsType.R0Externe]: string;
 }
 
 const defaultSmsTemplates: SmsTemplates = {
   [SmsType.PremierContact]: `Bonjour {civilite} {nom},
 
-Pour resituer mon appel, je suis gérant privé au sein du cabinet de gestion de patrimoine Arcanis Conseil. Je vous envoie l'adresse de notre site web que vous puissiez en savoir d'avantage : https://arcanis-conseil.fr
+Pour resituer mon appel, je suis gérant privé au sein du cabinet de gestion de patrimoine Arcanis Conseil. Je vous envoie l'adresse de notre site web que vous puissiez en savoir davantage : https://arcanis-conseil.fr
 
-Le site est avant tout une vitrine, le mieux est de m'appeler si vous souhaitez davantage d'informations ou de prendre un créneau de 30 minutes dans mon agenda via ce lien : https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true
+Le site est avant tout une vitrine. Le mieux est de m'appeler si vous souhaitez davantage d'informations ou de prendre un créneau de 30 minutes dans mon agenda via ce lien : https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true
 
 Bien à vous,`,
-  [SmsType.Relance]: `Bonjour {civilite} {nom},
+  [SmsType.D0Visio]: `Bonjour {civilite} {nom},
 
-Je me permets de revenir vers vous suite à notre dernier échange. Seriez-vous disponible pour un court entretien téléphonique afin de faire le point sur votre situation patrimoniale ?
+Suite à notre appel, je vous confirme {rdv} en visio. Nous prendrons 30 minutes pour faire un point rapide et vous présenter Arcanis Conseil.
 
-N'hésitez pas à me contacter ou à prendre rendez-vous directement : https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true
+À très bientôt,`,
+  [SmsType.R0Interne]: `Bonjour {civilite} {nom},
 
-Cordialement,`,
-  [SmsType.Confirmation]: `Bonjour {civilite} {nom},
+Suite à notre appel, je vous confirme {rdv} dans nos locaux (22 rue la Boétie, 75008 Paris). Prévoir 30 minutes pour l'entretien.
 
-Je vous confirme notre rendez-vous. Au plaisir d'échanger avec vous.
+À très bientôt,`,
+  [SmsType.R0Externe]: `Bonjour {civilite} {nom},
 
-Pour toute question : https://arcanis-conseil.fr
+Suite à notre appel, je vous confirme {rdv} à {adresse}. Prévoir 30 minutes pour l'entretien.
 
-Cordialement,`
+À très bientôt,`,
 };
 
 const smsTypeLabels = {
   [SmsType.PremierContact]: { label: 'Premier Contact', icon: MessageSquare },
-  [SmsType.Relance]: { label: 'Relance', icon: MessageSquare },
-  [SmsType.Confirmation]: { label: 'Confirmation', icon: MessageSquare },
+  [SmsType.D0Visio]: { label: 'D0 Visio', icon: Calendar },
+  [SmsType.R0Interne]: { label: 'R0 Interne', icon: Settings },
+  [SmsType.R0Externe]: { label: 'R0 Externe', icon: MessageSquare },
 };
 
 const STORAGE_KEY = 'dimicall_email_templates';
@@ -136,9 +139,9 @@ const getCategories = (devToolsEnabled: boolean, updateEnabled: boolean = true) 
   },
   { 
     id: 'sms' as SettingsCategory, 
-    label: 'Template SMS', 
+    label: 'Templates SMS', 
     icon: MessageSquare, 
-    description: 'Configurez votre message SMS'
+    description: 'Personnalisez vos modèles de SMS pour chaque type'
   },
   { 
     id: 'calcom' as SettingsCategory, 
@@ -1493,6 +1496,10 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                     <code className="bg-background px-2 py-1 rounded border text-xs">{'{nom}'}</code>
                     <code className="bg-background px-2 py-1 rounded border text-xs">{'{prenom}'}</code>
                     <code className="bg-background px-2 py-1 rounded border text-xs">{'{nom_complet}'}</code>
+                    <code className="bg-background px-2 py-1 rounded border text-xs">{'{rdv}'}</code>
+                    {selectedSmsType === SmsType.R0Externe && (
+                      <code className="bg-background px-2 py-1 rounded border text-xs">{'{adresse}'}</code>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Ces variables seront automatiquement remplacées par les informations du contact
@@ -1508,12 +1515,17 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                     <span className="text-sm font-medium">Aperçu avec exemple</span>
                   </div>
                   <div className="bg-background rounded-lg p-3 border text-xs font-mono whitespace-pre-wrap">
-                    {currentTemplate
-                      .replace(/{civilite}/g, 'Madame')
-                      .replace(/{nom}/g, 'Dupont')
-                      .replace(/{prenom}/g, 'Marie')
-                      .replace(/{nom_complet}/g, 'Marie Dupont')
-                    }
+                    {(() => {
+                      const previewRdv = 'notre entretien du lundi 1 janvier 2025 à 09:00';
+                      const previewAdresse = '22 rue la Boétie, 75008 Paris';
+                      return currentTemplate
+                        .replace(/{civilite}/g, 'Madame')
+                        .replace(/{nom}/g, 'Dupont')
+                        .replace(/{prenom}/g, 'Marie')
+                        .replace(/{nom_complet}/g, 'Marie Dupont')
+                        .replace(/{rdv}/g, previewRdv)
+                        .replace(/{adresse}/g, previewAdresse);
+                    })()}
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
                     Exemple avec : Civilité "Madame", Prénom "Marie", Nom "Dupont"

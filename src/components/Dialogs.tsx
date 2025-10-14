@@ -243,13 +243,49 @@ interface SmsDialogProps {
   onClose: () => void;
   contact: Contact | null;
   onSendSms: (civility: Civility, smsType: SmsType) => void;
+  onUpdateContact?: (updatedFields: Partial<Contact> & { id: string }) => void;
 }
 
-const SmsDialog: React.FC<SmsDialogProps> = ({ isOpen, onClose, contact, onSendSms }) => {
+const SmsDialog: React.FC<SmsDialogProps> = ({ isOpen, onClose, contact, onSendSms, onUpdateContact }) => {
   const [civility, setCivility] = useState<Civility>(Civility.Monsieur);
   const [smsType, setSmsType] = useState<SmsType>(SmsType.PremierContact);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedTime, setSelectedTime] = useState<string>('');
+
+  useEffect(() => {
+    if (contact) {
+      if (contact.dateRDV) {
+        try {
+          const dateRDV = new Date(contact.dateRDV);
+          if (!isNaN(dateRDV.getTime())) {
+            setSelectedDate(dateRDV);
+          }
+        } catch {}
+      }
+      if (contact.heureRDV) {
+        setSelectedTime(contact.heureRDV);
+      }
+    }
+  }, [contact]);
+
+  const handleDateChange = (date: Date | undefined) => {
+    setSelectedDate(date);
+    if (contact && onUpdateContact && date) {
+      const formattedDate = format(date, 'yyyy-MM-dd');
+      onUpdateContact({ id: contact.id, dateRDV: formattedDate });
+    }
+  };
+
+  const handleTimeChange = (time: string) => {
+    setSelectedTime(time);
+    if (contact && onUpdateContact) {
+      onUpdateContact({ id: contact.id, heureRDV: time });
+    }
+  };
 
   if (!contact) return null;
+
+  const needsDateTime = smsType === SmsType.D0Visio || smsType === SmsType.R0Interne || smsType === SmsType.R0Externe;
 
   const handleSendSms = () => {
     onSendSms(civility, smsType);
@@ -263,8 +299,9 @@ const SmsDialog: React.FC<SmsDialogProps> = ({ isOpen, onClose, contact, onSendS
 
   const smsTypeOptions = [
     { value: SmsType.PremierContact, label: 'Premier Contact' },
-    { value: SmsType.Relance, label: 'Relance' },
-    { value: SmsType.Confirmation, label: 'Confirmation' }
+    { value: SmsType.D0Visio, label: 'D0 Visio' },
+    { value: SmsType.R0Interne, label: 'R0 Interne' },
+    { value: SmsType.R0Externe, label: 'R0 Externe' },
   ];
 
   return (
@@ -307,8 +344,61 @@ const SmsDialog: React.FC<SmsDialogProps> = ({ isOpen, onClose, contact, onSendS
           </div>
         </div>
         
+        {needsDateTime && (
+          <div className="space-y-4 border-t pt-4">
+            <h3 className="text-sm font-medium text-foreground">Planification du rendez-vous</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="sms-date-picker" className="text-sm">
+                  Date du rendez-vous
+                </Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <ShadcnButton
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !selectedDate && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ? format(selectedDate, 'PPP', { locale: fr }) : <span>Sélectionner une date</span>}
+                    </ShadcnButton>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 z-[20001]">
+                    <Calendar
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={handleDateChange}
+                      disabled={(date) => date < new Date()}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div className="flex flex-col gap-3">
+                <Label htmlFor="sms-time-picker" className="text-sm">
+                  Heure du rendez-vous
+                </Label>
+                <TimePicker
+                  id="sms-time-picker"
+                  value={selectedTime}
+                  onChange={handleTimeChange}
+                  placeholder="HH:mm"
+                  zIndex={20001}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="bg-muted text-muted-foreground p-3 rounded text-sm">
           <strong>Aperçu:</strong> SMS {smsTypeOptions.find(opt => opt.value === smsType)?.label} pour {civilityOptions.find(opt => opt.value === civility)?.label} {contact.prenom} {contact.nom}
+          {needsDateTime && selectedDate && selectedTime && (
+            <div className="mt-1">
+              <strong>Rendez-vous:</strong> {format(selectedDate, 'PPPP', { locale: fr })} à {selectedTime}
+            </div>
+          )}
         </div>
         
         <div className="flex justify-end space-x-3 pt-4">
@@ -316,6 +406,7 @@ const SmsDialog: React.FC<SmsDialogProps> = ({ isOpen, onClose, contact, onSendS
           <Button 
             variant="primary" 
             onClick={handleSendSms}
+            disabled={needsDateTime && (!selectedDate || !selectedTime)}
           >
             Envoyer SMS
           </Button>

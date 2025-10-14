@@ -1,4 +1,4 @@
-import { Contact, ContactStatus, ClientFile, EmailType, Civility, CallMode } from '../types';
+import { Contact, ContactStatus, ClientFile, EmailType, Civility, CallMode, SmsType } from '../types';
 import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs
 import Papa from 'papaparse'; // For CSV parsing
 import * as XLSX from 'xlsx'; // For Excel parsing and writing
@@ -1123,6 +1123,100 @@ export const generateGmailComposeUrl = (
   params.set('body', finalBody);
 
   return `https://mail.google.com/mail/?view=cm&fs=1&${params.toString()}`;
+};
+
+// Génère le contenu d'un SMS à partir des templates et du contact
+export const generateSmsMessage = (
+  contact: Contact,
+  smsType: SmsType,
+  civility: Civility
+): string => {
+  const STORAGE_KEY = 'dimicall_sms_templates';
+  const MODE_STORAGE_KEY = 'dimicall-call-mode';
+
+  // Templates par défaut
+  const defaultSmsTemplates: Record<SmsType, string> = {
+    [SmsType.PremierContact]: `Bonjour {civilite} {nom},
+
+Pour resituer mon appel, je suis gérant privé au sein du cabinet de gestion de patrimoine Arcanis Conseil. Je vous envoie l'adresse de notre site web que vous puissiez en savoir davantage : https://arcanis-conseil.fr
+
+Le site est avant tout une vitrine. Le mieux est de m'appeler si vous souhaitez davantage d'informations ou de prendre un créneau de 30 minutes dans mon agenda via ce lien : https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true
+
+Bien à vous,`,
+    [SmsType.D0Visio]: `Bonjour {civilite} {nom},
+
+Suite à notre appel, je vous confirme {rdv} en visio. Nous prendrons 30 minutes pour faire un point rapide et vous présenter Arcanis Conseil.
+
+À très bientôt,`,
+    [SmsType.R0Interne]: `Bonjour {civilite} {nom},
+
+Suite à notre appel, je vous confirme {rdv} dans nos locaux (22 rue la Boétie, 75008 Paris). Prévoir 30 minutes pour l'entretien.
+
+À très bientôt,`,
+    [SmsType.R0Externe]: `Bonjour {civilite} {nom},
+
+Suite à notre appel, je vous confirme {rdv} à {adresse}. Prévoir 30 minutes pour l'entretien.
+
+À très bientôt,`,
+  };
+
+  // Charger les templates personnalisés si disponibles
+  let templates: Record<string, any> | null = null;
+  let useMandataire = false;
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const modeSaved = localStorage.getItem(MODE_STORAGE_KEY) as CallMode | null;
+    useMandataire = modeSaved === CallMode.Mandataire;
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      templates = useMandataire ? parsed?.mandataireSmsTemplates : parsed?.smsTemplates;
+    }
+  } catch (e) {
+    console.warn('Erreur chargement templates SMS, utilisation des valeurs par défaut');
+  }
+
+  // Déterminer le template
+  const bodyTemplate: string = (templates?.[smsType] as string) || defaultSmsTemplates[smsType] || '';
+
+  const titre = civility === Civility.Madame ? 'Madame' : 'Monsieur';
+  const civilite = titre; // alias pour cohérence
+  const contactLastName = contact.nom || '';
+  const contactFirstName = contact.prenom || '';
+  const fullName = `${contactFirstName} ${contactLastName}`.trim();
+
+  // RDV formatting similar to email
+  let rdvDetails = 'notre entretien du [DATE ET HEURE]';
+  if (contact.dateRDV && contact.heureRDV) {
+    try {
+      const date = new Date(`${contact.dateRDV}T${contact.heureRDV}`);
+      if (!isNaN(date.getTime())) {
+        const dateOptions: Intl.DateTimeFormatOptions = {
+          weekday: 'long',
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        };
+        const formattedDate = new Intl.DateTimeFormat('fr-FR', dateOptions).format(date);
+        rdvDetails = `notre entretien du ${formattedDate} à ${contact.heureRDV}`;
+      }
+    } catch {}
+  }
+
+  // Adresse par défaut si non fournie via remplacement manuel ultérieur
+  const defaultAdresse = '[ADRESSE CLIENT]';
+
+  // Remplacement des variables
+  const finalBody = bodyTemplate
+    .replace(/{civilite}/g, civilite)
+    .replace(/{titre}/g, civilite)
+    .replace(/{nom}/g, contactLastName)
+    .replace(/{prenom}/g, contactFirstName)
+    .replace(/{nom_complet}/g, fullName || 'client(e)')
+    .replace(/{rdv}/g, rdvDetails)
+    .replace(/{adresse}/g, defaultAdresse)
+    .replace(/\[DATE ET HEURE\]/g, 'date et heure à déterminer');
+
+  return finalBody;
 };
 
 // Fonction auxiliaire pour construire le champ Notes pour Google Contacts

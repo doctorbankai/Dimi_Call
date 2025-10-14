@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react"
+﻿import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Contact, ContactStatus, CallStates } from "../types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -69,7 +69,6 @@ import StatusSelect from "./StatusSelect"
 import { DatePickerWithClear } from "./DatePickerWithClear"
 import { TimePickerWithClear } from "./TimePickerWithClear"
 import { ZapWidget } from "./ZapWidget"
-import { loadAutoSearchMode } from "./AutoSearchDropdown"
 import { DropZoneOverlay } from "./DropZoneOverlay"
 import { ImportProgressBar } from "./ImportProgressBar"
 import ImportMappingDialog from "./ImportMappingDialog"
@@ -110,6 +109,8 @@ type AppelsCardsViewProps = {
   onSearch: (value: string) => void
   onImportDialog: () => void
   onExportDialog: () => void
+  autoSearchMode: 'disabled' | 'linkedin' | 'google' | 'link'
+  onAutoSearchModeChange: (mode: 'disabled' | 'linkedin' | 'google' | 'link') => void
 }
 
 type FormState = Pick<
@@ -146,7 +147,7 @@ const getInitialFormState = (contact: Contact | null): FormState => ({
 })
 
 const formatDisplayDate = (value?: string) => {
-  if (!value) return "—"
+  if (!value) return "â€”"
   try {
     return format(new Date(value), "dd MMM yyyy", { locale: fr })
   } catch {
@@ -155,19 +156,19 @@ const formatDisplayDate = (value?: string) => {
 }
 
 const formatDisplayTime = (value?: string) => {
-  if (!value) return "—"
+  if (!value) return "â€”"
   return value
 }
 
-// Définir les expectedTargets pour ImportMappingDialog
+// DÃ©finir les expectedTargets pour ImportMappingDialog
 const EXPECTED_TARGETS = [
-  { label: 'Prénom', value: 'prenom' },
+  { label: 'PrÃ©nom', value: 'prenom' },
   { label: 'Nom', value: 'nom' },
-  { label: 'Téléphone', value: 'telephone' },
+  { label: 'TÃ©lÃ©phone', value: 'telephone' },
   { label: 'Mail', value: 'email' },
   { label: 'Source', value: 'source' },
   { label: 'Type', value: 'type' },
-  { label: 'Qualité', value: 'qualite' },
+  { label: 'QualitÃ©', value: 'qualite' },
   { label: 'Lien', value: 'lien' },
   { label: 'Date Rappel', value: 'dateRappel' },
   { label: 'Heure Rappel', value: 'heureRappel' },
@@ -177,7 +178,7 @@ const EXPECTED_TARGETS = [
   { label: 'Commentaire', value: 'commentaire' },
   { label: 'Date RDV', value: 'dateRDV' },
   { label: 'Heure RDV', value: 'heureRDV' },
-  { label: 'Durée Appel', value: 'dureeAppel' },
+  { label: 'DurÃ©e Appel', value: 'dureeAppel' },
   { label: 'Sexe', value: 'sexe' },
   { label: 'Don', value: 'don' },
   { label: 'Date', value: 'date' },
@@ -213,12 +214,13 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   onSearch,
   onImportDialog,
   onExportDialog,
+  autoSearchMode,
+  onAutoSearchModeChange,
 }) => {
   const [visibleCount, setVisibleCount] = useState(40)
-  const [autoSearchMode, setAutoSearchMode] = useState<'disabled' | 'linkedin' | 'google' | 'link'>(() => loadAutoSearchMode())
   const [activeFilter, setActiveFilter] = useState<'all' | 'rappel' | 'rdv' | 'status'>('all')
   
-  // Ref pour tracker si le scroll doit être automatique (uniquement au clic)
+  // Ref pour tracker si le scroll doit Ãªtre automatique (uniquement au clic)
   const shouldAutoScrollRef = useRef(false)
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     try {
@@ -228,7 +230,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       return 'cards';
     }
   })
-  // Charger la configuration des colonnes essentielles depuis les paramètres
+  // Charger la configuration des colonnes essentielles depuis les paramÃ¨tres
   const getEssentialColumns = (): string[] => {
     const saved = localStorage.getItem('dimicall_column_config');
     if (saved) {
@@ -239,8 +241,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
         console.error('Erreur lors du chargement de la config des colonnes:', error);
       }
     }
-    // Configuration par défaut si rien n'est sauvegardé
-    return ['#', 'Prénom', 'Nom', 'Commentaire'];
+    // Configuration par dÃ©faut si rien n'est sauvegardÃ©
+    return ['#', 'PrÃ©nom', 'Nom', 'Commentaire'];
   };
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => {
@@ -251,13 +253,13 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     return defaultVisible;
   })
 
-  // Ordre des colonnes - utilise l'ordre par défaut si disponible
+  // Ordre des colonnes - utilise l'ordre par dÃ©faut si disponible
   const orderedColumnHeaders = useMemo(() => {
-    // Créer un ordre basé sur DEFAULT_COLUMN_ORDER
+    // CrÃ©er un ordre basÃ© sur DEFAULT_COLUMN_ORDER
     const ordered: string[] = [];
     const remainingHeaders = new Set(COLUMN_HEADERS);
     
-    // Ajouter d'abord les colonnes dans l'ordre par défaut si elles existent
+    // Ajouter d'abord les colonnes dans l'ordre par dÃ©faut si elles existent
     DEFAULT_COLUMN_ORDER.forEach(header => {
       if (remainingHeaders.has(header)) {
         ordered.push(header);
@@ -265,7 +267,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       }
     });
     
-    // Ajouter les colonnes restantes (comme "#" et les colonnes dynamiques) à la fin
+    // Ajouter les colonnes restantes (comme "#" et les colonnes dynamiques) Ã  la fin
     remainingHeaders.forEach(header => {
       ordered.push(header);
     });
@@ -273,20 +275,20 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     return ordered;
   }, [])
 
-  // Créer les clés de données correspondantes dans le même ordre
+  // CrÃ©er les clÃ©s de donnÃ©es correspondantes dans le mÃªme ordre
   const orderedContactDataKeys = useMemo(() => {
     const keyMap: Record<string, keyof Contact | null> = {
       '#': 'numeroLigne',
       'Sexe': 'sexe',
-      'Pr�nom': 'prenom',
+      'Prénom': 'prenom',
       'Nom': 'nom',
-      'T�l�phone': 'telephone',
+      'Téléphone': 'telephone',
       'Mail': 'email',
       'Statut': 'statut',
       'Commentaire': 'commentaire',
       'Source': 'source',
       'Type': 'type',
-      'Qualit�': 'qualite',
+      'Qualité': 'qualite',
       'Lien': 'lien',
       'Date Rappel': 'dateRappel',
       'Heure Rappel': 'heureRappel',
@@ -294,7 +296,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       'Heure RDV': 'heureRDV',
       'Date Appel': 'dateAppel',
       'Heure Appel': 'heureAppel',
-      'Dur�e Appel': 'dureeAppel',
+      'Durée Appel': 'dureeAppel',
       'Don': 'don',
       'Date': 'date',
       'UID': 'uid'
@@ -357,7 +359,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
 
       if (!validExtensions.includes(extension)) {
-        toast.error('Format de fichier non supporté', {
+        toast.error('Format de fichier non supportÃ©', {
           description: 'Veuillez utiliser un fichier .csv, .tsv, .xlsx ou .xls'
         })
         return
@@ -372,22 +374,22 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   const handleImportConfirm = async (mapping: Record<string, string>, options: { phonesToRemove?: string[] }) => {
     try {
       if (!mappingDialog.file) {
-        console.log('❌ [MAPPING] Aucun fichier dans le dialogue')
+        console.log('âŒ [MAPPING] Aucun fichier dans le dialogue')
         return
       }
       
-      console.log('🔄 [MAPPING] Début de l\'importation avec mapping:', mapping)
+      console.log('ðŸ”„ [MAPPING] DÃ©but de l\'importation avec mapping:', mapping)
       
-      // Import réel des contacts
+      // Import rÃ©el des contacts
       const { importContactsFromFile } = await import('../services/dataService')
       const imported = await importContactsFromFile(mappingDialog.file, mapping, options)
-      console.log(`📥 [MAPPING] ${imported.length} contacts importés (après exclusion éventuelle)`)
+      console.log(`ðŸ“¥ [MAPPING] ${imported.length} contacts importÃ©s (aprÃ¨s exclusion Ã©ventuelle)`)
       
-      // Déclencher l'événement global pour que App.tsx mette à jour la liste
+      // DÃ©clencher l'Ã©vÃ©nement global pour que App.tsx mette Ã  jour la liste
       try {
         const ext = mappingDialog.file.name.split('.').pop()?.toLowerCase()
         const source = (ext === 'xlsx' || ext === 'xls') ? 'xlsx' : (ext === 'csv' || ext === 'tsv') ? 'csv' : 'csv'
-        console.log('📡 [MAPPING] Déclenchement de l\'événement dimicall-imported-contacts')
+        console.log('ðŸ“¡ [MAPPING] DÃ©clenchement de l\'Ã©vÃ©nement dimicall-imported-contacts')
         window.dispatchEvent(new CustomEvent('dimicall-imported-contacts', {
           detail: {
             contacts: imported,
@@ -395,21 +397,21 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
             source
           }
         }))
-        console.log('✅ [MAPPING] Événement déclenché avec succès')
+        console.log('âœ… [MAPPING] Ã‰vÃ©nement dÃ©clenchÃ© avec succÃ¨s')
       } catch (error) {
-        console.error('❌ [MAPPING] Erreur lors du déclenchement de l\'événement:', error)
+        console.error('âŒ [MAPPING] Erreur lors du dÃ©clenchement de l\'Ã©vÃ©nement:', error)
       }
       
       // Fermer le dialogue
       setMappingDialog({ open: false, file: null, headers: [], preview: [] })
-      console.log('🔒 [MAPPING] Dialogue fermé')
+      console.log('ðŸ”’ [MAPPING] Dialogue fermÃ©')
       
-      toast.success('Import réussi', {
-        description: `${imported.length} contacts importés avec succès`
+      toast.success('Import rÃ©ussi', {
+        description: `${imported.length} contacts importÃ©s avec succÃ¨s`
       })
 
     } catch (error) {
-      console.error('❌ [MAPPING] Erreur lors de l\'import:', error)
+      console.error('âŒ [MAPPING] Erreur lors de l\'import:', error)
       setMappingDialog(prev => ({ ...prev, open: false }))
       toast.error('Erreur d\'import', {
         description: error instanceof Error ? error.message : 'Une erreur est survenue'
@@ -501,12 +503,12 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     setNoteDraft(selectedContact?.commentaire ?? "")
   }, [selectedContact])
 
-  // Persistance de la préférence de vue
+  // Persistance de la prÃ©fÃ©rence de vue
   useEffect(() => {
     try {
       localStorage.setItem('appels-2-view-mode', viewMode);
     } catch (error) {
-      console.warn('[Appels 2] Impossible de sauvegarder la préférence de vue', error);
+      console.warn('[Appels 2] Impossible de sauvegarder la prÃ©fÃ©rence de vue', error);
     }
   }, [viewMode]);
 
@@ -549,7 +551,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   useEffect(() => {
     if (!selectedContactId || !shouldAutoScrollRef.current) return
     
-    // Petit délai pour laisser le DOM se mettre à jour
+    // Petit dÃ©lai pour laisser le DOM se mettre Ã  jour
     const timeoutId = setTimeout(() => {
       const node = scrollRef.current?.querySelector<HTMLDivElement>(`[data-contact-card="${selectedContactId}"]`)
       
@@ -557,9 +559,9 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       if (!node) {
         const contactIndex = filteredContacts.findIndex(c => c.id === selectedContactId)
         if (contactIndex !== -1 && contactIndex >= visibleCount) {
-          // Charger jusqu'à ce contact + quelques autres
+          // Charger jusqu'Ã  ce contact + quelques autres
           setVisibleCount(contactIndex + 20)
-          // Réessayer après le render
+          // RÃ©essayer aprÃ¨s le render
           setTimeout(() => {
             const retryNode = scrollRef.current?.querySelector<HTMLDivElement>(`[data-contact-card="${selectedContactId}"]`)
             if (retryNode) {
@@ -567,12 +569,12 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
             }
           }, 200)
         }
-        // Réinitialiser le flag
+        // RÃ©initialiser le flag
         shouldAutoScrollRef.current = false;
         return
       }
       
-      // Vérifier si le contact est déjà visible
+      // VÃ©rifier si le contact est dÃ©jÃ  visible
       const container = scrollRef.current
       if (!container) {
         shouldAutoScrollRef.current = false;
@@ -591,7 +593,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
         node.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
       
-      // Réinitialiser le flag après le scroll
+      // RÃ©initialiser le flag aprÃ¨s le scroll
       shouldAutoScrollRef.current = false;
     }, 100)
     
@@ -625,7 +627,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     
     const timeoutId = setTimeout(() => {
       handleSave()
-    }, 1000) // Sauvegarde après 1 seconde d'inactivité
+    }, 1000) // Sauvegarde aprÃ¨s 1 seconde d'inactivitÃ©
     
     return () => clearTimeout(timeoutId)
   }, [formState, selectedStatus, noteDraft])
@@ -641,14 +643,14 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
 
       const key = e.key
 
-      // F1 : Appeler le contact sélectionné
+      // F1 : Appeler le contact sÃ©lectionnÃ©
       if (key === 'F1') {
         e.preventDefault()
         if (selectedContact) {
           onCall()
           toast.info('F1: Appel en cours...')
         } else {
-          toast.warning('Veuillez sélectionner un contact')
+          toast.warning('Veuillez sÃ©lectionner un contact')
         }
         return
       }
@@ -662,7 +664,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
           id: selectedContact.id,
           statut: newStatus as ContactStatus
         })
-        toast.success(`${key}: Statut "${newStatus}" appliqué`)
+        toast.success(`${key}: Statut "${newStatus}" appliquÃ©`)
         
         // Si autocall est actif, passer au contact suivant et appeler
         if (isAutocallActive) {
@@ -721,13 +723,13 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
         <div className="flex flex-wrap items-center gap-2">
           {viewMode === 'cards' && (
             <>
-              <Tabs value={autoSearchMode} onValueChange={(value) => setAutoSearchMode(value as any)} className="w-auto">
+              <Tabs value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)} className="w-auto">
                 <TabsList className="h-9">
                   <TabsTrigger 
                     value="disabled" 
                     className="text-xs data-[state=active]:bg-neutral-900 data-[state=active]:text-white dark:data-[state=active]:bg-neutral-100 dark:data-[state=active]:text-neutral-900"
                   >
-                    Désactivé
+                    DÃ©sactivÃ©
                   </TabsTrigger>
                   <TabsTrigger 
                     value="linkedin" 
@@ -759,7 +761,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       size="sm"
                       onClick={() => {
                         setIsAutocallActive(!isAutocallActive)
-                        toast.info(isAutocallActive ? 'Autocall désactivé' : 'Autocall activé')
+                        toast.info(isAutocallActive ? 'Autocall dÃ©sactivÃ©' : 'Autocall activÃ©')
                       }}
                       className={cn(
                         "h-9",
@@ -775,11 +777,11 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   <TooltipContent side="bottom" className="max-w-sm bg-popover text-popover-foreground border-border">
                     <div className="space-y-2">
                       <p className="font-semibold text-foreground">Mode Autocall</p>
-                      <p className="text-xs text-muted-foreground">Active l'appel automatique du contact suivant après application d'un statut.</p>
+                      <p className="text-xs text-muted-foreground">Active l'appel automatique du contact suivant aprÃ¨s application d'un statut.</p>
                       <div className="mt-2 space-y-1 text-xs">
                         <p className="font-medium text-foreground">Raccourcis clavier :</p>
-                        <p className="text-foreground">• <kbd className="px-1 py-0.5 bg-muted text-foreground rounded">F1</kbd> : Appeler le contact</p>
-                        <p className="text-foreground">• <kbd className="px-1 py-0.5 bg-muted text-foreground rounded">F2-F10</kbd> : Appliquer un statut</p>
+                        <p className="text-foreground">â€¢ <kbd className="px-1 py-0.5 bg-muted text-foreground rounded">F1</kbd> : Appeler le contact</p>
+                        <p className="text-foreground">â€¢ <kbd className="px-1 py-0.5 bg-muted text-foreground rounded">F2-F10</kbd> : Appliquer un statut</p>
                         <p className="text-muted-foreground mt-1">En mode Autocall, appliquer un statut (F2-F10) passe automatiquement au contact suivant et lance l'appel.</p>
                       </div>
                     </div>
@@ -792,7 +794,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                     <Button 
                       size="sm"
                       onClick={() => {
-                        // Trouver le premier contact sans statut ou avec statut "Non défini"
+                        // Trouver le premier contact sans statut ou avec statut "Non dÃ©fini"
                         const firstWithoutStatus = filteredContacts.find(c => 
                           !c.statut || c.statut === ContactStatus.NonDefini
                         );
@@ -802,7 +804,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           onSelectContact(firstWithoutStatus);
                           toast.info('Retour au premier contact sans statut');
                         } else {
-                          toast.info('Aucun contact sans statut trouvé');
+                          toast.info('Aucun contact sans statut trouvÃ©');
                         }
                       }}
                       className="h-9 bg-primary/10 hover:bg-primary/20 text-primary border-primary/30"
@@ -844,7 +846,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       size="sm" 
                       disabled={contacts.length === 0}
                       className="h-9 bg-neutral-900 hover:bg-black text-white border-neutral-900 dark:bg-neutral-800 dark:hover:bg-neutral-900"
-                      title="Exporter les données"
+                      title="Exporter les donnÃ©es"
                     >
                       <Download className="h-4 w-4 mr-2" />
                       Exporter
@@ -915,7 +917,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       disabled={!exportOptions.table && !exportOptions.tableExcel}
                     >
                       <Download className="mr-2 h-4 w-4" />
-                      <span className="font-medium">Exporter la sélection</span>
+                      <span className="font-medium">Exporter la sÃ©lection</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -933,8 +935,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   <AlertDialogHeader>
                     <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Êtes-vous sûr de vouloir supprimer tous les contacts de la liste actuelle ? 
-                      Cette action est irréversible.
+                      ÃŠtes-vous sÃ»r de vouloir supprimer tous les contacts de la liste actuelle ? 
+                      Cette action est irrÃ©versible.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -1007,7 +1009,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                             <span className="flex items-center gap-0.5 truncate">
                               <Phone className="h-2.5 w-2.5" />
-                              {contact.telephone || "—"}
+                              {contact.telephone || "â€”"}
                             </span>
                           </div>
                         </div>
@@ -1048,7 +1050,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       {isCalling && (
                         <div className="flex items-center gap-1 rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-[11px] text-primary ml-auto">
                           <PhoneCall className="h-3 w-3" />
-                          <span>Appel en cours…</span>
+                          <span>Appel en coursâ€¦</span>
                         </div>
                       )}
                     </CardContent>
@@ -1066,7 +1068,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
               )}
               {contacts.length === 0 && (
                 <div className="text-center text-sm text-muted-foreground py-10">
-                  Aucun contact trouvé.
+                  Aucun contact trouvÃ©.
                 </div>
               )}
             </div>
@@ -1092,7 +1094,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       </h2>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                         {selectedContact.email && <span>{selectedContact.email}</span>}
-                        {selectedContact.email && selectedContact.telephone && <span className="text-muted-foreground/50">•</span>}
+                        {selectedContact.email && selectedContact.telephone && <span className="text-muted-foreground/50">â€¢</span>}
                         {selectedContact.telephone && <span>{selectedContact.telephone}</span>}
                       </div>
                     </div>
@@ -1158,7 +1160,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       <div className="grid gap-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="contact-firstname">Prénom</Label>
+                            <Label htmlFor="contact-firstname">PrÃ©nom</Label>
                             <Input
                               id="contact-firstname"
                               value={formState.prenom}
@@ -1176,7 +1178,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="contact-phone">Téléphone</Label>
+                            <Label htmlFor="contact-phone">TÃ©lÃ©phone</Label>
                             <Input
                               id="contact-phone"
                               value={formState.telephone}
@@ -1280,7 +1282,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="call-duration">Durée d'appel</Label>
+                          <Label htmlFor="call-duration">DurÃ©e d'appel</Label>
                           <Input
                             id="call-duration"
                             value={formState.dureeAppel}
@@ -1328,7 +1330,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-muted-foreground">Aucun historique enregistré.</p>
+                        <p className="text-xs text-muted-foreground">Aucun historique enregistrÃ©.</p>
                       )}
                     </div>
 
@@ -1343,9 +1345,9 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
               <div className="rounded-full border bg-background p-3 shadow-sm">
                 <Phone className="h-6 w-6" />
               </div>
-              <div className="text-sm font-medium">Sélectionnez un prospect dans la colonne de gauche</div>
+              <div className="text-sm font-medium">SÃ©lectionnez un prospect dans la colonne de gauche</div>
               <p className="text-xs text-muted-foreground/80">
-                Les informations détaillées s’afficheront ici.
+                Les informations dÃ©taillÃ©es sâ€™afficheront ici.
               </p>
             </div>
           )}
@@ -1361,15 +1363,15 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <span data-slot="avatar" className="relative flex size-8 shrink-0 overflow-hidden rounded-full h-8 w-8 flex-shrink-0">
                       <span data-slot="avatar-fallback" className="bg-muted flex size-full items-center justify-center rounded-full">
-                        {selectedContact ? (selectedContact.prenom?.[0] || selectedContact.nom?.[0] || '?') : '—'}
+                        {selectedContact ? (selectedContact.prenom?.[0] || selectedContact.nom?.[0] || '?') : 'â€”'}
                       </span>
                     </span>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium whitespace-nowrap" title={selectedContact ? `${selectedContact.prenom || ''} ${selectedContact.nom || ''}`.trim() : 'Aucun contact sélectionné'}>
-                        {selectedContact ? `${selectedContact.prenom || ''} ${selectedContact.nom || ''}`.trim() || 'Sans nom' : 'Aucun contact sélectionné'}
+                      <span className="text-sm font-medium whitespace-nowrap" title={selectedContact ? `${selectedContact.prenom || ''} ${selectedContact.nom || ''}`.trim() : 'Aucun contact sÃ©lectionnÃ©'}>
+                        {selectedContact ? `${selectedContact.prenom || ''} ${selectedContact.nom || ''}`.trim() || 'Sans nom' : 'Aucun contact sÃ©lectionnÃ©'}
                       </span>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap" title={selectedContact?.telephone || '—'}>
-                        {selectedContact?.telephone || '—'}
+                      <span className="text-xs text-muted-foreground whitespace-nowrap" title={selectedContact?.telephone || 'â€”'}>
+                        {selectedContact?.telephone || 'â€”'}
                       </span>
                     </div>
                   </div>
@@ -1390,7 +1392,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{selectedContact ? 'Appeler' : 'Sélectionnez un contact'}</p>
+                            <p>{selectedContact ? 'Appeler' : 'SÃ©lectionnez un contact'}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -1419,8 +1421,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             <Button
                               size="icon"
                               variant="outline"
-                              onClick={() => selectedContact && onEmail()}
-                              disabled={!selectedContact}
+                              onClick={() => { if (selectedContact?.email) onEmail() }}
+                              disabled={!selectedContact || !selectedContact?.email}
                               className="size-10 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                               aria-label="Email"
                             >
@@ -1595,13 +1597,13 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           </DropdownMenuCheckboxItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                      <Tabs value={autoSearchMode} onValueChange={(value) => setAutoSearchMode(value as any)} className="w-auto">
+                      <Tabs value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)} className="w-auto">
                         <TabsList className="h-9">
                           <TabsTrigger 
                             value="disabled" 
                             className="text-xs data-[state=active]:bg-neutral-900 data-[state=active]:text-white dark:data-[state=active]:bg-neutral-100 dark:data-[state=active]:text-neutral-900"
                           >
-                            Désactivé
+                            DÃ©sactivÃ©
                           </TabsTrigger>
                           <TabsTrigger 
                             value="linkedin" 
@@ -1672,21 +1674,21 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           <Button 
                             size="sm"
                             onClick={() => {
-                              // Trouver le premier contact sans statut ou avec statut "Non défini"
+                              // Trouver le premier contact sans statut ou avec statut "Non dÃ©fini"
                               const firstWithoutStatus = filteredContacts.find(c => 
                                 !c.statut || c.statut === ContactStatus.NonDefini
                               );
                               
                               if (firstWithoutStatus) {
-                                // Sélectionner le contact
+                                // SÃ©lectionner le contact
                                 onSelectContact(firstWithoutStatus);
-                                // Utiliser la méthode scrollToContact de ContactTable via la ref
+                                // Utiliser la mÃ©thode scrollToContact de ContactTable via la ref
                                 setTimeout(() => {
                                   contactTableRef.current?.scrollToContact(firstWithoutStatus.id);
                                 }, 150);
                                 toast.info('Retour au premier contact sans statut');
                               } else {
-                                toast.info('Aucun contact sans statut trouvé');
+                                toast.info('Aucun contact sans statut trouvÃ©');
                               }
                             }}
                             className="h-8 gap-1.5 px-3 bg-primary/10 hover:bg-primary/20 text-primary border-primary/30"
@@ -1730,7 +1732,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             size="sm"
                             disabled={contacts.length === 0}
                             className="h-9 px-2"
-                            title="Exporter les données"
+                            title="Exporter les donnÃ©es"
                           >
                             <Download className="h-4 w-4" />
                           </Button>
@@ -1800,7 +1802,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             disabled={!exportOptions.table && !exportOptions.tableExcel}
                           >
                             <Download className="mr-2 h-4 w-4" />
-                            <span className="font-medium">Exporter la sélection</span>
+                            <span className="font-medium">Exporter la sÃ©lection</span>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1819,8 +1821,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           <AlertDialogHeader>
                             <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
                             <AlertDialogDescription>
-                              Êtes-vous sûr de vouloir supprimer tous les contacts de la liste actuelle ? 
-                              Cette action est irréversible.
+                              ÃŠtes-vous sÃ»r de vouloir supprimer tous les contacts de la liste actuelle ? 
+                              Cette action est irrÃ©versible.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -1862,7 +1864,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                 className="h-6 w-6 p-0 hover:bg-accent-foreground/10"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  toast.info('Édition d\'onglet non disponible dans cette vue')
+                                  toast.info('Ã‰dition d\'onglet non disponible dans cette vue')
                                 }}
                               >
                                 <Pencil className="h-3 w-3" />
@@ -1888,7 +1890,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-destructive hover:text-destructive" onClick={onClearActiveTab}>
                             <Trash2 className="h-4 w-4" />
-                            Supprimer toutes les données
+                            Supprimer toutes les donnÃ©es
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -1946,6 +1948,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
 }
 
 export default AppelsCardsView
+
 
 
 

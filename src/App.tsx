@@ -1,6 +1,6 @@
 import './index.css';
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { Theme, Contact, CallState, CallStates, ContactStatus, Civility, EmailType, CallMode } from './types';
+import { Theme, Contact, CallState, CallStates, ContactStatus, Civility, EmailType, CallMode, SmsType } from './types';
 import { useCallMode } from './context/ModeContext';
 import { APP_NAME, COLUMN_HEADERS, CONTACT_DATA_KEYS, headerIcons } from './constants';
 import { ContactTable, ContactTableRef } from './components/ContactTable';
@@ -28,6 +28,7 @@ import {
   getImportedTableMetadata,
   formatPhoneNumber,
   generateGmailComposeUrl,
+  generateSmsMessage,
   exportGoogleContactsCSV,
   exportGoogleCalendarCSV,
   reorderContactsColumns
@@ -377,22 +378,32 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
 
   const [autoSearchMode, setAutoSearchMode] = useState<'disabled' | 'linkedin' | 'google' | 'link'>(() => {
     try {
-      const saved = localStorage.getItem('auto-search-mode');
-      console.log('?? [AUTO-SEARCH] Chargement du mode depuis localStorage:', saved);
+      // Unifier la clé de stockage avec le dropdown et les autres vues
+      const KEYS = ['dimicall-auto-search-mode', 'auto-search-mode']
+      let saved: string | null = null
+      for (const k of KEYS) {
+        const val = localStorage.getItem(k)
+        if (val) { saved = val; break }
+      }
+      console.log('🔎 [AUTO-SEARCH] Chargement mode depuis localStorage:', saved)
 
-      // Validation de la valeur charge
       if (saved && ['disabled', 'linkedin', 'google', 'link'].includes(saved)) {
-        console.log('? [AUTO-SEARCH] Mode valide trouv:', saved);
-        return saved as 'disabled' | 'linkedin' | 'google' | 'link';
+        console.log('✅ [AUTO-SEARCH] Mode valide trouvé:', saved)
+        return saved as 'disabled' | 'linkedin' | 'google' | 'link'
       }
 
-      console.log('?? [AUTO-SEARCH] Aucun mode valide trouv, utilisation par dfaut: linkedin');
-      return 'linkedin'; // Par dfaut LinkedIn auto
+      console.log('ℹ️ [AUTO-SEARCH] Aucun mode valide, défaut linkedin')
+      return 'linkedin'
     } catch (error) {
-      console.error('? [AUTO-SEARCH] Erreur lors du chargement:', error);
-      return 'linkedin';
+      console.error('⚠️ [AUTO-SEARCH] Erreur lors du chargement:', error)
+      return 'linkedin'
     }
   });
+
+  // Persister le mode automatique pour toutes les vues qui lisent la même clé
+  useEffect(() => {
+    try { localStorage.setItem('dimicall-auto-search-mode', autoSearchMode) } catch {}
+  }, [autoSearchMode])
   const [splitPanelOpen, setSplitPanelOpen] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('dimicall-split-panel-open');
@@ -1000,7 +1011,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
   // Search handlers - Supprimés, voir plus bas pour les nouvelles versions avec type et source
 
-  const handleSms = useCallback(async (civilite: string, smsType?: string, contact?: Contact) => {
+  const handleSms = useCallback(async (civilite: string, smsType?: SmsType, contact?: Contact) => {
     const target = contact || selectedContact;
     if (!target) {
       showNotification('info', "Slectionnez un contact pour envoyer un SMS.");
@@ -1019,16 +1030,14 @@ Dimitri MOREL - Arcanis Conseil`;
       return;
     }
 
-    // Crer le nom d'accueil avec civilit
-    const greetingName = civilite ? `${civilite} ${target.nom}`.trim() : `${target.prenom} ${target.nom}`.trim() || "client(e)";
-
-    // Utiliser le template SMS en fonction du mode (Client / Mandataire)
-    const selectedTemplate = mode === CallMode.Mandataire ? smsTemplateMandataire : smsTemplate;
-    const messageBody = selectedTemplate
-      .replace(/{civilite}/g, civilite || target.prenom || "")
-      .replace(/{nom}/g, target.nom || "")
-      .replace(/{prenom}/g, target.prenom || "")
-      .replace(/{nom_complet}/g, `${target.prenom || ""} ${target.nom || ""}`.trim() || "client(e)");
+    // Générer le contenu du SMS selon le type et les templates configurés
+    let messageBody = '';
+    try {
+      messageBody = generateSmsMessage(target, (smsType as SmsType) || SmsType.PremierContact, civilite as Civility);
+    } catch (e) {
+      const fallback = `Bonjour ${civilite || ''} ${target.nom || ''}`.trim() + ',\n\n';
+      messageBody = fallback + 'Message à compléter.';
+    }
 
     // Nettoyer le numro de tlphone
     const phoneNumberCleaned = target.telephone.replace(/\s/g, '');
@@ -1047,7 +1056,7 @@ Dimitri MOREL - Arcanis Conseil`;
     } catch (error) {
       showNotification('error', `Erreur lors de la prparation du SMS: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
-  }, [selectedContact, showNotification, adbConnectionState.isConnected, sendSms, smsTemplate, smsTemplateMandataire, mode]);
+  }, [selectedContact, showNotification, adbConnectionState.isConnected, sendSms]);
 
   // Clear data handlers
   const clearAllData = useCallback(() => {
@@ -3175,6 +3184,8 @@ Dimitri MOREL - Arcanis Conseil`;
                       input.click()
                     }}
                     onExportDialog={() => handleExport('xlsx')}
+                    autoSearchMode={autoSearchMode}
+                    onAutoSearchModeChange={(mode) => setAutoSearchMode(mode)}
                   />
                 ) : viewMode === 'graph' ? (
                   <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0 w-full">
@@ -3215,6 +3226,7 @@ Dimitri MOREL - Arcanis Conseil`;
                 isOpen={isSmsDialogOpen}
                 onClose={() => setIsSmsDialogOpen(false)}
                 contact={selectedContact}
+                onUpdateContact={updateContact}
                 onSendSms={(civility, smsType) => {
                   handleSms(civility, smsType);
                   setIsSmsDialogOpen(false);

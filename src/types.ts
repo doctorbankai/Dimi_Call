@@ -80,9 +80,10 @@ export enum EmailType {
 }
 
 export enum SmsType {
+  D0Visio = "d0_visio",
+  R0Interne = "r0_interne",
+  R0Externe = "r0_externe",
   PremierContact = "premier_contact",
-  Relance = "relance",
-  Confirmation = "confirmation",
 }
 
 export enum Civility {
