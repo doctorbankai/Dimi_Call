@@ -6,7 +6,7 @@ import { APP_NAME, COLUMN_HEADERS, CONTACT_DATA_KEYS, headerIcons } from './cons
 import { ContactTable, ContactTableRef } from './components/ContactTable';
 import { PaginatedContactTable } from './components/PaginatedContactTable';
 import { AppelsCardsView } from './components/AppelsCardsView';
-import { EmailDialog, RappelDialog, RendezVousDialog, QualificationDialog, GenericInfoDialog } from './components/Dialogs';
+import { EmailDialog, SmsDialog, RappelDialog, RendezVousDialog, QualificationDialog, GenericInfoDialog } from './components/Dialogs';
 import Calendar2 from './pages/Calendar2';
 
 
@@ -14,12 +14,12 @@ import { TitleBar } from './components/TitleBar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import { UpdateConfirmationDialog } from './components/UpdateConfirmationDialog';
-import { 
-  loadContacts, 
-  saveContacts, 
-  importContactsFromFile, 
-  exportContactsToFile, 
-  loadCallStates, 
+import {
+  loadContacts,
+  saveContacts,
+  importContactsFromFile,
+  exportContactsToFile,
+  loadCallStates,
   saveCallStates,
   saveImportedTable,
   loadImportedTable,
@@ -104,7 +104,7 @@ const DonutChart: React.FC<{ progress: number; size?: number }> = ({ progress, s
   const radius = (size - 4) / 2;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
-  
+
   if (auth.isLoading) {
     return null;
   }
@@ -156,15 +156,15 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const { mode } = useCallMode();
   // Authentication hook
   const auth = useSupabaseAuth();
-  
+
   // Auto-update hook
   const { updateState, installUpdate, isUpdateEnabled } = useAutoUpdate();
-  
 
-  
+
+
   // Authentication states
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  
+
   // State declarations
   const [theme, setTheme] = useState<Theme>(() => {
     try {
@@ -202,8 +202,9 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   }, [appUpdateKey]);
   const [activeCallContactId, setActiveCallContactId] = useState<string | null>(null);
   const [callStartTime, setCallStartTime] = useState<Date | null>(null);
-  
+
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [isSmsDialogOpen, setIsSmsDialogOpen] = useState(false);
   const [isRappelDialogOpen, setIsRappelDialogOpen] = useState(false);
   const [isRendezVousDialogOpen, setIsRendezVousDialogOpen] = useState(false);
   const [isUpdateConfirmationOpen, setIsUpdateConfirmationOpen] = useState(false);
@@ -250,7 +251,7 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
       return raw ? JSON.parse(raw) as TableTab[] : []
     } catch { return [] }
   })
-  
+
   // tats pour l'dition des onglets
   const [editingTab, setEditingTab] = useState<TableTab | null>(null)
   const [isTabEditDialogOpen, setIsTabEditDialogOpen] = useState(false)
@@ -263,8 +264,8 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
 
   const handleSaveTab = (name: string, color: string) => {
     if (editingTab) {
-      setTableTabs(prev => prev.map(tab => 
-        tab.id === editingTab.id 
+      setTableTabs(prev => prev.map(tab =>
+        tab.id === editingTab.id
           ? { ...tab, name, color }
           : tab
       ))
@@ -326,10 +327,10 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
 
   // Persister tabs
   useEffect(() => {
-    try { localStorage.setItem('dimicall-table-tabs', JSON.stringify(tableTabs)) } catch {}
+    try { localStorage.setItem('dimicall-table-tabs', JSON.stringify(tableTabs)) } catch { }
   }, [tableTabs])
   useEffect(() => {
-    try { localStorage.setItem('dimicall-active-table-tab', activeTableTabId) } catch {}
+    try { localStorage.setItem('dimicall-active-table-tab', activeTableTabId) } catch { }
   }, [activeTableTabId])
 
   // Rception transfert depuis BDD
@@ -358,7 +359,7 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
         toast.success(d.title || 'Opration russie', {
           action: d.path ? {
             label: "Ouvrir l'emplacement",
-            onClick: () => { try { (window as any).electronAPI?.showItemInFolder?.(d.path) } catch {} }
+            onClick: () => { try { (window as any).electronAPI?.showItemInFolder?.(d.path) } catch { } }
           } : undefined
         })
       } else if (d?.type === 'error') {
@@ -373,18 +374,18 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
       window.removeEventListener('dimicall-toast', onToast as any)
     }
   }, [tableTabs.length])
-  
+
   const [autoSearchMode, setAutoSearchMode] = useState<'disabled' | 'linkedin' | 'google' | 'link'>(() => {
     try {
       const saved = localStorage.getItem('auto-search-mode');
       console.log('?? [AUTO-SEARCH] Chargement du mode depuis localStorage:', saved);
-      
+
       // Validation de la valeur charge
       if (saved && ['disabled', 'linkedin', 'google', 'link'].includes(saved)) {
         console.log('? [AUTO-SEARCH] Mode valide trouv:', saved);
         return saved as 'disabled' | 'linkedin' | 'google' | 'link';
       }
-      
+
       console.log('?? [AUTO-SEARCH] Aucun mode valide trouv, utilisation par dfaut: linkedin');
       return 'linkedin'; // Par dfaut LinkedIn auto
     } catch (error) {
@@ -400,36 +401,36 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
       return true;
     }
   });
-  
+
   // tat pour l'URL Cal.com personnalise
   const [calcomUrl, setCalcomUrl] = useState<string>(() => {
     const saved = localStorage.getItem('calcom-url');
-    
+
     // Migration automatique des anciennes URLs vers la nouvelle avec overlayCalendar=true
     if (saved) {
       const newUrl = 'https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true';
-      
+
       // Liste des anciennes URLs à migrer
       const oldUrls = [
         'https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial',
         'https://cal.com/dimitri-morel-arcanis-conseil/arcanis-conseil-audit-patrimonial-dimicall',
       ];
-      
+
       // Vrifier si c'est une ancienne URL à migrer
-      const isOldUrl = oldUrls.some(oldUrl => saved === oldUrl) || 
-                       (saved.includes('dimitri-morel-arcanis-conseil') && 
-                        !saved.includes('overlayCalendar=true') && 
-                        !saved.includes('audit-patrimonial?overlayCalendar=true'));
-      
+      const isOldUrl = oldUrls.some(oldUrl => saved === oldUrl) ||
+        (saved.includes('dimitri-morel-arcanis-conseil') &&
+          !saved.includes('overlayCalendar=true') &&
+          !saved.includes('audit-patrimonial?overlayCalendar=true'));
+
       if (isOldUrl) {
         console.log('🔄 Migration URL Cal.com:', saved, '→', newUrl);
         localStorage.setItem('calcom-url', newUrl);
         return newUrl;
       }
-      
+
       return saved;
     }
-    
+
     return 'https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true';
   });
 
@@ -459,7 +460,7 @@ Dimitri MOREL - Arcanis Conseil`;
         const data = JSON.parse(savedAll);
         if (data.smsMandataire) return data.smsMandataire as string;
       }
-    } catch {}
+    } catch { }
     return `Bonjour {civilite} {nom},\n\nJe vous contacte dans le cadre de la gestion de votre dossier mandataire. Voici les informations et liens ddis.\n\nBien à vous,`;
   });
 
@@ -479,12 +480,12 @@ Dimitri MOREL - Arcanis Conseil`;
   const detectAvailableColumns = useCallback((contactsData: Contact[]) => {
     if (!contactsData || contactsData.length === 0) {
       // Colonnes par dfaut minimales si pas de donnes
-        const defaultColumns = ["#", "Prnom", "Nom", "Tlphone", "Mail", "Statut"];
-  const defaultDataKeys = ['numeroLigne', 'prenom', 'nom', 'telephone', 'email', 'statut'] as (keyof Contact | null)[];
-      
+      const defaultColumns = ["#", "Prnom", "Nom", "Tlphone", "Mail", "Statut"];
+      const defaultDataKeys = ['numeroLigne', 'prenom', 'nom', 'telephone', 'email', 'statut'] as (keyof Contact | null)[];
+
       setAvailableColumns(defaultColumns);
       setAvailableDataKeys(defaultDataKeys);
-      
+
       // Initialiser la visibilit pour les colonnes par dfaut
       setVisibleColumns(prevVisible => {
         const defaultVisibility = defaultColumns.reduce((acc, col) => {
@@ -499,46 +500,46 @@ Dimitri MOREL - Arcanis Conseil`;
     // Analyser un chantillon de contacts pour dtecter les colonnes avec des donnes
     const sampleSize = Math.min(10, contactsData.length);
     const sample = contactsData.slice(0, sampleSize);
-    
+
     const detectedColumns = new Set<string>();
     const detectedDataKeys: (keyof Contact | null)[] = [];
-    
+
     // Toujours inclure les colonnes essentielles ET importantes par dfaut
     const alwaysIncludeColumns = [
-      "#", "Prnom", "Nom", 
+      "#", "Prnom", "Nom",
       "Tlphone", "Mail", "Statut", "Commentaire",
-      "Date Rappel", "Heure Rappel", "Date RDV", "Heure RDV", 
+      "Date Rappel", "Heure Rappel", "Date RDV", "Heure RDV",
       "Date Appel", "Heure Appel", "Dure Appel"
     ];
-    
+
     const alwaysIncludeDataKeys = [
       'numeroLigne', 'prenom', 'nom',
       'telephone', 'email', 'statut', 'commentaire',
       'dateRappel', 'heureRappel', 'dateRDV', 'heureRDV',
       'dateAppel', 'heureAppel', 'dureeAppel'
     ] as (keyof Contact)[];
-    
+
     alwaysIncludeColumns.forEach((col, index) => {
       detectedColumns.add(col);
       detectedDataKeys.push(alwaysIncludeDataKeys[index] || null);
     });
-    
+
     // Vrifier les colonnes optionnelles pour voir si elles contiennent des donnes
     const optionalColumns = ["Sexe", "Don", "Qualit", "Type", "Date", "UID"];
     const optionalDataKeys = ['sexe', 'don', 'qualite', 'type', 'date', 'uid'] as (keyof Contact)[];
-    
+
     COLUMN_HEADERS.forEach((header, index) => {
       if (alwaysIncludeColumns.includes(header)) return; // Djà incluse
-      
+
       const dataKey = CONTACT_DATA_KEYS[index];
       if (!dataKey) return;
-      
+
       // Vrifier si au moins un contact a une valeur non vide pour cette colonne
       const hasData = sample.some(contact => {
         const value = contact[dataKey as keyof Contact];
         return value !== undefined && value !== null && value !== '';
       });
-      
+
       if (hasData) {
         detectedColumns.add(header);
         detectedDataKeys.push(dataKey as keyof Contact);
@@ -548,7 +549,7 @@ Dimitri MOREL - Arcanis Conseil`;
     const newAvailableColumns = Array.from(detectedColumns);
     setAvailableColumns(newAvailableColumns);
     setAvailableDataKeys(detectedDataKeys);
-    
+
     // Mettre à jour la visibilit en utilisant une fonction callback pour viter la dpendance circulaire
     setVisibleColumns(prevVisible => {
       const newVisibleColumns = newAvailableColumns.reduce((acc, col) => {
@@ -556,7 +557,7 @@ Dimitri MOREL - Arcanis Conseil`;
         acc[col] = prevVisible[col] !== undefined ? prevVisible[col] : true;
         return acc;
       }, {} as Record<string, boolean>);
-      
+
       // Masquer par dfaut certaines colonnes moins importantes (seulement si pas djà dfini)
       const lessImportantColumns = ["Sexe", "Don", "Qualit", "Type", "Date", "UID"];
       lessImportantColumns.forEach(col => {
@@ -564,7 +565,7 @@ Dimitri MOREL - Arcanis Conseil`;
           newVisibleColumns[col] = false;
         }
       });
-      
+
       return newVisibleColumns;
     });
   }, []); // Pas de dpendances pour viter la boucle infinie
@@ -597,10 +598,10 @@ Dimitri MOREL - Arcanis Conseil`;
   }, []);
 
   // ADB Hook
-  const { 
-    connectionState: adbConnectionState, 
-    isConnecting: adbConnecting, 
-    connect: connectAdb, 
+  const {
+    connectionState: adbConnectionState,
+    isConnecting: adbConnecting,
+    connect: connectAdb,
     disconnect: disconnectAdb,
     getLogs: getAdbLogs,
     setAutoDetection: setAdbAutoDetection,
@@ -645,19 +646,19 @@ Dimitri MOREL - Arcanis Conseil`;
 
   // Sauvegardes de prfrences utilisateur
   useEffect(() => {
-    try { localStorage.setItem('dimicall-theme', theme === Theme.Light ? 'light' : 'dark'); } catch {}
+    try { localStorage.setItem('dimicall-theme', theme === Theme.Light ? 'light' : 'dark'); } catch { }
   }, [theme]);
   useEffect(() => {
-    try { localStorage.setItem('dimicall-active-tab', activeMenuTab); } catch {}
+    try { localStorage.setItem('dimicall-active-tab', activeMenuTab); } catch { }
   }, [activeMenuTab]);
   useEffect(() => {
-    try { localStorage.setItem('dimicall-search-term', searchTerm); } catch {}
+    try { localStorage.setItem('dimicall-search-term', searchTerm); } catch { }
   }, [searchTerm]);
   useEffect(() => {
-    try { localStorage.setItem('dimicall-search-column', String(searchColumn)); } catch {}
+    try { localStorage.setItem('dimicall-search-column', String(searchColumn)); } catch { }
   }, [searchColumn]);
   useEffect(() => {
-    try { localStorage.setItem('dimicall-split-panel-open', String(splitPanelOpen)); } catch {}
+    try { localStorage.setItem('dimicall-split-panel-open', String(splitPanelOpen)); } catch { }
   }, [splitPanelOpen]);
 
   useEffect(() => {
@@ -693,7 +694,7 @@ Dimitri MOREL - Arcanis Conseil`;
     let updatedContact: Contact | null = null;
     let contactFound = false;
     let previousStatusBeforeUpdate: ContactStatus | undefined;
-    
+
     setContacts(currentContacts => {
       const existingContact = currentContacts.find(c => c.id === updatedFields.id);
       if (!existingContact) {
@@ -706,25 +707,25 @@ Dimitri MOREL - Arcanis Conseil`;
       previousStatusBeforeUpdate = existingContact.statut;
       updatedContact = { ...existingContact, ...updatedFields };
       const updatedContacts = currentContacts.map(c => c.id === updatedFields.id ? updatedContact! : c);
-      
+
       console.log('🔄 [UPDATE] Contacts mis à jour:', updatedContacts.length, 'contacts');
       console.log('🔄 [UPDATE] Contact modifi:', updatedContact);
-      
+
       // Sauvegarder les contacts mis à jour
       saveContacts(updatedContacts);
-      
+
       // Si on a une table importe, la mettre à jour aussi
       if (hasImportedTable()) {
         const savedTable = loadImportedTable();
         if (savedTable && savedTable.metadata) {
           saveImportedTable(updatedContacts, savedTable.metadata);
-    
+
         }
       }
-      
+
       return updatedContacts; // Forcer le re-render immdiat
     });
-    
+
     // Si le contact n'a pas t trouv, arrter ici
     if (!contactFound || !updatedContact) {
       return;
@@ -795,7 +796,7 @@ Dimitri MOREL - Arcanis Conseil`;
             heureAppel: updatedContact.heureAppel,
             dureeAppel: updatedContact.dureeAppel,
           });
-          try { window.dispatchEvent(new CustomEvent('localdb-updated')); } catch {}
+          try { window.dispatchEvent(new CustomEvent('localdb-updated')); } catch { }
         }
       }
     } catch (e) {
@@ -881,7 +882,7 @@ Dimitri MOREL - Arcanis Conseil`;
             });
           }
 
-          try { window.dispatchEvent(new CustomEvent('localdb-updated')); } catch {}
+          try { window.dispatchEvent(new CustomEvent('localdb-updated')); } catch { }
         }
       }
     } catch (e) {
@@ -917,7 +918,7 @@ Dimitri MOREL - Arcanis Conseil`;
   const updateCallState = useCallback((contactId: string, newState: Partial<CallState>) => {
     setCallStates(prev => ({ ...prev, [contactId]: { ...(prev[contactId] || {}), ...newState } }));
   }, []);
-  
+
   const refreshData = useCallback(() => {
     const loadedContacts = loadContacts();
     const contactsWithIds = loadedContacts.map((c, idx) => ({
@@ -928,7 +929,7 @@ Dimitri MOREL - Arcanis Conseil`;
     }));
     setContacts(contactsWithIds);
     setCallStates(loadCallStates());
-    
+
     // Vrifier si le contact slectionn existe toujours
     if (selectedContact) {
       const stillExists = contactsWithIds.find(c => c.id === selectedContact.id);
@@ -946,11 +947,11 @@ Dimitri MOREL - Arcanis Conseil`;
   const handleDeleteContact = useCallback(async (contactId: string) => {
     if (window.confirm("Êtes-vous sr de vouloir supprimer ce contact ?")) {
       const contactToDelete = contacts.find(c => c.id === contactId);
-      
+
       // Suppression locale immdiate
-      setContacts(prev => prev.filter(c => c.id !== contactId).map((c, idx) => ({...c, numeroLigne: idx + 1})));
+      setContacts(prev => prev.filter(c => c.id !== contactId).map((c, idx) => ({ ...c, numeroLigne: idx + 1 })));
       setCallStates(prev => {
-        const newStates = {...prev};
+        const newStates = { ...prev };
         delete newStates[contactId];
         return newStates;
       });
@@ -976,9 +977,9 @@ Dimitri MOREL - Arcanis Conseil`;
         const seconds = Math.floor((durationMs / 1000) % 60);
         const minutes = Math.floor((durationMs / (1000 * 60)) % 60);
         const durationStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        updateContact({id: idToProcess, dureeAppel: durationStr });
+        updateContact({ id: idToProcess, dureeAppel: durationStr });
       } else if (markAsError) {
-        updateContact({id: idToProcess, dureeAppel: "Erreur" });
+        updateContact({ id: idToProcess, dureeAppel: "Erreur" });
       }
       if (activeCallContactId === idToProcess) {
         setActiveCallContactId(null);
@@ -1000,11 +1001,11 @@ Dimitri MOREL - Arcanis Conseil`;
 
   // Search handlers - Supprimés, voir plus bas pour les nouvelles versions avec type et source
 
-  const handleSms = useCallback(async (civilite?: string, contact?: Contact) => {
+  const handleSms = useCallback(async (civilite: string, smsType?: string, contact?: Contact) => {
     const target = contact || selectedContact;
     if (!target) {
-        showNotification('info', "Slectionnez un contact pour envoyer un SMS.");
-        return;
+      showNotification('info', "Slectionnez un contact pour envoyer un SMS.");
+      return;
     }
 
     // Vrifier la connexion ADB
@@ -1021,7 +1022,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
     // Crer le nom d'accueil avec civilit
     const greetingName = civilite ? `${civilite} ${target.nom}`.trim() : `${target.prenom} ${target.nom}`.trim() || "client(e)";
-    
+
     // Utiliser le template SMS en fonction du mode (Client / Mandataire)
     const selectedTemplate = mode === CallMode.Mandataire ? smsTemplateMandataire : smsTemplate;
     const messageBody = selectedTemplate
@@ -1035,10 +1036,10 @@ Dimitri MOREL - Arcanis Conseil`;
 
     try {
       showNotification('info', "Prparation du SMS...");
-      
+
       // Prparer le SMS avec le message pr-rempli
       const result = await sendSms(phoneNumberCleaned, messageBody);
-      
+
       if (result.success) {
         showNotification('success', "L'application de messagerie s'est ouverte avec votre message pr-rempli. Vous n'avez plus qu' vrifier et envoyer.");
       } else {
@@ -1054,33 +1055,33 @@ Dimitri MOREL - Arcanis Conseil`;
     try {
       // 1. Vider la liste des contacts
       setContacts([]);
-      
+
       // 2. Vider les tats d'appel
       setCallStates({});
-      
+
       // 3. Dslectionner le contact actuel
       setSelectedContact(null);
-      
+
       // 4. Rinitialiser l'appel actif si ncessaire
       if (activeCallContactId) {
         setActiveCallContactId(null);
         setCallStartTime(null);
       }
-      
+
       // 5. Crer un onglet vide par dfaut (ne jamais laisser 0 onglet)
       const defaultTabId = crypto.randomUUID();
-      setTableTabs([{ 
-        id: defaultTabId, 
-        name: 'Contacts', 
-        contacts: [] 
+      setTableTabs([{
+        id: defaultTabId,
+        name: 'Contacts',
+        contacts: []
       }]);
       setActiveTableTabId(defaultTabId);
-      
+
       // 6. Nettoyer le localStorage
       saveContacts([]);
       saveCallStates({});
       clearImportedTable();
-      
+
       // 7. Notification de succs
       showNotification('success', 'Toutes les donnes ont t supprimes avec succs');
     } catch (error) {
@@ -1123,41 +1124,41 @@ Dimitri MOREL - Arcanis Conseil`;
   // Import/Export handlers
   const handleSingleFileImport = useCallback(async (file: File) => {
     const fileSizeMB = file.size / (1024 * 1024);
-    
-    setImportProgress({ 
-      message: `Importation de "${file.name}" (${fileSizeMB.toFixed(1)} MB)...`, 
-      percentage: 0 
+
+    setImportProgress({
+      message: `Importation de "${file.name}" (${fileSizeMB.toFixed(1)} MB)...`,
+      percentage: 0
     });
-    
+
     try {
       // Analyse de la taille du fichier
       if (fileSizeMB > 50) {
-        setImportProgress({ 
-          message: `?? Fichier volumineux dtect (${fileSizeMB.toFixed(1)} MB). Traitement optimis...`, 
-          percentage: 5 
+        setImportProgress({
+          message: `?? Fichier volumineux dtect (${fileSizeMB.toFixed(1)} MB). Traitement optimis...`,
+          percentage: 5
         });
         await new Promise(res => setTimeout(res, 1000));
       }
-      
+
       setImportProgress({ message: `📖 Lecture du fichier...`, percentage: 10 });
       await new Promise(res => setTimeout(res, 200));
-      
+
       setImportProgress({ message: `⚙️ Traitement par chunks...`, percentage: 20 });
-      
+
       // Import optimis
       const newContacts = await importContactsFromFile(file);
-      
+
       setImportProgress({ message: `📝 Prparation des donnes...`, percentage: 80 });
       await new Promise(res => setTimeout(res, 100));
-      
-      const updatedContacts = newContacts.map((c, idx) => ({ 
-        ...c, 
-        numeroLigne: idx + 1, 
-        id: c.id || uuidv4() 
+
+      const updatedContacts = newContacts.map((c, idx) => ({
+        ...c,
+        numeroLigne: idx + 1,
+        id: c.id || uuidv4()
       }));
-      
+
       setImportProgress({ message: `💾 Sauvegarde...`, percentage: 90 });
-      
+
       // Sauvegarder la table importe pour persistance
       const fileExtension = file.name.split('.').pop()?.toLowerCase();
       const source = fileExtension === 'csv' ? 'csv' : 'xlsx';
@@ -1166,7 +1167,7 @@ Dimitri MOREL - Arcanis Conseil`;
         source: source as 'csv' | 'xlsx',
         totalRows: updatedContacts.length
       });
-      
+
       // Injecter dans l'onglet actif si la vue Tabs est utilise, sinon dans la vue globale
       if (tableTabs.length > 0) {
         const targetTabId = resolvedActiveTabId || tableTabs[0]?.id || '';
@@ -1190,17 +1191,17 @@ Dimitri MOREL - Arcanis Conseil`;
       }
       setCallStates({});
       setSelectedContact(null);
-      
+
       setImportProgress({ message: `✅ Finalisation...`, percentage: 100 });
-      await new Promise(res => setTimeout(res, 500)); 
+      await new Promise(res => setTimeout(res, 500));
       setImportProgress(null);
-      
-      const message = fileSizeMB > 10 
+
+      const message = fileSizeMB > 10
         ? `🎉 ${updatedContacts.length} contacts imports avec succs depuis un fichier de ${fileSizeMB.toFixed(1)} MB !`
         : `✅ ${updatedContacts.length} contacts imports avec succs !`;
-        
+
       showNotification('success', message);
-      
+
     } catch (error) {
       console.error("Import error:", error);
       setImportProgress(null);
@@ -1267,7 +1268,7 @@ Dimitri MOREL - Arcanis Conseil`;
       exportContactsToFile(contacts, format);
       try {
         window.dispatchEvent(new CustomEvent('dimicall-toast', { detail: { type: 'success', title: `Export ${format.toUpperCase()} russi` } }))
-      } catch {}
+      } catch { }
     } catch (error) {
       showNotification('error', `Erreur lors de l'export: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
@@ -1378,12 +1379,12 @@ Dimitri MOREL - Arcanis Conseil`;
       showNotification('error', 'Veuillez sélectionner un contact');
       return;
     }
-    
+
     const prenom = targetContact.prenom || '';
     const nom = targetContact.nom || '';
     const type = (targetContact as any).type || '';
     const source = targetContact.source || '';
-    
+
     searchLinkedIn(prenom, nom, type, source);
   }, [selectedContact, showNotification]);
 
@@ -1393,12 +1394,12 @@ Dimitri MOREL - Arcanis Conseil`;
       showNotification('error', 'Veuillez sélectionner un contact');
       return;
     }
-    
+
     const prenom = targetContact.prenom || '';
     const nom = targetContact.nom || '';
     const type = (targetContact as any).type || '';
     const source = targetContact.source || '';
-    
+
     searchGoogle(prenom, nom, type, source);
   }, [selectedContact, showNotification]);
 
@@ -1408,20 +1409,20 @@ Dimitri MOREL - Arcanis Conseil`;
       showNotification('error', 'Veuillez sélectionner un contact');
       return;
     }
-    
+
     const lien = targetContact.lien || '';
     if (!lien) {
       showNotification('error', 'Ce contact n\'a pas de lien défini');
       return;
     }
-    
+
     openDirectLink(lien);
   }, [selectedContact, showNotification]);
 
   const makePhoneCall = useCallback(async (contactToCall?: Contact) => {
     console.log('?? [MAKEPHONECALL] Dbut makePhoneCall, contactToCall:', contactToCall);
     console.log('?? [MAKEPHONECALL] selectedContact:', selectedContact);
-    
+
     const targetContact = contactToCall || selectedContact;
     console.log('?? [MAKEPHONECALL] targetContact final:', targetContact);
 
@@ -1430,11 +1431,11 @@ Dimitri MOREL - Arcanis Conseil`;
       showNotification('error', "Slectionnez un contact pour appeler.");
       return;
     }
-    
+
     console.log('?? [MAKEPHONECALL] activeCallContactId:', activeCallContactId);
     if (activeCallContactId && activeCallContactId !== targetContact.id) {
       console.log('?? [MAKEPHONECALL] Fin d\'appel en cours...');
-      endActiveCall(false, activeCallContactId); 
+      endActiveCall(false, activeCallContactId);
     }
 
     // Vrifier la connexion ADB
@@ -1448,35 +1449,35 @@ Dimitri MOREL - Arcanis Conseil`;
     // Nettoyer le numro de tlphone pour l'appel
     const cleanPhoneNumber = targetContact.telephone.replace(/[^0-9+]/g, '');
     console.log('🔍 [MAKEPHONECALL] cleanPhoneNumber:', cleanPhoneNumber);
-    
+
     try {
       console.log('🔍 [MAKEPHONECALL] Dbut du try...');
       showNotification('info', `Appel en cours vers ${targetContact.prenom} ${targetContact.nom} au ${targetContact.telephone}...`);
-      
+
       console.log('🔍 [MAKEPHONECALL] Avant makeAdbCall...');
       // Faire l'appel rel via ADB
-        const callResult = await makeAdbCall(cleanPhoneNumber);
-        console.log('🔍 [MAKEPHONECALL] Aprs makeAdbCall, result:', callResult);
-        
-        if (callResult.success) {
-          // Appel russi
-          console.log(`📞 Configuration de l'appel pour le contact ${targetContact.id}...`);
-          updateCallState(targetContact.id, { isCalling: true, hasBeenCalled: false });
-          setActiveCallContactId(targetContact.id);
-          setCallStartTime(new Date());
-          console.log(`📞 Contact actif dfini: ${targetContact.id}, heure de dbut: ${new Date()}`);
-          
-          const now = new Date();
-          updateContact({
-            id: targetContact.id,
-            dateAppel: now.toISOString().split('T')[0],
-            heureAppel: now.toTimeString().substring(0,5),
-            dureeAppel: "00:00" 
-          });
-          setSelectedContact(targetContact);
-        
+      const callResult = await makeAdbCall(cleanPhoneNumber);
+      console.log('🔍 [MAKEPHONECALL] Aprs makeAdbCall, result:', callResult);
+
+      if (callResult.success) {
+        // Appel russi
+        console.log(`📞 Configuration de l'appel pour le contact ${targetContact.id}...`);
+        updateCallState(targetContact.id, { isCalling: true, hasBeenCalled: false });
+        setActiveCallContactId(targetContact.id);
+        setCallStartTime(new Date());
+        console.log(`📞 Contact actif dfini: ${targetContact.id}, heure de dbut: ${new Date()}`);
+
+        const now = new Date();
+        updateContact({
+          id: targetContact.id,
+          dateAppel: now.toISOString().split('T')[0],
+          heureAppel: now.toTimeString().substring(0, 5),
+          dureeAppel: "00:00"
+        });
+        setSelectedContact(targetContact);
+
         showNotification('success', `Appel initi vers ${targetContact.prenom} ${targetContact.nom}`);
-        
+
         // Recherche automatique selon le mode configur
         if (autoSearchMode === 'linkedin') {
           handleLinkedInSearch(targetContact);
@@ -1496,27 +1497,27 @@ Dimitri MOREL - Arcanis Conseil`;
     } catch (error) {
       showNotification('error', `Erreur lors de l'appel: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
     }
-  }, [selectedContact, activeCallContactId, endActiveCall, updateCallState, updateContact, autoSearchMode, 
-      showNotification, handleLinkedInSearch, handleGoogleSearch, handleDirectLink, adbConnectionState.isConnected, makeAdbCall]);
+  }, [selectedContact, activeCallContactId, endActiveCall, updateCallState, updateContact, autoSearchMode,
+    showNotification, handleLinkedInSearch, handleGoogleSearch, handleDirectLink, adbConnectionState.isConnected, makeAdbCall]);
 
   // Surveillance robuste des fins d'appel via vnements ADB
   useEffect(() => {
     console.log('🔧 Configuration de la surveillance des fins d\'appels...');
-    
+
     const unsubscribeCallEnd = onCallEnd((callEndEvent) => {
       console.log('📞 vnement de fin d\'appel reu:', callEndEvent);
-      
+
       if (activeCallContactId) {
         // Calculer la dure d'appel formate
         const seconds = Math.floor((callEndEvent.durationMs / 1000) % 60);
         const minutes = Math.floor((callEndEvent.durationMs / (1000 * 60)) % 60);
         const durationStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-        
+
         console.log(`📞 Mise à jour du contact ${activeCallContactId} avec dure: ${durationStr}`);
-        
+
         // Mettre à jour le contact avec la dure relle
         updateContact({
-          id: activeCallContactId, 
+          id: activeCallContactId,
           dureeAppel: durationStr
         });
         // Si des tabs sont actifs, propager la dure dans le tab courant pour un rendu immdiat
@@ -1529,19 +1530,19 @@ Dimitri MOREL - Arcanis Conseil`;
             return { ...tab, contacts: newContacts };
           });
         });
-        
+
         // Terminer l'appel dans l'interface
         updateCallState(activeCallContactId, { isCalling: false, hasBeenCalled: true });
         setActiveCallContactId(null);
         setCallStartTime(null);
-        
+
         showNotification('success', `Appel termin - Dure: ${durationStr}`);
       } else {
         console.log('?? Fin d\'appel dtecte mais aucun appel actif dans l\'interface');
         showNotification('info', "Appel termin dtect.");
       }
     });
-    
+
     return () => {
       console.log('🔧 Nettoyage de la surveillance des fins d\'appels...');
       unsubscribeCallEnd();
@@ -1557,7 +1558,7 @@ Dimitri MOREL - Arcanis Conseil`;
           console.log('Auto-connexion ADB choue:', error);
         });
       }, 2000);
-      
+
       return () => clearTimeout(timer);
     }
   }, [adbConnectionState.isConnected, adbConnecting, connectAdb]);
@@ -1586,27 +1587,27 @@ Dimitri MOREL - Arcanis Conseil`;
           return;
         }
         console.log(`?? [IMPORT] ${newContacts.length} contacts reus pour importation`);
-        
+
         // Réordonner les colonnes selon l'ordre souhaité
         const reorderedContacts = reorderContactsColumns(newContacts);
-        
+
         const updatedContacts = reorderedContacts.map((c: Contact, idx: number) => ({
           ...c,
           numeroLigne: idx + 1,
           id: c.id || uuidv4()
         }));
         saveImportedTable(updatedContacts, { fileName: fileName || 'Import', source: (source || 'csv'), totalRows: updatedContacts.length });
-        
+
         // S'assurer qu'il y a toujours au minimum un onglet
         console.log(`?? [IMPORT] tat des onglets: ${tableTabs.length} onglets, actif: ${resolvedActiveTabId}`);
         if (tableTabs.length === 0) {
           // Crer un onglet par dfaut si aucun n'existe
           console.log('?? [IMPORT] Cration d\'un nouvel onglet par dfaut');
           const defaultTabId = crypto.randomUUID()
-          setTableTabs([{ 
-            id: defaultTabId, 
-            name: 'Contacts', 
-            contacts: updatedContacts 
+          setTableTabs([{
+            id: defaultTabId,
+            name: 'Contacts',
+            contacts: updatedContacts
           }])
           setActiveTableTabId(defaultTabId)
         } else {
@@ -1624,7 +1625,7 @@ Dimitri MOREL - Arcanis Conseil`;
             setActiveTableTabId(id)
           }
         }
-        
+
         setContacts(updatedContacts) // maintenir la liste globale en cohrence
         // Ne pas changer de vue si on est déjà sur "Appels 2" (appels-cards)
         if (viewMode !== 'appels-cards') {
@@ -1638,10 +1639,10 @@ Dimitri MOREL - Arcanis Conseil`;
         console.error('? [IMPORT] Erreur lors du traitement de l\'importation:', error);
       }
     }
-    
+
     window.addEventListener('dimicall-imported-contacts', onImported as any)
     console.log('?? [IMPORT] couteur d\'vnement dimicall-imported-contacts enregistr')
-    
+
     return () => {
       window.removeEventListener('dimicall-imported-contacts', onImported as any)
       console.log('?? [IMPORT] couteur d\'vnement dimicall-imported-contacts supprim')
@@ -1658,14 +1659,14 @@ Dimitri MOREL - Arcanis Conseil`;
         if (savedTable && savedTable.contacts.length > 0) {
           const metadata = savedTable.metadata;
           console.log(`🔄 Restauration de la table importe: ${savedTable.contacts.length} contacts (${metadata?.fileName})`);
-          
+
           const contactsWithIds = savedTable.contacts.map((c, idx) => ({
             ...c,
             telephone: formatPhoneNumber(c.telephone || ""),
             id: c.id || uuidv4(),
             numeroLigne: idx + 1,
           }));
-          
+
           setContacts(contactsWithIds);
           setCallStates(loadCallStates());
           showNotification('success', `Table importe restaure: ${contactsWithIds.length} contacts (${metadata?.fileName})`, 4000);
@@ -1673,21 +1674,21 @@ Dimitri MOREL - Arcanis Conseil`;
           return; // Ne pas charger les contacts par dfaut
         }
       }
-      
+
       // Chargement normal si pas de table importe
       refreshData();
-      
+
       // S'assurer qu'il y a toujours au minimum un onglet
       if (tableTabs.length === 0) {
         const defaultTabId = crypto.randomUUID();
-        setTableTabs([{ 
-          id: defaultTabId, 
-          name: 'Contacts', 
-          contacts: [] 
+        setTableTabs([{
+          id: defaultTabId,
+          name: 'Contacts',
+          contacts: []
         }]);
         setActiveTableTabId(defaultTabId);
       }
-      
+
       setIsInitialized(true);
     }
   }, [isInitialized, showNotification]);
@@ -1704,7 +1705,7 @@ Dimitri MOREL - Arcanis Conseil`;
   }, [callStates]);
 
   // Configuration des mises à jour temps rel - Supabase supprim pour librer de l'espace
-  
+
   const filteredContacts = useMemo(() => {
     if (!searchTerm) return contacts;
     const lowerSearchTerm = searchTerm.toLowerCase();
@@ -1717,398 +1718,398 @@ Dimitri MOREL - Arcanis Conseil`;
       const contactValue = contact[searchColumn as keyof Contact];
       return String(contactValue).toLowerCase().includes(lowerSearchTerm);
     });
-     }, [contacts, searchTerm, searchColumn]);
+  }, [contacts, searchTerm, searchColumn]);
 
-   // Variables de protection contre les workflows multiples (persistantes entre les re-renders)
-   const isProcessingRef = useRef(false);
-   const lastKeyPressRef = useRef<{ key: string; timestamp: number } | null>(null);
-   
-   // Refs pour stocker les valeurs actuelles (vite les problmes de closure stale)
-   const selectedContactRef = useRef<Contact | null>(null);
-   const activeCallContactIdRef = useRef<string | null>(null);
-   const filteredContactsRef = useRef<Contact[]>([]);
-   const contactsRef = useRef<Contact[]>([]);
-   const makePhoneCallRef = useRef<((contactToCall?: Contact) => Promise<void>) | null>(null);
-   
-   // Mettre à jour les refs quand les valeurs changent
-   useEffect(() => {
-     selectedContactRef.current = selectedContact;
-     console.log(`?? [CONTACT_REF] Contact slectionn mis  jour:`, selectedContact ? `${selectedContact.prenom} ${selectedContact.nom}` : 'null');
-   }, [selectedContact]);
-   
-   useEffect(() => {
-     activeCallContactIdRef.current = activeCallContactId;
-   }, [activeCallContactId]);
-   
-   useEffect(() => {
-     filteredContactsRef.current = filteredContacts;
-   }, [filteredContacts]);
-   
-   useEffect(() => {
-     contactsRef.current = contacts;
-   }, [contacts]);
-   
-   useEffect(() => {
-     makePhoneCallRef.current = makePhoneCall;
-   }, [makePhoneCall]);
+  // Variables de protection contre les workflows multiples (persistantes entre les re-renders)
+  const isProcessingRef = useRef(false);
+  const lastKeyPressRef = useRef<{ key: string; timestamp: number } | null>(null);
 
-   // Persistance du mode d'auto-recherche dans localStorage
-   useEffect(() => {
-     try {
-       console.log('💾 [AUTO-SEARCH] Sauvegarde du mode:', autoSearchMode);
-       localStorage.setItem('auto-search-mode', autoSearchMode);
-       console.log('✅ [AUTO-SEARCH] Mode sauvegard avec succs dans localStorage');
-       
-       // Vrification immdiate de la sauvegarde
-       const verification = localStorage.getItem('auto-search-mode');
-       if (verification === autoSearchMode) {
-         console.log('✅ [AUTO-SEARCH] Vrification russie - Mode persistent:', verification);
-       } else {
-         console.error('❌ [AUTO-SEARCH] chec de la vrification:', { expected: autoSearchMode, actual: verification });
-       }
-     } catch (error) {
-       console.error('❌ [AUTO-SEARCH] Erreur lors de la sauvegarde:', error);
-     }
-   }, [autoSearchMode]);
+  // Refs pour stocker les valeurs actuelles (vite les problmes de closure stale)
+  const selectedContactRef = useRef<Contact | null>(null);
+  const activeCallContactIdRef = useRef<string | null>(null);
+  const filteredContactsRef = useRef<Contact[]>([]);
+  const contactsRef = useRef<Contact[]>([]);
+  const makePhoneCallRef = useRef<((contactToCall?: Contact) => Promise<void>) | null>(null);
 
-   // Fonction de debug pour tester la persistence manuellement (accessible via window.testAutoSearchPersistence)
-   useEffect(() => {
-     (window as any).testAutoSearchPersistence = () => {
-       console.log('🧪 [AUTO-SEARCH] Test de persistence:');
-       console.log('📖 Mode actuel en mmoire:', autoSearchMode);
-       console.log('💾 Mode sauvegard en localStorage:', localStorage.getItem('auto-search-mode'));
-       console.log('🔄 Pour tester: changez le mode via l\'interface, puis rafrachissez la page');
-     };
-   }, [autoSearchMode]);
+  // Mettre à jour les refs quand les valeurs changent
+  useEffect(() => {
+    selectedContactRef.current = selectedContact;
+    console.log(`?? [CONTACT_REF] Contact slectionn mis  jour:`, selectedContact ? `${selectedContact.prenom} ${selectedContact.nom}` : 'null');
+  }, [selectedContact]);
 
-   // Log initial du mode d'auto-recherche au dmarrage
-   useEffect(() => {
-     console.log('🚀 [AUTO-SEARCH] Application dmarre avec le mode:', autoSearchMode);
-     console.log('💡 [AUTO-SEARCH] Ce mode sera utilis avec la touche F1 et le bouton Appeler');
-   }, []); // Seulement au mount
+  useEffect(() => {
+    activeCallContactIdRef.current = activeCallContactId;
+  }, [activeCallContactId]);
 
-   // Handler pour les raccourcis globaux Electron
-   useEffect(() => {
-     const handleGlobalFnKey = async (event: any, key: string) => {
-       // Protection contre les workflows multiples
-       if (isProcessingRef.current) {
-         return;
-       }
-       
-       // Protection contre les appuis rpts (debounce de 500ms)
-       const now = Date.now();
-       const lastKeyPress = lastKeyPressRef.current;
-       if (lastKeyPress && lastKeyPress.key === key && (now - lastKeyPress.timestamp) < 500) {
-         return;
-       }
-       lastKeyPressRef.current = { key, timestamp: now };
-       
-            // Rcuprer le contact slectionn au moment de l'appui sur la touche (depuis la ref)
-     const currentSelectedContact = selectedContactRef.current;
-     if (!currentSelectedContact) {
-       showNotification('error', `Veuillez slectionner un contact avant d'utiliser ${key}`);
-       return;
-     }
-     
-     // Traitement spcial pour F1 : Appeler le contact slectionn (identique au bouton "Appeler")
-     if (key === 'F1') {
-       isProcessingRef.current = true; // Bloquer les nouveaux workflows
-       
-       try {
-         console.log(`?? [F1] Lancement d'appel via F1 (identique au bouton Appeler)`);
-         console.log(`?? [F1] Contact slectionn:`, currentSelectedContact);
-         console.log(`?? [F1] makePhoneCall function:`, makePhoneCall);
-         
-         // Passer explicitement le contact pour viter les closures stales
-         await makePhoneCall(currentSelectedContact);
-         console.log(`?? [F1] makePhoneCall termin`);
-       } catch (error) {
-         console.error(`? [F1] Erreur lors de l'appel:`, error);
-       } finally {
-         isProcessingRef.current = false; // Dbloquer les workflows
-       }
-       return; // Sortir ici pour F1, pas besoin du workflow de changement de statut
-     }
-     
-     // Utiliser le service de raccourcis personnaliss pour F2-F10
-     const newStatus = shortcutService.getStatusForKey(key);
-     if (!newStatus) {
-       return;
-     }
-       
-       isProcessingRef.current = true; // Bloquer les nouveaux workflows
-       
-       // Afficher l'indicateur visuel
-       const shortcut = shortcutService.getShortcuts().find(s => s.key === key);
-       if (shortcut) {
-         setShortcutIndicator({
-           isVisible: true,
-           key: shortcut.key,
-           label: shortcut.label
-         });
-       }
-       
-       try {
-         await executeSequentialWorkflow(key, newStatus, currentSelectedContact);
-       } catch (error) {
-         console.error(`❌ [WORKFLOW] Erreur dans le workflow ${key}:`, error);
-         showNotification('error', `Erreur lors du workflow ${key}: ${error}`);
-       } finally {
-         isProcessingRef.current = false; // Dbloquer les workflows
-       }
-     };
+  useEffect(() => {
+    filteredContactsRef.current = filteredContacts;
+  }, [filteredContacts]);
 
-     // Fonction de workflow squentiel avec vrifications
-     const executeSequentialWorkflow = async (key: string, newStatus: ContactStatus, contact: Contact) => {
-       // TAPE 1: Raccrochage (si appel en cours)
-       const wasCallActive = activeCallContactIdRef.current === contact.id;
-       if (wasCallActive) {
-         const hangupSuccess = await performHangupWithRetry();
-         if (!hangupSuccess) {
-           throw new Error("chec du raccrochage aprs plusieurs tentatives");
-         }
-         
-         // Dlai de stabilisation aprs raccrochage
-         await waitWithLog(500, "Stabilisation aprs raccrochage");
-       }
+  useEffect(() => {
+    contactsRef.current = contacts;
+  }, [contacts]);
 
-       // TAPE 2: Application du statut avec vrification amliore
-       const statusUpdateSuccess = await performStatusUpdateWithVerification(contact, newStatus);
-       if (!statusUpdateSuccess) {
-         showNotification('info', `${key}: Statut appliqu mais non vrifi pour ${contact.prenom}`);
-       } else {
-         showNotification('success', `${key}: ${contact.prenom} → "${newStatus}"`);
-       }
-       
-       // Dlai pour que l'interface se mette à jour
-       await waitWithLog(600, "Mise à jour de l'interface");
+  useEffect(() => {
+    makePhoneCallRef.current = makePhoneCall;
+  }, [makePhoneCall]);
 
-       // TAPE 3: Slection du contact suivant avec vrification
-       const nextContact = await findAndSelectNextContact(contact);
-       if (!nextContact) {
-         showNotification('info', "Fin de la liste atteinte.");
-         return;
-       }
-       
-       // Dlai pour que la slection soit effective
-       await waitWithLog(300, "Finalisation de la slection");
+  // Persistance du mode d'auto-recherche dans localStorage
+  useEffect(() => {
+    try {
+      console.log('💾 [AUTO-SEARCH] Sauvegarde du mode:', autoSearchMode);
+      localStorage.setItem('auto-search-mode', autoSearchMode);
+      console.log('✅ [AUTO-SEARCH] Mode sauvegard avec succs dans localStorage');
 
-       // TAPE 4: Lancement de l'appel suivant avec vrification
-       const callSuccess = await performCallWithVerification(nextContact);
-       if (!callSuccess) {
-         showNotification('error', `Workflow termin, mais chec de l'appel vers ${nextContact.prenom}`);
-         return;
-       }
-     };
+      // Vrification immdiate de la sauvegarde
+      const verification = localStorage.getItem('auto-search-mode');
+      if (verification === autoSearchMode) {
+        console.log('✅ [AUTO-SEARCH] Vrification russie - Mode persistent:', verification);
+      } else {
+        console.error('❌ [AUTO-SEARCH] chec de la vrification:', { expected: autoSearchMode, actual: verification });
+      }
+    } catch (error) {
+      console.error('❌ [AUTO-SEARCH] Erreur lors de la sauvegarde:', error);
+    }
+  }, [autoSearchMode]);
 
-     // Fonction de raccrochage avec retry
-     const performHangupWithRetry = async (): Promise<boolean> => {
-       for (let attempt = 1; attempt <= 3; attempt++) {
-         try {
-           const result = await adbEndCall();
-           
-           // Vrifier que l'appel est vraiment termin
-           await waitWithLog(300, `Vrification raccrochage (tentative ${attempt})`);
-           
-           // Vrifier l'tat aprs le dlai
-           if (activeCallContactIdRef.current === null) {
-             return true;
-           }
-           
-         } catch (error) {
-           console.error(`❌ [HANGUP] Erreur tentative ${attempt}:`, error);
-         }
-         
-         if (attempt < 3) {
-           await waitWithLog(400, `Dlai avant tentative ${attempt + 1}`);
-         }
-       }
-       
-       // Forcer la fin d'appel si toutes les tentatives chouent
-       if (selectedContactRef.current) {
-         endActiveCall(false, selectedContactRef.current.id);
-       }
-       return false;
-     };
+  // Fonction de debug pour tester la persistence manuellement (accessible via window.testAutoSearchPersistence)
+  useEffect(() => {
+    (window as any).testAutoSearchPersistence = () => {
+      console.log('🧪 [AUTO-SEARCH] Test de persistence:');
+      console.log('📖 Mode actuel en mmoire:', autoSearchMode);
+      console.log('💾 Mode sauvegard en localStorage:', localStorage.getItem('auto-search-mode'));
+      console.log('🔄 Pour tester: changez le mode via l\'interface, puis rafrachissez la page');
+    };
+  }, [autoSearchMode]);
 
-     // Fonction de mise à jour du statut avec vrification amliore
-     const performStatusUpdateWithVerification = async (contact: Contact, newStatus: ContactStatus): Promise<boolean> => {
-       try {
-         // Appliquer la mise à jour avec retry
-         let updateAttempts = 0;
-         const maxUpdateAttempts = 3;
-         let updateSuccess = false;
-         
-         while (updateAttempts < maxUpdateAttempts && !updateSuccess) {
-           updateAttempts++;
-           
-           try {
-             await updateContact({ id: contact.id, statut: newStatus });
-             updateSuccess = true;
-           } catch (error) {
-             if (updateAttempts < maxUpdateAttempts) {
-               await waitWithLog(300, `Dlai avant nouvelle tentative de mise à jour`);
-             }
-           }
-         }
-         
-         if (!updateSuccess) {
-           return false;
-         }
-         
-         // Dlais plus longs pour la propagation
-         await waitWithLog(400, "Propagation de la mise à jour du statut");
-         
-         // Vrifier dans plusieurs sources avec dlais plus longs
-         let verificationAttempts = 0;
-         const maxVerificationAttempts = 8; // Plus de tentatives
-         
-         while (verificationAttempts < maxVerificationAttempts) {
-           verificationAttempts++;
-           
-           // Vrifier dans les contacts actuels
-           const updatedContact = contactsRef.current.find(c => c.id === contact.id);
-           
-           if (updatedContact?.statut === newStatus) {
-             return true;
-           }
-           
-           if (verificationAttempts < maxVerificationAttempts) {
-             await waitWithLog(250, `Attente propagation (tentative ${verificationAttempts})`);
-           }
-         }
-         
-         // Dernire tentative de force-update si la vrification choue
-         try {
-           await updateContact({ id: contact.id, statut: newStatus });
-           await waitWithLog(500, "Force-update final");
-           
-           const finalCheck = contactsRef.current.find(c => c.id === contact.id);
-           if (finalCheck?.statut === newStatus) {
-             return true;
-           }
-         } catch (error) {
-           console.error(`❌ [STATUS] chec du force-update:`, error);
-         }
-         
-         return false; // Plus strict - on signale l'chec
-         
-       } catch (error) {
-         console.error(`❌ [STATUS] Erreur lors de la mise à jour du statut:`, error);
-         return false;
-       }
-     };
+  // Log initial du mode d'auto-recherche au dmarrage
+  useEffect(() => {
+    console.log('🚀 [AUTO-SEARCH] Application dmarre avec le mode:', autoSearchMode);
+    console.log('💡 [AUTO-SEARCH] Ce mode sera utilis avec la touche F1 et le bouton Appeler');
+  }, []); // Seulement au mount
 
-     // Fonction de slection du contact suivant avec vrification
-     const findAndSelectNextContact = async (currentContact: Contact): Promise<Contact | null> => {
-       try {
-         const currentIndex = filteredContactsRef.current.findIndex(c => c.id === currentContact.id);
-         if (currentIndex === -1) {
-           return null;
-         }
-         
-         if (currentIndex >= filteredContactsRef.current.length - 1) {
-           return null;
-         }
-         
-         const nextContact = filteredContactsRef.current[currentIndex + 1];
-         
-         // Slectionner le contact suivant
-         setSelectedContact(nextContact);
-         
-         // Dlai pour que la slection soit effective
-         await waitWithLog(200, "Application de la slection");
-         
-         // Scroll automatique vers le contact slectionn
-         if (contactTableRef.current) {
-           contactTableRef.current.scrollToContact(nextContact.id);
-         }
-         
-         return nextContact;
-         
-       } catch (error) {
-         console.error(`❌ [SELECT] Erreur lors de la slection du contact suivant:`, error);
-         return null;
-       }
-     };
+  // Handler pour les raccourcis globaux Electron
+  useEffect(() => {
+    const handleGlobalFnKey = async (event: any, key: string) => {
+      // Protection contre les workflows multiples
+      if (isProcessingRef.current) {
+        return;
+      }
 
-     // Fonction d'appel avec vrification
-     const performCallWithVerification = async (contact: Contact): Promise<boolean> => {
-       try {
-         // Lancer l'appel en utilisant la ref pour viter les stale closures
-         if (!makePhoneCallRef.current) {
-           return false;
-         }
-         await makePhoneCallRef.current(contact);
-         
-         // Dlai plus court pour que l'appel s'initialise
-         await waitWithLog(400, "Initialisation de l'appel");
-         
-         // Vrifier que l'appel a bien dmarr (avec plusieurs tentatives)
-         let callVerificationAttempts = 0;
-         const maxCallVerificationAttempts = 5; // Plus de tentatives
-         
-         while (callVerificationAttempts < maxCallVerificationAttempts) {
-           callVerificationAttempts++;
-           
-           // Vrifier à la fois la ref ET l'tat direct avec une fonction de vrification
-           let isCallActive = false;
-           
-           // Mthode 1: Vrifier la ref
-           if (activeCallContactIdRef.current === contact.id) {
-             isCallActive = true;
-           }
-           
-           // Mthode 2: Vrifier l'tat des appels directement
-           if (!isCallActive) {
-             // Utiliser une fonction de callback pour accder à l'tat le plus rcent
-             await new Promise<void>((resolve) => {
-               setCallStates(currentCallStates => {
-                 const contactCallState = currentCallStates[contact.id];
-                 if (contactCallState?.isCalling) {
-                   isCallActive = true;
-                 }
-                 resolve();
-                 return currentCallStates; // Retourner l'tat inchang
-               });
-             });
-           }
-           
-           if (isCallActive) {
-             return true;
-           }
-           
-           if (callVerificationAttempts < maxCallVerificationAttempts) {
-             await waitWithLog(200, `Vrification appel (tentative ${callVerificationAttempts})`);
-           }
-         }
-         
-         return false;
-         
-       } catch (error) {
-         console.error(`❌ [CALL] Erreur lors du lancement de l'appel vers ${contact.prenom}:`, error);
-         return false;
-       }
-     };
+      // Protection contre les appuis rpts (debounce de 500ms)
+      const now = Date.now();
+      const lastKeyPress = lastKeyPressRef.current;
+      if (lastKeyPress && lastKeyPress.key === key && (now - lastKeyPress.timestamp) < 500) {
+        return;
+      }
+      lastKeyPressRef.current = { key, timestamp: now };
 
-     // Fonction utilitaire pour les dlais
-     const waitWithLog = async (ms: number, reason: string): Promise<void> => {
-       await new Promise(resolve => setTimeout(resolve, ms));
-     };
+      // Rcuprer le contact slectionn au moment de l'appui sur la touche (depuis la ref)
+      const currentSelectedContact = selectedContactRef.current;
+      if (!currentSelectedContact) {
+        showNotification('error', `Veuillez slectionner un contact avant d'utiliser ${key}`);
+        return;
+      }
 
-     // Vrifier l'API Electron via window.electronAPI
-     if (window.electronAPI?.ipcRenderer) {
-       try {
-         window.electronAPI.ipcRenderer.on('global-fn-key', handleGlobalFnKey);
-         
-         return () => {
-           window.electronAPI.ipcRenderer.removeListener('global-fn-key', handleGlobalFnKey);
-         };
-       } catch (error) {
-         console.error('❌ [ELECTRON_FN] Erreur activation raccourcis:', error);
-       }
-     }
-   }, [adbEndCall, endActiveCall, updateContact, showNotification]); // Retir makePhoneCall car on utilise maintenant makePhoneCallRef
+      // Traitement spcial pour F1 : Appeler le contact slectionn (identique au bouton "Appeler")
+      if (key === 'F1') {
+        isProcessingRef.current = true; // Bloquer les nouveaux workflows
+
+        try {
+          console.log(`?? [F1] Lancement d'appel via F1 (identique au bouton Appeler)`);
+          console.log(`?? [F1] Contact slectionn:`, currentSelectedContact);
+          console.log(`?? [F1] makePhoneCall function:`, makePhoneCall);
+
+          // Passer explicitement le contact pour viter les closures stales
+          await makePhoneCall(currentSelectedContact);
+          console.log(`?? [F1] makePhoneCall termin`);
+        } catch (error) {
+          console.error(`? [F1] Erreur lors de l'appel:`, error);
+        } finally {
+          isProcessingRef.current = false; // Dbloquer les workflows
+        }
+        return; // Sortir ici pour F1, pas besoin du workflow de changement de statut
+      }
+
+      // Utiliser le service de raccourcis personnaliss pour F2-F10
+      const newStatus = shortcutService.getStatusForKey(key);
+      if (!newStatus) {
+        return;
+      }
+
+      isProcessingRef.current = true; // Bloquer les nouveaux workflows
+
+      // Afficher l'indicateur visuel
+      const shortcut = shortcutService.getShortcuts().find(s => s.key === key);
+      if (shortcut) {
+        setShortcutIndicator({
+          isVisible: true,
+          key: shortcut.key,
+          label: shortcut.label
+        });
+      }
+
+      try {
+        await executeSequentialWorkflow(key, newStatus, currentSelectedContact);
+      } catch (error) {
+        console.error(`❌ [WORKFLOW] Erreur dans le workflow ${key}:`, error);
+        showNotification('error', `Erreur lors du workflow ${key}: ${error}`);
+      } finally {
+        isProcessingRef.current = false; // Dbloquer les workflows
+      }
+    };
+
+    // Fonction de workflow squentiel avec vrifications
+    const executeSequentialWorkflow = async (key: string, newStatus: ContactStatus, contact: Contact) => {
+      // TAPE 1: Raccrochage (si appel en cours)
+      const wasCallActive = activeCallContactIdRef.current === contact.id;
+      if (wasCallActive) {
+        const hangupSuccess = await performHangupWithRetry();
+        if (!hangupSuccess) {
+          throw new Error("chec du raccrochage aprs plusieurs tentatives");
+        }
+
+        // Dlai de stabilisation aprs raccrochage
+        await waitWithLog(500, "Stabilisation aprs raccrochage");
+      }
+
+      // TAPE 2: Application du statut avec vrification amliore
+      const statusUpdateSuccess = await performStatusUpdateWithVerification(contact, newStatus);
+      if (!statusUpdateSuccess) {
+        showNotification('info', `${key}: Statut appliqu mais non vrifi pour ${contact.prenom}`);
+      } else {
+        showNotification('success', `${key}: ${contact.prenom} → "${newStatus}"`);
+      }
+
+      // Dlai pour que l'interface se mette à jour
+      await waitWithLog(600, "Mise à jour de l'interface");
+
+      // TAPE 3: Slection du contact suivant avec vrification
+      const nextContact = await findAndSelectNextContact(contact);
+      if (!nextContact) {
+        showNotification('info', "Fin de la liste atteinte.");
+        return;
+      }
+
+      // Dlai pour que la slection soit effective
+      await waitWithLog(300, "Finalisation de la slection");
+
+      // TAPE 4: Lancement de l'appel suivant avec vrification
+      const callSuccess = await performCallWithVerification(nextContact);
+      if (!callSuccess) {
+        showNotification('error', `Workflow termin, mais chec de l'appel vers ${nextContact.prenom}`);
+        return;
+      }
+    };
+
+    // Fonction de raccrochage avec retry
+    const performHangupWithRetry = async (): Promise<boolean> => {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const result = await adbEndCall();
+
+          // Vrifier que l'appel est vraiment termin
+          await waitWithLog(300, `Vrification raccrochage (tentative ${attempt})`);
+
+          // Vrifier l'tat aprs le dlai
+          if (activeCallContactIdRef.current === null) {
+            return true;
+          }
+
+        } catch (error) {
+          console.error(`❌ [HANGUP] Erreur tentative ${attempt}:`, error);
+        }
+
+        if (attempt < 3) {
+          await waitWithLog(400, `Dlai avant tentative ${attempt + 1}`);
+        }
+      }
+
+      // Forcer la fin d'appel si toutes les tentatives chouent
+      if (selectedContactRef.current) {
+        endActiveCall(false, selectedContactRef.current.id);
+      }
+      return false;
+    };
+
+    // Fonction de mise à jour du statut avec vrification amliore
+    const performStatusUpdateWithVerification = async (contact: Contact, newStatus: ContactStatus): Promise<boolean> => {
+      try {
+        // Appliquer la mise à jour avec retry
+        let updateAttempts = 0;
+        const maxUpdateAttempts = 3;
+        let updateSuccess = false;
+
+        while (updateAttempts < maxUpdateAttempts && !updateSuccess) {
+          updateAttempts++;
+
+          try {
+            await updateContact({ id: contact.id, statut: newStatus });
+            updateSuccess = true;
+          } catch (error) {
+            if (updateAttempts < maxUpdateAttempts) {
+              await waitWithLog(300, `Dlai avant nouvelle tentative de mise à jour`);
+            }
+          }
+        }
+
+        if (!updateSuccess) {
+          return false;
+        }
+
+        // Dlais plus longs pour la propagation
+        await waitWithLog(400, "Propagation de la mise à jour du statut");
+
+        // Vrifier dans plusieurs sources avec dlais plus longs
+        let verificationAttempts = 0;
+        const maxVerificationAttempts = 8; // Plus de tentatives
+
+        while (verificationAttempts < maxVerificationAttempts) {
+          verificationAttempts++;
+
+          // Vrifier dans les contacts actuels
+          const updatedContact = contactsRef.current.find(c => c.id === contact.id);
+
+          if (updatedContact?.statut === newStatus) {
+            return true;
+          }
+
+          if (verificationAttempts < maxVerificationAttempts) {
+            await waitWithLog(250, `Attente propagation (tentative ${verificationAttempts})`);
+          }
+        }
+
+        // Dernire tentative de force-update si la vrification choue
+        try {
+          await updateContact({ id: contact.id, statut: newStatus });
+          await waitWithLog(500, "Force-update final");
+
+          const finalCheck = contactsRef.current.find(c => c.id === contact.id);
+          if (finalCheck?.statut === newStatus) {
+            return true;
+          }
+        } catch (error) {
+          console.error(`❌ [STATUS] chec du force-update:`, error);
+        }
+
+        return false; // Plus strict - on signale l'chec
+
+      } catch (error) {
+        console.error(`❌ [STATUS] Erreur lors de la mise à jour du statut:`, error);
+        return false;
+      }
+    };
+
+    // Fonction de slection du contact suivant avec vrification
+    const findAndSelectNextContact = async (currentContact: Contact): Promise<Contact | null> => {
+      try {
+        const currentIndex = filteredContactsRef.current.findIndex(c => c.id === currentContact.id);
+        if (currentIndex === -1) {
+          return null;
+        }
+
+        if (currentIndex >= filteredContactsRef.current.length - 1) {
+          return null;
+        }
+
+        const nextContact = filteredContactsRef.current[currentIndex + 1];
+
+        // Slectionner le contact suivant
+        setSelectedContact(nextContact);
+
+        // Dlai pour que la slection soit effective
+        await waitWithLog(200, "Application de la slection");
+
+        // Scroll automatique vers le contact slectionn
+        if (contactTableRef.current) {
+          contactTableRef.current.scrollToContact(nextContact.id);
+        }
+
+        return nextContact;
+
+      } catch (error) {
+        console.error(`❌ [SELECT] Erreur lors de la slection du contact suivant:`, error);
+        return null;
+      }
+    };
+
+    // Fonction d'appel avec vrification
+    const performCallWithVerification = async (contact: Contact): Promise<boolean> => {
+      try {
+        // Lancer l'appel en utilisant la ref pour viter les stale closures
+        if (!makePhoneCallRef.current) {
+          return false;
+        }
+        await makePhoneCallRef.current(contact);
+
+        // Dlai plus court pour que l'appel s'initialise
+        await waitWithLog(400, "Initialisation de l'appel");
+
+        // Vrifier que l'appel a bien dmarr (avec plusieurs tentatives)
+        let callVerificationAttempts = 0;
+        const maxCallVerificationAttempts = 5; // Plus de tentatives
+
+        while (callVerificationAttempts < maxCallVerificationAttempts) {
+          callVerificationAttempts++;
+
+          // Vrifier à la fois la ref ET l'tat direct avec une fonction de vrification
+          let isCallActive = false;
+
+          // Mthode 1: Vrifier la ref
+          if (activeCallContactIdRef.current === contact.id) {
+            isCallActive = true;
+          }
+
+          // Mthode 2: Vrifier l'tat des appels directement
+          if (!isCallActive) {
+            // Utiliser une fonction de callback pour accder à l'tat le plus rcent
+            await new Promise<void>((resolve) => {
+              setCallStates(currentCallStates => {
+                const contactCallState = currentCallStates[contact.id];
+                if (contactCallState?.isCalling) {
+                  isCallActive = true;
+                }
+                resolve();
+                return currentCallStates; // Retourner l'tat inchang
+              });
+            });
+          }
+
+          if (isCallActive) {
+            return true;
+          }
+
+          if (callVerificationAttempts < maxCallVerificationAttempts) {
+            await waitWithLog(200, `Vrification appel (tentative ${callVerificationAttempts})`);
+          }
+        }
+
+        return false;
+
+      } catch (error) {
+        console.error(`❌ [CALL] Erreur lors du lancement de l'appel vers ${contact.prenom}:`, error);
+        return false;
+      }
+    };
+
+    // Fonction utilitaire pour les dlais
+    const waitWithLog = async (ms: number, reason: string): Promise<void> => {
+      await new Promise(resolve => setTimeout(resolve, ms));
+    };
+
+    // Vrifier l'API Electron via window.electronAPI
+    if (window.electronAPI?.ipcRenderer) {
+      try {
+        window.electronAPI.ipcRenderer.on('global-fn-key', handleGlobalFnKey);
+
+        return () => {
+          window.electronAPI.ipcRenderer.removeListener('global-fn-key', handleGlobalFnKey);
+        };
+      } catch (error) {
+        console.error('❌ [ELECTRON_FN] Erreur activation raccourcis:', error);
+      }
+    }
+  }, [adbEndCall, endActiveCall, updateContact, showNotification]); // Retir makePhoneCall car on utilise maintenant makePhoneCallRef
 
   // Other handlers - version optimise pour gros fichiers (supprim car en conflit avec la version useCallback)
 
@@ -2119,7 +2120,7 @@ Dimitri MOREL - Arcanis Conseil`;
   const toggleTheme = () => {
     setTheme(prevTheme => (prevTheme === Theme.Light ? Theme.Dark : Theme.Light));
   };
-  
+
   // Obtenir les colonnes essentielles depuis les rglages sauvegards
   const getEssentialColumns = () => {
     try {
@@ -2146,7 +2147,7 @@ Dimitri MOREL - Arcanis Conseil`;
       showNotification('error', `La colonne "${header}" n'est pas disponible dans les donnes actuelles.`);
       return;
     }
-    
+
     setVisibleColumns(prev => {
       const newVisibleColumns = { ...prev, [header]: !prev[header] };
       console.log('🔧 App.tsx - Toggle column visibility:', {
@@ -2237,10 +2238,10 @@ Dimitri MOREL - Arcanis Conseil`;
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
         </div>
-        
+
         {/* Glow effect */}
         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-radial from-primary/20 via-transparent to-transparent blur-xl" />
-        
+
         {/* Content */}
         <div className="relative z-10 flex flex-col items-center justify-center h-full w-full">
           <div className="w-4 h-4 mb-1 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
@@ -2303,15 +2304,15 @@ Dimitri MOREL - Arcanis Conseil`;
       showNotification('error', 'Veuillez slectionner un contact pour prendre un rendez-vous');
       return;
     }
-    
+
     console.log('🗓️ Ouverture du modal calendrier pour:', selectedContact.prenom, selectedContact.nom);
-    
+
     // ⚠️ SOLUTION TEMPORAIRE pour X-Frame-Options
     // Cal.com bloque l'embedding avec X-Frame-Options: sameorigin
     // On peut soit essayer l'embed (qui va chouer) soit aller directement au nouvel onglet
-    
+
     const useDirectOpen = true; // Changez à false pour essayer l'embed d'abord
-    
+
     if (useDirectOpen) {
       console.log('🗓️ Ouverture directe en nouvel onglet (contournement X-Frame-Options)');
       handleDirectCalendarOpen();
@@ -2327,11 +2328,11 @@ Dimitri MOREL - Arcanis Conseil`;
       showNotification('error', 'Veuillez slectionner un contact');
       return;
     }
-    
+
     // Sparer l'URL de base et les paramtres existants
     const [baseUrl, existingParams] = calcomUrl.split('?');
     const allParams = new URLSearchParams(existingParams || '');
-    
+
     // Ajouter les paramtres du contact
     if (selectedContact.nom) allParams.set('name', selectedContact.nom);
     if (selectedContact.prenom) allParams.set('Prenom', selectedContact.prenom);
@@ -2349,16 +2350,16 @@ Dimitri MOREL - Arcanis Conseil`;
       }
       allParams.set('smsReminderNumber', phoneNumber);
     }
-    
+
     const finalUrl = `${baseUrl}?${allParams.toString()}`;
     console.log('🔗 Ouverture Cal.com:', finalUrl);
-    console.log('📝 Contact slectionn:', { 
-      nom: selectedContact.nom, 
-      prenom: selectedContact.prenom, 
+    console.log('📝 Contact slectionn:', {
+      nom: selectedContact.nom,
+      prenom: selectedContact.prenom,
       email: selectedContact.email,
-      telephone: selectedContact.telephone 
+      telephone: selectedContact.telephone
     });
-    
+
     window.open(finalUrl, '_blank');
     showNotification('info', `Calendrier ouvert pour ${selectedContact.prenom} ${selectedContact.nom}`);
   }, [selectedContact, showNotification, calcomUrl]);
@@ -2380,7 +2381,7 @@ Dimitri MOREL - Arcanis Conseil`;
         const data = savedAll ? JSON.parse(savedAll) : {};
         data.smsMandataire = newTemplate;
         localStorage.setItem('dimicall_email_templates', JSON.stringify(data));
-      } catch {}
+      } catch { }
     } else {
       setSmsTemplate(newTemplate);
       localStorage.setItem('sms-template', newTemplate);
@@ -2432,8 +2433,8 @@ Dimitri MOREL - Arcanis Conseil`;
           } as React.CSSProperties}
         >
           {/* Barre de titre personnalise pour Electron */}
-          <TitleBar 
-            theme={theme} 
+          <TitleBar
+            theme={theme}
             activeTab={activeMenuTab}
             onTabChange={(tab) => {
               if (tab === 'dimicall') {
@@ -2450,7 +2451,7 @@ Dimitri MOREL - Arcanis Conseil`;
                 setIsAdbLogsDialogOpen(true);
                 return;
               }
-              
+
               if (adbConnectionState.isConnected) {
                 await disconnectAdb();
                 showNotification('info', 'ADB dconnect');
@@ -2464,13 +2465,13 @@ Dimitri MOREL - Arcanis Conseil`;
             onUpdateClick={installUpdate}
             onUpdateConfirmationOpen={() => setIsUpdateConfirmationOpen(true)}
           />
-          
+
           {/* Contenu principal */}
           <main className="flex flex-col flex-1 w-full min-h-0 min-w-0 overflow-hidden h-full">
             {/* Notifications */}
-      
-             {/* 🔧 Indicateur d'appel en cours avec chronomtrage en temps rel - DSACTIV */}
-       {/* {activeCallContactId && callStartTime && (
+
+            {/* 🔧 Indicateur d'appel en cours avec chronomtrage en temps rel - DSACTIV */}
+            {/* {activeCallContactId && callStartTime && (
          <div className="fixed top-4 left-4 z-50">
            <div className="flex items-center gap-3 px-4 py-3 bg-green-500/10 border border-green-300 dark:border-green-700 rounded-lg animate-pulse shadow-lg">
              <div className="flex items-center gap-2">
@@ -2497,1072 +2498,1083 @@ Dimitri MOREL - Arcanis Conseil`;
          </div>
        )} */}
 
-      {/* Modal de progression */}
-      {importProgress && (
-        <Dialog open={true} onOpenChange={() => setImportProgress(null)}>
-          <DialogContent className="sm:max-w-md" aria-describedby="import-progress-desc">
-            <DialogHeader>
-              <DialogTitle className="sr-only">Progression d'import</DialogTitle>
-            </DialogHeader>
-            <div id="import-progress-desc" className="flex flex-col items-center space-y-4 p-4">
-              <div className="w-12 h-12 border-4 border-muted rounded-full animate-spin border-t-primary" />
-              <div className="text-center space-y-2">
-                <p className="text-sm font-medium">{importProgress.message}</p>
-                {importProgress.percentage !== null && (
-                  <div className="w-full">
-                    <Progress value={importProgress.percentage} className="h-2" />
-                    <p className="text-xs text-muted-foreground mt-1">{importProgress.percentage}%</p>
+            {/* Modal de progression */}
+            {importProgress && (
+              <Dialog open={true} onOpenChange={() => setImportProgress(null)}>
+                <DialogContent className="sm:max-w-md" aria-describedby="import-progress-desc">
+                  <DialogHeader>
+                    <DialogTitle className="sr-only">Progression d'import</DialogTitle>
+                  </DialogHeader>
+                  <div id="import-progress-desc" className="flex flex-col items-center space-y-4 p-4">
+                    <div className="w-12 h-12 border-4 border-muted rounded-full animate-spin border-t-primary" />
+                    <div className="text-center space-y-2">
+                      <p className="text-sm font-medium">{importProgress.message}</p>
+                      {importProgress.percentage !== null && (
+                        <div className="w-full">
+                          <Progress value={importProgress.percentage} className="h-2" />
+                          <p className="text-xs text-muted-foreground mt-1">{importProgress.percentage}%</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
+
+            {/* Toast/Modal lger d'export russi (Shadcn-like) */}
+            <Toaster position="bottom-right" richColors theme={theme === 'dark' ? 'dark' : 'light'} closeButton />
+
+
+            {/* Main content */}
+            <main className={cn(
+              "flex-1 flex flex-col p-1 md:p-1.5 space-y-1 md:space-y-1.5 overflow-hidden w-full min-h-0",
+              isAuthModalOpen && "pointer-events-none opacity-50"
+            )}>
+
+              {/* Search bar area */}
+              <div className="flex items-stretch gap-3 w-full justify-between">
+                {/* 0me encadr: Bascule Vue retire (dsormais dans la Sidebar) */}
+                {/* Call Control inline (à droite du slecteur de mode) */}
+                {viewMode === 'table' && (
+                  <>
+
+                    {/* Call Control - maintenant aprs la recherche */}
+                    <div className="flex-grow">
+                      <CallControl
+                        contact={selectedContact}
+                        isCalling={Boolean(activeCallContactId && selectedContact && activeCallContactId === selectedContact.id)}
+                        callStartTime={callStartTime}
+                        onCall={() => makePhoneCall()}
+                        onHangUp={() => adbEndCall()}
+                        onEmail={() => selectedContact && setIsEmailDialogOpen(true)}
+                        onSmsMonsieur={() => selectedContact && setIsSmsDialogOpen(true)}
+                        onSmsMadame={() => selectedContact && setIsSmsDialogOpen(true)}
+                        onRappel={() => selectedContact && setIsRappelDialogOpen(true)}
+                        onRendezVous={() => selectedContact && setIsRendezVousDialogOpen(true)}
+                        onCalCom={() => handleCalendarClick()}
+                        onQualification={() => selectedContact && setIsQualificationDialogOpen(true)}
+                        onStatusChange={(newStatus) => {
+                          console.log('🔄 [STATUS] Changement de statut demand:', newStatus, 'pour contact:', selectedContact?.id);
+                          if (selectedContact) {
+                            updateContact({ id: selectedContact.id, statut: newStatus });
+                          }
+                        }}
+                        adbConnected={adbConnectionState.isConnected}
+                      />
+                    </div>
+
+
+                  </>
+                )}
+
+                {/* Bandeau filtres uniformis pour Graph/BDD (remplace recherche/colonnes/progress) */}
+                {(viewMode === 'graph' || viewMode === 'db') && (
+                  <div className="flex-1 w-full bg-card rounded-lg p-3 shadow-sm border">
+                    <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+                      <h1 className="text-xl font-semibold text-foreground">
+                        {viewMode === 'graph' ? 'Graphiques' : 'Données'}
+                      </h1>
+                      <div className="flex flex-wrap items-center justify-center gap-2">
+                        <div className="inline-flex items-center gap-2">
+                          <Button size="sm" variant={filterQuick === 'all' ? 'default' : 'outline'} onClick={() => {
+                            setFilterQuick('all')
+                            if (viewMode === 'graph') { setGraphRange({ start: '', end: '' }) }
+                            if (viewMode === 'db') { setDbRange({ start: '', end: '' }) }
+                            const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode === 'graph' ? 'graph' : 'db', start: '', end: '' } })
+                            window.dispatchEvent(evt)
+                          }}>Tout</Button>
+                          <Button size="sm" variant={filterQuick === 'today' ? 'default' : 'outline'} onClick={() => {
+                            const today = new Date(); const y = today.getFullYear(); const m = String(today.getMonth() + 1).padStart(2, '0'); const d = String(today.getDate()).padStart(2, '0'); const ymd = `${y}-${m}-${d}`
+                            setFilterQuick('today')
+                            const range = { start: ymd, end: ymd }
+                            if (viewMode === 'graph') setGraphRange(range); else setDbRange(range)
+                            const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode === 'graph' ? 'graph' : 'db', start: ymd, end: ymd } })
+                            window.dispatchEvent(evt)
+                          }}>Aujourd'hui</Button>
+                          <Button size="sm" variant={filterQuick === 'thisWeek' ? 'default' : 'outline'} onClick={() => {
+                            const today = new Date(); const day = today.getDay(); const diffToMonday = (day + 6) % 7
+                            const start = new Date(today); start.setDate(today.getDate() - diffToMonday)
+                            const end = new Date(start); end.setDate(start.getDate() + 6)
+                            const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+                            const s = fmt(start), e = fmt(end)
+                            setFilterQuick('thisWeek')
+                            const range = { start: s, end: e }
+                            if (viewMode === 'graph') setGraphRange(range); else setDbRange(range)
+                            const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode === 'graph' ? 'graph' : 'db', start: s, end: e } })
+                            window.dispatchEvent(evt)
+                          }}>Cette semaine</Button>
+                          <Button size="sm" variant={filterQuick === 'thisMonth' ? 'default' : 'outline'} onClick={() => {
+                            const today = new Date(); const start = new Date(today.getFullYear(), today.getMonth(), 1); const end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+                            const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+                            const s = fmt(start), e = fmt(end)
+                            setFilterQuick('thisMonth')
+                            const range = { start: s, end: e }
+                            if (viewMode === 'graph') setGraphRange(range); else setDbRange(range)
+                            const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode === 'graph' ? 'graph' : 'db', start: s, end: e } })
+                            window.dispatchEvent(evt)
+                          }}>Ce mois</Button>
+                        </div>
+                        <Popover open={filterPopoverOpen} onOpenChange={setFilterPopoverOpen}>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-8">
+                              <Calendar className="h-4 w-4 mr-2" />
+                              {(viewMode === 'graph' ? graphRange.start : dbRange.start) && (viewMode === 'graph' ? graphRange.end : dbRange.end) ? `${viewMode === 'graph' ? graphRange.start : dbRange.start} → ${viewMode === 'graph' ? graphRange.end : dbRange.end}` : 'Plage'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="p-2" align="start">
+                            <UiCalendar
+                              mode="range"
+                              selected={{ from: (viewMode === 'graph' ? graphRange.start : dbRange.start) ? new Date(viewMode === 'graph' ? graphRange.start : dbRange.start) : undefined, to: (viewMode === 'graph' ? graphRange.end : dbRange.end) ? new Date(viewMode === 'graph' ? graphRange.end : dbRange.end) : undefined } as any}
+                              onSelect={(r: any) => {
+                                const f: Date | undefined = r?.from ?? undefined
+                                const t: Date | undefined = r?.to ?? r?.from ?? undefined
+                                const fmt = (d?: Date) => d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : ''
+                                const s = fmt(f), e = fmt(t)
+                                setFilterQuick('custom')
+                                if (viewMode === 'graph') setGraphRange({ start: s, end: e }); else setDbRange({ start: s, end: e })
+                                const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode === 'graph' ? 'graph' : 'db', start: s, end: e } })
+                                window.dispatchEvent(evt)
+                              }}
+                              numberOfMonths={2}
+                            />
+                          </PopoverContent>
+                        </Popover>
+                        {viewMode === 'graph' && (
+                          <Button variant="outline" size="sm" className="h-8" onClick={() => {
+                            const r = graphRange
+                            const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: 'graph', start: r.start, end: r.end } })
+                            window.dispatchEvent(evt)
+                          }}>
+                            <RefreshCw className="h-4 w-4 mr-2" /> Actualiser
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Content area */}
+              <div className="flex-1 flex overflow-hidden min-h-0">
+                {viewMode === 'table' ? (
+                  <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
+                    <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-hidden">
+                      {tableTabs.length === 0 ? (
+                        <PaginatedContactTable
+                          key={`table-${tableUpdateKey}-${filteredContacts.length}-${selectedContact?.id || 'none'}`}
+                          ref={contactTableRef}
+                          contacts={filteredContacts}
+                          callStates={callStates}
+                          onSelectContact={handleRowSelection}
+                          selectedContactId={selectedContact?.id || null}
+                          onUpdateContact={updateContact}
+                          onDeleteContact={handleDeleteContact}
+                          activeCallContactId={activeCallContactId}
+                          theme={theme}
+                          visibleColumns={visibleColumns}
+                          columnHeaders={availableColumns.length > 0 ? availableColumns : COLUMN_HEADERS}
+                          contactDataKeys={availableDataKeys.length > 0 ? availableDataKeys : CONTACT_DATA_KEYS as (keyof Contact | null)[]}
+                          onToggleColumnVisibility={toggleColumnVisibility}
+                          availableColumns={availableColumns}
+                          onFileImport={handleSingleFileImport}
+                          initialItemsPerPage={savedItemsPerPage}
+                          pageSizeOptions={[25, 50, 100]}
+                        />
+                      ) : (
+                        <Tabs value={resolvedActiveTabId} onValueChange={setActiveTableTabId} className="flex h-full flex-col">
+                          {/* Barre d'onglets en haut */}
+                          <div className="flex items-center justify-between px-1.5 py-1.5 border-b bg-card">
+                            {/* Actions - à gauche */}
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                              {/* Bouton Colonnes simplifié */}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-9 px-2"
+                                    title="Gestion des colonnes"
+                                  >
+                                    <Settings2 className="h-4 w-4" />
+                                    <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">
+                                      {availableColumns.filter(col => visibleColumns[col]).length}
+                                    </Badge>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-64">
+                                  <DropdownMenuLabel className="flex items-center gap-2">
+                                    <Eye className="h-4 w-4" />
+                                    Gestion des colonnes
+                                  </DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+                                  {COLUMN_HEADERS.map((header) => (
+                                    <DropdownMenuCheckboxItem
+                                      key={header}
+                                      className="flex items-center gap-2"
+                                      checked={visibleColumns[header] || false}
+                                      onCheckedChange={() => toggleColumnVisibility(header)}
+                                      onSelect={(e) => e.preventDefault()}
+                                    >
+                                      {header}
+                                    </DropdownMenuCheckboxItem>
+                                  ))}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuCheckboxItem
+                                    className="flex items-center gap-2 text-primary"
+                                    checked={availableColumns.every(header => visibleColumns[header])}
+                                    onCheckedChange={showAllAvailableColumns}
+                                    onSelect={(e) => e.preventDefault()}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                    Afficher toutes les colonnes disponibles
+                                  </DropdownMenuCheckboxItem>
+                                  <DropdownMenuCheckboxItem
+                                    className="flex items-center gap-2 text-orange-600 dark:text-orange-400"
+                                    checked={availableColumns.every(header => essentialColumns.includes(header) ? visibleColumns[header] : !visibleColumns[header])}
+                                    onCheckedChange={hideOptionalColumns}
+                                    onSelect={(e) => e.preventDefault()}
+                                  >
+                                    <EyeOff className="h-4 w-4" />
+                                    Masquer les colonnes optionnelles
+                                  </DropdownMenuCheckboxItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+
+                              {/* Bouton Recherche moderne - Actions rapides */}
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={!selectedContact}
+                                    className="h-9 px-2"
+                                    title="Actions de recherche pour le contact sélectionné"
+                                  >
+                                    <Globe className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  className="w-56 border shadow-lg bg-popover text-popover-foreground z-50"
+                                  align="start"
+                                >
+                                  {/* Actions principales - plus épurées */}
+                                  <DropdownMenuItem
+                                    onClick={() => handleLinkedInSearch()}
+                                    disabled={!selectedContact}
+                                    className="cursor-pointer"
+                                  >
+                                    <Linkedin className="mr-2 h-4 w-4 text-blue-500" />
+                                    <span>LinkedIn</span>
+                                  </DropdownMenuItem>
+
+                                  <DropdownMenuItem
+                                    onClick={() => handleGoogleSearch()}
+                                    disabled={!selectedContact}
+                                    className="cursor-pointer"
+                                  >
+                                    <Globe className="mr-2 h-4 w-4 text-green-500" />
+                                    <span>Google</span>
+                                  </DropdownMenuItem>
+
+                                  <DropdownMenuItem
+                                    onClick={() => handleDirectLink()}
+                                    disabled={!selectedContact || !selectedContact.lien}
+                                    className="cursor-pointer"
+                                  >
+                                    <ExternalLink className="mr-2 h-4 w-4 text-purple-500" />
+                                    <span>Lien direct</span>
+                                  </DropdownMenuItem>
+
+                                  <DropdownMenuSeparator />
+
+                                  {/* Mode automatique - simplifié */}
+                                  <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1">
+                                    Mode automatique
+                                  </DropdownMenuLabel>
+
+                                  <DropdownMenuRadioGroup value={autoSearchMode} onValueChange={(value) => setAutoSearchMode(value as any)}>
+                                    <DropdownMenuRadioItem value="disabled" className="cursor-pointer">
+                                      <X className="mr-2 h-4 w-4" />
+                                      <span>Désactivé</span>
+                                    </DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="linkedin" className="cursor-pointer">
+                                      <Linkedin className="mr-2 h-4 w-4 text-blue-500" />
+                                      <span>LinkedIn</span>
+                                    </DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="google" className="cursor-pointer">
+                                      <Globe className="mr-2 h-4 w-4 text-green-500" />
+                                      <span>Google</span>
+                                    </DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="link" className="cursor-pointer">
+                                      <ExternalLink className="mr-2 h-4 w-4 text-purple-500" />
+                                      <span>Lien</span>
+                                    </DropdownMenuRadioItem>
+                                  </DropdownMenuRadioGroup>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+
+                            {/* Boutons d'action - à droite */}
+                            <div className="flex items-center gap-1 mr-3">
+                              {/* Boutons de recherche LinkedIn et Google */}
+                              <div className="flex flex-wrap items-center gap-2 mr-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleLinkedInSearch()}
+                                  disabled={!selectedContact}
+                                  className="h-8 gap-1.5 px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2]"
+                                  title="Rechercher sur LinkedIn"
+                                >
+                                  <Linkedin className="h-4 w-4" />
+                                  LinkedIn
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleGoogleSearch()}
+                                  disabled={!selectedContact}
+                                  className="h-8 gap-1.5 px-3 bg-[#4285F4] hover:bg-[#357AE8] text-white border-[#4285F4]"
+                                  title="Rechercher sur Google"
+                                >
+                                  <Globe className="h-4 w-4" />
+                                  Google
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDirectLink()}
+                                  disabled={!selectedContact || !selectedContact.lien}
+                                  className="h-8 gap-1.5 px-3"
+                                  title="Ouvrir le lien direct"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                  Lien direct
+                                </Button>
+                              </div>
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  console.log('??? [IMPORT] Clic sur le bouton Importer');
+                                  document.getElementById('fileImporter')?.click();
+                                }}
+                                className="h-9 px-2"
+                                title="Importer un fichier CSV/Excel"
+                              >
+                                <Upload className="h-4 w-4" />
+                              </Button>
+                              <input
+                                type="file"
+                                id="fileImporter"
+                                accept=".csv, .tsv, .xlsx, .xls"
+                                className="hidden"
+                                onClick={(e) => {
+                                  (e.target as HTMLInputElement).value = '';
+                                }}
+                                onChange={(e) => {
+                                  console.log('?? [IMPORT] vnement onChange de l\'input file dclench');
+                                  if (e.target.files && e.target.files.length > 0) {
+                                    console.log(`?? [IMPORT] Fichier slectionn: ${e.target.files[0].name}`);
+                                    handleImportFile(e.target.files);
+                                  } else {
+                                    console.log('? [IMPORT] Aucun fichier dans e.target.files');
+                                  }
+                                }}
+                              />
+
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={contacts.length === 0 && googleContactsCount === 0 && calendarRemindersCount === 0}
+                                    className="h-9 px-2"
+                                    title="Exporter les données"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  className="w-56 border shadow-lg bg-popover text-popover-foreground z-50"
+                                  align="start"
+                                >
+                                  <DropdownMenuLabel className="flex items-center gap-2">
+                                    <Download className="w-4 h-4" />
+                                    Options d'export
+                                  </DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+
+                                  {/* Options d'export avec cases à cocher */}
+                                  <DropdownMenuCheckboxItem
+                                    checked={exportOptions.table}
+                                    onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, table: checked }))}
+                                    onSelect={(e) => e.preventDefault()}
+                                    disabled={contacts.length === 0}
+                                    className="cursor-pointer"
+                                  >
+                                    <BarChart3 className="mr-2 h-4 w-4" />
+                                    <span>Table (CSV)</span>
+                                    {contacts.length > 0 && (
+                                      <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
+                                    )}
+                                  </DropdownMenuCheckboxItem>
+
+                                  <DropdownMenuCheckboxItem
+                                    checked={exportOptions.tableExcel}
+                                    onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, tableExcel: checked }))}
+                                    onSelect={(e) => e.preventDefault()}
+                                    disabled={contacts.length === 0}
+                                    className="cursor-pointer"
+                                  >
+                                    <FileSpreadsheet className="mr-2 h-4 w-4" />
+                                    <span>Table (Excel)</span>
+                                    {contacts.length > 0 && (
+                                      <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
+                                    )}
+                                  </DropdownMenuCheckboxItem>
+
+                                  <DropdownMenuCheckboxItem
+                                    checked={exportOptions.contacts}
+                                    onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, contacts: checked }))}
+                                    onSelect={(e) => e.preventDefault()}
+                                    disabled={googleContactsCount === 0}
+                                    className="cursor-pointer"
+                                  >
+                                    <Users className="mr-2 h-4 w-4" />
+                                    <span>Contacts Google</span>
+                                    {googleContactsCount > 0 && (
+                                      <span className="ml-auto text-xs text-muted-foreground">({googleContactsCount})</span>
+                                    )}
+                                  </DropdownMenuCheckboxItem>
+
+                                  <DropdownMenuCheckboxItem
+                                    checked={exportOptions.agenda}
+                                    onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, agenda: checked }))}
+                                    onSelect={(e) => e.preventDefault()}
+                                    disabled={calendarRemindersCount === 0}
+                                    className="cursor-pointer"
+                                  >
+                                    <Calendar className="mr-2 h-4 w-4" />
+                                    <span>Agenda Google</span>
+                                    {calendarRemindersCount > 0 && (
+                                      <span className="ml-auto text-xs text-muted-foreground">({calendarRemindersCount})</span>
+                                    )}
+                                  </DropdownMenuCheckboxItem>
+
+                                  <DropdownMenuSeparator />
+
+                                  {/* Bouton d'export final */}
+                                  <DropdownMenuItem
+                                    onClick={handleUnifiedExport}
+                                    className="cursor-pointer bg-primary/10 hover:bg-primary/20"
+                                    disabled={Object.values(exportOptions).every(option => !option)}
+                                  >
+                                    <Download className="mr-2 h-4 w-4" />
+                                    <span className="font-medium">Exporter la sélection</span>
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={contacts.length === 0}
+                                onClick={handleClearActiveTab}
+                                className="h-9 px-2"
+                                title="Supprimer les contacts de l'onglet actif"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+
+                            {/* Dropdown des onglets - à droite */}
+                            <div className="flex items-center gap-2 flex-shrink-0">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className="flex items-center gap-2 px-3 py-1.5 h-9 text-sm"
+                                  >
+                                    <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tableTabs.find(t => t.id === (resolvedActiveTabId))?.color || 'var(--primary)' }} />
+                                    <span className="truncate max-w-[200px]">
+                                      {tableTabs.find(t => t.id === (resolvedActiveTabId))?.name || 'Onglets'}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="w-64">
+                                  <DropdownMenuLabel className="flex items-center gap-2">
+                                    <Tabs className="h-4 w-4" />
+                                    Onglets
+                                  </DropdownMenuLabel>
+                                  <DropdownMenuSeparator />
+
+                                  {/* Liste des onglets existants */}
+                                  {tableTabs.map(tab => (
+                                    <DropdownMenuItem
+                                      key={tab.id}
+                                      onClick={() => setActiveTableTabId(tab.id)}
+                                      className={cn(
+                                        "flex items-center gap-2 cursor-pointer",
+                                        (resolvedActiveTabId) === tab.id && "bg-accent"
+                                      )}
+                                    >
+                                      <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: tab.color || 'var(--primary)' }} />
+                                      <span className="flex-1 truncate">{tab.name}</span>
+
+                                      {/* Boutons d'action pour l'onglet */}
+                                      <div className="flex items-center gap-1">
+                                        {/* Bouton de renommage */}
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6 p-0 hover:bg-accent-foreground/10"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleEditTab(tab)
+                                          }}
+                                        >
+                                          <Pencil className="h-3 w-3" />
+                                        </Button>
+
+                                        {/* Bouton de suppression */}
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            setTableTabs(prev => {
+                                              const next = prev.filter(t => t.id !== tab.id)
+
+                                              // Si c'tait le dernier onglet, crer un nouvel onglet vide
+                                              if (next.length === 0) {
+                                                const newTabId = crypto.randomUUID()
+                                                const newTab = {
+                                                  id: newTabId,
+                                                  name: 'Nouveau',
+                                                  contacts: []
+                                                }
+                                                setActiveTableTabId(newTabId)
+                                                return [newTab]
+                                              }
+
+                                              // Sinon, passer  l'onglet suivant
+                                              if ((resolvedActiveTabId) === tab.id) {
+                                                setActiveTableTabId(next[0]?.id || '')
+                                              }
+                                              return next
+                                            })
+                                          }}
+                                        >
+                                          <X className="h-3 w-3" />
+                                        </Button>
+                                      </div>
+                                    </DropdownMenuItem>
+                                  ))}
+
+                                  {/* Bouton d'ajout d'onglet */}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      if (tableTabs.length >= 5) return
+                                      const id = crypto.randomUUID()
+                                      setTableTabs(prev => [...prev, { id, name: `Onglet ${prev.length + 1}`, contacts: [] }])
+                                      setActiveTableTabId(id)
+                                    }}
+                                    disabled={tableTabs.length >= 5}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <Plus className="h-4 w-4" />
+                                    Ajouter un onglet
+                                  </DropdownMenuItem>
+
+                                  {/* Bouton de suppression complte */}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    onClick={handleClearData}
+                                    className="flex items-center gap-2 text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Supprimer toutes les donnes
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </div>
+                          {/* Contenu des onglets */}
+                          {tableTabs.map((tab) => {
+                            const isActiveTab = tab.id === resolvedActiveTabId;
+                            return (
+                              <TabsContent key={tab.id} value={tab.id} className="flex-1 overflow-hidden">
+                                <PaginatedContactTable
+                                  key={`table-tab-${tab.id}-${tableUpdateKey}`}
+                                  ref={isActiveTab ? contactTableRef : undefined}
+                                  contacts={isActiveTab ? filteredContacts : tab.contacts}
+                                  callStates={callStates}
+                                  onSelectContact={handleRowSelection}
+                                  selectedContactId={selectedContact?.id || null}
+                                  onUpdateContact={updateContact}
+                                  onDeleteContact={handleDeleteContact}
+                                  activeCallContactId={activeCallContactId}
+                                  theme={theme}
+                                  visibleColumns={visibleColumns}
+                                  columnHeaders={availableColumns.length > 0 ? availableColumns : COLUMN_HEADERS}
+                                  contactDataKeys={availableDataKeys.length > 0 ? availableDataKeys : CONTACT_DATA_KEYS as (keyof Contact | null)[]}
+                                  onToggleColumnVisibility={toggleColumnVisibility}
+                                  availableColumns={availableColumns}
+                                  onFileImport={handleSingleFileImport}
+                                  initialItemsPerPage={savedItemsPerPage}
+                                  pageSizeOptions={[25, 50, 100]}
+                                />
+                              </TabsContent>
+                            );
+                          })}
+                        </Tabs>
+                      )}
+                    </div>
+                  </div>
+                ) : viewMode === 'appels-cards' ? (
+                  <AppelsCardsView
+                    contacts={filteredContacts}
+                    selectedContactId={selectedContact?.id || null}
+                    onSelectContact={handleRowSelection}
+                    onUpdateContact={updateContact}
+                    callStates={callStates}
+                    activeCallContactId={activeCallContactId}
+                    callStartTime={callStartTime}
+                    adbConnected={adbConnectionState.isConnected}
+                    onCall={() => makePhoneCall()}
+                    onHangUp={() => adbEndCall()}
+                    onEmail={() => selectedContact && setIsEmailDialogOpen(true)}
+                    onSmsMonsieur={() => selectedContact && setIsSmsDialogOpen(true)}
+                    onSmsMadame={() => selectedContact && setIsSmsDialogOpen(true)}
+                    onRappel={() => selectedContact && setIsRappelDialogOpen(true)}
+                    onRendezVous={() => selectedContact && setIsRendezVousDialogOpen(true)}
+                    onCalCom={() => handleCalendarClick()}
+                    onQualification={() => selectedContact && setIsQualificationDialogOpen(true)}
+                    onLinkedInSearch={() => handleLinkedInSearch()}
+                    onGoogleSearch={() => handleGoogleSearch()}
+                    onDirectLink={() => handleDirectLink()}
+                    onExport={() => handleUnifiedExport()}
+                    onClearActiveTab={handleClearActiveTab}
+                    searchQuery={searchTerm}
+                    onSearch={(value) => setSearchTerm(value)}
+                    onImportDialog={() => {
+                      const input = document.createElement('input')
+                      input.type = 'file'
+                      input.accept = '.csv,.tsv,.xlsx,.xls'
+                      input.onchange = (event) => {
+                        const files = (event.target as HTMLInputElement).files
+                        if (files && files.length > 0) {
+                          handleImportFile(files)
+                        }
+                      }
+                      input.click()
+                    }}
+                    onExportDialog={() => handleExport('xlsx')}
+                  />
+                ) : viewMode === 'graph' ? (
+                  <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0 w-full">
+                    <div className="flex-1 w-full overflow-auto min-w-0">
+                      <ChartDashboard contacts={filteredContacts} />
+                    </div>
+                  </div>
+                ) : viewMode === 'calendar-2' ? (
+                  <Calendar2 />
+                ) : viewMode === 'annuaire' ? (
+                  <AnnuairePage
+                    theme={theme === Theme.Dark ? 'dark' : 'light'}
+                  />
+                ) : (
+                  <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
+                    <div className="flex-1 overflow-hidden">
+                      <PaginatedEventTable />
+                    </div>
                   </div>
                 )}
               </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+            </main>
 
-      {/* Toast/Modal lger d'export russi (Shadcn-like) */}
-      <Toaster position="bottom-right" richColors theme={theme === 'dark' ? 'dark' : 'light'} closeButton />
 
-      
-      {/* Main content */}
-      <main className={cn(
-        "flex-1 flex flex-col p-1 md:p-1.5 space-y-1 md:space-y-1.5 overflow-hidden w-full min-h-0",
-        isAuthModalOpen && "pointer-events-none opacity-50"
-      )}>
 
-        {/* Search bar area */}
-        <div className="flex items-stretch gap-3 w-full justify-between">
-          {/* 0me encadr: Bascule Vue retire (dsormais dans la Sidebar) */}
-          {/* Call Control inline (à droite du slecteur de mode) */}
-          {viewMode === 'table' && (
-            <>
+            {/* Dialogs */}
+            {selectedContact && isEmailDialogOpen && (
+              <EmailDialog
+                isOpen={isEmailDialogOpen}
+                onClose={() => setIsEmailDialogOpen(false)}
+                contact={selectedContact}
+                showNotification={showNotification}
+                onUpdateContact={updateContact}
+              />
+            )}
+            {selectedContact && isSmsDialogOpen && (
+              <SmsDialog
+                isOpen={isSmsDialogOpen}
+                onClose={() => setIsSmsDialogOpen(false)}
+                contact={selectedContact}
+                onSendSms={(civility, smsType) => {
+                  handleSms(civility, smsType);
+                  setIsSmsDialogOpen(false);
+                }}
+              />
+            )}
+            {selectedContact && isRappelDialogOpen && (
+              <RappelDialog
+                isOpen={isRappelDialogOpen}
+                onClose={() => setIsRappelDialogOpen(false)}
+                contact={selectedContact}
+                onSave={(date, time) => {
+                  updateContact({ id: selectedContact.id, dateRappel: date, heureRappel: time });
+                  showNotification('success', `Rappel dfini pour ${selectedContact.prenom} le ${date} à ${time}.`);
+                  setIsRappelDialogOpen(false);
+                }}
+              />
+            )}
+            {selectedContact && isRendezVousDialogOpen && (
+              <RendezVousDialog
+                isOpen={isRendezVousDialogOpen}
+                onClose={() => setIsRendezVousDialogOpen(false)}
+                contact={selectedContact}
+                onSave={(date, time) => {
+                  updateContact({ id: selectedContact.id, dateRDV: date, heureRDV: time });
+                  showNotification('success', `Rendez-vous programm pour ${selectedContact.prenom} le ${date} à ${time}.`);
+                  setIsRendezVousDialogOpen(false);
+                }}
+              />
+            )}
+            {selectedContact && isQualificationDialogOpen && (
+              <QualificationDialog
+                isOpen={isQualificationDialogOpen}
+                onClose={() => setIsQualificationDialogOpen(false)}
+                onSave={(comment) => {
+                  updateContact({ id: selectedContact.id, commentaire: comment });
+                  showNotification('success', `Qualification enregistre pour ${selectedContact.prenom}.`);
+                  setIsQualificationDialogOpen(false);
+                }}
+                theme={theme}
+              />
+            )}
+            {isFnKeysInfoOpen && (
+              <GenericInfoDialog
+                isOpen={isFnKeysInfoOpen}
+                onClose={() => setIsFnKeysInfoOpen(false)}
+                title="Raccourcis Clavier"
+                content={
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                      Utilisez les touches de fonction pour interagir rapidement avec le contact slectionn :
+                    </p>
 
-              {/* Call Control - maintenant aprs la recherche */}
-              <div className="flex-grow">
-                <CallControl
-                  contact={selectedContact}
-                  isCalling={Boolean(activeCallContactId && selectedContact && activeCallContactId === selectedContact.id)}
-                  callStartTime={callStartTime}
-                  onCall={() => makePhoneCall()}
-                  onHangUp={() => adbEndCall()}
-                  onEmail={() => selectedContact && setIsEmailDialogOpen(true)}
-                  onSmsMonsieur={() => handleSms('Monsieur')}
-                  onSmsMadame={() => handleSms('Madame')}
-                  onRappel={() => selectedContact && setIsRappelDialogOpen(true)}
-                  onRendezVous={() => selectedContact && setIsRendezVousDialogOpen(true)}
-                  onCalCom={() => handleCalendarClick()}
-                  onQualification={() => selectedContact && setIsQualificationDialogOpen(true)}
-                  onStatusChange={(newStatus) => {
-                    console.log('🔄 [STATUS] Changement de statut demand:', newStatus, 'pour contact:', selectedContact?.id);
-                    if (selectedContact) {
-                      updateContact({ id: selectedContact.id, statut: newStatus });
-                    }
-                  }}
-                  adbConnected={adbConnectionState.isConnected}
-                />
-              </div>
-
-              
-            </>
-          )}
-
-          {/* Bandeau filtres uniformis pour Graph/BDD (remplace recherche/colonnes/progress) */}
-          {(viewMode === 'graph' || viewMode === 'db') && (
-            <div className="flex-1 w-full bg-card rounded-lg p-3 shadow-sm border">
-              <div className="flex flex-wrap items-center justify-between gap-2 w-full">
-                <h1 className="text-xl font-semibold text-foreground">
-                  {viewMode === 'graph' ? 'Graphiques' : 'Données'}
-                </h1>
-                <div className="flex flex-wrap items-center justify-center gap-2">
-                <div className="inline-flex items-center gap-2">
-                  <Button size="sm" variant={filterQuick==='all'?'default':'outline'} onClick={() => {
-                    setFilterQuick('all')
-                    if (viewMode==='graph') { setGraphRange({ start:'', end:'' }) }
-                    if (viewMode==='db') { setDbRange({ start:'', end:'' }) }
-                    const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode==='graph'?'graph':'db', start: '', end: '' } })
-                    window.dispatchEvent(evt)
-                  }}>Tout</Button>
-                  <Button size="sm" variant={filterQuick==='today'?'default':'outline'} onClick={() => {
-                    const today = new Date(); const y = today.getFullYear(); const m = String(today.getMonth()+1).padStart(2,'0'); const d = String(today.getDate()).padStart(2,'0'); const ymd = `${y}-${m}-${d}`
-                    setFilterQuick('today')
-                    const range = { start: ymd, end: ymd }
-                    if (viewMode==='graph') setGraphRange(range); else setDbRange(range)
-                    const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode==='graph'?'graph':'db', start: ymd, end: ymd } })
-                    window.dispatchEvent(evt)
-                  }}>Aujourd'hui</Button>
-                  <Button size="sm" variant={filterQuick==='thisWeek'?'default':'outline'} onClick={() => {
-                    const today = new Date(); const day = today.getDay(); const diffToMonday = (day + 6) % 7
-                    const start = new Date(today); start.setDate(today.getDate() - diffToMonday)
-                    const end = new Date(start); end.setDate(start.getDate() + 6)
-                    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-                    const s = fmt(start), e = fmt(end)
-                    setFilterQuick('thisWeek')
-                    const range = { start: s, end: e }
-                    if (viewMode==='graph') setGraphRange(range); else setDbRange(range)
-                    const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode==='graph'?'graph':'db', start: s, end: e } })
-                    window.dispatchEvent(evt)
-                  }}>Cette semaine</Button>
-                  <Button size="sm" variant={filterQuick==='thisMonth'?'default':'outline'} onClick={() => {
-                    const today = new Date(); const start = new Date(today.getFullYear(), today.getMonth(), 1); const end = new Date(today.getFullYear(), today.getMonth()+1, 0)
-                    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
-                    const s = fmt(start), e = fmt(end)
-                    setFilterQuick('thisMonth')
-                    const range = { start: s, end: e }
-                    if (viewMode==='graph') setGraphRange(range); else setDbRange(range)
-                    const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode==='graph'?'graph':'db', start: s, end: e } })
-                    window.dispatchEvent(evt)
-                  }}>Ce mois</Button>
-                </div>
-                <Popover open={filterPopoverOpen} onOpenChange={setFilterPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      {(viewMode==='graph'?graphRange.start:dbRange.start) && (viewMode==='graph'?graphRange.end:dbRange.end) ? `${viewMode==='graph'?graphRange.start:dbRange.start} → ${viewMode==='graph'?graphRange.end:dbRange.end}` : 'Plage'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="p-2" align="start">
-                    <UiCalendar
-                      mode="range"
-                      selected={{ from: (viewMode==='graph'?graphRange.start:dbRange.start) ? new Date(viewMode==='graph'?graphRange.start:dbRange.start) : undefined, to: (viewMode==='graph'?graphRange.end:dbRange.end) ? new Date(viewMode==='graph'?graphRange.end:dbRange.end) : undefined } as any}
-                      onSelect={(r: any) => {
-                        const f: Date | undefined = r?.from ?? undefined
-                        const t: Date | undefined = r?.to ?? r?.from ?? undefined
-                        const fmt = (d?: Date) => d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : ''
-                        const s = fmt(f), e = fmt(t)
-                        setFilterQuick('custom')
-                        if (viewMode==='graph') setGraphRange({ start: s, end: e }); else setDbRange({ start: s, end: e })
-                        const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode==='graph'?'graph':'db', start: s, end: e } })
-                        window.dispatchEvent(evt)
-                      }}
-                      numberOfMonths={2}
-                    />
-                  </PopoverContent>
-                </Popover>
-                {viewMode==='graph' && (
-                  <Button variant="outline" size="sm" className="h-8" onClick={() => {
-                    const r = graphRange
-                    const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: 'graph', start: r.start, end: r.end } })
-                    window.dispatchEvent(evt)
-                  }}>
-                    <RefreshCw className="h-4 w-4 mr-2" /> Actualiser
-                  </Button>
-                )}
-                </div>
-              </div>
-            </div>
-          )}
-
-        </div>
-
-        {/* Content area */}
-        <div className="flex-1 flex overflow-hidden min-h-0">
-          {viewMode === 'table' ? (
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
-              <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-hidden">
-                {tableTabs.length === 0 ? (
-                  <PaginatedContactTable
-                    key={`table-${tableUpdateKey}-${filteredContacts.length}-${selectedContact?.id || 'none'}`}
-                    ref={contactTableRef}
-                    contacts={filteredContacts}
-                    callStates={callStates}
-                    onSelectContact={handleRowSelection}
-                    selectedContactId={selectedContact?.id || null}
-                    onUpdateContact={updateContact}
-                    onDeleteContact={handleDeleteContact}
-                    activeCallContactId={activeCallContactId}
-                    theme={theme}
-                    visibleColumns={visibleColumns}
-                    columnHeaders={availableColumns.length > 0 ? availableColumns : COLUMN_HEADERS}
-                    contactDataKeys={availableDataKeys.length > 0 ? availableDataKeys : CONTACT_DATA_KEYS as (keyof Contact | null)[]}
-                    onToggleColumnVisibility={toggleColumnVisibility}
-                    availableColumns={availableColumns}
-                    onFileImport={handleSingleFileImport}
-                    initialItemsPerPage={savedItemsPerPage}
-                    pageSizeOptions={[25, 50, 100]}
-                  />
-                ) : (
-                  <Tabs value={resolvedActiveTabId} onValueChange={setActiveTableTabId} className="flex h-full flex-col">
-                    {/* Barre d'onglets en haut */}
-                    <div className="flex items-center justify-between px-1.5 py-1.5 border-b bg-card">
-                      {/* Actions - à gauche */}
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        {/* Bouton Colonnes simplifié */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-9 px-2"
-                              title="Gestion des colonnes"
-                            >
-                              <Settings2 className="h-4 w-4" />
-                              <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">
-                                {availableColumns.filter(col => visibleColumns[col]).length}
-                              </Badge>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-64">
-                            <DropdownMenuLabel className="flex items-center gap-2">
-                              <Eye className="h-4 w-4" />
-                              Gestion des colonnes
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            {COLUMN_HEADERS.map((header) => (
-                              <DropdownMenuCheckboxItem
-                                key={header}
-                                className="flex items-center gap-2"
-                                checked={visibleColumns[header] || false}
-                                onCheckedChange={() => toggleColumnVisibility(header)}
-                                onSelect={(e) => e.preventDefault()}
-                              >
-                                {header}
-                              </DropdownMenuCheckboxItem>
-                            ))}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuCheckboxItem
-                              className="flex items-center gap-2 text-primary"
-                              checked={availableColumns.every(header => visibleColumns[header])}
-                              onCheckedChange={showAllAvailableColumns}
-                              onSelect={(e) => e.preventDefault()}
-                            >
-                              <Eye className="h-4 w-4" />
-                              Afficher toutes les colonnes disponibles
-                            </DropdownMenuCheckboxItem>
-                            <DropdownMenuCheckboxItem
-                              className="flex items-center gap-2 text-orange-600 dark:text-orange-400"
-                              checked={availableColumns.every(header => essentialColumns.includes(header) ? visibleColumns[header] : !visibleColumns[header])}
-                              onCheckedChange={hideOptionalColumns}
-                              onSelect={(e) => e.preventDefault()}
-                            >
-                              <EyeOff className="h-4 w-4" />
-                              Masquer les colonnes optionnelles
-                            </DropdownMenuCheckboxItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-
-                        {/* Bouton Recherche moderne - Actions rapides */}
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={!selectedContact}
-                              className="h-9 px-2"
-                              title="Actions de recherche pour le contact sélectionné"
-                            >
-                              <Globe className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            className="w-56 border shadow-lg bg-popover text-popover-foreground z-50"
-                            align="start"
-                          >
-                            {/* Actions principales - plus épurées */}
-                            <DropdownMenuItem
-                              onClick={() => handleLinkedInSearch()}
-                              disabled={!selectedContact}
-                              className="cursor-pointer"
-                            >
-                              <Linkedin className="mr-2 h-4 w-4 text-blue-500" />
-                              <span>LinkedIn</span>
-                            </DropdownMenuItem>
-
-                            <DropdownMenuItem
-                              onClick={() => handleGoogleSearch()}
-                              disabled={!selectedContact}
-                              className="cursor-pointer"
-                            >
-                              <Globe className="mr-2 h-4 w-4 text-green-500" />
-                              <span>Google</span>
-                            </DropdownMenuItem>
-
-                            <DropdownMenuItem
-                              onClick={() => handleDirectLink()}
-                              disabled={!selectedContact || !selectedContact.lien}
-                              className="cursor-pointer"
-                            >
-                              <ExternalLink className="mr-2 h-4 w-4 text-purple-500" />
-                              <span>Lien direct</span>
-                            </DropdownMenuItem>
-
-                            <DropdownMenuSeparator />
-
-                            {/* Mode automatique - simplifié */}
-                            <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1">
-                              Mode automatique
-                            </DropdownMenuLabel>
-
-                            <DropdownMenuRadioGroup value={autoSearchMode} onValueChange={(value) => setAutoSearchMode(value as any)}>
-                              <DropdownMenuRadioItem value="disabled" className="cursor-pointer">
-                                <X className="mr-2 h-4 w-4" />
-                                <span>Désactivé</span>
-                              </DropdownMenuRadioItem>
-                              <DropdownMenuRadioItem value="linkedin" className="cursor-pointer">
-                                <Linkedin className="mr-2 h-4 w-4 text-blue-500" />
-                                <span>LinkedIn</span>
-                              </DropdownMenuRadioItem>
-                              <DropdownMenuRadioItem value="google" className="cursor-pointer">
-                                <Globe className="mr-2 h-4 w-4 text-green-500" />
-                                <span>Google</span>
-                              </DropdownMenuRadioItem>
-                              <DropdownMenuRadioItem value="link" className="cursor-pointer">
-                                <ExternalLink className="mr-2 h-4 w-4 text-purple-500" />
-                                <span>Lien</span>
-                              </DropdownMenuRadioItem>
-                            </DropdownMenuRadioGroup>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                    {/* F1 pour l'appel */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Action d'appel :</p>
+                      <div className="flex items-center gap-3 p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                        <Badge variant="outline" className="font-mono text-xs bg-blue-100 dark:bg-blue-800">
+                          F1
+                        </Badge>
+                        <span className="text-sm font-medium">📞 Appeler le contact</span>
                       </div>
+                    </div>
 
-                      {/* Boutons d'action - à droite */}
-                      <div className="flex items-center gap-1 mr-3">
-                        {/* Boutons de recherche LinkedIn et Google */}
-                        <div className="flex flex-wrap items-center gap-2 mr-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleLinkedInSearch()}
-                            disabled={!selectedContact}
-                            className="h-8 gap-1.5 px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2]"
-                            title="Rechercher sur LinkedIn"
-                          >
-                            <Linkedin className="h-4 w-4" />
-                            LinkedIn
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleGoogleSearch()}
-                            disabled={!selectedContact}
-                            className="h-8 gap-1.5 px-3 bg-[#4285F4] hover:bg-[#357AE8] text-white border-[#4285F4]"
-                            title="Rechercher sur Google"
-                          >
-                            <Globe className="h-4 w-4" />
-                            Google
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDirectLink()}
-                            disabled={!selectedContact || !selectedContact.lien}
-                            className="h-8 gap-1.5 px-3"
-                            title="Ouvrir le lien direct"
-                          >
-                            <Eye className="h-4 w-4" />
-                            Lien direct
-                          </Button>
-                        </div>
-                        
+                    {/* F2-F10 pour les statuts */}
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground">Changement de statut :</p>
+                      <div className="grid grid-cols-1 gap-2">
+                        {shortcutService.getShortcuts().map(({ key, label }) => (
+                          <div key={key} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+                            <Badge variant="outline" className="font-mono text-xs">
+                              {key}
+                            </Badge>
+                            <span className="text-sm">{label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-center pt-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setIsFnKeysInfoOpen(false);
+                          setIsShortcutConfigOpen(true);
+                        }}
+                        className="text-xs"
+                      >
+                        Personnaliser les raccourcis F2-F10
+                      </Button>
+                    </div>
+                  </div>
+                }
+                theme={theme}
+              />
+            )}
+            {/* Supabase dialog supprim pour librer de l'espace */}
+
+            {/* Dialog de configuration des raccourcis */}
+            {isShortcutConfigOpen && (
+              <ShortcutConfigDialog
+                isOpen={isShortcutConfigOpen}
+                onClose={() => setIsShortcutConfigOpen(false)}
+                theme={theme}
+                onSave={() => {
+                  showNotification('success', 'Configuration des raccourcis sauvegarde', 3000);
+                }}
+              />
+            )}
+
+            {/* Dialog des rglages */}
+            {isSettingsOpen && (
+              <SettingsDialog
+                isOpen={isSettingsOpen}
+                onClose={() => setIsSettingsOpen(false)}
+                onSave={() => {
+                  reloadEssentialColumns(); // Recharger les colonnes essentielles
+                  showNotification('success', 'Rglages sauvegards avec succs', 3000);
+                }}
+                calcomUrl={calcomUrl}
+                onCalcomUrlChange={handleSaveCalcomUrl}
+                smsTemplate={smsTemplate}
+                onSmsTemplateChange={handleSaveSmsTemplate}
+                theme={theme}
+                onThemeChange={setTheme}
+              />
+            )}
+
+            {/* Indicateur de raccourci */}
+            <ShortcutIndicator
+              isVisible={shortcutIndicator.isVisible}
+              keyPressed={shortcutIndicator.key}
+              statusLabel={shortcutIndicator.label}
+              theme={theme}
+              onClose={() => setShortcutIndicator({ isVisible: false, key: '', label: '' })}
+            />
+
+            {/* Dialog des logs ADB */}
+            {isAdbLogsDialogOpen && (
+              <Dialog open={isAdbLogsDialogOpen} onOpenChange={setIsAdbLogsDialogOpen}>
+                <DialogContent className="max-w-4xl max-h-[80vh]" aria-describedby="adb-logs-desc">
+                  <DialogHeader>
+                    <DialogTitle>Logs ADB - Debug</DialogTitle>
+                  </DialogHeader>
+                  <div id="adb-logs-desc" className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div></div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAdbAutoDetection(!adbConnectionState.autoDetectionEnabled)}
+                        >
+                          {adbConnectionState.autoDetectionEnabled ? 'Dsactiver' : 'Activer'} dtection auto
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            const success = await restartAdb();
+                            showNotification(success ? 'success' : 'error', success ? 'Serveur ADB redmarr' : 'Erreur lors du redmarrage ADB');
+                          }}
+                        >
+                          Redmarrer ADB
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => {
-                            console.log('??? [IMPORT] Clic sur le bouton Importer');
-                            document.getElementById('fileImporter')?.click();
+                            const logs = getAdbLogs().join('\n');
+                            navigator.clipboard.writeText(logs);
+                            showNotification('success', 'Logs copis dans le presse-papier');
                           }}
-                          className="h-9 px-2"
-                          title="Importer un fichier CSV/Excel"
                         >
-                          <Upload className="h-4 w-4" />
-                        </Button>
-                        <input
-                          type="file"
-                          id="fileImporter"
-                          accept=".csv, .tsv, .xlsx, .xls"
-                          className="hidden"
-                          onClick={(e) => {
-                            (e.target as HTMLInputElement).value = '';
-                          }}
-                          onChange={(e) => {
-                            console.log('?? [IMPORT] vnement onChange de l\'input file dclench');
-                            if (e.target.files && e.target.files.length > 0) {
-                              console.log(`?? [IMPORT] Fichier slectionn: ${e.target.files[0].name}`);
-                              handleImportFile(e.target.files);
-                            } else {
-                              console.log('? [IMPORT] Aucun fichier dans e.target.files');
-                            }
-                          }}
-                        />
-
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={contacts.length === 0 && googleContactsCount === 0 && calendarRemindersCount === 0}
-                              className="h-9 px-2"
-                              title="Exporter les données"
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent
-                            className="w-56 border shadow-lg bg-popover text-popover-foreground z-50"
-                            align="start"
-                          >
-                            <DropdownMenuLabel className="flex items-center gap-2">
-                              <Download className="w-4 h-4" />
-                              Options d'export
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-
-                            {/* Options d'export avec cases à cocher */}
-                            <DropdownMenuCheckboxItem
-                              checked={exportOptions.table}
-                              onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, table: checked }))}
-                              onSelect={(e) => e.preventDefault()}
-                              disabled={contacts.length === 0}
-                              className="cursor-pointer"
-                            >
-                              <BarChart3 className="mr-2 h-4 w-4" />
-                              <span>Table (CSV)</span>
-                              {contacts.length > 0 && (
-                                <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
-                              )}
-                            </DropdownMenuCheckboxItem>
-
-                            <DropdownMenuCheckboxItem
-                              checked={exportOptions.tableExcel}
-                              onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, tableExcel: checked }))}
-                              onSelect={(e) => e.preventDefault()}
-                              disabled={contacts.length === 0}
-                              className="cursor-pointer"
-                            >
-                              <FileSpreadsheet className="mr-2 h-4 w-4" />
-                              <span>Table (Excel)</span>
-                              {contacts.length > 0 && (
-                                <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
-                              )}
-                            </DropdownMenuCheckboxItem>
-
-                            <DropdownMenuCheckboxItem
-                              checked={exportOptions.contacts}
-                              onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, contacts: checked }))}
-                              onSelect={(e) => e.preventDefault()}
-                              disabled={googleContactsCount === 0}
-                              className="cursor-pointer"
-                            >
-                              <Users className="mr-2 h-4 w-4" />
-                              <span>Contacts Google</span>
-                              {googleContactsCount > 0 && (
-                                <span className="ml-auto text-xs text-muted-foreground">({googleContactsCount})</span>
-                              )}
-                            </DropdownMenuCheckboxItem>
-
-                            <DropdownMenuCheckboxItem
-                              checked={exportOptions.agenda}
-                              onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, agenda: checked }))}
-                              onSelect={(e) => e.preventDefault()}
-                              disabled={calendarRemindersCount === 0}
-                              className="cursor-pointer"
-                            >
-                              <Calendar className="mr-2 h-4 w-4" />
-                              <span>Agenda Google</span>
-                              {calendarRemindersCount > 0 && (
-                                <span className="ml-auto text-xs text-muted-foreground">({calendarRemindersCount})</span>
-                              )}
-                            </DropdownMenuCheckboxItem>
-
-                            <DropdownMenuSeparator />
-
-                            {/* Bouton d'export final */}
-                            <DropdownMenuItem
-                              onClick={handleUnifiedExport}
-                              className="cursor-pointer bg-primary/10 hover:bg-primary/20"
-                              disabled={Object.values(exportOptions).every(option => !option)}
-                            >
-                              <Download className="mr-2 h-4 w-4" />
-                              <span className="font-medium">Exporter la sélection</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={contacts.length === 0}
-                          onClick={handleClearActiveTab}
-                          className="h-9 px-2"
-                          title="Supprimer les contacts de l'onglet actif"
-                        >
-                          <Trash2 className="h-4 w-4" />
+                          Copier logs
                         </Button>
                       </div>
+                    </div>
 
-                      {/* Dropdown des onglets - à droite */}
-                      <div className="flex items-center gap-2 flex-shrink-0">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              className="flex items-center gap-2 px-3 py-1.5 h-9 text-sm"
-                            >
-                              <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tableTabs.find(t => t.id === (resolvedActiveTabId))?.color || 'var(--primary)' }} />
-                              <span className="truncate max-w-[200px]">
-                                {tableTabs.find(t => t.id === (resolvedActiveTabId))?.name || 'Onglets'}
-                              </span>
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" className="w-64">
-                            <DropdownMenuLabel className="flex items-center gap-2">
-                              <Tabs className="h-4 w-4" />
-                              Onglets
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <strong>tat:</strong> {adbConnectionState.isConnected ? '✅ Connect' : '❌ Dconnect'}
+                      </div>
+                      <div>
+                        <strong>Dtection auto:</strong> {adbConnectionState.autoDetectionEnabled ? '✅ Active' : '❌ Dsactive'}
+                      </div>
+                      {adbConnectionState.device && (
+                        <>
+                          <div>
+                            <strong>Appareil:</strong> {adbConnectionState.device.name}
+                          </div>
+                          <div>
+                            <strong>Srie:</strong> {adbConnectionState.device.serial}
+                          </div>
+                        </>
+                      )}
+                      {adbConnectionState.batteryLevel && (
+                        <div>
+                          <strong>Batterie:</strong> {adbConnectionState.batteryLevel}% {adbConnectionState.isCharging ? '🔌' : '🔋'}
+                        </div>
+                      )}
+                    </div>
 
-                            {/* Liste des onglets existants */}
-                            {tableTabs.map(tab => (
-                              <DropdownMenuItem
-                                key={tab.id}
-                                onClick={() => setActiveTableTabId(tab.id)}
-                                className={cn(
-                                  "flex items-center gap-2 cursor-pointer",
-                                  (resolvedActiveTabId) === tab.id && "bg-accent"
-                                )}
-                              >
-                                <span className="inline-block w-2 h-2 rounded-full" style={{ backgroundColor: tab.color || 'var(--primary)' }} />
-                                <span className="flex-1 truncate">{tab.name}</span>
-                                
-                                {/* Boutons d'action pour l'onglet */}
-                                <div className="flex items-center gap-1">
-                                  {/* Bouton de renommage */}
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 p-0 hover:bg-accent-foreground/10"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      handleEditTab(tab)
-                                    }}
-                                  >
-                                    <Pencil className="h-3 w-3" />
-                                  </Button>
-                                  
-                                  {/* Bouton de suppression */}
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
-                                    onClick={(e) => {
-                                      e.stopPropagation()
-                                      setTableTabs(prev => {
-                                        const next = prev.filter(t => t.id !== tab.id)
-                                        
-                                        // Si c'tait le dernier onglet, crer un nouvel onglet vide
-                                        if (next.length === 0) {
-                                          const newTabId = crypto.randomUUID()
-                                          const newTab = { 
-                                            id: newTabId, 
-                                            name: 'Nouveau', 
-                                            contacts: [] 
-                                          }
-                                          setActiveTableTabId(newTabId)
-                                          return [newTab]
-                                        }
-                                        
-                                        // Sinon, passer  l'onglet suivant
-                                        if ((resolvedActiveTabId) === tab.id) {
-                                          setActiveTableTabId(next[0]?.id || '')
-                                        }
-                                        return next
-                                      })
-                                    }}
-                                  >
-                                    <X className="h-3 w-3" />
-                                  </Button>
-                                </div>
-                              </DropdownMenuItem>
-                            ))}
+                    {adbConnectionState.error && (
+                      <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                        <strong className="text-red-600">Erreur:</strong> {adbConnectionState.error}
+                      </div>
+                    )}
 
-                            {/* Bouton d'ajout d'onglet */}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={() => {
-                                if (tableTabs.length >= 5) return
-                                const id = crypto.randomUUID()
-                                setTableTabs(prev => [...prev, { id, name: `Onglet ${prev.length + 1}`, contacts: [] }])
-                                setActiveTableTabId(id)
-                              }}
-                              disabled={tableTabs.length >= 5}
-                              className="flex items-center gap-2"
-                            >
-                              <Plus className="h-4 w-4" />
-                              Ajouter un onglet
-                            </DropdownMenuItem>
-                            
-                            {/* Bouton de suppression complte */}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              onClick={handleClearData}
-                              className="flex items-center gap-2 text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              Supprimer toutes les donnes
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                    <div className="space-y-2">
+                      <h3 className="font-medium">Logs en temps rel:</h3>
+                      <div className="bg-muted/50 rounded-lg p-3 max-h-96 overflow-y-auto hide-scrollbar font-mono text-xs">
+                        {getAdbLogs().length > 0 ? (
+                          getAdbLogs().map((log, index) => (
+                            <div key={index} className="mb-1">
+                              {log}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-muted-foreground">Aucun log disponible</div>
+                        )}
                       </div>
                     </div>
-                    {/* Contenu des onglets */}
-                    {tableTabs.map((tab) => {
-                      const isActiveTab = tab.id === resolvedActiveTabId;
-                      return (
-                        <TabsContent key={tab.id} value={tab.id} className="flex-1 overflow-hidden">
-                          <PaginatedContactTable
-                            key={`table-tab-${tab.id}-${tableUpdateKey}`}
-                            ref={isActiveTab ? contactTableRef : undefined}
-                            contacts={isActiveTab ? filteredContacts : tab.contacts}
-                            callStates={callStates}
-                            onSelectContact={handleRowSelection}
-                            selectedContactId={selectedContact?.id || null}
-                            onUpdateContact={updateContact}
-                            onDeleteContact={handleDeleteContact}
-                            activeCallContactId={activeCallContactId}
-                            theme={theme}
-                            visibleColumns={visibleColumns}
-                            columnHeaders={availableColumns.length > 0 ? availableColumns : COLUMN_HEADERS}
-                            contactDataKeys={availableDataKeys.length > 0 ? availableDataKeys : CONTACT_DATA_KEYS as (keyof Contact | null)[]}
-                            onToggleColumnVisibility={toggleColumnVisibility}
-                            availableColumns={availableColumns}
-                            onFileImport={handleSingleFileImport}
-                            initialItemsPerPage={savedItemsPerPage}
-                            pageSizeOptions={[25, 50, 100]}
-                          />
-                        </TabsContent>
-                      );
-                    })}
-                  </Tabs>
-                )}
-              </div>
-            </div>
-          ) : viewMode === 'appels-cards' ? (
-            <AppelsCardsView
-              contacts={filteredContacts}
-              selectedContactId={selectedContact?.id || null}
-              onSelectContact={handleRowSelection}
-              onUpdateContact={updateContact}
-              callStates={callStates}
-              activeCallContactId={activeCallContactId}
-              callStartTime={callStartTime}
-              adbConnected={adbConnectionState.isConnected}
-              onCall={() => makePhoneCall()}
-              onHangUp={() => adbEndCall()}
-              onEmail={() => selectedContact && setIsEmailDialogOpen(true)}
-              onSmsMonsieur={() => handleSms('Monsieur')}
-              onSmsMadame={() => handleSms('Madame')}
-              onRappel={() => selectedContact && setIsRappelDialogOpen(true)}
-              onRendezVous={() => selectedContact && setIsRendezVousDialogOpen(true)}
-              onCalCom={() => handleCalendarClick()}
-              onQualification={() => selectedContact && setIsQualificationDialogOpen(true)}
-              onLinkedInSearch={() => handleLinkedInSearch()}
-              onGoogleSearch={() => handleGoogleSearch()}
-              onDirectLink={() => handleDirectLink()}
-              onExport={() => handleUnifiedExport()}
-              onClearActiveTab={handleClearActiveTab}
-              searchQuery={searchTerm}
-              onSearch={(value) => setSearchTerm(value)}
-              onImportDialog={() => {
-                const input = document.createElement('input')
-                input.type = 'file'
-                input.accept = '.csv,.tsv,.xlsx,.xls'
-                input.onchange = (event) => {
-                  const files = (event.target as HTMLInputElement).files
-                  if (files && files.length > 0) {
-                    handleImportFile(files)
-                  }
-                }
-                input.click()
-              }}
-              onExportDialog={() => handleExport('xlsx')}
-            />
-          ) : viewMode === 'graph' ? (
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0 w-full">
-              <div className="flex-1 w-full overflow-auto min-w-0">
-                <ChartDashboard contacts={filteredContacts} />
-              </div>
-            </div>
-          ) : viewMode === 'calendar-2' ? (
-            <Calendar2 />
-          ) : viewMode === 'annuaire' ? (
-            <AnnuairePage
-              theme={theme === Theme.Dark ? 'dark' : 'light'}
-            />
-          ) : (
-            <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
-              <div className="flex-1 overflow-hidden">
-                <PaginatedEventTable />
-              </div>
-            </div>
-          )}
-        </div>
-              </main>
-
-
-
-      {/* Dialogs */}
-      {selectedContact && isEmailDialogOpen && (
-        <EmailDialog
-          isOpen={isEmailDialogOpen}
-          onClose={() => setIsEmailDialogOpen(false)}
-          contact={selectedContact}
-          showNotification={showNotification}
-          onUpdateContact={updateContact}
-        />
-      )}
-      {selectedContact && isRappelDialogOpen && (
-        <RappelDialog
-          isOpen={isRappelDialogOpen}
-          onClose={() => setIsRappelDialogOpen(false)}
-          contact={selectedContact}
-          onSave={(date, time) => {
-            updateContact({ id: selectedContact.id, dateRappel: date, heureRappel: time });
-            showNotification('success', `Rappel dfini pour ${selectedContact.prenom} le ${date} à ${time}.`);
-            setIsRappelDialogOpen(false);
-          }}
-        />
-      )}
-      {selectedContact && isRendezVousDialogOpen && (
-        <RendezVousDialog
-          isOpen={isRendezVousDialogOpen}
-          onClose={() => setIsRendezVousDialogOpen(false)}
-          contact={selectedContact}
-          onSave={(date, time) => {
-            updateContact({ id: selectedContact.id, dateRDV: date, heureRDV: time });
-            showNotification('success', `Rendez-vous programm pour ${selectedContact.prenom} le ${date} à ${time}.`);
-            setIsRendezVousDialogOpen(false);
-          }}
-        />
-      )}
-      {selectedContact && isQualificationDialogOpen && (
-        <QualificationDialog
-          isOpen={isQualificationDialogOpen}
-          onClose={() => setIsQualificationDialogOpen(false)}
-          onSave={(comment) => {
-            updateContact({ id: selectedContact.id, commentaire: comment });
-            showNotification('success', `Qualification enregistre pour ${selectedContact.prenom}.`);
-            setIsQualificationDialogOpen(false);
-          }}
-          theme={theme}
-        />
-      )}
-      {isFnKeysInfoOpen && (
-        <GenericInfoDialog
-          isOpen={isFnKeysInfoOpen}
-          onClose={() => setIsFnKeysInfoOpen(false)}
-          title="Raccourcis Clavier"
-          content={
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Utilisez les touches de fonction pour interagir rapidement avec le contact slectionn :
-              </p>
-              
-              {/* F1 pour l'appel */}
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Action d'appel :</p>
-                <div className="flex items-center gap-3 p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                  <Badge variant="outline" className="font-mono text-xs bg-blue-100 dark:bg-blue-800">
-                    F1
-                  </Badge>
-                  <span className="text-sm font-medium">📞 Appeler le contact</span>
-                </div>
-              </div>
-              
-              {/* F2-F10 pour les statuts */}
-              <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground">Changement de statut :</p>
-                <div className="grid grid-cols-1 gap-2">
-                  {shortcutService.getShortcuts().map(({ key, label }) => (
-                    <div key={key} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                      <Badge variant="outline" className="font-mono text-xs">
-                        {key}
-                      </Badge>
-                      <span className="text-sm">{label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="flex justify-center pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setIsFnKeysInfoOpen(false);
-                    setIsShortcutConfigOpen(true);
-                  }}
-                  className="text-xs"
-                >
-                  Personnaliser les raccourcis F2-F10
-                </Button>
-              </div>
-            </div>
-          }
-          theme={theme}
-        />
-              )}
-      {/* Supabase dialog supprim pour librer de l'espace */}
-       
-       {/* Dialog de configuration des raccourcis */}
-       {isShortcutConfigOpen && (
-         <ShortcutConfigDialog
-           isOpen={isShortcutConfigOpen}
-           onClose={() => setIsShortcutConfigOpen(false)}
-           theme={theme}
-           onSave={() => {
-             showNotification('success', 'Configuration des raccourcis sauvegarde', 3000);
-           }}
-         />
-       )}
-
-       {/* Dialog des rglages */}
-       {isSettingsOpen && (
-         <SettingsDialog
-           isOpen={isSettingsOpen}
-           onClose={() => setIsSettingsOpen(false)}
-           onSave={() => {
-             reloadEssentialColumns(); // Recharger les colonnes essentielles
-             showNotification('success', 'Rglages sauvegards avec succs', 3000);
-           }}
-           calcomUrl={calcomUrl}
-           onCalcomUrlChange={handleSaveCalcomUrl}
-           smsTemplate={smsTemplate}
-           onSmsTemplateChange={handleSaveSmsTemplate}
-           theme={theme}
-           onThemeChange={setTheme}
-         />
-       )}
-
-       {/* Indicateur de raccourci */}
-       <ShortcutIndicator
-         isVisible={shortcutIndicator.isVisible}
-         keyPressed={shortcutIndicator.key}
-         statusLabel={shortcutIndicator.label}
-         theme={theme}
-         onClose={() => setShortcutIndicator({ isVisible: false, key: '', label: '' })}
-       />
-        
-        {/* Dialog des logs ADB */}
-      {isAdbLogsDialogOpen && (
-        <Dialog open={isAdbLogsDialogOpen} onOpenChange={setIsAdbLogsDialogOpen}>
-          <DialogContent className="max-w-4xl max-h-[80vh]" aria-describedby="adb-logs-desc">
-            <DialogHeader>
-              <DialogTitle>Logs ADB - Debug</DialogTitle>
-            </DialogHeader>
-            <div id="adb-logs-desc" className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div></div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setAdbAutoDetection(!adbConnectionState.autoDetectionEnabled)}
-                  >
-                    {adbConnectionState.autoDetectionEnabled ? 'Dsactiver' : 'Activer'} dtection auto
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={async () => {
-                      const success = await restartAdb();
-                      showNotification(success ? 'success' : 'error', success ? 'Serveur ADB redmarr' : 'Erreur lors du redmarrage ADB');
-                    }}
-                  >
-                    Redmarrer ADB
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const logs = getAdbLogs().join('\n');
-                      navigator.clipboard.writeText(logs);
-                      showNotification('success', 'Logs copis dans le presse-papier');
-                    }}
-                  >
-                    Copier logs
-                  </Button>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <strong>tat:</strong> {adbConnectionState.isConnected ? '✅ Connect' : '❌ Dconnect'}
-                </div>
-                <div>
-                  <strong>Dtection auto:</strong> {adbConnectionState.autoDetectionEnabled ? '✅ Active' : '❌ Dsactive'}
-                </div>
-                {adbConnectionState.device && (
-                  <>
-                    <div>
-                      <strong>Appareil:</strong> {adbConnectionState.device.name}
-                    </div>
-                    <div>
-                      <strong>Srie:</strong> {adbConnectionState.device.serial}
-                    </div>
-                  </>
-                )}
-                {adbConnectionState.batteryLevel && (
-                  <div>
-                    <strong>Batterie:</strong> {adbConnectionState.batteryLevel}% {adbConnectionState.isCharging ? '🔌' : '🔋'}
                   </div>
-                )}
-              </div>
-              
-              {adbConnectionState.error && (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                  <strong className="text-red-600">Erreur:</strong> {adbConnectionState.error}
-                </div>
-              )}
-              
-              <div className="space-y-2">
-                <h3 className="font-medium">Logs en temps rel:</h3>
-                <div className="bg-muted/50 rounded-lg p-3 max-h-96 overflow-y-auto hide-scrollbar font-mono text-xs">
-                  {getAdbLogs().length > 0 ? (
-                    getAdbLogs().map((log, index) => (
-                      <div key={index} className="mb-1">
-                        {log}
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-muted-foreground">Aucun log disponible</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
+                </DialogContent>
+              </Dialog>
+            )}
 
-      {/* Modal Cal.com */}
-      <CalendarModal
-        open={isCalendarModalOpen}
-        onOpenChange={setIsCalendarModalOpen}
-        contact={selectedContact || undefined}
-        theme={theme}
-        onSuccess={handleCalendarSuccess}
-      />
+            {/* Modal Cal.com */}
+            <CalendarModal
+              open={isCalendarModalOpen}
+              onOpenChange={setIsCalendarModalOpen}
+              contact={selectedContact || undefined}
+              theme={theme}
+              onSuccess={handleCalendarSuccess}
+            />
 
-      {/* Modal de configuration Cal.com */}
-      {isCalcomConfigOpen && (
-        <Dialog open={isCalcomConfigOpen} onOpenChange={setIsCalcomConfigOpen}>
-          <DialogContent className="sm:max-w-md" aria-describedby="calcom-config-desc">
-            <DialogHeader>
-              <DialogTitle>Configuration Cal.com</DialogTitle>
-              <DialogDescription id="calcom-config-desc">
-                Configurez l'URL de votre compte Cal.com pour la prise de rendez-vous.
-              </DialogDescription>
-            </DialogHeader>
-            
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <label htmlFor="calcom-url" className="text-sm font-medium">
-                  URL Cal.com
-                </label>
-                <input
-                  id="calcom-url"
-                  type="url"
-                  defaultValue={calcomUrl}
-                  placeholder="https://cal.com/votre-nom/votre-vnement"
-                  className="w-full px-3 py-2 border border-input rounded-md text-sm bg-background"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      const input = e.target as HTMLInputElement;
-                      if (input.value.trim()) {
-                        handleSaveCalcomUrl(input.value.trim());
-                      }
-                    }
-                  }}
-                />
-              </div>
-              
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p> Utilisez l'URL complte de votre vnement Cal.com</p>
-                <p> Format: https://cal.com/votre-nom/votre-vnement</p>
-                <p> Les paramtres du contact seront ajouts automatiquement</p>
-              </div>
-            </div>
-            
-            <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setIsCalcomConfigOpen(false)}>
-                Annuler
-              </Button>
-              <Button 
-                onClick={() => {
-                  const input = document.getElementById('calcom-url') as HTMLInputElement;
-                  if (input?.value.trim()) {
-                    handleSaveCalcomUrl(input.value.trim());
-                  }
-                }}
-                className="bg-primary text-primary-foreground hover:bg-primary/90"
-              >
-                Sauvegarder
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
+            {/* Modal de configuration Cal.com */}
+            {isCalcomConfigOpen && (
+              <Dialog open={isCalcomConfigOpen} onOpenChange={setIsCalcomConfigOpen}>
+                <DialogContent className="sm:max-w-md" aria-describedby="calcom-config-desc">
+                  <DialogHeader>
+                    <DialogTitle>Configuration Cal.com</DialogTitle>
+                    <DialogDescription id="calcom-config-desc">
+                      Configurez l'URL de votre compte Cal.com pour la prise de rendez-vous.
+                    </DialogDescription>
+                  </DialogHeader>
 
-      {/* Modal d'authentification */}
-              <AuthModal
-          isOpen={isAuthModalOpen}
-          onClose={() => setIsAuthModalOpen(false)}
-        />
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <label htmlFor="calcom-url" className="text-sm font-medium">
+                        URL Cal.com
+                      </label>
+                      <input
+                        id="calcom-url"
+                        type="url"
+                        defaultValue={calcomUrl}
+                        placeholder="https://cal.com/votre-nom/votre-vnement"
+                        className="w-full px-3 py-2 border border-input rounded-md text-sm bg-background"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const input = e.target as HTMLInputElement;
+                            if (input.value.trim()) {
+                              handleSaveCalcomUrl(input.value.trim());
+                            }
+                          }
+                        }}
+                      />
+                    </div>
 
-      {/* Pop-up de dconnexion Supabase */}
-      <SupabaseDisconnectDialog
-        open={!!auth.disconnectInfo}
-        info={auth.disconnectInfo}
-        onClose={auth.clearDisconnectInfo}
-        onRetry={async () => {
-          const ok = await auth.requestSessionRefresh();
-          if (ok) {
-            auth.clearDisconnectInfo();
-          }
-        }}
-      />
+                    <div className="text-xs text-muted-foreground space-y-1">
+                      <p> Utilisez l'URL complte de votre vnement Cal.com</p>
+                      <p> Format: https://cal.com/votre-nom/votre-vnement</p>
+                      <p> Les paramtres du contact seront ajouts automatiquement</p>
+                    </div>
+                  </div>
 
-      {/* Dialog de confirmation de mise à jour */}
-      <UpdateConfirmationDialog
-        isOpen={isUpdateConfirmationOpen}
-        onClose={() => setIsUpdateConfirmationOpen(false)}
-        onConfirm={installUpdate}
-        updateInfo={updateState.updateInfo}
-      />
+                  <DialogFooter className="gap-2">
+                    <Button variant="outline" onClick={() => setIsCalcomConfigOpen(false)}>
+                      Annuler
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        const input = document.getElementById('calcom-url') as HTMLInputElement;
+                        if (input?.value.trim()) {
+                          handleSaveCalcomUrl(input.value.trim());
+                        }
+                      }}
+                      className="bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      Sauvegarder
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            )}
 
-      {/* Dialog de confirmation de suppression des donnes */}
-      <Dialog open={isClearDataDialogOpen} onOpenChange={setIsClearDataDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Supprimer toutes les donnes</DialogTitle>
-            <DialogDescription>
-              Cette action supprimera dfinitivement tous les contacts imports dans la table. 
-              Cette action ne peut pas tre annule.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsClearDataDialogOpen(false)}>
-              Annuler
-            </Button>
-            <Button variant="destructive" onClick={confirmClearData}>
-              Supprimer tout
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            {/* Modal d'authentification */}
+            <AuthModal
+              isOpen={isAuthModalOpen}
+              onClose={() => setIsAuthModalOpen(false)}
+            />
 
-      {/* Dialog d'dition des onglets */}
-      <TabEditDialog
-        isOpen={isTabEditDialogOpen}
-        onClose={() => {
-          setIsTabEditDialogOpen(false)
-          setEditingTab(null)
-        }}
-        onSave={handleSaveTab}
-        currentName={editingTab?.name || ''}
-        currentColor={editingTab?.color || '#3b82f6'}
-      />
+            {/* Pop-up de dconnexion Supabase */}
+            <SupabaseDisconnectDialog
+              open={!!auth.disconnectInfo}
+              info={auth.disconnectInfo}
+              onClose={auth.clearDisconnectInfo}
+              onRetry={async () => {
+                const ok = await auth.requestSessionRefresh();
+                if (ok) {
+                  auth.clearDisconnectInfo();
+                }
+              }}
+            />
 
-        </main>
+            {/* Dialog de confirmation de mise à jour */}
+            <UpdateConfirmationDialog
+              isOpen={isUpdateConfirmationOpen}
+              onClose={() => setIsUpdateConfirmationOpen(false)}
+              onConfirm={installUpdate}
+              updateInfo={updateState.updateInfo}
+            />
+
+            {/* Dialog de confirmation de suppression des donnes */}
+            <Dialog open={isClearDataDialogOpen} onOpenChange={setIsClearDataDialogOpen}>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Supprimer toutes les donnes</DialogTitle>
+                  <DialogDescription>
+                    Cette action supprimera dfinitivement tous les contacts imports dans la table.
+                    Cette action ne peut pas tre annule.
+                  </DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsClearDataDialogOpen(false)}>
+                    Annuler
+                  </Button>
+                  <Button variant="destructive" onClick={confirmClearData}>
+                    Supprimer tout
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Dialog d'dition des onglets */}
+            <TabEditDialog
+              isOpen={isTabEditDialogOpen}
+              onClose={() => {
+                setIsTabEditDialogOpen(false)
+                setEditingTab(null)
+              }}
+              onSave={handleSaveTab}
+              currentName={editingTab?.name || ''}
+              currentColor={editingTab?.color || '#3b82f6'}
+            />
+
+          </main>
         </div>
       </div>
     </SidebarProvider>

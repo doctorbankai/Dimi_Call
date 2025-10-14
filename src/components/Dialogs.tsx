@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Contact, Theme, EmailType, Civility, QualificationStatutMarital, QualificationSituationPro } from '../types';
+import { Contact, Theme, EmailType, SmsType, Civility, QualificationStatutMarital, QualificationSituationPro } from '../types';
 import { Button, Input, Select, Modal } from './Common';
 import { generateGmailComposeUrl } from '../services/dataService';
 import { Label } from '@/components/ui/label';
@@ -16,6 +16,13 @@ import { Button as ShadcnButton } from '@/components/ui/button';
 import { Input as ShadcnInput } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { 
+  Select as ShadcnSelect, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ReminderDialog } from './ReminderDialog';
@@ -131,20 +138,31 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
             </div>
           </div>
           <div className="space-y-3">
-            <Select
-              value={civility}
-              onChange={(value) => setCivility(value as Civility)}
-              options={civilityOptions}
-              placeholder="Civilité"
-              className="w-full"
-            />
-            <Select
-              value={emailType}
-              onChange={(value) => setEmailType(value as EmailType)}
-              options={emailTypeOptions}
-              placeholder="Type d'email"
-              className="w-full"
-            />
+            <ShadcnSelect value={civility} onValueChange={(value) => setCivility(value as Civility)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Civilité" />
+              </SelectTrigger>
+              <SelectContent className="z-[20001]">
+                {civilityOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </ShadcnSelect>
+            
+            <ShadcnSelect value={emailType} onValueChange={(value) => setEmailType(value as EmailType)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Type d'email" />
+              </SelectTrigger>
+              <SelectContent className="z-[20001]">
+                {emailTypeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </ShadcnSelect>
           </div>
         </div>
 
@@ -169,7 +187,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
                       {selectedDate ? format(selectedDate, 'PPP', { locale: fr }) : <span>Sélectionner une date</span>}
                     </ShadcnButton>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent className="w-auto p-0 z-[20001]">
                     <Calendar
                       mode="single"
                       selected={selectedDate}
@@ -189,6 +207,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
                   value={selectedTime}
                   onChange={handleTimeChange}
                   placeholder="HH:mm"
+                  zIndex={20001}
                 />
               </div>
             </div>
@@ -212,6 +231,93 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
             disabled={needsDateTime && (!selectedDate || !selectedTime)}
           >
             Générer Email Gmail
+          </Button>
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+interface SmsDialogProps {
+  isOpen: boolean;
+  onClose: () => void;
+  contact: Contact | null;
+  onSendSms: (civility: Civility, smsType: SmsType) => void;
+}
+
+const SmsDialog: React.FC<SmsDialogProps> = ({ isOpen, onClose, contact, onSendSms }) => {
+  const [civility, setCivility] = useState<Civility>(Civility.Monsieur);
+  const [smsType, setSmsType] = useState<SmsType>(SmsType.PremierContact);
+
+  if (!contact) return null;
+
+  const handleSendSms = () => {
+    onSendSms(civility, smsType);
+    onClose();
+  };
+
+  const civilityOptions = [
+    { value: Civility.Monsieur, label: 'Monsieur' },
+    { value: Civility.Madame, label: 'Madame' }
+  ];
+
+  const smsTypeOptions = [
+    { value: SmsType.PremierContact, label: 'Premier Contact' },
+    { value: SmsType.Relance, label: 'Relance' },
+    { value: SmsType.Confirmation, label: 'Confirmation' }
+  ];
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="Envoyer un SMS" size="md">
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1 text-foreground">Contact</label>
+            <div className="p-2 bg-muted text-muted-foreground rounded border text-sm">
+              <div><strong>Nom:</strong> {contact.prenom} {contact.nom}</div>
+              <div><strong>Téléphone:</strong> {contact.telephone}</div>
+            </div>
+          </div>
+          <div className="space-y-3">
+            <ShadcnSelect value={civility} onValueChange={(value) => setCivility(value as Civility)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Civilité" />
+              </SelectTrigger>
+              <SelectContent className="z-[20001]">
+                {civilityOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </ShadcnSelect>
+            
+            <ShadcnSelect value={smsType} onValueChange={(value) => setSmsType(value as SmsType)}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Type de SMS" />
+              </SelectTrigger>
+              <SelectContent className="z-[20001]">
+                {smsTypeOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </ShadcnSelect>
+          </div>
+        </div>
+        
+        <div className="bg-muted text-muted-foreground p-3 rounded text-sm">
+          <strong>Aperçu:</strong> SMS {smsTypeOptions.find(opt => opt.value === smsType)?.label} pour {civilityOptions.find(opt => opt.value === civility)?.label} {contact.prenom} {contact.nom}
+        </div>
+        
+        <div className="flex justify-end space-x-3 pt-4">
+          <Button variant="ghost" onClick={onClose}>Annuler</Button>
+          <Button 
+            variant="primary" 
+            onClick={handleSendSms}
+          >
+            Envoyer SMS
           </Button>
         </div>
       </div>
@@ -536,4 +642,4 @@ const GenericInfoDialogComponent: React.FC<GenericInfoDialogProps> = ({ isOpen, 
   );
 };
 
-export { EmailDialog, RappelDialog, RendezVousDialog, QualificationDialog, GenericInfoDialogComponent as GenericInfoDialog };
+export { EmailDialog, SmsDialog, RappelDialog, RendezVousDialog, QualificationDialog, GenericInfoDialogComponent as GenericInfoDialog };

@@ -16,6 +16,7 @@ interface TimePickerProps {
   'aria-label'?: string;
   'aria-describedby'?: string;
   container?: HTMLElement | null;
+  zIndex?: number;
 }
 
 export const TimePicker: React.FC<TimePickerProps> = ({
@@ -28,6 +29,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
   'aria-label': ariaLabel,
   'aria-describedby': ariaDescribedBy,
   container,
+  zIndex = 250,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -75,7 +77,7 @@ export const TimePicker: React.FC<TimePickerProps> = ({
             {value || placeholder}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-4 z-[250]" align="start" container={container}>
+        <PopoverContent className={cn("w-auto p-4", `z-[${zIndex}]`)} align="start" container={container}>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <div className="text-sm font-medium mb-2">Heures</div>

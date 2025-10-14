@@ -79,6 +79,12 @@ export enum EmailType {
   PremierContact = "premier_contact",
 }
 
+export enum SmsType {
+  PremierContact = "premier_contact",
+  Relance = "relance",
+  Confirmation = "confirmation",
+}
+
 export enum Civility {
   Monsieur = "monsieur",
   Madame = "madame",

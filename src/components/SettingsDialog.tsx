@@ -15,7 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { EmailType, Civility, Theme, ContactStatus, CallMode } from '../types';
+import { EmailType, SmsType, Civility, Theme, ContactStatus, CallMode } from '../types';
 import { shortcutService, ShortcutConfig } from '../services/shortcutService';
 import { cn } from '../lib/utils';
 import { StatusConfigService, StatusConfigMap } from '../services/statusConfigService';
@@ -65,7 +65,44 @@ const defaultTemplates: EmailTemplates = {
   }
 };
 
+interface SmsTemplates {
+  [SmsType.PremierContact]: string;
+  [SmsType.Relance]: string;
+  [SmsType.Confirmation]: string;
+}
+
+const defaultSmsTemplates: SmsTemplates = {
+  [SmsType.PremierContact]: `Bonjour {civilite} {nom},
+
+Pour resituer mon appel, je suis gérant privé au sein du cabinet de gestion de patrimoine Arcanis Conseil. Je vous envoie l'adresse de notre site web que vous puissiez en savoir d'avantage : https://arcanis-conseil.fr
+
+Le site est avant tout une vitrine, le mieux est de m'appeler si vous souhaitez davantage d'informations ou de prendre un créneau de 30 minutes dans mon agenda via ce lien : https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true
+
+Bien à vous,`,
+  [SmsType.Relance]: `Bonjour {civilite} {nom},
+
+Je me permets de revenir vers vous suite à notre dernier échange. Seriez-vous disponible pour un court entretien téléphonique afin de faire le point sur votre situation patrimoniale ?
+
+N'hésitez pas à me contacter ou à prendre rendez-vous directement : https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true
+
+Cordialement,`,
+  [SmsType.Confirmation]: `Bonjour {civilite} {nom},
+
+Je vous confirme notre rendez-vous. Au plaisir d'échanger avec vous.
+
+Pour toute question : https://arcanis-conseil.fr
+
+Cordialement,`
+};
+
+const smsTypeLabels = {
+  [SmsType.PremierContact]: { label: 'Premier Contact', icon: MessageSquare },
+  [SmsType.Relance]: { label: 'Relance', icon: MessageSquare },
+  [SmsType.Confirmation]: { label: 'Confirmation', icon: MessageSquare },
+};
+
 const STORAGE_KEY = 'dimicall_email_templates';
+const SMS_STORAGE_KEY = 'dimicall_sms_templates';
 const COLUMNS_STORAGE_KEY = 'dimicall_column_config';
 const MODE_STORAGE_KEY = 'dimicall-call-mode';
 
@@ -208,9 +245,12 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   const [mandataireSignature, setMandataireSignature] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedEmailType, setSelectedEmailType] = useState<EmailType>(EmailType.PremierContact);
+  const [selectedSmsType, setSelectedSmsType] = useState<SmsType>(SmsType.PremierContact);
   const [localCalcomUrl, setLocalCalcomUrl] = useState<string>(calcomUrl || 'https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true');
   const [localSmsTemplate, setLocalSmsTemplate] = useState<string>(smsTemplate || DEFAULT_SMS_TEMPLATE);
   const [localSmsTemplateMandataire, setLocalSmsTemplateMandataire] = useState<string>(smsTemplate || DEFAULT_SMS_TEMPLATE);
+  const [smsTemplates, setSmsTemplates] = useState<SmsTemplates>(defaultSmsTemplates);
+  const [mandataireSmsTemplates, setMandataireSmsTemplates] = useState<SmsTemplates>(defaultSmsTemplates);
   const [shortcuts, setShortcuts] = useState<ShortcutConfig[]>([]);
   const [shortcutsChanged, setShortcutsChanged] = useState(false);
   const [appVersion, setAppVersion] = useState<string>('Chargement...');
@@ -306,6 +346,18 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         if (data.smsMandataire) setLocalSmsTemplateMandataire(data.smsMandataire);
       } catch (error) {
         console.error('Erreur lors du chargement des templates:', error);
+      }
+    }
+    
+    // Charger les templates SMS
+    const savedSms = localStorage.getItem(SMS_STORAGE_KEY);
+    if (savedSms) {
+      try {
+        const data = JSON.parse(savedSms);
+        if (data.smsTemplates) setSmsTemplates(data.smsTemplates);
+        if (data.mandataireSmsTemplates) setMandataireSmsTemplates(data.mandataireSmsTemplates);
+      } catch (error) {
+        console.error('Erreur lors du chargement des templates SMS:', error);
       }
     }
   }, []);
@@ -417,15 +469,6 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     setHasChanges(true);
   };
 
-  const handleSmsTemplateChange = (value: string) => {
-    if (callMode === CallMode.Mandataire) {
-      setLocalSmsTemplateMandataire(value);
-    } else {
-      setLocalSmsTemplate(value);
-    }
-    setHasChanges(true);
-  };
-
   // Obtenir le libellé d'un statut (dépend du mode)
   const getStatusLabel = (status: ContactStatus): string => {
     return StatusConfigService.getLabel(status, callMode);
@@ -491,6 +534,15 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         lastModified: new Date().toISOString()
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      
+      // Sauvegarde des templates SMS structurés
+      const smsData = {
+        smsTemplates,
+        mandataireSmsTemplates,
+        lastModified: new Date().toISOString()
+      };
+      localStorage.setItem(SMS_STORAGE_KEY, JSON.stringify(smsData));
+      
       // Sauvegarder le mode
       localStorage.setItem(MODE_STORAGE_KEY, callMode);
       
@@ -1320,101 +1372,160 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     </div>
   );
 
-  const renderSmsSettings = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
-              <MessageSquare className="w-4 h-4 text-muted-foreground" />
-            </div>
+  const handleSmsTemplateChange = (value: string) => {
+    const templatesByMode = callMode === CallMode.Mandataire ? mandataireSmsTemplates : smsTemplates;
+    const updatedTemplates = { ...templatesByMode, [selectedSmsType]: value };
+    
+    if (callMode === CallMode.Mandataire) {
+      setMandataireSmsTemplates(updatedTemplates);
+    } else {
+      setSmsTemplates(updatedTemplates);
+    }
+    setHasChanges(true);
+  };
+
+  const renderSmsSettings = () => {
+    const templatesByMode = callMode === CallMode.Mandataire ? mandataireSmsTemplates : smsTemplates;
+    const currentTemplate = templatesByMode[selectedSmsType];
+    const smsInfo = smsTypeLabels[selectedSmsType];
+
+    return (
+      <div className="space-y-6">
+        <Separator />
+
+        {/* Template Selection & Editor */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-base">Template SMS</CardTitle>
-              <CardDescription>Personnalisez le message SMS envoyé aux contacts</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Bandeau mode actif */}
-          <div className="flex items-center justify-between p-3 rounded-md bg-accent/30 border">
-            <div className="text-sm">
-              Mode actif : <strong>{callMode === CallMode.Mandataire ? 'Mandataire' : 'Client'}</strong>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant={callMode === CallMode.Client ? 'default' : 'secondary'} className="text-[10px]">Client</Badge>
-              <Switch
-                checked={callMode === CallMode.Mandataire}
-                onCheckedChange={(checked) => {
-                  const newMode = checked ? CallMode.Mandataire : CallMode.Client;
-                  setCallMode(newMode);
-                  try { localStorage.setItem(MODE_STORAGE_KEY, newMode); } catch {}
-                }}
-              />
-              <Badge variant={callMode === CallMode.Mandataire ? 'default' : 'secondary'} className="text-[10px]">Mandataire</Badge>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="sms-template-input">Message SMS ({callMode === CallMode.Mandataire ? 'Mandataire' : 'Client'})</Label>
-            <Textarea
-              id="sms-template-input"
-              value={callMode === CallMode.Mandataire ? localSmsTemplateMandataire : localSmsTemplate}
-              onChange={(e) => handleSmsTemplateChange(e.target.value)}
-              placeholder="Tapez votre message SMS personnalisé..."
-              rows={10}
-              className="font-mono text-sm"
-            />
-            <div className="text-xs text-muted-foreground">
-              Caractères: {(callMode === CallMode.Mandataire ? localSmsTemplateMandataire : localSmsTemplate).length} / 1600 (recommandé pour SMS long)
-            </div>
-          </div>
-
-          {/* Variables disponibles */}
-          <div className="bg-muted/50 rounded-lg p-4 border">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4 text-muted-foreground" />
-                <p className="text-sm font-medium">Variables disponibles</p>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <code className="bg-background px-2 py-1 rounded border text-xs">{'{civilite}'}</code>
-                <code className="bg-background px-2 py-1 rounded border text-xs">{'{nom}'}</code>
-                <code className="bg-background px-2 py-1 rounded border text-xs">{'{prenom}'}</code>
-                <code className="bg-background px-2 py-1 rounded border text-xs">{'{nom_complet}'}</code>
-              </div>
-              <div className="space-y-2 text-xs text-muted-foreground">
-                <p>• <strong>{'{civilite}'}</strong> : "Monsieur" ou "Madame" selon le choix dans le menu</p>
-                <p>• <strong>{'{nom}'}</strong> : Nom de famille du contact</p>
-                <p>• <strong>{'{prenom}'}</strong> : Prénom du contact</p>
-                <p>• <strong>{'{nom_complet}'}</strong> : Prénom + Nom du contact</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Aperçu avec exemple */}
-          {(callMode === CallMode.Mandataire ? localSmsTemplateMandataire : localSmsTemplate) && (
-            <div className="bg-muted/50 rounded-lg p-4 border">
-              <div className="flex items-center gap-2 mb-3">
-                <MessageSquare className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm font-medium">Aperçu avec exemple</span>
-              </div>
-              <div className="bg-background rounded-lg p-3 border text-xs font-mono whitespace-pre-wrap">
-                {(callMode === CallMode.Mandataire ? localSmsTemplateMandataire : localSmsTemplate)
-                  .replace(/{civilite}/g, 'Madame')
-                  .replace(/{nom}/g, 'Dupont')
-                  .replace(/{prenom}/g, 'Marie')
-                  .replace(/{nom_complet}/g, 'Marie Dupont')
-                }
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Exemple avec : Civilité "Madame", Prénom "Marie", Nom "Dupont"
+              <h3 className="text-lg font-semibold">Templates SMS</h3>
+              <p className="text-sm text-muted-foreground">
+                Personnalisez vos modèles de SMS pour chaque type d'interaction
               </p>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
+            {hasChanges && (
+              <Badge variant="outline" className="text-xs">
+                Non sauvegardé
+              </Badge>
+            )}
+          </div>
+
+          {/* SMS Type Selector */}
+          <div className="space-y-3">
+            <Label htmlFor="sms-type-selector">Type de SMS</Label>
+            <Select 
+              value={selectedSmsType} 
+              onValueChange={(value) => setSelectedSmsType(value as SmsType)}
+            >
+              <SelectTrigger id="sms-type-selector" className="z-[20001]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="z-[20001]">
+                {Object.entries(smsTypeLabels).map(([type, info]) => (
+                  <SelectItem key={type} value={type}>
+                    <div className="flex items-center gap-2">
+                      <info.icon className="w-4 h-4" />
+                      <span>{info.label}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Template Editor (par mode) */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
+                  <smsInfo.icon className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">{smsInfo.label}</CardTitle>
+                  <CardDescription>Personnalisez le contenu de ce type de SMS</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Bandeau mode actif */}
+              <div className="flex items-center justify-between p-3 rounded-md bg-accent/30 border">
+                <div className="text-sm">
+                  Mode actif : <strong>{callMode === CallMode.Mandataire ? 'Mandataire' : 'Client'}</strong>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Badge variant={callMode === CallMode.Client ? 'default' : 'secondary'} className="text-[10px]">Client</Badge>
+                  <Switch
+                    checked={callMode === CallMode.Mandataire}
+                    onCheckedChange={(checked) => {
+                      const newMode = checked ? CallMode.Mandataire : CallMode.Client;
+                      setCallMode(newMode);
+                      try { localStorage.setItem(MODE_STORAGE_KEY, newMode); } catch {}
+                    }}
+                  />
+                  <Badge variant={callMode === CallMode.Mandataire ? 'default' : 'secondary'} className="text-[10px]">Mandataire</Badge>
+                </div>
+              </div>
+
+              {/* Body Field */}
+              <div className="space-y-2">
+                <Label htmlFor={`sms-body-${selectedSmsType}`}>Message SMS</Label>
+                <Textarea
+                  id={`sms-body-${selectedSmsType}`}
+                  value={currentTemplate}
+                  onChange={(e) => handleSmsTemplateChange(e.target.value)}
+                  placeholder="Corps du message SMS"
+                  rows={10}
+                  className="font-mono text-sm"
+                />
+                <div className="text-xs text-muted-foreground">
+                  Caractères: {currentTemplate.length} / 1600 (recommandé pour SMS long)
+                </div>
+              </div>
+
+              {/* Variables Help */}
+              <div className="bg-muted/50 p-4 rounded-lg border">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Settings className="w-4 h-4 text-muted-foreground" />
+                    <p className="text-sm font-medium">Variables disponibles</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <code className="bg-background px-2 py-1 rounded border text-xs">{'{civilite}'}</code>
+                    <code className="bg-background px-2 py-1 rounded border text-xs">{'{nom}'}</code>
+                    <code className="bg-background px-2 py-1 rounded border text-xs">{'{prenom}'}</code>
+                    <code className="bg-background px-2 py-1 rounded border text-xs">{'{nom_complet}'}</code>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Ces variables seront automatiquement remplacées par les informations du contact
+                  </p>
+                </div>
+              </div>
+
+              {/* Aperçu avec exemple */}
+              {currentTemplate && (
+                <div className="bg-muted/50 rounded-lg p-4 border">
+                  <div className="flex items-center gap-2 mb-3">
+                    <MessageSquare className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Aperçu avec exemple</span>
+                  </div>
+                  <div className="bg-background rounded-lg p-3 border text-xs font-mono whitespace-pre-wrap">
+                    {currentTemplate
+                      .replace(/{civilite}/g, 'Madame')
+                      .replace(/{nom}/g, 'Dupont')
+                      .replace(/{prenom}/g, 'Marie')
+                      .replace(/{nom_complet}/g, 'Marie Dupont')
+                    }
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Exemple avec : Civilité "Madame", Prénom "Marie", Nom "Dupont"
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  };
 
   const renderAppearanceSettings = () => (
     <Card>

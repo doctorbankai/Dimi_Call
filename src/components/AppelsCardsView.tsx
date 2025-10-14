@@ -1396,27 +1396,16 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  size="icon"
-                                  variant="outline"
-                                  disabled={!selectedContact}
-                                  className="size-10 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                  aria-label="SMS"
-                                >
-                                  <MessageSquare className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent>
-                                <DropdownMenuItem onClick={() => selectedContact && onSmsMonsieur()}>
-                                  SMS Monsieur
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => selectedContact && onSmsMadame()}>
-                                  SMS Madame
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                            <Button
+                              size="icon"
+                              variant="outline"
+                              disabled={!selectedContact}
+                              onClick={() => selectedContact && onSmsMonsieur()}
+                              className="size-10 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                              aria-label="SMS"
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                            </Button>
                           </TooltipTrigger>
                           <TooltipContent>
                             <p>SMS</p>
