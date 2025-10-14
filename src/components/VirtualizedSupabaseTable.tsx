@@ -127,7 +127,7 @@ export const VirtualizedSupabaseTable: React.FC<VirtualizedSupabaseTableProps> =
   // Fonction pour démarrer l'édition d'une cellule
   const startEditing = (rowId: string, column: string, currentValue: any) => {
     // Ne pas éditer certaines colonnes
-    if (column === 'UID' || column === 'Actions') return;
+    if (column === 'UID') return;
     
     const stringValue = String(currentValue || '');
     setEditingCell({
@@ -202,7 +202,7 @@ export const VirtualizedSupabaseTable: React.FC<VirtualizedSupabaseTableProps> =
   // Déterminer si une colonne est éditable
   const isColumnEditable = (column: string): boolean => {
     // Liste des colonnes non éditables
-    const nonEditableColumns = ['UID', 'Actions', 'created_at', 'updated_at', 'Utilisateur', 'utilisateur'];
+    const nonEditableColumns = ['UID', 'created_at', 'updated_at', 'Utilisateur', 'utilisateur'];
     return !nonEditableColumns.includes(column);
   };
 
@@ -813,38 +813,6 @@ export const VirtualizedSupabaseTable: React.FC<VirtualizedSupabaseTableProps> =
                     </div>
                   );
                 })}
-                
-                {/* Colonne Actions */}
-                {visibleColumns['Actions'] && (
-                  <div 
-                    style={{ width: '100px' }}
-                    className={`
-                      px-3 py-2 flex items-center justify-center flex-shrink-0
-                      ${theme === Theme.Dark ? 'border-oled-border' : 'border-light-border'}
-                    `}
-                  >
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onDeleteContact(contact.id);
-                            }}
-                            variant="ghost" 
-                            size="sm" 
-                            className="!p-1 text-red-500 hover:text-red-400"
-                          >
-                            <IconTrash className="w-4 h-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Supprimer Contact</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                )}
               </div>
             );
           })}

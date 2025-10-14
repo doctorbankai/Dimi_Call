@@ -182,7 +182,6 @@ const EXPECTED_TARGETS = [
   { label: 'Don', value: 'don' },
   { label: 'Date', value: 'date' },
   { label: 'UID', value: 'uid' },
-  { label: 'Actions', value: 'actions' },
 ]
 
 const REQUIRED_TARGETS = ['telephone']
@@ -266,7 +265,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       }
     });
     
-    // Ajouter les colonnes restantes (comme "#" et "Actions") à la fin
+    // Ajouter les colonnes restantes (comme "#" et les colonnes dynamiques) à la fin
     remainingHeaders.forEach(header => {
       ordered.push(header);
     });
@@ -276,18 +275,18 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
 
   // Créer les clés de données correspondantes dans le même ordre
   const orderedContactDataKeys = useMemo(() => {
-    const keyMap: Record<string, keyof Contact | 'actions' | null> = {
+    const keyMap: Record<string, keyof Contact | null> = {
       '#': 'numeroLigne',
       'Sexe': 'sexe',
-      'Prénom': 'prenom',
+      'Pr�nom': 'prenom',
       'Nom': 'nom',
-      'Téléphone': 'telephone',
+      'T�l�phone': 'telephone',
       'Mail': 'email',
       'Statut': 'statut',
       'Commentaire': 'commentaire',
       'Source': 'source',
       'Type': 'type',
-      'Qualité': 'qualite',
+      'Qualit�': 'qualite',
       'Lien': 'lien',
       'Date Rappel': 'dateRappel',
       'Heure Rappel': 'heureRappel',
@@ -295,8 +294,10 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       'Heure RDV': 'heureRDV',
       'Date Appel': 'dateAppel',
       'Heure Appel': 'heureAppel',
-      'Durée Appel': 'dureeAppel',
-      'Actions': 'actions'
+      'Dur�e Appel': 'dureeAppel',
+      'Don': 'don',
+      'Date': 'date',
+      'UID': 'uid'
     };
     
     return orderedColumnHeaders.map(header => keyMap[header] || null);
@@ -1945,4 +1946,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
 }
 
 export default AppelsCardsView
+
+
+
 

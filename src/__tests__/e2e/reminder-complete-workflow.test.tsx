@@ -79,11 +79,10 @@ describe('Reminder Complete User Workflows E2E', () => {
       'Statut': true,
       'Commentaire': true,
       'Date Rappel': true,
-      'Heure Rappel': true,
-      'Actions': true
+      'Heure Rappel': true
     },
-    columnHeaders: ['#', 'Prénom', 'Nom', 'Téléphone', 'Mail', 'Statut', 'Commentaire', 'Date Rappel', 'Heure Rappel', 'Actions'],
-    contactDataKeys: ['numeroLigne', 'prenom', 'nom', 'telephone', 'email', 'statut', 'commentaire', 'dateRappel', 'heureRappel', 'actions'],
+    columnHeaders: ['#', 'Prénom', 'Nom', 'Téléphone', 'Mail', 'Statut', 'Commentaire', 'Date Rappel', 'Heure Rappel'],
+    contactDataKeys: ['numeroLigne', 'prenom', 'nom', 'telephone', 'email', 'statut', 'commentaire', 'dateRappel', 'heureRappel'],
     onToggleColumnVisibility: jest.fn()
   };
 

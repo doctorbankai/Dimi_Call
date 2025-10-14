@@ -81,10 +81,11 @@ describe('ContactTable Reminder Integration', () => {
       'Mail': true,
       'Statut': true,
       'Commentaire': true,
-      'Actions': true
+      'Date Rappel': true,
+      'Heure Rappel': true
     },
-    columnHeaders: ['#', 'Prénom', 'Nom', 'Téléphone', 'Mail', 'Statut', 'Commentaire', 'Actions'],
-    contactDataKeys: ['numeroLigne', 'prenom', 'nom', 'telephone', 'email', 'statut', 'commentaire', 'actions'],
+    columnHeaders: ['#', 'Prénom', 'Nom', 'Téléphone', 'Mail', 'Statut', 'Commentaire', 'Date Rappel', 'Heure Rappel'],
+    contactDataKeys: ['numeroLigne', 'prenom', 'nom', 'telephone', 'email', 'statut', 'commentaire', 'dateRappel', 'heureRappel'],
     onToggleColumnVisibility: jest.fn()
   };
 
@@ -101,7 +102,7 @@ describe('ContactTable Reminder Integration', () => {
     mockDateCalculationService.isValidQuantity.mockReturnValue(true);
   });
 
-  it('should render reminder buttons in actions column', () => {
+  it('should render reminder buttons next to reminder date', () => {
     render(<ContactTable {...defaultProps} />);
     
     // Vérifier que les boutons de rappel sont présents
@@ -316,3 +317,4 @@ describe('ContactTable Reminder Integration', () => {
     expect(saveButton).toBeDisabled();
   });
 });
+

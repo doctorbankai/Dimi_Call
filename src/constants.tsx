@@ -305,31 +305,30 @@ export const IconDotsVertical = ({ className = "w-5 h-5" }: { className?: string
 );
 
 
-// Add "Actions" to COLUMN_HEADERS and a corresponding 'null' or specific key to CONTACT_DATA_KEYS
+// Column configuration: enforced order that matches the required table layout
 export const COLUMN_HEADERS = [
   '#',
+  'Sexe',
   'Prénom',
   'Nom',
   'Téléphone',
   'Mail',
+  'Statut',
+  'Commentaire',
   'Source',
   'Type',
   'Qualité',
   'Lien',
   'Date Rappel',
   'Heure Rappel',
-  'Date Appel',
-  'Heure Appel',
-  'Statut',
-  'Commentaire',
   'Date RDV',
   'Heure RDV',
+  'Date Appel',
+  'Heure Appel',
   'Durée Appel',
-  'Sexe',
   'Don',
   'Date',
   'UID',
-  'Actions',
 ];
 
 // Ordre par défaut des colonnes pour la page Appels (mode table)
@@ -357,28 +356,27 @@ export const DEFAULT_COLUMN_ORDER = [
 
 export const CONTACT_DATA_KEYS = [
   'numeroLigne',
+  'sexe',
   'prenom',
   'nom',
   'telephone',
   'email',
+  'statut',
+  'commentaire',
   'source',
   'type',
   'qualite',
   'lien',
   'dateRappel',
   'heureRappel',
-  'dateAppel',
-  'heureAppel',
-  'statut',
-  'commentaire',
   'dateRDV',
   'heureRDV',
+  'dateAppel',
+  'heureAppel',
   'dureeAppel',
-  'sexe',
   'don',
   'date',
   'uid',
-  'actions',
 ];
 
 export const STRETCHABLE_COLUMN_INDICES = [1, 2, 4, 5, 7]; // Prénom, Nom, Mail, École, Commentaire
@@ -424,7 +422,6 @@ export const headerIcons: Record<string, React.ReactNode> = {
   "Don": <IconUser />,
   "Date": <IconCalendar />,
   "UID": <IconUser />,
-  "Actions": <IconSettings />,
 };
 
 // Export alias pour compat shadcn en-têtes

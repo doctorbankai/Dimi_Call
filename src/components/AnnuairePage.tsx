@@ -2081,7 +2081,6 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
             { label: 'Don', value: 'don' },
             { label: 'Date', value: 'date' },
             { label: 'UID', value: 'uid' },
-            { label: 'Actions', value: 'actions' },
           ]}
           requiredTargets={['telephone']}
           onConfirm={handleImportConfirm}
@@ -2090,3 +2089,5 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
     </div>
   );
 }
+
+

@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 import { Contact, ContactStatus, CallStates, Theme, CallMode } from '../types';
-import { QUICK_COMMENTS, TABLE_HEADER_ICONS } from '../constants';
+import { QUICK_COMMENTS, TABLE_HEADER_ICONS, DEFAULT_COLUMN_ORDER } from '../constants';
 import { cn } from '../lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +22,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Phone, User, Mail, MessageCircle, Clock, Calendar as CalendarIcon, FileText, ArrowUpDown,
-  ArrowUp, ArrowDown, Zap, Timer, Hourglass, Settings2, GripVertical, Upload, FileSpreadsheet, Users, CloudUpload, Bell, Hash, FolderOpen, X
+  ArrowUp, ArrowDown, Zap, Timer, Hourglass, Upload, FileSpreadsheet, Users, CloudUpload, Hash, FolderOpen, X, Bell
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { formatPhoneNumber } from '../services/dataService';
@@ -38,13 +38,13 @@ import { importContactsFromFile, normalizeHeader } from '../services/dataService
 // Clés de stockage pour la persistance des préférences de table
 const COLUMN_ORDER_STORAGE_KEY = 'dimicall-column-order';
 const COLUMN_ORDER_VERSION_KEY = 'dimicall-column-order-version';
-const COLUMN_ORDER_VERSION = '2.0'; // Incrémenter pour forcer la réinitialisation
+const COLUMN_ORDER_VERSION = '3.0'; // Incrémenter pour forcer la réinitialisation
 const SORT_CONFIG_STORAGE_KEY = 'dimicall-sort-config';
 
 // Configuration des colonnes
 interface ColumnConfig {
   id: string;
-  key: keyof Contact | 'actions' | 'index';
+  key: keyof Contact | 'index';
   label: string;
   icon: React.ComponentType<any>;
   width?: string;
@@ -354,7 +354,7 @@ const SortableHeader: React.FC<SortableHeaderProps> = ({
   };
 
   const handleClick = () => {
-    if (column.canSort && column.key !== 'actions' && column.key !== 'index') {
+    if (column.canSort && column.key !== 'index') {
       onSort(column.key as keyof Contact);
     }
   };
@@ -431,12 +431,15 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
   // Utiliser les colonnes transmises par le parent au lieu du système interne
   const [columnOrder, setColumnOrder] = useState<string[]>([]);
   
+  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
+  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   // Créer des configurations de colonnes dynamiques basées sur les props
   const dynamicColumns = useMemo((): ColumnConfig[] => {
     return columnHeaders.map((header, index) => {
       const dataKey = contactDataKeys[index];
       const headerToIdMap: Record<string, string> = {
         '#': 'numeroLigne',
+        'Sexe': 'sexe',
         'Prénom': 'prenom',
         'Nom': 'nom',
         'Téléphone': 'telephone',
@@ -451,7 +454,6 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
         'Date Appel': 'dateAppel',
         'Heure Appel': 'heureAppel',
         'Durée Appel': 'dureeAppel',
-        'Sexe': 'sexe',
         'Don': 'don',
         'Qualité': 'qualite',
         'Type': 'type',
@@ -481,54 +483,53 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
         'Type': User,
         'Date': CalendarIcon,
         'UID': User,
-        'Actions': Settings2
       };
 
       return {
         id: headerToIdMap[header] || header.toLowerCase(),
-        key: (dataKey || 'actions') as keyof Contact | 'actions',
+        key: (dataKey || 'index') as keyof Contact | 'index',
         label: header,
         icon: iconMap[header] || FileText,
-        width: header === 'Actions' ? '80px' : 'auto',
-        minWidth: header === 'Actions' ? '80px' : header === '#' ? '60px' : header.includes('Téléphone') || header.includes('Mail') ? '150px' : '100px',
-        canHide: !['#', 'Prénom', 'Nom', 'Commentaire', 'Actions'].includes(header),
-        canSort: header !== 'Actions',
+        width: 'auto',
+        minWidth: header === '#' ? '60px' : header.includes('Téléphone') || header.includes('Mail') ? '150px' : '100px',
+        canHide: !['#', 'Prénom', 'Nom', 'Commentaire'].includes(header),
+        canSort: true,
         defaultVisible: true,
       };
     });
   }, [columnHeaders, contactDataKeys]);
 
+  const enforcedColumnIds = useMemo(() => {
+    if (dynamicColumns.length === 0) {
+      return [];
+    }
+
+    const enforcedLabels = ['#', ...DEFAULT_COLUMN_ORDER, 'Don', 'Date', 'UID'];
+    const enforcedIds = enforcedLabels
+      .map(label => dynamicColumns.find(col => col.label === label)?.id)
+      .filter((id): id is string => Boolean(id));
+
+    const remainingIds = dynamicColumns
+      .map(col => col.id)
+      .filter(id => !enforcedIds.includes(id));
+
+    return [...enforcedIds, ...remainingIds];
+  }, [dynamicColumns]);
+
   // Charger l'ordre des colonnes sauvegardé quand la définition change
   useEffect(() => {
-    if (dynamicColumns.length === 0) return;
+    if (enforcedColumnIds.length === 0) return;
     try {
-      // Vérifier la version de l'ordre des colonnes
       const savedVersion = localStorage.getItem(COLUMN_ORDER_VERSION_KEY);
-      const saved = localStorage.getItem(COLUMN_ORDER_STORAGE_KEY);
-      const dynamicIds = dynamicColumns.map(col => col.id);
-      
-      // Si la version a changé, réinitialiser l'ordre
       if (savedVersion !== COLUMN_ORDER_VERSION) {
         console.log('[ContactTable] Version de l\'ordre des colonnes changée, réinitialisation...');
         localStorage.setItem(COLUMN_ORDER_VERSION_KEY, COLUMN_ORDER_VERSION);
         localStorage.removeItem(COLUMN_ORDER_STORAGE_KEY);
-        setColumnOrder(dynamicColumns.map(col => col.id));
-        return;
       }
-      
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          const validSaved = parsed.filter((id: string) => dynamicIds.includes(id));
-          const missing = dynamicIds.filter((id) => !validSaved.includes(id));
-          setColumnOrder([...validSaved, ...missing]);
-          return;
-        }
-      }
+      localStorage.setItem(COLUMN_ORDER_STORAGE_KEY, JSON.stringify(enforcedColumnIds));
     } catch {}
-    // Fallback: ordre par défaut
-    setColumnOrder(dynamicColumns.map(col => col.id));
-  }, [dynamicColumns]);
+    setColumnOrder(enforcedColumnIds);
+  }, [enforcedColumnIds]);
 
   // Sauvegarder l'ordre des colonnes quand il change
   useEffect(() => {
@@ -540,8 +541,6 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
   }, [columnOrder]);
 
   // État pour le drag & drop
-  const [draggedColumn, setDraggedColumn] = useState<string | null>(null);
-  const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
 
   // Ref pour le conteneur de scroll
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -594,7 +593,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
         const parsed = JSON.parse(saved) as { key: string | null; direction: SortDirection };
         const validKeys = dynamicColumns
           .map(col => col.key)
-          .filter((k): k is keyof Contact => k !== 'actions' && k !== 'index');
+          .filter((k): k is keyof Contact => k !== 'index');
         if (parsed && (parsed.key === null || (typeof parsed.key === 'string' && (validKeys as string[]).includes(parsed.key))) &&
             (parsed.direction === 'asc' || parsed.direction === 'desc' || parsed.direction === null)) {
           setSortConfig({ key: parsed.key as keyof Contact | null, direction: parsed.direction });
@@ -780,31 +779,6 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
       );
     }
     
-    if (column.id === 'actions') {
-      return (
-        <div className="flex items-center justify-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
-            onClick={() => handleOpenReminderDialog(contact)}
-            title="Programmer un rappel"
-          >
-            <Bell className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary"
-            onClick={() => {/* TODO: Implémenter l'action d'appel */}}
-            title="Appeler"
-          >
-            <Phone className="h-4 w-4" />
-          </Button>
-        </div>
-      );
-    }
-
     const value = contact[columnKey];
 
     // Ajout : support de l'édition inline lorsqu'une cellule est en mode édition
@@ -887,6 +861,35 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
         );
 
       case 'dateRappel':
+        return (
+          <div className="flex items-center justify-center gap-1">
+            <DateTimeCell
+              value={(value as string) || ''}
+              type="date"
+              onChange={(newDate) => {
+                onUpdateContact({
+                  id: contact.id,
+                  [columnKey]: newDate
+                });
+              }}
+              theme={theme}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 text-muted-foreground hover:text-primary"
+              title="Programmer un rappel"
+              onClick={(event) => {
+                event.stopPropagation();
+                handleOpenReminderDialog(contact);
+              }}
+            >
+              <Bell className="h-4 w-4" />
+            </Button>
+          </div>
+        );
+
       case 'dateRDV':
       case 'dateAppel':
         return (
@@ -995,16 +998,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
       return;
     }
 
-    const newOrder = [...columnOrder];
-    const draggedIndex = newOrder.indexOf(draggedColumn);
-    const targetIndex = newOrder.indexOf(targetColumnId);
-
-    // Retirer l'élément de sa position actuelle
-    newOrder.splice(draggedIndex, 1);
-    // L'insérer Ã  la nouvelle position
-    newOrder.splice(targetIndex, 0, draggedColumn);
-
-    setColumnOrder(newOrder);
+    setColumnOrder(enforcedColumnIds);
     setDraggedColumn(null);
     setDragOverColumn(null);
   };
@@ -1128,7 +1122,6 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
       { label: 'Don', value: 'don' },
       { label: 'Date', value: 'date' },
       { label: 'UID', value: 'uid' },
-      { label: 'Actions', value: 'actions' },
     ];
     return options;
   }, []);
@@ -1393,8 +1386,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                               "text-foreground h-16 align-middle whitespace-nowrap px-2 py-1.5 text-center font-medium text-xs select-none transition-all duration-200",
                               column.canSort ? "cursor-pointer hover:bg-muted" : "",
                               draggedColumn === column.id && "opacity-50 scale-95",
-                              dragOverColumn === column.id && "border-l-4 border-l-primary bg-primary/10",
-                              "cursor-grab active:cursor-grabbing"
+                              dragOverColumn === column.id && "border-l-4 border-l-primary bg-primary/10"
                             )}
                             style={{ 
                               width: column.width,
@@ -1413,15 +1405,14 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                             }}
                             onClick={(e) => {
                               // Empêcher le tri si on est en train de drag
-                              if (!draggedColumn && column.canSort && column.key !== 'actions' && column.key !== 'index') {
+                              if (!draggedColumn && column.canSort && column.key !== 'index') {
                                 handleSort(column.key as keyof Contact);
                               }
                             }}
                           >
                             <div className="flex flex-col items-center justify-center gap-1 min-h-[40px]">
-                              {/* Ligne supérieure : Grip + Label + Indicateurs de tri */}
+                              {/* Ligne supérieure : Label + Indicateurs de tri */}
                               <div className="flex items-center justify-center gap-1 w-full">
-                                <GripVertical className="w-3 h-3 text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
                                 <span className="inline-flex items-center gap-1.5 truncate text-xs font-medium [&>svg]:w-3.5 [&>svg]:h-3.5 [&>svg]:text-muted-foreground">
                                   {TABLE_HEADER_ICONS[column.label]}
                                   <span className="truncate">{column.label}</span>
@@ -1492,7 +1483,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                                 minWidth: column.minWidth
                               }}
                               onDoubleClick={() => {
-                                if (column.key !== 'actions' && column.key !== 'index') {
+                                if (column.key !== 'index') {
                                   handleCellDoubleClick(contact.id, column.key as keyof Contact, contact[column.key as keyof Contact]);
                                 }
                               }}
@@ -1576,7 +1567,6 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
 });
 
 ContactTable.displayName = 'ContactTable';
-
 
 
 

@@ -480,8 +480,8 @@ Dimitri MOREL - Arcanis Conseil`;
   const detectAvailableColumns = useCallback((contactsData: Contact[]) => {
     if (!contactsData || contactsData.length === 0) {
       // Colonnes par dfaut minimales si pas de donnes
-      const defaultColumns = ["#", "Prnom", "Nom", "Tlphone", "Mail", "Statut"];
-      const defaultDataKeys = ['numeroLigne', 'prenom', 'nom', 'telephone', 'email', 'statut'] as (keyof Contact | null)[];
+      const defaultColumns = ["#", "Sexe", "Prnom", "Nom", "Tlphone", "Mail", "Statut", "Commentaire"];
+      const defaultDataKeys = ['numeroLigne', 'sexe', 'prenom', 'nom', 'telephone', 'email', 'statut', 'commentaire'] as (keyof Contact | null)[];
 
       setAvailableColumns(defaultColumns);
       setAvailableDataKeys(defaultDataKeys);
@@ -506,15 +506,17 @@ Dimitri MOREL - Arcanis Conseil`;
 
     // Toujours inclure les colonnes essentielles ET importantes par dfaut
     const alwaysIncludeColumns = [
-      "#", "Prnom", "Nom",
+      "#", "Sexe", "Prnom", "Nom",
       "Tlphone", "Mail", "Statut", "Commentaire",
+      "Source", "Type", "Qualit", "Lien",
       "Date Rappel", "Heure Rappel", "Date RDV", "Heure RDV",
       "Date Appel", "Heure Appel", "Dure Appel"
     ];
 
     const alwaysIncludeDataKeys = [
-      'numeroLigne', 'prenom', 'nom',
+      'numeroLigne', 'sexe', 'prenom', 'nom',
       'telephone', 'email', 'statut', 'commentaire',
+      'source', 'type', 'qualite', 'lien',
       'dateRappel', 'heureRappel', 'dateRDV', 'heureRDV',
       'dateAppel', 'heureAppel', 'dureeAppel'
     ] as (keyof Contact)[];
@@ -525,9 +527,6 @@ Dimitri MOREL - Arcanis Conseil`;
     });
 
     // Vrifier les colonnes optionnelles pour voir si elles contiennent des donnes
-    const optionalColumns = ["Sexe", "Don", "Qualit", "Type", "Date", "UID"];
-    const optionalDataKeys = ['sexe', 'don', 'qualite', 'type', 'date', 'uid'] as (keyof Contact)[];
-
     COLUMN_HEADERS.forEach((header, index) => {
       if (alwaysIncludeColumns.includes(header)) return; // Djà incluse
 
@@ -559,7 +558,7 @@ Dimitri MOREL - Arcanis Conseil`;
       }, {} as Record<string, boolean>);
 
       // Masquer par dfaut certaines colonnes moins importantes (seulement si pas djà dfini)
-      const lessImportantColumns = ["Sexe", "Don", "Qualit", "Type", "Date", "UID"];
+      const lessImportantColumns = ["Don", "Qualit", "Type", "Date", "UID"];
       lessImportantColumns.forEach(col => {
         if (newVisibleColumns[col] !== undefined && prevVisible[col] === undefined) {
           newVisibleColumns[col] = false;
@@ -2129,7 +2128,7 @@ Dimitri MOREL - Arcanis Conseil`;
     } catch (error) {
       console.error('Erreur lors du chargement de la config des colonnes:', error);
       // Fallback vers la config par dfaut
-      return ["#", "Prnom", "Nom", "Commentaire"];
+      return ["#", "Sexe", "Prnom", "Nom", "Commentaire"];
     }
   };
 
