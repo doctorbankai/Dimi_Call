@@ -9,7 +9,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useSupabaseAuth } from '../lib/auth-client';
-import { Eye, EyeOff, Lock, Mail, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, Loader2, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface AuthModalProps {
@@ -86,18 +86,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  const handleCloseApp = async () => {
+    if (window.electronAPI) {
+      await window.electronAPI.closeApp();
+    }
+  };
+
   return (
     <Dialog 
       open={isOpen} 
       onOpenChange={() => {}} // Empêche la fermeture par clic extérieur
     >
       <DialogContent 
-        className="sm:max-w-[400px] border-0 bg-gray-900/95 backdrop-blur-xl shadow-2xl"
+        className="!fixed sm:max-w-[400px] border-0 bg-gray-900/95 backdrop-blur-xl shadow-2xl"
         showCloseButton={false} // Supprime le bouton de fermeture (croix)
         onEscapeKeyDown={(e) => e.preventDefault()} // Empêche la fermeture via Escape
         onPointerDownOutside={(e) => e.preventDefault()} // Empêche la fermeture par clic extérieur
         onInteractOutside={(e) => e.preventDefault()} // Empêche toute interaction extérieure
       >
+        {/* Bouton de fermeture de l'application */}
+        <button
+          onClick={handleCloseApp}
+          className="absolute top-4 right-4 z-50 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none text-gray-400 hover:text-white hover:bg-red-500/20"
+          title="Fermer l'application"
+        >
+          <X className="h-4 w-4" />
+          <span className="sr-only">Fermer l'application</span>
+        </button>
+
         <DialogHeader className="space-y-4 text-center pb-4">
           <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
             <Lock className="w-8 h-8 text-white" />

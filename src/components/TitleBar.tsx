@@ -164,7 +164,7 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
   return (
     <div 
       className={cn(
-        "fixed top-0 left-0 right-0 z-10 flex items-center select-none pointer-events-none",
+        "fixed top-0 left-0 right-0 z-[30000] flex items-center select-none pointer-events-none",
         isMacOS ? "h-8" : "h-8", // Hauteur adaptée selon la plateforme
         menuBarBg
       )}
