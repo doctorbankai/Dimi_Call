@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Contact, ContactStatus, CallStates } from "../types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -83,6 +83,7 @@ import { shortcutService } from '../services/shortcutService'
 import { ViewSwitcher, ViewMode } from '@/components/ViewSwitcher'
 import { PaginatedContactTable } from '@/components/PaginatedContactTable'
 import type { ContactTableRef } from '@/components/ContactTable'
+import { StatusCompletionChart } from '@/components/StatusCompletionChart'
 
 type AppelsCardsViewProps = {
   contacts: Contact[]
@@ -96,8 +97,7 @@ type AppelsCardsViewProps = {
   onCall: () => void | Promise<void>
   onHangUp: () => void | Promise<void>
   onEmail: () => void
-  onSmsMonsieur: () => void
-  onSmsMadame: () => void
+  onSms: () => void
   onRappel: () => void
   onRendezVous: () => void
   onCalCom: () => void
@@ -201,8 +201,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   onCall,
   onHangUp,
   onEmail,
-  onSmsMonsieur,
-  onSmsMadame,
+  onSms,
   onRappel,
   onRendezVous,
   onCalCom,
@@ -327,6 +326,97 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     contacts: false,
     agenda: false
   })
+
+  // Calcul du nombre de contacts filtrés pour Google Contacts
+  const googleContactsCount = useMemo(() => {
+    const filteredContacts = contacts.filter(contact =>
+      contact.statut === ContactStatus.ARappeler ||
+      contact.statut === ContactStatus.DO ||
+      contact.statut === ContactStatus.RO ||
+      contact.statut === ContactStatus.A0
+    );
+    return filteredContacts.length;
+  }, [contacts]);
+
+  // Calcul du nombre de contacts avec rappels pour Google Calendar
+  const calendarRemindersCount = useMemo(() => {
+    const filteredContacts = contacts.filter(contact =>
+      contact.dateRappel && contact.dateRappel.trim() !== ''
+    );
+    return filteredContacts.length;
+  }, [contacts]);
+
+  // Handler unifié pour l'export avec options multiples
+  const handleUnifiedExport = async () => {
+    if (contacts.length === 0) {
+      toast.info('Aucun contact à exporter');
+      return;
+    }
+
+    const options = Object.entries(exportOptions).filter(([_, enabled]) => enabled);
+
+    if (options.length === 0) {
+      toast.info('Veuillez sélectionner au moins une option d\'export');
+      return;
+    }
+
+    let exportCount = 0;
+
+    // Import dynamique des fonctions d'export
+    const { exportContactsToFile, exportGoogleContactsCSV, exportGoogleCalendarCSV } = await import('../services/dataService');
+
+    // Exporter la table CSV si sélectionnée
+    if (exportOptions.table) {
+      try {
+        exportContactsToFile(contacts, 'csv');
+        exportCount++;
+      } catch (error) {
+        console.error('Erreur lors de l\'export CSV:', error);
+      }
+    }
+
+    // Exporter la table Excel si sélectionnée
+    if (exportOptions.tableExcel) {
+      try {
+        exportContactsToFile(contacts, 'xlsx');
+        exportCount++;
+      } catch (error) {
+        console.error('Erreur lors de l\'export Excel:', error);
+      }
+    }
+
+    // Exporter vers Google Contacts si sélectionné
+    if (exportOptions.contacts) {
+      try {
+        if (googleContactsCount === 0) {
+          toast.info('Aucun contact à exporter vers Google Contacts (statuts: À rappeler, DO, RO, A0)');
+        } else {
+          exportGoogleContactsCSV(contacts);
+          exportCount++;
+        }
+      } catch (error) {
+        console.error('Erreur lors de l\'export Google Contacts:', error);
+      }
+    }
+
+    // Exporter vers Google Calendar si sélectionné
+    if (exportOptions.agenda) {
+      try {
+        if (calendarRemindersCount === 0) {
+          toast.info('Aucun rappel à exporter vers Google Agenda');
+        } else {
+          exportGoogleCalendarCSV(contacts);
+          exportCount++;
+        }
+      } catch (error) {
+        console.error('Erreur lors de l\'export Google Calendar:', error);
+      }
+    }
+
+    if (exportCount > 0) {
+      toast.success(`${exportCount} export(s) effectué(s) avec succès`);
+    }
+  };
 
   // Handlers pour le drag & drop
   const handleDragEnter = (e: React.DragEvent) => {
@@ -723,6 +813,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
           />
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <StatusCompletionChart contacts={contacts} compact className="flex-shrink-0" />
           {viewMode === 'cards' && (
             <>
               <Tabs value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)} className="w-auto">
@@ -893,30 +984,36 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       checked={exportOptions.contacts}
                       onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, contacts: checked }))}
                       onSelect={(e) => e.preventDefault()}
-                      disabled={true}
+                      disabled={googleContactsCount === 0}
                       className="cursor-pointer"
                     >
                       <Users className="mr-2 h-4 w-4" />
                       <span>Contacts Google</span>
+                      {googleContactsCount > 0 && (
+                        <span className="ml-auto text-xs text-muted-foreground">({googleContactsCount})</span>
+                      )}
                     </DropdownMenuCheckboxItem>
 
                     <DropdownMenuCheckboxItem
                       checked={exportOptions.agenda}
                       onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, agenda: checked }))}
                       onSelect={(e) => e.preventDefault()}
-                      disabled={true}
+                      disabled={calendarRemindersCount === 0}
                       className="cursor-pointer"
                     >
                       <Calendar className="mr-2 h-4 w-4" />
                       <span>Agenda Google</span>
+                      {calendarRemindersCount > 0 && (
+                        <span className="ml-auto text-xs text-muted-foreground">({calendarRemindersCount})</span>
+                      )}
                     </DropdownMenuCheckboxItem>
 
                     <DropdownMenuSeparator />
 
                     <DropdownMenuItem
-                      onClick={onExportDialog}
+                      onClick={handleUnifiedExport}
                       className="cursor-pointer bg-primary/10 hover:bg-primary/20"
-                      disabled={!exportOptions.table && !exportOptions.tableExcel}
+                      disabled={Object.values(exportOptions).every(option => !option)}
                     >
                       <Download className="mr-2 h-4 w-4" />
                       <span className="font-medium">Exporter la sÃ©lection</span>
@@ -1119,8 +1216,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       onCall={onCall}
                       onHangUp={onHangUp}
                       onEmail={onEmail}
-                      onSmsMonsieur={onSmsMonsieur}
-                      onSmsMadame={onSmsMadame}
+                      onSms={onSms}
                       onRappel={onRappel}
                       onRendezVous={onRendezVous}
                       onCalCom={onCalCom}
@@ -1343,7 +1439,10 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
 
             </div>
           ) : (
-            <div className="flex h-full flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/30 text-muted-foreground">
+            <div 
+              className="flex h-full flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/30 text-muted-foreground"
+              style={{ pointerEvents: 'none' }}
+            >
               <div className="rounded-full border bg-background p-3 shadow-sm">
                 <Phone className="h-6 w-6" />
               </div>
@@ -1405,7 +1504,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                               size="icon"
                               variant="outline"
                               disabled={!selectedContact}
-                              onClick={() => selectedContact && onSmsMonsieur()}
+                              onClick={() => selectedContact && onSms()}
                               className="size-10 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
                               aria-label="SMS"
                             >
@@ -1827,30 +1926,36 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             checked={exportOptions.contacts}
                             onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, contacts: checked }))}
                             onSelect={(e) => e.preventDefault()}
-                            disabled={true}
+                            disabled={googleContactsCount === 0}
                             className="cursor-pointer"
                           >
                             <Users className="mr-2 h-4 w-4" />
                             <span>Contacts Google</span>
+                            {googleContactsCount > 0 && (
+                              <span className="ml-auto text-xs text-muted-foreground">({googleContactsCount})</span>
+                            )}
                           </DropdownMenuCheckboxItem>
 
                           <DropdownMenuCheckboxItem
                             checked={exportOptions.agenda}
                             onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, agenda: checked }))}
                             onSelect={(e) => e.preventDefault()}
-                            disabled={true}
+                            disabled={calendarRemindersCount === 0}
                             className="cursor-pointer"
                           >
                             <Calendar className="mr-2 h-4 w-4" />
                             <span>Agenda Google</span>
+                            {calendarRemindersCount > 0 && (
+                              <span className="ml-auto text-xs text-muted-foreground">({calendarRemindersCount})</span>
+                            )}
                           </DropdownMenuCheckboxItem>
 
                           <DropdownMenuSeparator />
 
                           <DropdownMenuItem
-                            onClick={onExportDialog}
+                            onClick={handleUnifiedExport}
                             className="cursor-pointer bg-primary/10 hover:bg-primary/20"
-                            disabled={!exportOptions.table && !exportOptions.tableExcel}
+                            disabled={Object.values(exportOptions).every(option => !option)}
                           >
                             <Download className="mr-2 h-4 w-4" />
                             <span className="font-medium">Exporter la sÃ©lection</span>

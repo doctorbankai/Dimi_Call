@@ -1653,19 +1653,31 @@ export const getImportedTableMetadata = (): {
 // ===== GOOGLE CALENDAR EXPORT UTILITIES =====
 
 /**
- * Convertit une date du format YYYY-MM-DD vers MM/DD/YYYY pour Google Calendar
+ * Convertit une date du format YYYY-MM-DD ou DD/MM/YYYY vers MM/DD/YYYY pour Google Calendar
  */
 export const formatDateForGoogleCalendar = (dateStr: string): string => {
   if (!dateStr || dateStr.trim() === '') {
     throw new Error('Date invalide pour le formatage Google Calendar');
   }
   
-  const [year, month, day] = dateStr.split('-');
-  if (!year || !month || !day) {
-    throw new Error(`Format de date invalide: ${dateStr}. Attendu: YYYY-MM-DD`);
+  // Détection du format: si contient '-', c'est YYYY-MM-DD, sinon c'est DD/MM/YYYY
+  if (dateStr.includes('-')) {
+    // Format YYYY-MM-DD
+    const [year, month, day] = dateStr.split('-');
+    if (!year || !month || !day) {
+      throw new Error(`Format de date invalide: ${dateStr}. Attendu: YYYY-MM-DD ou DD/MM/YYYY`);
+    }
+    return `${month}/${day}/${year}`;
+  } else if (dateStr.includes('/')) {
+    // Format DD/MM/YYYY
+    const [day, month, year] = dateStr.split('/');
+    if (!year || !month || !day) {
+      throw new Error(`Format de date invalide: ${dateStr}. Attendu: YYYY-MM-DD ou DD/MM/YYYY`);
+    }
+    return `${month}/${day}/${year}`;
+  } else {
+    throw new Error(`Format de date invalide: ${dateStr}. Attendu: YYYY-MM-DD ou DD/MM/YYYY`);
   }
-  
-  return `${month}/${day}/${year}`;
 };
 
 /**

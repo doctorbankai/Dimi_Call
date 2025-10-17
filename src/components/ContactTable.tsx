@@ -490,7 +490,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
         key: (dataKey || 'index') as keyof Contact | 'index',
         label: header,
         icon: iconMap[header] || FileText,
-        width: 'auto',
+        width: header === 'Lien' ? '200px' : 'auto',
         minWidth: header === '#' ? '60px' : header.includes('Téléphone') || header.includes('Mail') ? '150px' : '100px',
         canHide: !['#', 'Prénom', 'Nom', 'Commentaire'].includes(header),
         canSort: true,
@@ -926,6 +926,16 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
       case 'dureeAppel':
         return (
           <span className="cursor-pointer hover:text-primary transition-colors text-center block">
+            {value || 'N/A'}
+          </span>
+        );
+
+      case 'lien':
+        return (
+          <span 
+            className="cursor-pointer hover:text-primary transition-colors truncate block max-w-[180px]" 
+            title={value as string}
+          >
             {value || 'N/A'}
           </span>
         );

@@ -294,6 +294,7 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   useEffect(() => {
     if (!resolvedActiveTabId) {
       if (contacts.length > 0) {
+        console.log('[DEBUG] Pas d\'onglet actif, réinitialisation des contacts');
         setContacts([]);
       }
       if (selectedContact) {
@@ -304,17 +305,23 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
 
     const currentTab = tableTabs.find(tab => tab.id === resolvedActiveTabId);
     if (!currentTab) {
+      console.log('[DEBUG] Onglet actif non trouvé:', resolvedActiveTabId);
       return;
     }
 
-    if (!contactsEqualById(contacts, currentTab.contacts)) {
+    // Toujours synchroniser les contacts de l'onglet actif, même si les IDs sont les mêmes
+    // Cela permet de mettre à jour les compteurs googleContactsCount et calendarRemindersCount
+    // quand le contenu des contacts change (statut, dateRappel, etc.)
+    // On utilise une comparaison par référence pour détecter les changements
+    if (contacts !== currentTab.contacts) {
+      console.log('[DEBUG] Synchronisation des contacts de l\'onglet actif:', currentTab.contacts.length, 'contacts');
       setContacts(currentTab.contacts);
     }
 
     if (selectedContact && !currentTab.contacts.some(contact => contact.id === selectedContact.id)) {
       setSelectedContact(null);
     }
-  }, [resolvedActiveTabId, tableTabs, contacts, selectedContact]);
+  }, [resolvedActiveTabId, tableTabs]);
 
 
   useEffect(() => {
@@ -479,16 +486,24 @@ Dimitri MOREL - Arcanis Conseil`;
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => {
     try {
       const saved = localStorage.getItem(VISIBLE_COLUMNS_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : {};
-    } catch {
+      const parsed = saved ? JSON.parse(saved) : {};
+      console.log('🔍 Chargement initial visibleColumns depuis localStorage:', parsed);
+      return parsed;
+    } catch (error) {
+      console.error('❌ Erreur lors du chargement de visibleColumns:', error);
       return {};
     }
   });
+  
+  // Ref pour garder une trace de l'initialisation des colonnes
+  const columnsInitializedRef = useRef(false);
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
   const [availableDataKeys, setAvailableDataKeys] = useState<(keyof Contact | null)[]>([]);
 
   // Fonction pour dtecter les colonnes disponibles dans les donnes
   const detectAvailableColumns = useCallback((contactsData: Contact[]) => {
+    console.log('🔎 detectAvailableColumns appelé avec', contactsData?.length || 0, 'contacts');
+    
     if (!contactsData || contactsData.length === 0) {
       // Colonnes par dfaut minimales si pas de donnes
       const defaultColumns = ["#", "Sexe", "Prnom", "Nom", "Tlphone", "Mail", "Statut", "Commentaire"];
@@ -497,8 +512,17 @@ Dimitri MOREL - Arcanis Conseil`;
       setAvailableColumns(defaultColumns);
       setAvailableDataKeys(defaultDataKeys);
 
-      // Initialiser la visibilit pour les colonnes par dfaut
+      // NE PAS réinitialiser visibleColumns si des préférences existent déjà
+      // Initialiser uniquement si c'est la toute première fois
       setVisibleColumns(prevVisible => {
+        // Si on a déjà des préférences, les garder
+        if (Object.keys(prevVisible).length > 0) {
+          console.log('✅ Préférences existantes conservées (pas de contacts):', prevVisible);
+          return prevVisible;
+        }
+        
+        // Sinon, initialiser avec les valeurs par défaut
+        console.log('⚠️ Initialisation avec valeurs par défaut (pas de contacts)');
         const defaultVisibility = defaultColumns.reduce((acc, col) => {
           acc[col] = true;
           return acc;
@@ -560,8 +584,13 @@ Dimitri MOREL - Arcanis Conseil`;
     setAvailableColumns(newAvailableColumns);
     setAvailableDataKeys(detectedDataKeys);
 
-    // Mettre à jour la visibilit en utilisant une fonction callback pour viter la dpendance circulaire
+    // Mettre à jour la visibilit UNIQUEMENT lors de la premire initialisation
+    // ou si de nouvelles colonnes sont dtectes
     setVisibleColumns(prevVisible => {
+      // Si les colonnes sont djà initialises et qu'on a des prfrences sauvegardes,
+      // ne pas les craser
+      const hasExistingPreferences = Object.keys(prevVisible).length > 0;
+      
       const newVisibleColumns = newAvailableColumns.reduce((acc, col) => {
         // Garder la prfrence existante si elle existe, sinon true par dfaut
         acc[col] = prevVisible[col] !== undefined ? prevVisible[col] : true;
@@ -576,6 +605,20 @@ Dimitri MOREL - Arcanis Conseil`;
         }
       });
 
+      // Si on a djà des prfrences, ne retourner les nouvelles valeurs que pour les nouvelles colonnes
+      if (hasExistingPreferences) {
+        const merged = { ...prevVisible };
+        // Ajouter uniquement les nouvelles colonnes dtectes
+        newAvailableColumns.forEach(col => {
+          if (merged[col] === undefined) {
+            merged[col] = newVisibleColumns[col];
+          }
+        });
+        console.log('✅ Préférences existantes conservées et fusionnées:', merged);
+        return merged;
+      }
+
+      console.log('⚠️ Initialisation avec nouvelles colonnes détectées:', newVisibleColumns);
       return newVisibleColumns;
     });
   }, []); // Pas de dpendances pour viter la boucle infinie
@@ -583,16 +626,17 @@ Dimitri MOREL - Arcanis Conseil`;
   // Effect pour dtecter les colonnes quand les contacts changent
   useEffect(() => {
     detectAvailableColumns(contacts);
-  }, [contacts]); // Seulement dpendant des contacts, pas de detectAvailableColumns
+  }, [contacts, detectAvailableColumns]); // Inclure detectAvailableColumns dans les dépendances
 
   // Sauvegarder la visibilit des colonnes à chaque modification
   useEffect(() => {
     try {
       if (Object.keys(visibleColumns).length > 0) {
+        console.log('💾 Sauvegarde visibleColumns dans localStorage:', visibleColumns);
         localStorage.setItem(VISIBLE_COLUMNS_STORAGE_KEY, JSON.stringify(visibleColumns));
       }
-    } catch {
-      // Ignorer pour ne pas bloquer l'UI
+    } catch (error) {
+      console.error('❌ Erreur lors de la sauvegarde de visibleColumns:', error);
     }
   }, [visibleColumns]);
 
@@ -1244,19 +1288,26 @@ Dimitri MOREL - Arcanis Conseil`;
 
   // Calcul du nombre de contacts filtrs pour Google Contacts
   const googleContactsCount = useMemo(() => {
-    return contacts.filter(contact =>
+    const filteredContacts = contacts.filter(contact =>
       contact.statut === ContactStatus.ARappeler ||
       contact.statut === ContactStatus.DO ||
       contact.statut === ContactStatus.RO ||
       contact.statut === ContactStatus.A0
-    ).length;
+    );
+    console.log('[DEBUG] googleContactsCount:', filteredContacts.length, 'sur', contacts.length, 'contacts');
+    console.log('[DEBUG] Statuts des contacts:', contacts.map(c => c.statut).filter((v, i, a) => a.indexOf(v) === i));
+    console.log('[DEBUG] Contacts filtrés pour Google:', filteredContacts.map(c => ({ nom: c.nom, statut: c.statut })));
+    return filteredContacts.length;
   }, [contacts]);
 
   // Calcul du nombre de contacts avec rappels pour Google Calendar
   const calendarRemindersCount = useMemo(() => {
-    return contacts.filter(contact =>
+    const filteredContacts = contacts.filter(contact =>
       contact.dateRappel && contact.dateRappel.trim() !== ''
-    ).length;
+    );
+    console.log('[DEBUG] calendarRemindersCount:', filteredContacts.length, 'sur', contacts.length, 'contacts');
+    console.log('[DEBUG] Contacts avec rappel:', filteredContacts.map(c => ({ nom: c.nom, dateRappel: c.dateRappel })));
+    return filteredContacts.length;
   }, [contacts]);
 
   const [exportOptions, setExportOptions] = useState({
@@ -1265,6 +1316,37 @@ Dimitri MOREL - Arcanis Conseil`;
     contacts: false,
     agenda: false,
   });
+
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+
+  // Garder une référence des anciennes valeurs pour détecter les vrais changements
+  const prevCountsRef = useRef({ 
+    contactsLength: 0, 
+    googleCount: 0, 
+    calendarCount: 0 
+  });
+
+  // Fermer le menu d'export quand les compteurs changent (pas au chargement initial)
+  useEffect(() => {
+    const prev = prevCountsRef.current;
+    const hasChanged = 
+      prev.contactsLength !== contacts.length ||
+      prev.googleCount !== googleContactsCount ||
+      prev.calendarCount !== calendarRemindersCount;
+
+    // Fermer le menu seulement si les valeurs ont changé ET que le menu est ouvert
+    if (hasChanged && exportMenuOpen && (prev.contactsLength > 0 || prev.googleCount > 0 || prev.calendarCount > 0)) {
+      console.log('[DEBUG MENU] Fermeture du menu car les compteurs ont changé');
+      setExportMenuOpen(false);
+    }
+
+    // Mettre à jour les références
+    prevCountsRef.current = {
+      contactsLength: contacts.length,
+      googleCount: googleContactsCount,
+      calendarCount: calendarRemindersCount
+    };
+  }, [contacts.length, googleContactsCount, calendarRemindersCount, exportMenuOpen]);
 
   const handleExport = useCallback((format: 'csv' | 'xlsx') => {
     if (contacts.length === 0) {
@@ -2586,8 +2668,7 @@ Dimitri MOREL - Arcanis Conseil`;
                         onCall={() => makePhoneCall()}
                         onHangUp={() => adbEndCall()}
                         onEmail={() => selectedContact && setIsEmailDialogOpen(true)}
-                        onSmsMonsieur={() => selectedContact && setIsSmsDialogOpen(true)}
-                        onSmsMadame={() => selectedContact && setIsSmsDialogOpen(true)}
+                        onSms={() => selectedContact && setIsSmsDialogOpen(true)}
                         onRappel={() => selectedContact && setIsRappelDialogOpen(true)}
                         onRendezVous={() => selectedContact && setIsRendezVousDialogOpen(true)}
                         onCalCom={() => handleCalendarClick()}
@@ -2924,7 +3005,10 @@ Dimitri MOREL - Arcanis Conseil`;
                                 }}
                               />
 
-                              <DropdownMenu>
+                              <DropdownMenu open={exportMenuOpen} onOpenChange={(open) => {
+                                console.log('[DEBUG MENU] Menu ouverture:', open, 'googleContactsCount:', googleContactsCount, 'calendarRemindersCount:', calendarRemindersCount);
+                                setExportMenuOpen(open);
+                              }}>
                                 <DropdownMenuTrigger asChild>
                                   <Button
                                     variant="outline"
@@ -2977,7 +3061,10 @@ Dimitri MOREL - Arcanis Conseil`;
 
                                   <DropdownMenuCheckboxItem
                                     checked={exportOptions.contacts}
-                                    onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, contacts: checked }))}
+                                    onCheckedChange={(checked) => {
+                                      console.log('[DEBUG MENU] Contacts Google clicked, count:', googleContactsCount);
+                                      setExportOptions(prev => ({ ...prev, contacts: checked }));
+                                    }}
                                     onSelect={(e) => e.preventDefault()}
                                     disabled={googleContactsCount === 0}
                                     className="cursor-pointer"
@@ -3189,8 +3276,7 @@ Dimitri MOREL - Arcanis Conseil`;
                     onCall={() => makePhoneCall()}
                     onHangUp={() => adbEndCall()}
                     onEmail={() => selectedContact && setIsEmailDialogOpen(true)}
-                    onSmsMonsieur={() => selectedContact && setIsSmsDialogOpen(true)}
-                    onSmsMadame={() => selectedContact && setIsSmsDialogOpen(true)}
+                    onSms={() => selectedContact && setIsSmsDialogOpen(true)}
                     onRappel={() => selectedContact && setIsRappelDialogOpen(true)}
                     onRendezVous={() => selectedContact && setIsRendezVousDialogOpen(true)}
                     onCalCom={() => handleCalendarClick()}

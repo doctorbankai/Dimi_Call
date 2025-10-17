@@ -16,8 +16,7 @@ interface CallControlProps {
   onCall: () => void | Promise<void>;
   onHangUp: () => void | Promise<void>;
   onEmail?: () => void;
-  onSmsMonsieur?: () => void;
-  onSmsMadame?: () => void;
+  onSms?: () => void;
   onStatusChange?: (status: ContactStatus) => void;
   onRappel?: () => void;
   onRendezVous?: () => void;
@@ -48,8 +47,7 @@ const CallControl: React.FC<CallControlProps> = ({
   onCall,
   onHangUp,
   onEmail,
-  onSmsMonsieur,
-  onSmsMadame,
+  onSms,
   onStatusChange,
   onRappel,
   onRendezVous,
@@ -162,53 +160,22 @@ const CallControl: React.FC<CallControlProps> = ({
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    aria-label="SMS"
-                    title="SMS"
-                    disabled={!contact}
-                    className={cn(
-                      "size-10 rounded-full transition-all duration-200 hover:scale-105",
-                      "border-2 hover:bg-accent hover:text-accent-foreground",
-                      "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
-                      "disabled:opacity-50 disabled:cursor-not-allowed",
-                    )}
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  className="z-50 w-40 border bg-popover text-popover-foreground shadow-lg"
-                  align="end"
-                >
-                  <DropdownMenuLabel className="flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4" />
-                    Envoyer SMS
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      onClick={() => onSmsMonsieur && onSmsMonsieur()}
-                      disabled={!contact}
-                      className="cursor-pointer"
-                    >
-                      Monsieur {contact?.nom || ""}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => onSmsMadame && onSmsMadame()}
-                      disabled={!contact}
-                      className="cursor-pointer"
-                    >
-                      Madame {contact?.nom || ""}
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label="SMS"
+              title="SMS"
+              onClick={() => onSms && onSms()}
+              disabled={!contact}
+              className={cn(
+                "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                "border-2 hover:bg-accent hover:text-accent-foreground",
+                "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+              )}
+            >
+              <MessageSquare className="h-4 w-4" />
+            </Button>
           </TooltipTrigger>
           <TooltipContent>
             <p>Envoyer un SMS</p>

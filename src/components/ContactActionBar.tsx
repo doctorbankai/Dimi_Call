@@ -16,12 +16,7 @@ import {
   CalendarSearch
 } from 'lucide-react';
 import { formatPhoneNumber } from '../services/dataService';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+
 
 interface ContactActionBarProps {
   contact: Contact;
@@ -188,27 +183,16 @@ export const ContactActionBar = React.memo<ContactActionBarProps>(({
               </TooltipContent>
             </Tooltip>
 
-            {/* Bouton SMS avec menu déroulant (priorité haute) */}
+            {/* Bouton SMS (priorité haute) */}
             <Tooltip>
               <TooltipTrigger asChild>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      className="action-button action-button-secondary"
-                      aria-label="SMS"
-                    >
-                      <MessageSquare className="action-button-icon" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={handleSms}>
-                      SMS Standard
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleSms}>
-                      SMS Mandataire
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button
+                  className="action-button action-button-secondary"
+                  onClick={handleSms}
+                  aria-label="SMS"
+                >
+                  <MessageSquare className="action-button-icon" />
+                </Button>
               </TooltipTrigger>
               <TooltipContent>
                 <p>SMS</p>
