@@ -2803,9 +2803,9 @@ Dimitri MOREL - Arcanis Conseil`;
                         />
                       ) : (
                         <Tabs value={resolvedActiveTabId} onValueChange={setActiveTableTabId} className="flex h-full flex-col">
-                          {/* Barre d'onglets en haut */}
-                          <div className="flex items-center justify-between px-1.5 py-1.5 border-b bg-card">
-                            {/* Actions - à gauche */}
+                          {/* Barre d'onglets en haut - Responsive */}
+                          <div className="flex flex-col lg:flex-row lg:items-center gap-2 px-1.5 py-1.5 border-b bg-card">
+                            {/* Première ligne: Actions principales */}
                             <div className="flex items-center gap-2 flex-1 min-w-0">
                               {/* Bouton Colonnes simplifié */}
                               <DropdownMenu>
@@ -2813,7 +2813,7 @@ Dimitri MOREL - Arcanis Conseil`;
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-9 px-2"
+                                    className="h-9 px-2 shrink-0"
                                     title="Gestion des colonnes"
                                   >
                                     <Settings2 className="h-4 w-4" />
@@ -2861,14 +2861,14 @@ Dimitri MOREL - Arcanis Conseil`;
                                 </DropdownMenuContent>
                               </DropdownMenu>
 
-                              {/* Bouton Recherche moderne - Actions rapides */}
+                              {/* Bouton Recherche moderne - Actions rapides - Visible sur tous les écrans */}
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
                                     variant="outline"
                                     size="sm"
                                     disabled={!selectedContact}
-                                    className="h-9 px-2"
+                                    className="h-9 px-2 shrink-0"
                                     title="Actions de recherche pour le contact sélectionné"
                                   >
                                     <Globe className="h-4 w-4" />
@@ -2933,47 +2933,47 @@ Dimitri MOREL - Arcanis Conseil`;
                                   </DropdownMenuRadioGroup>
                                 </DropdownMenuContent>
                               </DropdownMenu>
-                            </div>
 
-                            {/* Boutons d'action - à droite */}
-                            <div className="flex items-center gap-1 mr-3">
-                              {/* Boutons de recherche LinkedIn et Google */}
-                              <div className="flex flex-wrap items-center gap-2 mr-2">
+                              {/* Boutons de recherche LinkedIn et Google - Masqués sur petits écrans, visibles sur grands écrans */}
+                              <div className="hidden xl:flex items-center gap-2">
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleLinkedInSearch()}
                                   disabled={!selectedContact}
-                                  className="h-8 gap-1.5 px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2]"
+                                  className="h-8 gap-1.5 px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2] shrink-0"
                                   title="Rechercher sur LinkedIn"
                                 >
                                   <Linkedin className="h-4 w-4" />
-                                  LinkedIn
+                                  <span className="hidden 2xl:inline">LinkedIn</span>
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleGoogleSearch()}
                                   disabled={!selectedContact}
-                                  className="h-8 gap-1.5 px-3 bg-[#4285F4] hover:bg-[#357AE8] text-white border-[#4285F4]"
+                                  className="h-8 gap-1.5 px-3 bg-[#4285F4] hover:bg-[#357AE8] text-white border-[#4285F4] shrink-0"
                                   title="Rechercher sur Google"
                                 >
                                   <Globe className="h-4 w-4" />
-                                  Google
+                                  <span className="hidden 2xl:inline">Google</span>
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleDirectLink()}
                                   disabled={!selectedContact || !selectedContact.lien}
-                                  className="h-8 gap-1.5 px-3"
+                                  className="h-8 gap-1.5 px-3 shrink-0"
                                   title="Ouvrir le lien direct"
                                 >
                                   <Eye className="h-4 w-4" />
-                                  Lien direct
+                                  <span className="hidden 2xl:inline">Lien direct</span>
                                 </Button>
                               </div>
+                            </div>
 
+                            {/* Deuxième section: Boutons d'action */}
+                            <div className="flex items-center gap-1 shrink-0">
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -3014,7 +3014,7 @@ Dimitri MOREL - Arcanis Conseil`;
                                     variant="outline"
                                     size="sm"
                                     disabled={contacts.length === 0 && googleContactsCount === 0 && calendarRemindersCount === 0}
-                                    className="h-9 px-2"
+                                    className="h-9 px-2 shrink-0"
                                     title="Exporter les données"
                                   >
                                     <Download className="h-4 w-4" />
@@ -3109,26 +3109,24 @@ Dimitri MOREL - Arcanis Conseil`;
                                 size="sm"
                                 disabled={contacts.length === 0}
                                 onClick={handleClearActiveTab}
-                                className="h-9 px-2"
+                                className="h-9 px-2 shrink-0"
                                 title="Supprimer les contacts de l'onglet actif"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
-                            </div>
 
-                            {/* Dropdown des onglets - à droite */}
-                            <div className="flex items-center gap-2 flex-shrink-0">
+                              {/* Dropdown des onglets - Responsive */}
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
                                     variant="outline"
-                                    className="flex items-center gap-2 px-3 py-1.5 h-9 text-sm"
+                                    className="flex items-center gap-2 px-3 py-1.5 h-9 text-sm shrink-0"
                                   >
                                     <span className="inline-block w-2 h-2 rounded-full mr-1" style={{ backgroundColor: tableTabs.find(t => t.id === (resolvedActiveTabId))?.color || 'var(--primary)' }} />
-                                    <span className="truncate max-w-[200px]">
+                                    <span className="truncate max-w-[120px] sm:max-w-[200px]">
                                       {tableTabs.find(t => t.id === (resolvedActiveTabId))?.name || 'Onglets'}
                                     </span>
-                                    <ChevronDown className="h-4 w-4" />
+                                    <ChevronDown className="h-4 w-4 shrink-0" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="start" className="w-64">

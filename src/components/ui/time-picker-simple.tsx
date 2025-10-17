@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 interface TimePickerSimpleProps {
@@ -76,8 +75,11 @@ export const TimePickerSimple: React.FC<TimePickerSimpleProps> = ({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <div className="text-sm font-medium mb-2">Heures</div>
-            <ScrollArea className="h-40">
-              <div className="grid gap-1">
+            <div 
+              className="relative h-40 overflow-y-auto overflow-x-hidden rounded-md border"
+              onWheel={(e) => e.stopPropagation()}
+            >
+              <div className="grid gap-1 p-1">
                 {hours.map((hour) => (
                   <Button
                     key={hour}
@@ -93,12 +95,15 @@ export const TimePickerSimple: React.FC<TimePickerSimpleProps> = ({
                   </Button>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
           </div>
           <div>
             <div className="text-sm font-medium mb-2">Minutes</div>
-            <ScrollArea className="h-40">
-              <div className="grid gap-1">
+            <div 
+              className="relative h-40 overflow-y-auto overflow-x-hidden rounded-md border"
+              onWheel={(e) => e.stopPropagation()}
+            >
+              <div className="grid gap-1 p-1">
                 {minutes.map((minute) => (
                   <Button
                     key={minute}
@@ -114,7 +119,7 @@ export const TimePickerSimple: React.FC<TimePickerSimpleProps> = ({
                   </Button>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
           </div>
         </div>
       </PopoverContent>

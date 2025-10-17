@@ -3,7 +3,6 @@ import { X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ScrollArea } from '@/components/ui/scroll-area'
 
 interface TimePickerWithClearProps {
   label: string
@@ -33,14 +32,12 @@ export const TimePickerWithClear: React.FC<TimePickerWithClearProps> = ({
           <SelectTrigger className="flex-1">
             <SelectValue placeholder="Sélectionner" />
           </SelectTrigger>
-          <SelectContent>
-            <ScrollArea className="h-60">
-              {timeOptions.map((time) => (
-                <SelectItem key={time} value={time}>
-                  {time}
-                </SelectItem>
-              ))}
-            </ScrollArea>
+          <SelectContent className="max-h-60">
+            {timeOptions.map((time) => (
+              <SelectItem key={time} value={time}>
+                {time}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         {value && (

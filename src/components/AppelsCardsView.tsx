@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react"
+﻿import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Contact, ContactStatus, CallStates } from "../types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -149,7 +149,7 @@ const getInitialFormState = (contact: Contact | null): FormState => ({
 })
 
 const formatDisplayDate = (value?: string) => {
-  if (!value) return "â€”"
+  if (!value) return ""
   try {
     return format(new Date(value), "dd MMM yyyy", { locale: fr })
   } catch {
@@ -158,19 +158,19 @@ const formatDisplayDate = (value?: string) => {
 }
 
 const formatDisplayTime = (value?: string) => {
-  if (!value) return "â€”"
+  if (!value) return ""
   return value
 }
 
-// DÃ©finir les expectedTargets pour ImportMappingDialog
+// Définir les expectedTargets pour ImportMappingDialog
 const EXPECTED_TARGETS = [
-  { label: 'PrÃ©nom', value: 'prenom' },
+  { label: 'Prénom', value: 'prenom' },
   { label: 'Nom', value: 'nom' },
-  { label: 'TÃ©lÃ©phone', value: 'telephone' },
+  { label: 'Téléphone', value: 'telephone' },
   { label: 'Mail', value: 'email' },
   { label: 'Source', value: 'source' },
   { label: 'Type', value: 'type' },
-  { label: 'QualitÃ©', value: 'qualite' },
+  { label: 'Qualité', value: 'qualite' },
   { label: 'Lien', value: 'lien' },
   { label: 'Date Rappel', value: 'dateRappel' },
   { label: 'Heure Rappel', value: 'heureRappel' },
@@ -180,7 +180,7 @@ const EXPECTED_TARGETS = [
   { label: 'Commentaire', value: 'commentaire' },
   { label: 'Date RDV', value: 'dateRDV' },
   { label: 'Heure RDV', value: 'heureRDV' },
-  { label: 'DurÃ©e Appel', value: 'dureeAppel' },
+  { label: 'Durée Appel', value: 'dureeAppel' },
   { label: 'Sexe', value: 'sexe' },
   { label: 'Don', value: 'don' },
   { label: 'Date', value: 'date' },
@@ -221,7 +221,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   const [visibleCount, setVisibleCount] = useState(40)
   const [activeFilter, setActiveFilter] = useState<'all' | 'rappel' | 'rdv' | 'status'>('all')
   
-  // Ref pour tracker si le scroll doit Ãªtre automatique (uniquement au clic)
+  // Ref pour tracker si le scroll doit être automatique (uniquement au clic)
   const shouldAutoScrollRef = useRef(false)
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     try {
@@ -231,7 +231,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       return 'cards';
     }
   })
-  // Charger la configuration des colonnes essentielles depuis les paramÃ¨tres
+  // Charger la configuration des colonnes essentielles depuis les paramètres
   const getEssentialColumns = (): string[] => {
     const saved = localStorage.getItem('dimicall_column_config');
     if (saved) {
@@ -242,8 +242,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
         console.error('Erreur lors du chargement de la config des colonnes:', error);
       }
     }
-    // Configuration par dÃ©faut si rien n'est sauvegardÃ©
-    return ['#', 'PrÃ©nom', 'Nom', 'Commentaire'];
+    // Configuration par défaut si rien n'est sauvegardé
+    return ['#', 'Prénom', 'Nom', 'Commentaire'];
   };
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => {
@@ -254,13 +254,13 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     return defaultVisible;
   })
 
-  // Ordre des colonnes - utilise l'ordre par dÃ©faut si disponible
+  // Ordre des colonnes - utilise l'ordre par défaut si disponible
   const orderedColumnHeaders = useMemo(() => {
-    // CrÃ©er un ordre basÃ© sur DEFAULT_COLUMN_ORDER
+    // Créer un ordre basé sur DEFAULT_COLUMN_ORDER
     const ordered: string[] = [];
     const remainingHeaders = new Set(COLUMN_HEADERS);
     
-    // Ajouter d'abord les colonnes dans l'ordre par dÃ©faut si elles existent
+    // Ajouter d'abord les colonnes dans l'ordre par défaut si elles existent
     DEFAULT_COLUMN_ORDER.forEach(header => {
       if (remainingHeaders.has(header)) {
         ordered.push(header);
@@ -276,7 +276,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     return ordered;
   }, [])
 
-  // CrÃ©er les clÃ©s de donnÃ©es correspondantes dans le mÃªme ordre
+  // Créer les clés de données correspondantes dans le même ordre
   const orderedContactDataKeys = useMemo(() => {
     const keyMap: Record<string, keyof Contact | null> = {
       '#': 'numeroLigne',
@@ -451,7 +451,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
 
       if (!validExtensions.includes(extension)) {
-        toast.error('Format de fichier non supportÃ©', {
+        toast.error('Format de fichier non supporté', {
           description: 'Veuillez utiliser un fichier .csv, .tsv, .xlsx ou .xls'
         })
         return
@@ -470,18 +470,18 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
         return
       }
       
-      console.log('ðŸ”„ [MAPPING] DÃ©but de l\'importation avec mapping:', mapping)
+      console.log('ðŸ”„ [MAPPING] Début de l\'importation avec mapping:', mapping)
       
-      // Import rÃ©el des contacts
+      // Import réel des contacts
       const { importContactsFromFile } = await import('../services/dataService')
       const imported = await importContactsFromFile(mappingDialog.file, mapping, options)
-      console.log(`ðŸ“¥ [MAPPING] ${imported.length} contacts importÃ©s (aprÃ¨s exclusion Ã©ventuelle)`)
+      console.log(`ðŸ“¥ [MAPPING] ${imported.length} contacts importés (après exclusion éventuelle)`)
       
-      // DÃ©clencher l'Ã©vÃ©nement global pour que App.tsx mette Ã  jour la liste
+      // Déclencher l'événement global pour que App.tsx mette à jour la liste
       try {
         const ext = mappingDialog.file.name.split('.').pop()?.toLowerCase()
         const source = (ext === 'xlsx' || ext === 'xls') ? 'xlsx' : (ext === 'csv' || ext === 'tsv') ? 'csv' : 'csv'
-        console.log('ðŸ“¡ [MAPPING] DÃ©clenchement de l\'Ã©vÃ©nement dimicall-imported-contacts')
+        console.log('ðŸ“¡ [MAPPING] Déclenchement de l\'événement dimicall-imported-contacts')
         window.dispatchEvent(new CustomEvent('dimicall-imported-contacts', {
           detail: {
             contacts: imported,
@@ -489,17 +489,17 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
             source
           }
         }))
-        console.log('âœ… [MAPPING] Ã‰vÃ©nement dÃ©clenchÃ© avec succÃ¨s')
+        console.log('✅ [MAPPING] Événement déclenché avec succès')
       } catch (error) {
-        console.error('âŒ [MAPPING] Erreur lors du dÃ©clenchement de l\'Ã©vÃ©nement:', error)
+        console.error('âŒ [MAPPING] Erreur lors du déclenchement de l\'événement:', error)
       }
       
       // Fermer le dialogue
       setMappingDialog({ open: false, file: null, headers: [], preview: [] })
-      console.log('ðŸ”’ [MAPPING] Dialogue fermÃ©')
+      console.log('🔒 [MAPPING] Dialogue fermé')
       
-      toast.success('Import rÃ©ussi', {
-        description: `${imported.length} contacts importÃ©s avec succÃ¨s`
+      toast.success('Import réussi', {
+        description: `${imported.length} contacts importés avec succès`
       })
 
     } catch (error) {
@@ -595,12 +595,12 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     setNoteDraft(selectedContact?.commentaire ?? "")
   }, [selectedContact])
 
-  // Persistance de la prÃ©fÃ©rence de vue
+  // Persistance de la préférence de vue
   useEffect(() => {
     try {
       localStorage.setItem('appels-2-view-mode', viewMode);
     } catch (error) {
-      console.warn('[Appels 2] Impossible de sauvegarder la prÃ©fÃ©rence de vue', error);
+      console.warn('[Appels 2] Impossible de sauvegarder la préférence de vue', error);
     }
   }, [viewMode]);
 
@@ -643,7 +643,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   useEffect(() => {
     if (!selectedContactId || !shouldAutoScrollRef.current) return
     
-    // Petit dÃ©lai pour laisser le DOM se mettre Ã  jour
+    // Petit délai pour laisser le DOM se mettre Ã  jour
     const timeoutId = setTimeout(() => {
       const node = scrollRef.current?.querySelector<HTMLDivElement>(`[data-contact-card="${selectedContactId}"]`)
       
@@ -653,7 +653,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
         if (contactIndex !== -1 && contactIndex >= visibleCount) {
           // Charger jusqu'Ã  ce contact + quelques autres
           setVisibleCount(contactIndex + 20)
-          // RÃ©essayer aprÃ¨s le render
+          // Réessayer après le render
           setTimeout(() => {
             const retryNode = scrollRef.current?.querySelector<HTMLDivElement>(`[data-contact-card="${selectedContactId}"]`)
             if (retryNode) {
@@ -661,12 +661,12 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
             }
           }, 200)
         }
-        // RÃ©initialiser le flag
+        // Réinitialiser le flag
         shouldAutoScrollRef.current = false;
         return
       }
       
-      // VÃ©rifier si le contact est dÃ©jÃ  visible
+      // Vérifier si le contact est déjÃ  visible
       const container = scrollRef.current
       if (!container) {
         shouldAutoScrollRef.current = false;
@@ -685,7 +685,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
         node.scrollIntoView({ behavior: 'smooth', block: 'center' })
       }
       
-      // RÃ©initialiser le flag aprÃ¨s le scroll
+      // Réinitialiser le flag après le scroll
       shouldAutoScrollRef.current = false;
     }, 100)
     
@@ -719,7 +719,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     
     const timeoutId = setTimeout(() => {
       handleSave()
-    }, 1000) // Sauvegarde aprÃ¨s 1 seconde d'inactivitÃ©
+    }, 1000) // Sauvegarde après 1 seconde d'inactivité
     
     return () => clearTimeout(timeoutId)
   }, [formState, selectedStatus, noteDraft])
@@ -735,14 +735,14 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
 
       const key = e.key
 
-      // F1 : Appeler le contact sÃ©lectionnÃ©
+      // F1 : Appeler le contact sélectionné
       if (key === 'F1') {
         e.preventDefault()
         if (selectedContact) {
           onCall()
           toast.info('F1: Appel en cours...')
         } else {
-          toast.warning('Veuillez sÃ©lectionner un contact')
+          toast.warning('Veuillez sélectionner un contact')
         }
         return
       }
@@ -756,7 +756,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
           id: selectedContact.id,
           statut: newStatus as ContactStatus
         })
-        toast.success(`${key}: Statut "${newStatus}" appliquÃ©`)
+        toast.success(`${key}: Statut "${newStatus}" appliqué`)
         
         // Si autocall est actif, passer au contact suivant et appeler
         if (isAutocallActive) {
@@ -822,7 +822,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                     value="disabled" 
                     className="text-xs data-[state=active]:bg-neutral-900 data-[state=active]:text-white dark:data-[state=active]:bg-neutral-100 dark:data-[state=active]:text-neutral-900"
                   >
-                    DÃ©sactivÃ©
+                    Désactivé
                   </TabsTrigger>
                   <TabsTrigger 
                     value="linkedin" 
@@ -854,7 +854,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       size="sm"
                       onClick={() => {
                         setIsAutocallActive(!isAutocallActive)
-                        toast.info(isAutocallActive ? 'Autocall dÃ©sactivÃ©' : 'Autocall activÃ©')
+                        toast.info(isAutocallActive ? 'Autocall désactivé' : 'Autocall activé')
                       }}
                       className={cn(
                         "h-9",
@@ -870,11 +870,11 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   <TooltipContent side="bottom" className="max-w-sm bg-popover text-popover-foreground border-border">
                     <div className="space-y-2">
                       <p className="font-semibold text-foreground">Mode Autocall</p>
-                      <p className="text-xs text-muted-foreground">Active l'appel automatique du contact suivant aprÃ¨s application d'un statut.</p>
+                      <p className="text-xs text-muted-foreground">Active l'appel automatique du contact suivant après application d'un statut.</p>
                       <div className="mt-2 space-y-1 text-xs">
                         <p className="font-medium text-foreground">Raccourcis clavier :</p>
-                        <p className="text-foreground">â€¢ <kbd className="px-1 py-0.5 bg-muted text-foreground rounded">F1</kbd> : Appeler le contact</p>
-                        <p className="text-foreground">â€¢ <kbd className="px-1 py-0.5 bg-muted text-foreground rounded">F2-F10</kbd> : Appliquer un statut</p>
+                        <p className="text-foreground">"¢ <kbd className="px-1 py-0.5 bg-muted text-foreground rounded">F1</kbd> : Appeler le contact</p>
+                        <p className="text-foreground">"¢ <kbd className="px-1 py-0.5 bg-muted text-foreground rounded">F2-F10</kbd> : Appliquer un statut</p>
                         <p className="text-muted-foreground mt-1">En mode Autocall, appliquer un statut (F2-F10) passe automatiquement au contact suivant et lance l'appel.</p>
                       </div>
                     </div>
@@ -887,7 +887,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                     <Button 
                       size="sm"
                       onClick={() => {
-                        // Trouver le premier contact sans statut ou avec statut "Non dÃ©fini"
+                        // Trouver le premier contact sans statut ou avec statut "Non défini"
                         const firstWithoutStatus = filteredContacts.find(c => 
                           !c.statut || c.statut === ContactStatus.NonDefini
                         );
@@ -897,7 +897,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           onSelectContact(firstWithoutStatus);
                           toast.info('Retour au premier contact sans statut');
                         } else {
-                          toast.info('Aucun contact sans statut trouvÃ©');
+                          toast.info('Aucun contact sans statut trouvé');
                         }
                       }}
                       className="h-9 bg-primary/10 hover:bg-primary/20 text-primary border-primary/30"
@@ -939,7 +939,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       size="sm" 
                       disabled={contacts.length === 0}
                       className="h-9 bg-neutral-900 hover:bg-black text-white border-neutral-900 dark:bg-neutral-800 dark:hover:bg-neutral-900"
-                      title="Exporter les donnÃ©es"
+                      title="Exporter les données"
                     >
                       <Download className="h-4 w-4 mr-2" />
                       Exporter
@@ -1016,7 +1016,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       disabled={Object.values(exportOptions).every(option => !option)}
                     >
                       <Download className="mr-2 h-4 w-4" />
-                      <span className="font-medium">Exporter la sÃ©lection</span>
+                      <span className="font-medium">Exporter la sélection</span>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -1034,8 +1034,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   <AlertDialogHeader>
                     <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
                     <AlertDialogDescription>
-                      ÃŠtes-vous sÃ»r de vouloir supprimer tous les contacts de la liste actuelle ? 
-                      Cette action est irrÃ©versible.
+                      Êtes-vous sûr de vouloir supprimer tous les contacts de la liste actuelle ? 
+                      Cette action est irréversible.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
@@ -1108,7 +1108,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                             <span className="flex items-center gap-0.5 truncate">
                               <Phone className="h-2.5 w-2.5" />
-                              {contact.telephone || "â€”"}
+                              {contact.telephone || "-"}
                             </span>
                           </div>
                         </div>
@@ -1149,7 +1149,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       {isCalling && (
                         <div className="flex items-center gap-1 rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-[11px] text-primary ml-auto">
                           <PhoneCall className="h-3 w-3" />
-                          <span>Appel en coursâ€¦</span>
+                          <span>Appel en cours"¦</span>
                         </div>
                       )}
                     </CardContent>
@@ -1167,7 +1167,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
               )}
               {contacts.length === 0 && (
                 <div className="text-center text-sm text-muted-foreground py-10">
-                  Aucun contact trouvÃ©.
+                  Aucun contact trouvé.
                 </div>
               )}
             </div>
@@ -1193,7 +1193,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       </h2>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                         {selectedContact.email && <span>{selectedContact.email}</span>}
-                        {selectedContact.email && selectedContact.telephone && <span className="text-muted-foreground/50">â€¢</span>}
+                        {selectedContact.email && selectedContact.telephone && <span className="text-muted-foreground/50">"¢</span>}
                         {selectedContact.telephone && <span>{selectedContact.telephone}</span>}
                       </div>
                     </div>
@@ -1258,7 +1258,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       <div className="grid gap-4">
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="contact-firstname">PrÃ©nom</Label>
+                            <Label htmlFor="contact-firstname">Prénom</Label>
                             <Input
                               id="contact-firstname"
                               value={formState.prenom}
@@ -1276,7 +1276,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <Label htmlFor="contact-phone">TÃ©lÃ©phone</Label>
+                            <Label htmlFor="contact-phone">Téléphone</Label>
                             <Input
                               id="contact-phone"
                               value={formState.telephone}
@@ -1380,7 +1380,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="call-duration">DurÃ©e d'appel</Label>
+                          <Label htmlFor="call-duration">Durée d'appel</Label>
                           <Input
                             id="call-duration"
                             value={formState.dureeAppel}
@@ -1428,7 +1428,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-muted-foreground">Aucun historique enregistrÃ©.</p>
+                        <p className="text-xs text-muted-foreground">Aucun historique enregistré.</p>
                       )}
                     </div>
 
@@ -1446,9 +1446,10 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
               <div className="rounded-full border bg-background p-3 shadow-sm">
                 <Phone className="h-6 w-6" />
               </div>
-              <div className="text-sm font-medium">SÃ©lectionnez un prospect dans la colonne de gauche</div>
+              <div className="text-sm font-medium">Sélectionnez un prospect dans la colonne de gauche</div>
               <p className="text-xs text-muted-foreground/80">
-                Les informations dÃ©taillÃ©es sâ€™afficheront ici.
+                Les informations détaillées s,
+    '"˜': afficheront ici.
               </p>
             </div>
           )}
@@ -1464,15 +1465,15 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <span data-slot="avatar" className="relative flex size-8 shrink-0 overflow-hidden rounded-full h-8 w-8 flex-shrink-0">
                       <span data-slot="avatar-fallback" className="bg-muted flex size-full items-center justify-center rounded-full">
-                        {selectedContact ? (selectedContact.prenom?.[0] || selectedContact.nom?.[0] || '?') : 'â€”'}
+                        {selectedContact ? (selectedContact.prenom?.[0] || selectedContact.nom?.[0] || '?') : '"”'}
                       </span>
                     </span>
                     <div className="flex flex-col">
-                      <span className="text-sm font-medium whitespace-nowrap" title={selectedContact ? `${selectedContact.prenom || ''} ${selectedContact.nom || ''}`.trim() : 'Aucun contact sÃ©lectionnÃ©'}>
-                        {selectedContact ? `${selectedContact.prenom || ''} ${selectedContact.nom || ''}`.trim() || 'Sans nom' : 'Aucun contact sÃ©lectionnÃ©'}
+                      <span className="text-sm font-medium whitespace-nowrap" title={selectedContact ? `${selectedContact.prenom || ''} ${selectedContact.nom || ''}`.trim() : 'Aucun contact sélectionné'}>
+                        {selectedContact ? `${selectedContact.prenom || ''} ${selectedContact.nom || ''}`.trim() || 'Sans nom' : 'Aucun contact sélectionné'}
                       </span>
-                      <span className="text-xs text-muted-foreground whitespace-nowrap" title={selectedContact?.telephone || 'â€”'}>
-                        {selectedContact?.telephone || 'â€”'}
+                      <span className="text-xs text-muted-foreground whitespace-nowrap" title={selectedContact?.telephone || '"”'}>
+                        {selectedContact?.telephone || '"”'}
                       </span>
                     </div>
                   </div>
@@ -1493,7 +1494,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>
-                            <p>{selectedContact ? 'Appeler' : 'SÃ©lectionnez un contact'}</p>
+                            <p>{selectedContact ? 'Appeler' : 'Sélectionnez un contact'}</p>
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -1622,15 +1623,16 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
             <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
               <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-hidden">
                 <div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="gap-2 flex h-full flex-col">
-                  {/* Table Controls Bar */}
-                  <div className="flex items-center justify-between px-1.5 py-1.5 border-b bg-card">
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                  {/* Table Controls Bar - Fully Responsive */}
+                  <div className="flex items-center gap-2 px-1.5 py-1.5 border-b bg-card flex-wrap">
+                    {/* Groupe 1: Gestion colonnes + Mode auto + Recherche */}
+                    <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-9 px-2"
+                            className="h-9 px-2 shrink-0"
                             title="Gestion des colonnes"
                           >
                             <Settings2 className="h-4 w-4" />
@@ -1704,7 +1706,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             value="disabled" 
                             className="text-xs data-[state=active]:bg-neutral-900 data-[state=active]:text-white dark:data-[state=active]:bg-neutral-100 dark:data-[state=active]:text-neutral-900"
                           >
-                            DÃ©sactivÃ©
+                            Désactivé
                           </TabsTrigger>
                           <TabsTrigger 
                             value="linkedin" 
@@ -1734,7 +1736,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-9 px-2"
+                            className="h-9 px-2 shrink-0"
                             title="Mode de recherche automatique"
                           >
                             {autoSearchMode === 'linkedin' && <Linkedin className="h-4 w-4 text-blue-600" />}
@@ -1769,7 +1771,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         </DropdownMenuContent>
                       </DropdownMenu>
 
-                      <div className="relative w-[220px] sm:w-[260px] md:w-[300px]">
+                      <div className="relative flex-1 min-w-[180px] max-w-[300px]">
                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           placeholder="Rechercher dans la table..."
@@ -1780,81 +1782,82 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       </div>
                     </div>
                     
-                    {/* Boutons de recherche manuelle LinkedIn/Google/Lien */}
-                    <div className="flex flex-wrap items-center gap-2 mr-3">
+                    {/* Groupe 2: Boutons de recherche manuelle LinkedIn/Google/Lien */}
+                    <div className="flex items-center gap-2 flex-wrap shrink-0">
                       <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onLinkedInSearch}
-                        disabled={!selectedContactId}
-                        className="h-8 gap-1.5 px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2]"
-                        title="Rechercher sur LinkedIn"
-                      >
-                        <Linkedin className="h-4 w-4" />
-                        LinkedIn
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onGoogleSearch}
-                        disabled={!selectedContactId}
-                        className="h-8 gap-1.5 px-3 bg-[#4285F4] hover:bg-[#357AE8] text-white border-[#4285F4]"
-                        title="Rechercher sur Google"
-                      >
-                        <Globe className="h-4 w-4" />
-                        Google
-                      </Button>
+                          variant="outline"
+                          size="sm"
+                          onClick={onLinkedInSearch}
+                          disabled={!selectedContactId}
+                          className="h-8 gap-1.5 px-2 sm:px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2] shrink-0"
+                          title="Rechercher sur LinkedIn"
+                        >
+                          <Linkedin className="h-4 w-4" />
+                          <span className="hidden sm:inline">LinkedIn</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={onGoogleSearch}
+                          disabled={!selectedContactId}
+                          className="h-8 gap-1.5 px-2 sm:px-3 bg-[#4285F4] hover:bg-[#357AE8] text-white border-[#4285F4] shrink-0"
+                          title="Rechercher sur Google"
+                        >
+                          <Globe className="h-4 w-4" />
+                          <span className="hidden sm:inline">Google</span>
+                        </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={onDirectLink}
                         disabled={!selectedContactId}
-                        className="h-8 gap-1.5 px-3"
+                        className="h-8 gap-1.5 px-2 sm:px-3 shrink-0"
                         title="Ouvrir le lien direct"
                       >
                         <Eye className="h-4 w-4" />
-                        Lien direct
+                        <span className="hidden sm:inline">Lien direct</span>
                       </Button>
                     </div>
                     
-                    {/* Bouton pour revenir au premier contact sans statut */}
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button 
-                            size="sm"
-                            onClick={() => {
-                              // Trouver le premier contact sans statut ou avec statut "Non dÃ©fini"
-                              const firstWithoutStatus = filteredContacts.find(c => 
-                                !c.statut || c.statut === ContactStatus.NonDefini
-                              );
-                              
-                              if (firstWithoutStatus) {
-                                // SÃ©lectionner le contact
-                                onSelectContact(firstWithoutStatus);
-                                // Utiliser la mÃ©thode scrollToContact de ContactTable via la ref
-                                setTimeout(() => {
-                                  contactTableRef.current?.scrollToContact(firstWithoutStatus.id);
-                                }, 150);
-                                toast.info('Retour au premier contact sans statut');
-                              } else {
-                                toast.info('Aucun contact sans statut trouvÃ©');
-                              }
-                            }}
-                            className="h-8 gap-1.5 px-3 bg-primary/10 hover:bg-primary/20 text-primary border-primary/30"
-                            disabled={!filteredContacts.some(c => !c.statut || c.statut === ContactStatus.NonDefini)}
-                          >
-                            <ChevronUp className="h-4 w-4" />
-                            Premier sans statut
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p>Revenir au premier contact sans statut</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    
-                    <div className="flex items-center gap-1 mr-3">
+                    {/* Groupe 3: Boutons d'actions */}
+                    <div className="flex items-center gap-2 flex-wrap shrink-0">
+                      {/* Bouton pour revenir au premier contact sans statut */}
+                      <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button 
+                                size="sm"
+                                onClick={() => {
+                                  // Trouver le premier contact sans statut ou avec statut "Non défini"
+                                  const firstWithoutStatus = filteredContacts.find(c => 
+                                    !c.statut || c.statut === ContactStatus.NonDefini
+                                  );
+                                  
+                                  if (firstWithoutStatus) {
+                                    // Sélectionner le contact
+                                    onSelectContact(firstWithoutStatus);
+                                    // Utiliser la méthode scrollToContact de ContactTable via la ref
+                                    setTimeout(() => {
+                                      contactTableRef.current?.scrollToContact(firstWithoutStatus.id);
+                                    }, 150);
+                                    toast.info('Retour au premier contact sans statut');
+                                  } else {
+                                    toast.info('Aucun contact sans statut trouvé');
+                                  }
+                                }}
+                                className="h-8 gap-1.5 px-2 sm:px-3 bg-primary/10 hover:bg-primary/20 text-primary border-primary/30 shrink-0"
+                                disabled={!filteredContacts.some(c => !c.statut || c.statut === ContactStatus.NonDefini)}
+                              >
+                                <ChevronUp className="h-4 w-4" />
+                                <span className="hidden md:inline">Premier sans statut</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              <p>Revenir au premier contact sans statut</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      
                       <Button
                         variant="outline"
                         size="sm"
@@ -1870,19 +1873,20 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           }
                           input.click()
                         }}
-                        className="h-9 px-2"
+                        className="h-8 px-2 shrink-0"
                         title="Importer un fichier CSV/Excel"
                       >
                         <Upload className="h-4 w-4" />
                       </Button>
+                      
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="outline"
                             size="sm"
                             disabled={contacts.length === 0}
-                            className="h-9 px-2"
-                            title="Exporter les donnÃ©es"
+                            className="h-8 px-2 shrink-0"
+                            title="Exporter les données"
                           >
                             <Download className="h-4 w-4" />
                           </Button>
@@ -1958,27 +1962,27 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             disabled={Object.values(exportOptions).every(option => !option)}
                           >
                             <Download className="mr-2 h-4 w-4" />
-                            <span className="font-medium">Exporter la sÃ©lection</span>
+                            <span className="font-medium">Exporter la sélection</span>
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-9 px-2"
-                            title="Supprimer les contacts de l'onglet actif"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-9 px-2 shrink-0"
+                              title="Supprimer les contacts de l'onglet actif"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
                         <AlertDialogContent>
                           <AlertDialogHeader>
                             <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
                             <AlertDialogDescription>
-                              ÃŠtes-vous sÃ»r de vouloir supprimer tous les contacts de la liste actuelle ? 
-                              Cette action est irrÃ©versible.
+                              Êtes-vous sûr de vouloir supprimer tous les contacts de la liste actuelle ? 
+                              Cette action est irréversible.
                             </AlertDialogDescription>
                           </AlertDialogHeader>
                           <AlertDialogFooter>
@@ -1992,17 +1996,16 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           </AlertDialogFooter>
                         </AlertDialogContent>
                       </AlertDialog>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
+                      
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="outline"
-                            className="flex items-center gap-2 px-3 py-1.5 h-9 text-sm"
+                            className="flex items-center gap-2 px-2 sm:px-3 py-1.5 h-8 text-sm shrink-0"
                           >
-                            <span className="inline-block w-2 h-2 rounded-full mr-1" style={{backgroundColor: 'var(--primary)'}}></span>
-                            <span className="truncate max-w-[200px]">Contacts</span>
-                            <ChevronDown className="h-4 w-4" />
+                            <span className="inline-block w-2 h-2 rounded-full" style={{backgroundColor: 'var(--primary)'}}></span>
+                            <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">Contacts</span>
+                            <ChevronDown className="h-4 w-4 shrink-0" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" className="w-64">
@@ -2020,7 +2023,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                 className="h-6 w-6 p-0 hover:bg-accent-foreground/10"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  toast.info('Ã‰dition d\'onglet non disponible dans cette vue')
+                                  toast.info('Édition d\'onglet non disponible dans cette vue')
                                 }}
                               >
                                 <Pencil className="h-3 w-3" />
@@ -2046,7 +2049,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-destructive hover:text-destructive" onClick={onClearActiveTab}>
                             <Trash2 className="h-4 w-4" />
-                            Supprimer toutes les donnÃ©es
+                            Supprimer toutes les données
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
