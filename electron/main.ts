@@ -1863,6 +1863,32 @@ app.whenReady().then(async () => {
     }
   })
 
+  // Helper pour exécuter ADB avec spawn (plus fiable que exec pour les arguments complexes)
+  const spawnAdb = (adbPath: string, args: string[]): Promise<{ stdout: string; stderr: string }> => {
+    return new Promise((resolve, reject) => {
+      const process = spawn(adbPath, args, { 
+        shell: false,
+        windowsVerbatimArguments: true 
+      })
+      
+      let stdout = ''
+      let stderr = ''
+      
+      process.stdout?.on('data', (data) => { stdout += data.toString() })
+      process.stderr?.on('data', (data) => { stderr += data.toString() })
+      
+      process.on('close', (code) => {
+        if (code === 0 || stderr.includes('Starting:') || stderr.includes('Warning')) {
+          resolve({ stdout, stderr })
+        } else {
+          reject(new Error(stderr || `Process exited with code ${code}`))
+        }
+      })
+      
+      process.on('error', reject)
+    })
+  }
+
   ipcMain.handle('adb:send-sms', async (event, phoneNumber, messageBody) => {
     try {
       const adbPath = await getValidatedAdbPath()
@@ -1872,52 +1898,36 @@ app.whenReady().then(async () => {
         internationalNumber = "+33" + phoneNumber.substring(1)
       }
       
-      // Échapper les caractères spéciaux pour le shell
-      const escapeShellArg = (arg: string) => {
-        // Normaliser d'abord les apostrophes typographiques et sauts de ligne
-        const normalized = arg
-          .replace(/\u2019/g, "'")         // ' → '
-          .replace(/\u2018/g, "'")         // ' → '
-          .replace(/\u201C/g, '"')         // " → "
-          .replace(/\u201D/g, '"')         // " → "
-          .replace(/\r?\n+/g, ' ')         // newlines -> spaces
-          .trim()
-        
-        // Échapper les caractères sensibles pour /system/bin/sh
-        return normalized
-          .replace(/\\/g, '\\\\')       // backslash
-          .replace(/"/g, '\\"')          // double quote
-          .replace(/'/g, "\\'")          // single quote/apostrophe
-          .replace(/\$/g, '\\$')          // dollar
-          .replace(/`/g, '\\`')            // backtick
-      }
+      // Normaliser le message : apostrophes typographiques et sauts de ligne
+      const normalizedMessage = String(messageBody)
+        .replace(/\u2019/g, "'")         // ' → '
+        .replace(/\u2018/g, "'")         // ' → '
+        .replace(/\u201C/g, '"')         // " → "
+        .replace(/\u201D/g, '"')         // " → "
+        .replace(/\r?\n+/g, ' ')         // newlines -> spaces
+        .trim()
       
-      // Encoder le message pour l'URL (méthode 1)
-      // Normaliser d'abord les retours à la ligne pour éviter une URI invalide
-      const encodedMessage = encodeURIComponent(String(messageBody).replace(/\r?\n/g, ' '))
+      // Encoder le message pour l'URL
+      const encodedMessage = encodeURIComponent(normalizedMessage)
       
-      // Échapper le message pour le shell (méthodes 2 et 3)
-      const escapedMessage = escapeShellArg(String(messageBody))
-      
-      // Essayer plusieurs approches dans l'ordre
-      // Utiliser le schéma "smsto:" pour une compatibilité maximale avec les apps SMS
+      // Essayer plusieurs approches dans l'ordre avec spawn (pas de problème de quoting)
       const approaches = [
-        // 1. Intent VIEW avec smsto + body dans l'URI (souvent le plus robuste)
-        `"${getAdbPath()}" shell am start -a android.intent.action.VIEW -d "smsto:${internationalNumber}?body=${encodedMessage}"`,
+        // 1. Intent VIEW avec smsto + body dans l'URI
+        ['shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', `smsto:${internationalNumber}?body=${encodedMessage}`],
         // 2. Intent SENDTO avec smsto + body dans l'URI
-        `"${getAdbPath()}" shell am start -a android.intent.action.SENDTO -d "smsto:${internationalNumber}?body=${encodedMessage}"`,
+        ['shell', 'am', 'start', '-a', 'android.intent.action.SENDTO', '-d', `smsto:${internationalNumber}?body=${encodedMessage}`],
         // 3. Intent SENDTO avec smsto et extra sms_body
-        `"${getAdbPath()}" shell am start -a android.intent.action.SENDTO -d "smsto:${internationalNumber}" --es sms_body "${escapedMessage}"`,
-        // 4. Intent VIEW avec smsto et extra sms_body (dernier recours)
-        `"${getAdbPath()}" shell am start -a android.intent.action.VIEW -d "smsto:${internationalNumber}" --es sms_body "${escapedMessage}"`
+        ['shell', 'am', 'start', '-a', 'android.intent.action.SENDTO', '-d', `smsto:${internationalNumber}`, '--es', 'sms_body', normalizedMessage],
+        // 4. Intent VIEW avec smsto et extra sms_body
+        ['shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', `smsto:${internationalNumber}`, '--es', 'sms_body', normalizedMessage]
       ]
       
       let lastError = ""
       
-      for (const [index, command] of approaches.entries()) {
+      for (const [index, args] of approaches.entries()) {
         try {
-          console.log(`[ADB] Tentative ${index + 1}`)
-          const { stdout, stderr } = await execAsync(command)
+          console.log(`[ADB] Tentative ${index + 1} avec spawn`)
+          const { stdout, stderr } = await spawnAdb(adbPath, args)
           
           if (!stderr || stderr.includes('Warning') || stderr.includes('Starting:')) {
             return { 
@@ -1933,44 +1943,19 @@ app.whenReady().then(async () => {
         }
       }
       
-      // Fallback 5: Ouvrir l'app SMS puis simuler la saisie du message
+      // Fallback 5: Ouvrir l'app SMS sans message (l'utilisateur devra taper manuellement)
       try {
-        console.log('[ADB] Fallback saisie simulée: ouverture compose sans body')
-        const openCmd = `"${getAdbPath()}" shell am start -a android.intent.action.SENDTO -d "smsto:${internationalNumber}"`
-        await execAsync(openCmd)
-
-        // petite pause pour que le champ de saisie soit focalisé
-        await new Promise(resolve => setTimeout(resolve, 400))
-
-        const toInput = String(messageBody)
-          .replace(/\u2019/g, "'")       // ' → ' AVANT échappement
-          .replace(/\u2018/g, "'")       // ' → '
-          .replace(/\u201C/g, '"')       // " → "
-          .replace(/\u201D/g, '"')       // " → "
-          .replace(/\r?\n+/g, ' ')       // newlines -> spaces
-          .replace(/\\/g, '\\\\')
-          .replace(/"/g, '\\"')
-          .replace(/'/g, "\\'")          // apostrophe normale
-          .replace(/&/g, '\\&')
-          .replace(/\|/g, '\\|')
-          .replace(/</g, '\\<')
-          .replace(/>/g, '\\>')
-          .replace(/;/g, '\\;')
-          .replace(/\$/g, '\\$')
-          .replace(/\(/g, '\\(')
-          .replace(/\)/g, '\\)')
-          .replace(/ /g, '%s')
-          .trim()
-
-        const typeCmd = `"${getAdbPath()}" shell input text "${toInput}"`
-        const { stderr: typeErr } = await execAsync(typeCmd)
-        if (!typeErr || typeErr.includes('Warning')) {
-          return { success: true, message: 'SMS préparé via saisie simulée' }
+        console.log('[ADB] Fallback final: ouverture SMS sans message pré-rempli')
+        await spawnAdb(adbPath, ['shell', 'am', 'start', '-a', 'android.intent.action.SENDTO', '-d', `smsto:${internationalNumber}`])
+        
+        return { 
+          success: true, 
+          message: 'Application SMS ouverte. Veuillez saisir le message manuellement.',
+          warning: 'Le message n\'a pas pu être pré-rempli automatiquement'
         }
-        lastError = typeErr || lastError
       } catch (e) {
         lastError = (e as Error)?.message || String(e)
-        console.log(`[ADB] Fallback saisie simulée échoué: ${lastError}`)
+        console.log(`[ADB] Fallback final échoué: ${lastError}`)
       }
 
       // Si toutes les approches ont échoué

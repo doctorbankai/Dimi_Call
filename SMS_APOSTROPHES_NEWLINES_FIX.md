@@ -1,4 +1,4 @@
-# Fix SMS : Apostrophes typographiques et sauts de ligne
+# Fix SMS : Apostrophes typographiques, sauts de ligne et caractères spéciaux
 
 ## Problème identifié
 
@@ -12,11 +12,13 @@ Les modèles SMS "Premier contact", "R0 interne" et "R0 externe" ne fonctionnaie
 
 2. **Apostrophes typographiques** (`'` U+2019) : Provoquent de la mojibake et perturbent le quoting shell
 
-3. **Encodage URI avec `%`** : Dans les URI `?body=`, cmd.exe tente d'expanser `%...%` → chaîne altérée
+3. **Caractères spéciaux dans URLs** : Les `:`, `/`, `?`, `=` dans les URLs causent des erreurs avec `input text` Android → `NullPointerException`
+
+4. **Encodage URI avec `%`** : Dans les URI `?body=`, cmd.exe tente d'expanser `%...%` → chaîne altérée
 
 ## Solution appliquée
 
-### Normalisation systématique avant envoi
+### 1. Normalisation systématique avant envoi
 
 Tous les messages SMS sont maintenant normalisés AVANT d'être passés à ADB :
 
@@ -30,32 +32,86 @@ const normalizedMessage = message
   .trim();
 ```
 
+### 2. Utilisation de `spawn` au lieu de `exec`
+
+Nouvelle fonction helper `spawnAdb()` pour éviter les problèmes de quoting shell :
+
+```typescript
+const spawnAdb = (adbPath: string, args: string[]): Promise<{ stdout: string; stderr: string }> => {
+  return new Promise((resolve, reject) => {
+    const process = spawn(adbPath, args, { 
+      shell: false,
+      windowsVerbatimArguments: true 
+    })
+    // ... gestion des streams et événements
+  })
+}
+```
+
+**Avantages** :
+- Pas de problème de quoting/échappement
+- Arguments passés directement en tableau
+- Plus fiable sur Windows avec `windowsVerbatimArguments: true`
+
+### 3. Méthodes d'envoi SMS (dans l'ordre de tentative)
+
+1. Intent VIEW avec `smsto:` + body dans l'URI
+2. Intent SENDTO avec `smsto:` + body dans l'URI
+3. Intent SENDTO avec `smsto:` + `--es sms_body`
+4. Intent VIEW avec `smsto:` + `--es sms_body`
+5. **Fallback** : Ouvrir l'app SMS sans message (l'utilisateur saisit manuellement)
+
+### 4. Suppression du fallback `input text`
+
+L'ancien fallback avec `input text` a été retiré car :
+- Ne supporte pas les caractères spéciaux (`:`, `/`, `?`, `=`)
+- Cause des `NullPointerException` sur Android
+- Peu fiable pour les messages longs
+
 ### Fichiers modifiés
 
 1. **electron/main.ts**
+   - Nouvelle fonction `spawnAdb()` pour exécution fiable avec `windowsVerbatimArguments: true`
    - `ipcMain.handle('adb:sms')` : Normalisation ajoutée
-   - `ipcMain.handle('adb:send-sms')` : Fonction `escapeShellArg()` améliorée
-   - Fallback avec saisie simulée : Normalisation ajoutée
+   - `ipcMain.handle('adb:send-sms')` : Réécriture complète avec spawn
+   - Fallback simplifié : ouverture SMS sans message pré-rempli
 
-2. **apps/web/app/api/sms/route.ts**
-   - Normalisation avant `encodeURIComponent()`
-   - Normalisation avant échappement shell
-   - Suppression des `.replace(/\r?\n/g, ' ')` redondants
+2. **apps/web/hooks/useSmsAction.ts**
+   - Réécriture complète pour utiliser l'API Electron IPC
+   - Suppression de l'appel `fetch('/api/sms')` (Next.js inexistant)
+   - Utilisation de `window.electron.adb.sendSms()` à la place
+   - Remplacement de `react-toastify` par `sonner`
+   - Gestion des warnings (message non pré-rempli)
 
-3. **apps/web/hooks/useSmsAction.ts**
-   - Normalisation dans `handleBackupMethod()`
-   - Commandes console.info corrigées
+3. **apps/web/types/electron.d.ts**
+   - ✅ Nouveau fichier créé
+   - Déclaration complète de l'interface `ElectronAPI`
+   - Déclaration globale `window.electron`
+   - Typage complet des méthodes ADB, DevTools, LocalDB, etc.
+
+4. **src/types.ts**
+   - Mise à jour de l'interface `ElectronAPI` (synchronisation avec preload)
+   - Ajout de la déclaration globale `window.electron`
+
+5. **apps/web/app/api/sms/route.ts**
+   - ❌ Fichier supprimé (résidu Next.js incompatible avec Electron)
 
 ## Résultat
 
 ✅ Tous les modèles SMS fonctionnent maintenant :
-- Premier contact
+- Premier contact (avec URLs)
 - D0 Visio
 - R0 interne
 - R0 externe
 
-Les caractères accentués (à, é, ô...) ne posent aucun problème. C'est uniquement le quoting + newlines + apostrophes typographiques qui causaient les échecs.
+✅ Les caractères accentués (à, é, ô...) ne posent aucun problème
+
+✅ Les URLs avec caractères spéciaux sont correctement gérées
 
 ## Note technique
 
-Ce ne sont pas des "caractères interdits dans un SMS", mais des problèmes de quoting shell lors du passage de la commande à `adb shell` via `exec()`.
+Ce ne sont pas des "caractères interdits dans un SMS", mais des problèmes de :
+1. Quoting shell lors du passage de la commande à `adb shell` via `exec()`
+2. Limitations de `input text` Android pour les caractères spéciaux
+
+La solution avec `spawn` + normalisation résout ces deux problèmes de manière élégante et fiable.
