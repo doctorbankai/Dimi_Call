@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Contact, ContactStatus, CallStates } from "../types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -85,6 +85,13 @@ import { PaginatedContactTable } from '@/components/PaginatedContactTable'
 import type { ContactTableRef } from '@/components/ContactTable'
 import { StatusCompletionChart } from '@/components/StatusCompletionChart'
 
+export type TableTab = {
+  id: string
+  name: string
+  color?: string
+  contacts: Contact[]
+}
+
 type AppelsCardsViewProps = {
   contacts: Contact[]
   selectedContactId: string | null
@@ -113,6 +120,13 @@ type AppelsCardsViewProps = {
   onExportDialog: () => void
   autoSearchMode: 'disabled' | 'linkedin' | 'linkedin-name' | 'linkedin-name-type' | 'google' | 'link'
   onAutoSearchModeChange: (mode: 'disabled' | 'linkedin' | 'linkedin-name' | 'linkedin-name-type' | 'google' | 'link') => void
+  // Props pour la gestion des onglets
+  tableTabs?: TableTab[]
+  activeTableTabId?: string
+  onSetActiveTableTabId?: (id: string) => void
+  onAddTab?: () => void
+  onEditTab?: (tab: TableTab) => void
+  onDeleteTab?: (tabId: string) => void
 }
 
 type FormState = Pick<
@@ -217,6 +231,13 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   onExportDialog,
   autoSearchMode,
   onAutoSearchModeChange,
+  // Props pour la gestion des onglets
+  tableTabs = [],
+  activeTableTabId = '',
+  onSetActiveTableTabId,
+  onAddTab,
+  onEditTab,
+  onDeleteTab,
 }) => {
   const [visibleCount, setVisibleCount] = useState(40)
   const [activeFilter, setActiveFilter] = useState<'all' | 'rappel' | 'rdv' | 'status'>('all')
@@ -1100,7 +1121,88 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
         <div className="flex w-full lg:w-[320px] xl:w-[360px] 2xl:w-[420px] flex-col rounded-xl border bg-card/70 backdrop-blur-sm shadow-sm max-h-[300px] lg:max-h-none">
           <div className="border-b px-4 py-2.5 space-y-2.5">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-medium text-muted-foreground">Contacts</h2>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="flex items-center gap-2 px-2 sm:px-3 py-1.5 h-8 text-sm shrink-0"
+                  >
+                    <span className="inline-block w-2 h-2 rounded-full" style={{backgroundColor: tableTabs.find(t => t.id === activeTableTabId)?.color || 'var(--primary)'}}></span>
+                    <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">
+                      {tableTabs.find(t => t.id === activeTableTabId)?.name || 'Onglets'}
+                    </span>
+                    <ChevronDown className="h-4 w-4 shrink-0" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-64">
+                  <DropdownMenuLabel className="flex items-center gap-2">
+                    Onglets
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  
+                  {/* Liste des onglets existants */}
+                  {tableTabs.map(tab => (
+                    <DropdownMenuItem
+                      key={tab.id}
+                      onClick={() => onSetActiveTableTabId?.(tab.id)}
+                      className={cn(
+                        "flex items-center gap-2 cursor-pointer",
+                        activeTableTabId === tab.id && "bg-accent"
+                      )}
+                    >
+                      <span className="inline-block w-2 h-2 rounded-full" style={{backgroundColor: tab.color || 'var(--primary)'}}></span>
+                      <span className="flex-1 truncate">{tab.name}</span>
+                      
+                      {/* Boutons d'action pour l'onglet */}
+                      <div className="flex items-center gap-1">
+                        {/* Bouton de renommage */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 p-0 hover:bg-accent-foreground/10"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onEditTab?.(tab)
+                          }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        
+                        {/* Bouton de suppression */}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            onDeleteTab?.(tab.id)
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </DropdownMenuItem>
+                  ))}
+                  
+                  {/* Bouton d'ajout d'onglet */}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => onAddTab?.()}
+                    disabled={tableTabs.length >= 5}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Ajouter un onglet
+                  </DropdownMenuItem>
+                  
+                  {/* Bouton de suppression complète */}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-destructive hover:text-destructive" onClick={onClearActiveTab}>
+                    <Trash2 className="h-4 w-4" />
+                    Supprimer toutes les données
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <p className="text-xs text-muted-foreground/70">
                 {contacts.length} prospect{contacts.length > 1 ? "s" : ""}
               </p>
@@ -2051,8 +2153,10 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             variant="outline"
                             className="flex items-center gap-2 px-2 sm:px-3 py-1.5 h-8 text-sm shrink-0"
                           >
-                            <span className="inline-block w-2 h-2 rounded-full" style={{backgroundColor: 'var(--primary)'}}></span>
-                            <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">Contacts</span>
+                            <span className="inline-block w-2 h-2 rounded-full" style={{backgroundColor: tableTabs.find(t => t.id === activeTableTabId)?.color || 'var(--primary)'}}></span>
+                            <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">
+                              {tableTabs.find(t => t.id === activeTableTabId)?.name || 'Onglets'}
+                            </span>
                             <ChevronDown className="h-4 w-4 shrink-0" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -2061,39 +2165,63 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             Onglets
                           </DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="bg-accent cursor-pointer">
-                            <span className="inline-block w-2 h-2 rounded-full" style={{backgroundColor: 'var(--primary)'}}></span>
-                            <span className="flex-1 truncate">Contacts</span>
-                            <div className="flex items-center gap-1">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 p-0 hover:bg-accent-foreground/10"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  toast.info('Édition d\'onglet non disponible dans cette vue')
-                                }}
-                              >
-                                <Pencil className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  toast.info('Suppression d\'onglet non disponible dans cette vue')
-                                }}
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </DropdownMenuItem>
+                          
+                          {/* Liste des onglets existants */}
+                          {tableTabs.map(tab => (
+                            <DropdownMenuItem
+                              key={tab.id}
+                              onClick={() => onSetActiveTableTabId?.(tab.id)}
+                              className={cn(
+                                "flex items-center gap-2 cursor-pointer",
+                                activeTableTabId === tab.id && "bg-accent"
+                              )}
+                            >
+                              <span className="inline-block w-2 h-2 rounded-full" style={{backgroundColor: tab.color || 'var(--primary)'}}></span>
+                              <span className="flex-1 truncate">{tab.name}</span>
+                              
+                              {/* Boutons d'action pour l'onglet */}
+                              <div className="flex items-center gap-1">
+                                {/* Bouton de renommage */}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 p-0 hover:bg-accent-foreground/10"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    onEditTab?.(tab)
+                                  }}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                                
+                                {/* Bouton de suppression */}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 p-0 hover:bg-destructive/10 hover:text-destructive"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    onDeleteTab?.(tab.id)
+                                  }}
+                                >
+                                  <X className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </DropdownMenuItem>
+                          ))}
+                          
+                          {/* Bouton d'ajout d'onglet */}
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="cursor-default" onClick={() => toast.info('Ajout d\'onglet non disponible dans cette vue')}>
+                          <DropdownMenuItem
+                            onClick={() => onAddTab?.()}
+                            disabled={tableTabs.length >= 5}
+                            className="flex items-center gap-2"
+                          >
                             <Plus className="h-4 w-4" />
                             Ajouter un onglet
                           </DropdownMenuItem>
+                          
+                          {/* Bouton de suppression complète */}
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-destructive hover:text-destructive" onClick={onClearActiveTab}>
                             <Trash2 className="h-4 w-4" />

@@ -5,7 +5,7 @@ import { useCallMode } from './context/ModeContext';
 import { APP_NAME, COLUMN_HEADERS, CONTACT_DATA_KEYS, headerIcons } from './constants';
 import { ContactTable, ContactTableRef } from './components/ContactTable';
 import { PaginatedContactTable } from './components/PaginatedContactTable';
-import { AppelsCardsView } from './components/AppelsCardsView';
+import { AppelsCardsView, TableTab } from './components/AppelsCardsView';
 import { EmailDialog, RappelDialog, RendezVousDialog, QualificationDialog, GenericInfoDialog } from './components/Dialogs';
 import { SmsDialogImproved as SmsDialog } from './components/SmsDialogImproved';
 import Calendar2 from './pages/Calendar2';
@@ -246,7 +246,6 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const [filterQuick, setFilterQuick] = useState<'all' | 'today' | 'thisWeek' | 'thisMonth' | 'custom'>('all')
   const [dbSelectedCount, setDbSelectedCount] = useState<number>(0)
   // Onglets Table
-  type TableTab = { id: string; name: string; color?: string; contacts: Contact[] }
   const [tableTabs, setTableTabs] = useState<TableTab[]>(() => {
     try {
       const raw = localStorage.getItem('dimicall-table-tabs')
@@ -272,6 +271,37 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
           : tab
       ))
     }
+  }
+
+  const handleAddTab = () => {
+    if (tableTabs.length >= 5) return
+    const id = crypto.randomUUID()
+    setTableTabs(prev => [...prev, { id, name: `Onglet ${prev.length + 1}`, contacts: [] }])
+    setActiveTableTabId(id)
+  }
+
+  const handleDeleteTab = (tabId: string) => {
+    setTableTabs(prev => {
+      const next = prev.filter(t => t.id !== tabId)
+
+      // Si c'tait le dernier onglet, crer un nouvel onglet vide
+      if (next.length === 0) {
+        const newTabId = crypto.randomUUID()
+        const newTab = {
+          id: newTabId,
+          name: 'Nouveau',
+          contacts: []
+        }
+        setActiveTableTabId(newTabId)
+        return [newTab]
+      }
+
+      // Sinon, passer  l'onglet suivant
+      if (resolvedActiveTabId === tabId) {
+        setActiveTableTabId(next[0]?.id || '')
+      }
+      return next
+    })
   }
   const [activeTableTabId, setActiveTableTabId] = useState<string>(() => {
     try { return localStorage.getItem('dimicall-active-table-tab') || '' } catch { return '' }
@@ -3328,6 +3358,12 @@ Dimitri MOREL - Arcanis Conseil`;
                     onExportDialog={() => handleExport('xlsx')}
                     autoSearchMode={autoSearchMode}
                     onAutoSearchModeChange={(mode) => setAutoSearchMode(mode)}
+                    tableTabs={tableTabs}
+                    activeTableTabId={resolvedActiveTabId}
+                    onSetActiveTableTabId={setActiveTableTabId}
+                    onAddTab={handleAddTab}
+                    onEditTab={handleEditTab}
+                    onDeleteTab={handleDeleteTab}
                   />
                 ) : viewMode === 'graph' ? (
                   <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0 w-full">

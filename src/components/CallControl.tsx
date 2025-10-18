@@ -71,9 +71,16 @@ const CallControl: React.FC<CallControlProps> = ({
   }, [isCalling, callStartTime, now]);
 
   const initials = useMemo(() => {
-    const first = contact?.prenom?.[0] || '';
-    const last = contact?.nom?.[0] || '';
-    return (first + last).toUpperCase() || '—';
+    if (!contact) return '—';
+    const prenom = String(contact.prenom || '').trim();
+    const nom = String(contact.nom || '').trim();
+    // Nettoyer les guillemets vides
+    const cleanPrenom = prenom === '""' || prenom === "''" ? '' : prenom;
+    const cleanNom = nom === '""' || nom === "''" ? '' : nom;
+    const first = cleanPrenom[0] || '';
+    const last = cleanNom[0] || '';
+    const result = (first + last).toUpperCase().trim();
+    return result || '—';
   }, [contact]);
 
   const displayName = useMemo(() => {
@@ -85,11 +92,17 @@ const CallControl: React.FC<CallControlProps> = ({
   }, [contact]);
 
   const phone = useMemo(() => {
-    if (!contact?.telephone) return '—';
+    if (!contact?.telephone) return '';
+    let tel = String(contact.telephone).trim();
+    // Nettoyer tous les types de guillemets vides ou valeurs invalides
+    if (!tel || tel === '""' || tel === "''" || tel === '\"\"' || tel === '\'\'' || tel === '—' || tel === '-') return '';
+    // Supprimer les guillemets au début et à la fin si présents
+    tel = tel.replace(/^["']+|["']+$/g, '');
+    if (!tel) return '';
     try {
-      return formatPhoneNumber(contact.telephone);
+      return formatPhoneNumber(tel);
     } catch {
-      return contact.telephone;
+      return tel;
     }
   }, [contact]);
 
@@ -346,9 +359,11 @@ const CallControl: React.FC<CallControlProps> = ({
               <span className="text-sm font-medium whitespace-nowrap" title={displayName}>
                 {displayName}
               </span>
-              <span className="text-xs text-muted-foreground whitespace-nowrap" title={phone}>
-                {phone}
-              </span>
+              {phone && (
+                <span className="text-xs text-muted-foreground whitespace-nowrap" title={phone}>
+                  {phone}
+                </span>
+              )}
             </div>
           </div>
         )}
