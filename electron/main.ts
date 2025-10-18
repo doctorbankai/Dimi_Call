@@ -1881,32 +1881,33 @@ app.whenReady().then(async () => {
         .replace(/\r?\n+/g, ' ')         // newlines -> spaces
         .trim()
       
-      // Encoder le message pour l'URL
-      const encodedMessage = encodeURIComponent(normalizedMessage)
-      
-      // Échapper pour --es sms_body (guillemets doubles seulement)
-      const escapedMessage = normalizedMessage.replace(/"/g, '\\"')
+      // Échapper pour --es sms_body (guillemets doubles et backslashes)
+      const escapedMessage = normalizedMessage
+        .replace(/\\/g, '\\\\')
+        .replace(/"/g, '\\"')
       
       // Essayer plusieurs approches dans l'ordre
+      // IMPORTANT : --es sms_body en premier car il gère mieux les URLs
       const approaches = [
-        // 1. Intent VIEW avec smsto + body dans l'URI
-        `"${adbPath}" shell am start -a android.intent.action.VIEW -d "smsto:${internationalNumber}?body=${encodedMessage}"`,
-        // 2. Intent SENDTO avec smsto + body dans l'URI
-        `"${adbPath}" shell am start -a android.intent.action.SENDTO -d "smsto:${internationalNumber}?body=${encodedMessage}"`,
-        // 3. Intent SENDTO avec smsto et extra sms_body
+        // 1. Intent SENDTO avec smsto et extra sms_body (meilleur pour URLs)
         `"${adbPath}" shell am start -a android.intent.action.SENDTO -d "smsto:${internationalNumber}" --es sms_body "${escapedMessage}"`,
-        // 4. Intent VIEW avec smsto et extra sms_body
-        `"${adbPath}" shell am start -a android.intent.action.VIEW -d "smsto:${internationalNumber}" --es sms_body "${escapedMessage}"`
+        // 2. Intent VIEW avec smsto et extra sms_body
+        `"${adbPath}" shell am start -a android.intent.action.VIEW -d "smsto:${internationalNumber}" --es sms_body "${escapedMessage}"`,
+        // 3. Intent SENDTO avec sms: et extra sms_body (sans le 'to')
+        `"${adbPath}" shell am start -a android.intent.action.SENDTO -d "sms:${internationalNumber}" --es sms_body "${escapedMessage}"`,
+        // 4. Intent VIEW avec sms: et extra sms_body
+        `"${adbPath}" shell am start -a android.intent.action.VIEW -d "sms:${internationalNumber}" --es sms_body "${escapedMessage}"`
       ]
       
       let lastError = ""
       
       for (const [index, command] of approaches.entries()) {
         try {
-          console.log(`[ADB] Tentative ${index + 1}`)
+          console.log(`[ADB] Tentative ${index + 1}: ${command.substring(0, 150)}...`)
           const { stdout, stderr } = await execAsync(command)
           
           if (!stderr || stderr.includes('Warning') || stderr.includes('Starting:')) {
+            console.log(`[ADB] ✅ Méthode ${index + 1} réussie`)
             return { 
               success: true, 
               message: `SMS préparé avec succès (méthode ${index + 1})` 
@@ -1914,9 +1915,10 @@ app.whenReady().then(async () => {
           }
           
           lastError = stderr
+          console.log(`[ADB] ⚠️ Méthode ${index + 1} a retourné stderr: ${stderr}`)
         } catch (error) {
           lastError = error instanceof Error ? error.message : String(error)
-          console.log(`[ADB] Méthode ${index + 1} échouée: ${lastError}`)
+          console.log(`[ADB] ❌ Méthode ${index + 1} échouée: ${lastError}`)
         }
       }
       

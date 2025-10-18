@@ -88,11 +88,24 @@ L'ancien fallback avec `input text` a été retiré car :
 
 ## Résultat
 
-✅ Tous les modèles SMS fonctionnent maintenant :
+### Problème découvert après premier fix
+- ✅ D0 Visio fonctionne (pas d'URL)
+- ❌ Premier contact, R0 interne, R0 externe ne fonctionnent pas (contiennent des URLs)
+
+**Cause** : `encodeURIComponent()` encode les URLs (`https://` → `https%3A%2F%2F`), ce qui empêche Android de les décoder correctement dans `?body=`
+
+### Solution finale
+1. **Inverser l'ordre des méthodes** : Essayer `--es sms_body` EN PREMIER
+2. **`--es sms_body` passe le texte brut** sans encodage URI → les URLs restent intactes
+3. **Échappement minimal** : Seulement backslashes et guillemets doubles
+4. **Logs améliorés** : Afficher quelle méthode réussit réellement
+
+### Résultat attendu
+✅ Tous les modèles SMS devraient maintenant fonctionner :
 - Premier contact (avec URLs)
 - D0 Visio
-- R0 interne
-- R0 externe
+- R0 interne (avec adresse)
+- R0 externe (avec placeholder)
 
 ✅ Les caractères accentués (à, é, ô...) ne posent aucun problème
 
