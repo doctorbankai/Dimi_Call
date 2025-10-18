@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { useDisclosure } from "../../hooks/use-disclosure";
 
 import { Button } from "./button";
-import { SingleCalendar } from "./single-calendar";
+import { Calendar } from "./calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 
 import { cn } from "../../lib/utils";
@@ -18,9 +18,10 @@ type TProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onSelect" | "value"
   placeholder: string;
   labelVariant?: "P" | "PP" | "PPP";
   container?: HTMLElement | null;
+  zIndex?: number;
 };
 
-function SingleDayPicker({ id, onSelect, className, placeholder, labelVariant = "PPP", value, container, ...props }: TProps) {
+function SingleDayPicker({ id, onSelect, className, placeholder, labelVariant = "PPP", value, container, zIndex = 50, ...props }: TProps) {
   const { isOpen, onClose, onToggle } = useDisclosure();
 
   const handleSelect = (date: Date | undefined) => {
@@ -42,8 +43,13 @@ function SingleDayPicker({ id, onSelect, className, placeholder, labelVariant = 
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent align="center" className="w-fit p-0" container={container}>
-        <SingleCalendar mode="single" selected={value} onSelect={handleSelect} initialFocus />
+      <PopoverContent 
+        align="center" 
+        className={cn("w-fit p-0", `z-[${zIndex}]`)} 
+        container={container}
+        style={{ zIndex }}
+      >
+        <Calendar mode="single" selected={value} onSelect={handleSelect} />
       </PopoverContent>
     </Popover>
   );

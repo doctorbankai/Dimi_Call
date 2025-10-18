@@ -11,6 +11,7 @@ interface RelativeDateSelectorProps {
   className?: string;
   // Optional: container element for portalled dropdowns (e.g., inside a Dialog)
   portalContainer?: HTMLElement | null;
+  zIndex?: number;
 }
 
 interface RelativeDateSelectorState {
@@ -33,6 +34,7 @@ export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
   disabled = false,
   className,
   portalContainer,
+  zIndex = 20100,
 }) => {
   const [state, setState] = useState<RelativeDateSelectorState>({
     quantity: '',
@@ -187,7 +189,11 @@ export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
           >
             <SelectValue />
           </SelectTrigger>
-          <SelectContent container={portalContainer}>
+          <SelectContent 
+            container={portalContainer}
+            style={{ zIndex }}
+            className="max-h-[300px]"
+          >
             {TIME_UNITS.map(unit => (
               <SelectItem key={unit.value} value={unit.value}>
                 {unit.label}

@@ -83,28 +83,6 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
     }));
   };
 
-  // Gérer le changement de date manuelle
-  const handleManualDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newDate = e.target.value;
-    setState(prev => ({
-      ...prev,
-      selectedDate: newDate,
-      useRelativeSelector: false, // Désactiver le mode relatif
-      hasUnsavedChanges: true
-    }));
-    
-    // Valider la date
-    if (newDate) {
-      const validation = DateCalculationService.validateDateRange(newDate);
-      setErrors(prev => ({
-        ...prev,
-        date: validation.isValid ? undefined : validation.errorMessage
-      }));
-    } else {
-      setErrors(prev => ({ ...prev, date: undefined }));
-    }
-  };
-
   // Gérer le changement d'heure manuelle
   const handleManualTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = e.target.value;
@@ -226,16 +204,6 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Champ date */}
               <div className="space-y-1">
-                <Input
-                  type="date"
-                  value={state.selectedDate}
-                  onChange={handleManualDateChange}
-                  placeholder="YYYY-MM-DD"
-                  className={cn("sr-only")}
-                  aria-label="Date du rappel"
-                  aria-describedby={errors.date ? "date-error" : undefined}
-                  aria-invalid={!!errors.date}
-                />
                 <SingleDayPicker
                   id="reminder-date-picker"
                   placeholder="YYYY-MM-DD"
@@ -243,6 +211,10 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
                   onSelect={handleCalendarSelect}
                   className={cn("w-full")}
                   container={dialogContentRef.current}
+                  zIndex={20100}
+                  aria-label="Date du rappel"
+                  aria-describedby={errors.date ? "date-error" : undefined}
+                  aria-invalid={!!errors.date}
                 />
                 {errors.date && (
                   <p 
@@ -270,6 +242,7 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
                     aria-label="Heure du rappel (optionnelle)"
                     aria-describedby={errors.time ? "time-error" : "time-help"}
                     container={dialogContentRef.current}
+                    zIndex={20100}
                   />
                   <span className="absolute -top-2 right-2 text-xs text-muted-foreground bg-background px-1">
                     optionnelle
@@ -313,6 +286,7 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
             currentDate={state.selectedDate}
             disabled={false}
             portalContainer={dialogContentRef.current}
+            zIndex={20100}
           />
 
           {/* Actions */}
