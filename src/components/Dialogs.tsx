@@ -289,7 +289,6 @@ const SmsDialog: React.FC<SmsDialogProps> = ({ isOpen, onClose, contact, onSendS
 
   const handleSendSms = () => {
     onSendSms(civility, smsType);
-    onClose();
   };
 
   const civilityOptions = [

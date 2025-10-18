@@ -3361,8 +3361,8 @@ Dimitri MOREL - Arcanis Conseil`;
                 onClose={() => setIsSmsDialogOpen(false)}
                 contact={selectedContact}
                 onUpdateContact={updateContact}
-                onSendSms={(civility, smsType) => {
-                  handleSms(civility, smsType);
+                onSendSms={async (civility, smsType) => {
+                  await handleSms(civility as string, smsType);
                   setIsSmsDialogOpen(false);
                 }}
               />
