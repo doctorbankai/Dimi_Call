@@ -1869,6 +1869,7 @@ app.whenReady().then(async () => {
         return arg
           .replace(/\\/g, '\\\\')       // backslash
           .replace(/"/g, '\\"')          // double quote
+          .replace(/'/g, "\\'")          // single quote/apostrophe - CRITIQUE!
           .replace(/\$/g, '\\$')          // dollar
           .replace(/`/g, '\\`')            // backtick
           .replace(/\r?\n/g, ' ')          // newlines -> spaces
@@ -1928,6 +1929,7 @@ app.whenReady().then(async () => {
           .replace(/\r?\n/g, ' ')
           .replace(/\\/g, '\\\\')
           .replace(/"/g, '\\"')
+          .replace(/'/g, "\\'")          // apostrophe - CRITIQUE!
           .replace(/&/g, '\\&')
           .replace(/\|/g, '\\|')
           .replace(/</g, '\\<')

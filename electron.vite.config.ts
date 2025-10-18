@@ -28,7 +28,10 @@ export default defineConfig({
     build: {
       outDir: resolve(__dirname, 'dist/renderer'),
       rollupOptions: {
-        input: resolve(__dirname, 'src/index.html')
+        input: resolve(__dirname, 'src/index.html'),
+        output: {
+          manualChunks: undefined, // Désactive le code splitting automatique
+        }
       }
     },
     resolve: {

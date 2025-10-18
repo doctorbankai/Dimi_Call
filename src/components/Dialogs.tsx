@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Contact, Theme, EmailType, SmsType, Civility, QualificationStatutMarital, QualificationSituationPro } from '../types';
 import { Button, Input, Select, Modal } from './Common';
 import { generateGmailComposeUrl, generateSmsMessage } from '../services/dataService';
@@ -68,7 +68,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
     }
   }, [contact]);
 
-  // Fonction pour mettre Ã  jour la date du contact
+  // Fonction pour mettre Ã€Â  jour la date du contact
   const handleDateChange = (date: Date | undefined) => {
     setSelectedDate(date);
     if (contact && onUpdateContact && date) {
@@ -77,7 +77,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
     }
   };
 
-  // Fonction pour mettre Ã  jour l'heure du contact
+  // Fonction pour mettre Ã€Â  jour l'heure du contact
   const handleTimeChange = (time: string) => {
     setSelectedTime(time);
     if (contact && onUpdateContact) {
@@ -218,7 +218,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
           <strong>AperÃ§u:</strong> Email {emailTypeOptions.find(opt => opt.value === emailType)?.label} pour {civilityOptions.find(opt => opt.value === civility)?.label} {contact.prenom} {contact.nom}
           {needsDateTime && selectedDate && selectedTime && (
             <div className="mt-1">
-              <strong>Rendez-vous:</strong> {format(selectedDate, 'PPPP', { locale: fr })} Ã  {selectedTime}
+              <strong>Rendez-vous:</strong> {format(selectedDate, 'PPPP', { locale: fr })} Ã€Â  {selectedTime}
             </div>
           )}
         </div>
@@ -288,7 +288,7 @@ const SmsDialog: React.FC<SmsDialogProps> = ({ isOpen, onClose, contact, onSendS
 
   const needsDateTime = smsType === SmsType.D0Visio || smsType === SmsType.R0Interne || smsType === SmsType.R0Externe;
 
-    // Mettre à jour la prévisualisation du message à chaque changement
+    // Mettre Ã  jour la prÃ©visualisation du message Ã  chaque changement
   useEffect(() => {
     if (!contact) return;
     try {
@@ -365,7 +365,7 @@ const handleSendSms = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div></div>
           <div>
-            <label className="block text-sm font-medium mb-1 text-foreground">Prévisualisation du message</label>
+            <label className="block text-sm font-medium mb-1 text-foreground">PrÃ©visualisation du message</label>
             <div className="h-full p-3 bg-muted/40 text-foreground rounded border text-sm whitespace-pre-wrap">
               {previewMessage}
             </div>
@@ -423,7 +423,7 @@ const handleSendSms = () => {
           <strong>AperÃ§u:</strong> SMS {smsTypeOptions.find(opt => opt.value === smsType)?.label} pour {civilityOptions.find(opt => opt.value === civility)?.label} {contact.prenom} {contact.nom}
           {needsDateTime && selectedDate && selectedTime && (
             <div className="mt-1">
-              <strong>Rendez-vous:</strong> {format(selectedDate, 'PPPP', { locale: fr })} Ã  {selectedTime}
+              <strong>Rendez-vous:</strong> {format(selectedDate, 'PPPP', { locale: fr })} Ã€Â  {selectedTime}
             </div>
           )}
         </div>
@@ -524,12 +524,12 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
 
   const statutMaritalOptions = [
     { value: '', label: 'SÃ©lectionner...' },
-    { value: 'reset', label: 'âŒ RÃ©initialiser' },
+    { value: 'reset', label: 'Ã¢ÂÅ’ RÃ©initialiser' },
     ...Object.values(QualificationStatutMarital).map(s => ({value: s, label: s}))
   ];
   const situationProOptions = [
     { value: '', label: 'SÃ©lectionner...' },
-    { value: 'reset', label: 'âŒ RÃ©initialiser' },
+    { value: 'reset', label: 'Ã¢ÂÅ’ RÃ©initialiser' },
     ...Object.values(QualificationSituationPro).map(s => ({value: s, label: s}))
   ];
 
