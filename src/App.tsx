@@ -6,7 +6,8 @@ import { APP_NAME, COLUMN_HEADERS, CONTACT_DATA_KEYS, headerIcons } from './cons
 import { ContactTable, ContactTableRef } from './components/ContactTable';
 import { PaginatedContactTable } from './components/PaginatedContactTable';
 import { AppelsCardsView } from './components/AppelsCardsView';
-import { EmailDialog, SmsDialog, RappelDialog, RendezVousDialog, QualificationDialog, GenericInfoDialog } from './components/Dialogs';
+import { EmailDialog, RappelDialog, RendezVousDialog, QualificationDialog, GenericInfoDialog } from './components/Dialogs';
+import { SmsDialogImproved as SmsDialog } from './components/SmsDialogImproved';
 import Calendar2 from './pages/Calendar2';
 
 
@@ -1074,8 +1075,8 @@ Dimitri MOREL - Arcanis Conseil`;
       return;
     }
 
-    // Générer le contenu du SMS selon le type et les templates configurés
-    // Appliquer d'éventuelles valeurs de date/heure fournies par le dialogue
+    // Gï¿½nï¿½rer le contenu du SMS selon le type et les templates configurï¿½s
+    // Appliquer d'ï¿½ventuelles valeurs de date/heure fournies par le dialogue
     if (target && (dateISO || time)) {
       target = { ...target,
         dateRDV: dateISO || target.dateRDV,
