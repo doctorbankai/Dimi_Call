@@ -1863,24 +1863,33 @@ app.whenReady().then(async () => {
         internationalNumber = "+33" + phoneNumber.substring(1)
       }
       
-      // Encoder le message pour l'URL
+      // Échapper les caractères spéciaux pour le shell
+      const escapeShellArg = (arg: string) => {
+        // Remplacer les guillemets doubles par des guillemets échappés
+        return arg.replace(/"/g, '\\"').replace(/\$/g, '\\$').replace(/`/g, '\\`')
+      }
+      
+      // Encoder le message pour l'URL (méthode 1)
       const encodedMessage = encodeURIComponent(messageBody)
+      
+      // Échapper le message pour le shell (méthodes 2 et 3)
+      const escapedMessage = escapeShellArg(messageBody)
       
       // Essayer plusieurs approches dans l'ordre
       const approaches = [
-        // 1. Intent direct vers Messages de Google
+        // 1. Intent direct vers Messages de Google avec URI
         `"${getAdbPath()}" shell am start -a android.intent.action.SENDTO -d "sms:${internationalNumber}?body=${encodedMessage}"`,
-        // 2. Intent générique SENDTO
-        `"${getAdbPath()}" shell am start -a android.intent.action.SENDTO -d "sms:${phoneNumber}" --es sms_body "${messageBody}"`,
-        // 3. Intent SEND générique
-        `"${getAdbPath()}" shell am start -a android.intent.action.SEND -t text/plain --es android.intent.extra.TEXT "${messageBody}" --es address "${internationalNumber}"`
+        // 2. Intent SENDTO avec sms_body
+        `"${getAdbPath()}" shell am start -a android.intent.action.SENDTO -d "sms:${internationalNumber}" --es sms_body "${escapedMessage}"`,
+        // 3. Intent VIEW avec URI sms
+        `"${getAdbPath()}" shell am start -a android.intent.action.VIEW -d "sms:${internationalNumber}" --es sms_body "${escapedMessage}"`
       ]
       
       let lastError = ""
       
       for (const [index, command] of approaches.entries()) {
         try {
-          console.log(`[ADB] Tentative ${index + 1}: ${command}`)
+          console.log(`[ADB] Tentative ${index + 1}`)
           const { stdout, stderr } = await execAsync(command)
           
           if (!stderr || stderr.includes('Warning') || stderr.includes('Starting:')) {

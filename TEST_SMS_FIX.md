@@ -80,7 +80,19 @@ Pour tester la correction :
 6. Cliquer sur "Envoyer SMS"
 7. Vérifier que l'application SMS s'ouvre sur le téléphone avec le message pré-rempli
 
+### 3. Modification de `electron/main.ts`
+
+**Problème supplémentaire identifié** : Les commandes ADB échouaient car les caractères spéciaux dans le message SMS n'étaient pas correctement échappés pour le shell.
+
+**Corrections :**
+- Ajout d'une fonction `escapeShellArg` pour échapper les guillemets, dollars et backticks
+- Utilisation de `encodeURIComponent` pour la méthode 1 (URI)
+- Utilisation de `escapeShellArg` pour les méthodes 2 et 3
+- Remplacement de la méthode 3 (SEND) par VIEW qui est plus compatible
+- Suppression de l'affichage de la commande complète dans les logs (pour éviter de polluer)
+
 ## Fichiers Modifiés
 
 - `src/components/Dialogs.tsx` : Suppression de l'appel à `onClose()` dans `handleSendSms`
 - `src/App.tsx` : Ajout de `async/await` et cast de type dans le callback `onSendSms`
+- `electron/main.ts` : Ajout de l'échappement des caractères spéciaux pour les commandes shell ADB
