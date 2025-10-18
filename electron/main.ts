@@ -1863,20 +1863,28 @@ app.whenReady().then(async () => {
     }
   })
 
+  // Helper pour logger vers le renderer ET la console
+  const logToRenderer = (message: string, level: 'info' | 'warn' | 'error' = 'info') => {
+    console.log(message)
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('adb-sms-log', { message, level, timestamp: new Date().toISOString() })
+    }
+  }
+
   ipcMain.handle('adb:send-sms', async (event, phoneNumber, messageBody) => {
-    console.log(`[ADB-SEND-SMS] 🚀 Début de l'envoi SMS vers ${phoneNumber}`)
-    console.log(`[ADB-SEND-SMS] 📝 Message original (${messageBody.length} caractères):`, messageBody.substring(0, 100))
+    logToRenderer(`[ADB-SEND-SMS] 🚀 Début de l'envoi SMS vers ${phoneNumber}`)
+    logToRenderer(`[ADB-SEND-SMS] 📝 Message original (${messageBody.length} caractères): ${messageBody.substring(0, 100)}...`)
     
     try {
       const adbPath = await getValidatedAdbPath()
-      console.log(`[ADB-SEND-SMS] 📱 Chemin ADB: ${adbPath}`)
+      logToRenderer(`[ADB-SEND-SMS] 📱 Chemin ADB: ${adbPath}`)
       
       // Normaliser le numéro de téléphone pour plus de compatibilité
       let internationalNumber = phoneNumber
       if (phoneNumber.startsWith('0') && phoneNumber.length === 10) {
         internationalNumber = "+33" + phoneNumber.substring(1)
       }
-      console.log(`[ADB-SEND-SMS] 📞 Numéro normalisé: ${internationalNumber}`)
+      logToRenderer(`[ADB-SEND-SMS] 📞 Numéro normalisé: ${internationalNumber}`)
       
       // Normaliser le message : apostrophes typographiques et sauts de ligne
       const normalizedMessage = String(messageBody)
@@ -1887,14 +1895,14 @@ app.whenReady().then(async () => {
         .replace(/\r?\n+/g, ' ')         // newlines -> spaces
         .trim()
       
-      console.log(`[ADB-SEND-SMS] 📝 Message normalisé (${normalizedMessage.length} caractères):`, normalizedMessage.substring(0, 100))
+      logToRenderer(`[ADB-SEND-SMS] 📝 Message normalisé (${normalizedMessage.length} caractères): ${normalizedMessage.substring(0, 100)}...`)
       
       // Échapper pour --es sms_body (guillemets doubles et backslashes)
       const escapedMessage = normalizedMessage
         .replace(/\\/g, '\\\\')
         .replace(/"/g, '\\"')
       
-      console.log(`[ADB-SEND-SMS] 🔐 Message échappé (${escapedMessage.length} caractères):`, escapedMessage.substring(0, 100))
+      logToRenderer(`[ADB-SEND-SMS] 🔐 Message échappé (${escapedMessage.length} caractères): ${escapedMessage.substring(0, 100)}...`)
       
       // Essayer plusieurs approches dans l'ordre
       // IMPORTANT : --es sms_body en premier car il gère mieux les URLs
@@ -1911,20 +1919,20 @@ app.whenReady().then(async () => {
       
       let lastError = ""
       
-      console.log(`[ADB-SEND-SMS] 🔄 Tentative de ${approaches.length} méthodes...`)
+      logToRenderer(`[ADB-SEND-SMS] 🔄 Tentative de ${approaches.length} méthodes...`)
       
       for (const [index, command] of approaches.entries()) {
         try {
-          console.log(`\n[ADB-SEND-SMS] 🎯 Méthode ${index + 1}/${approaches.length}`)
-          console.log(`[ADB-SEND-SMS] 📤 Commande: ${command.substring(0, 200)}...`)
+          logToRenderer(`\n[ADB-SEND-SMS] 🎯 Méthode ${index + 1}/${approaches.length}`)
+          logToRenderer(`[ADB-SEND-SMS] 📤 Commande: ${command.substring(0, 200)}...`)
           
           const { stdout, stderr } = await execAsync(command)
           
-          console.log(`[ADB-SEND-SMS] 📥 stdout:`, stdout || '(vide)')
-          console.log(`[ADB-SEND-SMS] 📥 stderr:`, stderr || '(vide)')
+          logToRenderer(`[ADB-SEND-SMS] 📥 stdout: ${stdout || '(vide)'}`)
+          logToRenderer(`[ADB-SEND-SMS] 📥 stderr: ${stderr || '(vide)'}`)
           
           if (!stderr || stderr.includes('Warning') || stderr.includes('Starting:')) {
-            console.log(`[ADB-SEND-SMS] ✅ Méthode ${index + 1} RÉUSSIE - App ouverte`)
+            logToRenderer(`[ADB-SEND-SMS] ✅ Méthode ${index + 1} RÉUSSIE - App ouverte`)
             return { 
               success: true, 
               message: `SMS préparé avec succès (méthode ${index + 1})` 
@@ -1932,18 +1940,18 @@ app.whenReady().then(async () => {
           }
           
           lastError = stderr
-          console.log(`[ADB-SEND-SMS] ⚠️ Méthode ${index + 1} a retourné stderr, on continue...`)
+          logToRenderer(`[ADB-SEND-SMS] ⚠️ Méthode ${index + 1} a retourné stderr, on continue...`, 'warn')
         } catch (error) {
           lastError = error instanceof Error ? error.message : String(error)
-          console.log(`[ADB-SEND-SMS] ❌ Méthode ${index + 1} ÉCHOUÉE:`, lastError)
+          logToRenderer(`[ADB-SEND-SMS] ❌ Méthode ${index + 1} ÉCHOUÉE: ${lastError}`, 'error')
         }
       }
       
-      console.log(`[ADB-SEND-SMS] ⚠️ Toutes les méthodes ont échoué, fallback...`)
+      logToRenderer(`[ADB-SEND-SMS] ⚠️ Toutes les méthodes ont échoué, fallback...`, 'warn')
       
       // Fallback 5: Ouvrir l'app SMS sans message (l'utilisateur devra taper manuellement)
       try {
-        console.log('[ADB] Fallback final: ouverture SMS sans message pré-rempli')
+        logToRenderer('[ADB-SEND-SMS] 🆘 Fallback final: ouverture SMS sans message pré-rempli', 'warn')
         const fallbackCmd = `"${adbPath}" shell am start -a android.intent.action.SENDTO -d "smsto:${internationalNumber}"`
         await execAsync(fallbackCmd)
         
@@ -1954,15 +1962,15 @@ app.whenReady().then(async () => {
         }
       } catch (e) {
         lastError = (e as Error)?.message || String(e)
-        console.log(`[ADB] Fallback final échoué: ${lastError}`)
+        logToRenderer(`[ADB-SEND-SMS] ❌ Fallback final échoué: ${lastError}`, 'error')
       }
 
       // Si toutes les approches ont échoué
-      console.log(`[ADB-SEND-SMS] 💥 ÉCHEC TOTAL - Dernière erreur: ${lastError}`)
+      logToRenderer(`[ADB-SEND-SMS] 💥 ÉCHEC TOTAL - Dernière erreur: ${lastError}`, 'error')
       throw new Error(`Toutes les méthodes ont échoué. Dernière erreur: ${lastError}`)
       
     } catch (error) {
-      console.log(`[ADB-SEND-SMS] 🔴 Exception capturée:`, error)
+      logToRenderer(`[ADB-SEND-SMS] 🔴 Exception capturée: ${error}`, 'error')
       return { success: false, error: error instanceof Error ? error.message : String(error) }
     }
   })
