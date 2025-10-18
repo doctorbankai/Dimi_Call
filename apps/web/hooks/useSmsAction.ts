@@ -10,8 +10,17 @@ export function useSmsAction() {
       // Nettoyage du numéro de téléphone
       const cleanedPhoneNumber = phoneNumber.replace(/\D/g, '');
       
+      // Normaliser le message : remplacer sauts de ligne et apostrophes typographiques
+      const normalizedMessage = message
+        .replace(/\r?\n+/g, ' ')           // Sauts de ligne → espaces
+        .replace(/\u2019/g, "'")           // ' → '
+        .replace(/\u2018/g, "'")           // ' → '
+        .replace(/\u201C/g, '"')           // " → "
+        .replace(/\u201D/g, '"')           // " → "
+        .trim();
+      
       // Méthode 1: URI smsto: avec le paramètre body (fonctionne sur certains navigateurs/appareils)
-      const encodedMessage = encodeURIComponent(String(message).replace(/\r?\n/g, ' '));
+      const encodedMessage = encodeURIComponent(normalizedMessage);
       const smsUri = `smsto:${cleanedPhoneNumber}?body=${encodedMessage}`;
       
       // Ouvrir dans un nouvel onglet
@@ -23,8 +32,8 @@ export function useSmsAction() {
       console.info('Si l\'ouverture automatique ne fonctionne pas, exécutez l\'une de ces commandes dans un terminal:');
       
       // Commande ADB 1 : Intent SENDTO avec extra sms_body
-      const escapedMessage = message.replace(/"/g, '\\"').replace(/'/g, "\\'");
-      console.info(`Méthode 1 : adb shell am start -a android.intent.action.SENDTO -d smsto:${cleanedPhoneNumber} --es sms_body "${escapedMessage.replace(/\r?\n/g, ' ')}"`);
+      const escapedMessage = normalizedMessage.replace(/"/g, '\\"').replace(/'/g, "\\'");
+      console.info(`Méthode 1 : adb shell am start -a android.intent.action.SENDTO -d smsto:${cleanedPhoneNumber} --es sms_body "${escapedMessage}"`);
       
       // Commande ADB 2 : Intent VIEW avec paramètre body dans l'URI
       console.info(`Méthode 2 : adb shell am start -a android.intent.action.VIEW -d "smsto:${cleanedPhoneNumber}?body=${encodedMessage}"`);

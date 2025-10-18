@@ -47,12 +47,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const cleanedPhoneNumber = phoneNumber.replace(/\D/g, '');
     console.log('[SMS API] Numéro de téléphone nettoyé:', cleanedPhoneNumber);
 
+    // Normaliser le message : remplacer sauts de ligne et apostrophes typographiques
+    const normalizedMessage = message
+      .replace(/\r?\n+/g, ' ')           // Sauts de ligne → espaces
+      .replace(/\u2019/g, "'")           // ' → '
+      .replace(/\u2018/g, "'")           // ' → '
+      .replace(/\u201C/g, '"')           // " → "
+      .replace(/\u201D/g, '"')           // " → "
+      .trim();
+
     // Échapper les guillemets et autres caractères spéciaux dans le message
-    const escapedMessage = message.replace(/"/g, '\\"').replace(/'/g, "\\'");
+    const escapedMessage = normalizedMessage.replace(/"/g, '\\"').replace(/'/g, "\\'");
     
     // Utiliser la commande ADB recommandée pour ouvrir l'application Messages avec un message pré-rempli
     // Méthode 1 - Utilisation de VIEW avec smsto et body dans l'URI (plus robuste)
-    const encodedMessage = encodeURIComponent(String(message).replace(/\r?\n/g, ' '));
+    const encodedMessage = encodeURIComponent(normalizedMessage);
     const adbCommand = `adb shell am start -a android.intent.action.VIEW -d "smsto:${cleanedPhoneNumber}?body=${encodedMessage}"`;
 
     console.log('[SMS API] Tentative d\'exécution de la commande ADB:', adbCommand);
@@ -70,7 +79,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         console.log('[SMS API] Première méthode échouée, tentative avec la méthode alternative');
         
         // Méthode 2 - Utilisation de l'intent SENDTO avec extra sms_body
-        const alternativeCommand = `adb shell am start -a android.intent.action.SENDTO -d smsto:${cleanedPhoneNumber} --es sms_body "${escapedMessage.replace(/\r?\n/g, ' ')}"`;
+        const alternativeCommand = `adb shell am start -a android.intent.action.SENDTO -d smsto:${cleanedPhoneNumber} --es sms_body "${escapedMessage}"`;
         
         console.log('[SMS API] Tentative d\'exécution de la commande ADB alternative:', alternativeCommand);
         const altResult = await execPromise(alternativeCommand);
@@ -98,7 +107,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         console.log('[SMS API] Première méthode échouée, tentative avec la méthode alternative');
         
         // Méthode 2 - Utilisation de l'intent SENDTO avec extra sms_body
-        const alternativeCommand = `adb shell am start -a android.intent.action.SENDTO -d smsto:${cleanedPhoneNumber} --es sms_body "${escapedMessage.replace(/\r?\n/g, ' ')}"`;
+        const alternativeCommand = `adb shell am start -a android.intent.action.SENDTO -d smsto:${cleanedPhoneNumber} --es sms_body "${escapedMessage}"`;
         
         console.log('[SMS API] Tentative d\'exécution de la commande ADB alternative:', alternativeCommand);
         const { stdout, stderr } = await execPromise(alternativeCommand);

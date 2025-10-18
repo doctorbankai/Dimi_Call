@@ -1531,8 +1531,17 @@ app.whenReady().then(async () => {
   ipcMain.handle('adb:sms', async (event, phoneNumber, message) => {
     try {
       const adbPath = await getValidatedAdbPath()
+      // Normaliser le message : remplacer sauts de ligne par espaces et apostrophes typographiques
+      const normalizedMessage = message
+        .replace(/\r?\n+/g, ' ')           // Sauts de ligne → espaces
+        .replace(/\u2019/g, "'")           // ' → '
+        .replace(/\u2018/g, "'")           // ' → '
+        .replace(/\u201C/g, '"')           // " → "
+        .replace(/\u201D/g, '"')           // " → "
+        .trim()
+      
       // Échapper les guillemets dans le message
-      const escapedMessage = message.replace(/"/g, '\\"')
+      const escapedMessage = normalizedMessage.replace(/"/g, '\\"')
       const adbCommand = `"${adbPath}" shell am start -a android.intent.action.SENDTO -d sms:${phoneNumber} --es sms_body "${escapedMessage}"`
       const { stdout, stderr } = await execAsync(adbCommand)
       if (stderr) {
@@ -1865,14 +1874,22 @@ app.whenReady().then(async () => {
       
       // Échapper les caractères spéciaux pour le shell
       const escapeShellArg = (arg: string) => {
-        // Échapper les caractères sensibles pour /system/bin/sh et normaliser
-        return arg
+        // Normaliser d'abord les apostrophes typographiques et sauts de ligne
+        const normalized = arg
+          .replace(/\u2019/g, "'")         // ' → '
+          .replace(/\u2018/g, "'")         // ' → '
+          .replace(/\u201C/g, '"')         // " → "
+          .replace(/\u201D/g, '"')         // " → "
+          .replace(/\r?\n+/g, ' ')         // newlines -> spaces
+          .trim()
+        
+        // Échapper les caractères sensibles pour /system/bin/sh
+        return normalized
           .replace(/\\/g, '\\\\')       // backslash
           .replace(/"/g, '\\"')          // double quote
-          .replace(/'/g, "\\'")          // single quote/apostrophe - CRITIQUE!
+          .replace(/'/g, "\\'")          // single quote/apostrophe
           .replace(/\$/g, '\\$')          // dollar
           .replace(/`/g, '\\`')            // backtick
-          .replace(/\r?\n/g, ' ')          // newlines -> spaces
       }
       
       // Encoder le message pour l'URL (méthode 1)
@@ -1926,10 +1943,14 @@ app.whenReady().then(async () => {
         await new Promise(resolve => setTimeout(resolve, 400))
 
         const toInput = String(messageBody)
-          .replace(/\r?\n/g, ' ')
+          .replace(/\u2019/g, "'")       // ' → ' AVANT échappement
+          .replace(/\u2018/g, "'")       // ' → '
+          .replace(/\u201C/g, '"')       // " → "
+          .replace(/\u201D/g, '"')       // " → "
+          .replace(/\r?\n+/g, ' ')       // newlines -> spaces
           .replace(/\\/g, '\\\\')
           .replace(/"/g, '\\"')
-          .replace(/'/g, "\\'")          // apostrophe - CRITIQUE!
+          .replace(/'/g, "\\'")          // apostrophe normale
           .replace(/&/g, '\\&')
           .replace(/\|/g, '\\|')
           .replace(/</g, '\\<')
@@ -1939,6 +1960,7 @@ app.whenReady().then(async () => {
           .replace(/\(/g, '\\(')
           .replace(/\)/g, '\\)')
           .replace(/ /g, '%s')
+          .trim()
 
         const typeCmd = `"${getAdbPath()}" shell input text "${toInput}"`
         const { stderr: typeErr } = await execAsync(typeCmd)
