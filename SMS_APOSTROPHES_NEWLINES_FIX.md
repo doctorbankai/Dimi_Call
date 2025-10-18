@@ -32,26 +32,15 @@ const normalizedMessage = message
   .trim();
 ```
 
-### 2. Utilisation de `spawn` au lieu de `exec`
+### 2. Retour à `exec` avec normalisation
 
-Nouvelle fonction helper `spawnAdb()` pour éviter les problèmes de quoting shell :
+Après tests, `spawn` pose des problèmes avec les chemins Windows contenant des parenthèses (ex: `platform-tools (4)`).
 
-```typescript
-const spawnAdb = (adbPath: string, args: string[]): Promise<{ stdout: string; stderr: string }> => {
-  return new Promise((resolve, reject) => {
-    const process = spawn(adbPath, args, { 
-      shell: false,
-      windowsVerbatimArguments: true 
-    })
-    // ... gestion des streams et événements
-  })
-}
-```
-
-**Avantages** :
-- Pas de problème de quoting/échappement
-- Arguments passés directement en tableau
-- Plus fiable sur Windows avec `windowsVerbatimArguments: true`
+**Solution finale** : Utiliser `exec` avec :
+- Normalisation du message AVANT de construire la commande
+- Chemin ADB entre guillemets doubles : `"${adbPath}"`
+- Message normalisé (une seule ligne, apostrophes standards)
+- Échappement minimal (guillemets doubles uniquement pour `--es sms_body`)
 
 ### 3. Méthodes d'envoi SMS (dans l'ordre de tentative)
 
@@ -71,10 +60,11 @@ L'ancien fallback avec `input text` a été retiré car :
 ### Fichiers modifiés
 
 1. **electron/main.ts**
-   - Nouvelle fonction `spawnAdb()` pour exécution fiable avec `windowsVerbatimArguments: true`
-   - `ipcMain.handle('adb:sms')` : Normalisation ajoutée
-   - `ipcMain.handle('adb:send-sms')` : Réécriture complète avec spawn
+   - `ipcMain.handle('adb:sms')` : Normalisation du message ajoutée
+   - `ipcMain.handle('adb:send-sms')` : Normalisation + échappement minimal
+   - Chemin ADB entre guillemets : `"${adbPath}"`
    - Fallback simplifié : ouverture SMS sans message pré-rempli
+   - Suppression de la fonction `spawnAdb()` (problèmes avec chemins Windows)
 
 2. **apps/web/hooks/useSmsAction.ts**
    - Réécriture complète pour utiliser l'API Electron IPC

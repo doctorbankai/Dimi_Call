@@ -3,7 +3,7 @@ import * as path from 'path'
 import { app, shell, BrowserWindow, ipcMain, globalShortcut, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { spawn, exec } from 'child_process'
+import { exec } from 'child_process'
 import { promisify } from 'util'
 import * as fs from 'fs'
 import electronUpdater from 'electron-updater'
@@ -1863,32 +1863,6 @@ app.whenReady().then(async () => {
     }
   })
 
-  // Helper pour exécuter ADB avec spawn (plus fiable que exec pour les arguments complexes)
-  const spawnAdb = (adbPath: string, args: string[]): Promise<{ stdout: string; stderr: string }> => {
-    return new Promise((resolve, reject) => {
-      const process = spawn(adbPath, args, { 
-        shell: false,
-        windowsVerbatimArguments: true 
-      })
-      
-      let stdout = ''
-      let stderr = ''
-      
-      process.stdout?.on('data', (data) => { stdout += data.toString() })
-      process.stderr?.on('data', (data) => { stderr += data.toString() })
-      
-      process.on('close', (code) => {
-        if (code === 0 || stderr.includes('Starting:') || stderr.includes('Warning')) {
-          resolve({ stdout, stderr })
-        } else {
-          reject(new Error(stderr || `Process exited with code ${code}`))
-        }
-      })
-      
-      process.on('error', reject)
-    })
-  }
-
   ipcMain.handle('adb:send-sms', async (event, phoneNumber, messageBody) => {
     try {
       const adbPath = await getValidatedAdbPath()
@@ -1910,24 +1884,27 @@ app.whenReady().then(async () => {
       // Encoder le message pour l'URL
       const encodedMessage = encodeURIComponent(normalizedMessage)
       
-      // Essayer plusieurs approches dans l'ordre avec spawn (pas de problème de quoting)
+      // Échapper pour --es sms_body (guillemets doubles seulement)
+      const escapedMessage = normalizedMessage.replace(/"/g, '\\"')
+      
+      // Essayer plusieurs approches dans l'ordre
       const approaches = [
         // 1. Intent VIEW avec smsto + body dans l'URI
-        ['shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', `smsto:${internationalNumber}?body=${encodedMessage}`],
+        `"${adbPath}" shell am start -a android.intent.action.VIEW -d "smsto:${internationalNumber}?body=${encodedMessage}"`,
         // 2. Intent SENDTO avec smsto + body dans l'URI
-        ['shell', 'am', 'start', '-a', 'android.intent.action.SENDTO', '-d', `smsto:${internationalNumber}?body=${encodedMessage}`],
+        `"${adbPath}" shell am start -a android.intent.action.SENDTO -d "smsto:${internationalNumber}?body=${encodedMessage}"`,
         // 3. Intent SENDTO avec smsto et extra sms_body
-        ['shell', 'am', 'start', '-a', 'android.intent.action.SENDTO', '-d', `smsto:${internationalNumber}`, '--es', 'sms_body', normalizedMessage],
+        `"${adbPath}" shell am start -a android.intent.action.SENDTO -d "smsto:${internationalNumber}" --es sms_body "${escapedMessage}"`,
         // 4. Intent VIEW avec smsto et extra sms_body
-        ['shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', `smsto:${internationalNumber}`, '--es', 'sms_body', normalizedMessage]
+        `"${adbPath}" shell am start -a android.intent.action.VIEW -d "smsto:${internationalNumber}" --es sms_body "${escapedMessage}"`
       ]
       
       let lastError = ""
       
-      for (const [index, args] of approaches.entries()) {
+      for (const [index, command] of approaches.entries()) {
         try {
-          console.log(`[ADB] Tentative ${index + 1} avec spawn`)
-          const { stdout, stderr } = await spawnAdb(adbPath, args)
+          console.log(`[ADB] Tentative ${index + 1}`)
+          const { stdout, stderr } = await execAsync(command)
           
           if (!stderr || stderr.includes('Warning') || stderr.includes('Starting:')) {
             return { 
@@ -1946,7 +1923,8 @@ app.whenReady().then(async () => {
       // Fallback 5: Ouvrir l'app SMS sans message (l'utilisateur devra taper manuellement)
       try {
         console.log('[ADB] Fallback final: ouverture SMS sans message pré-rempli')
-        await spawnAdb(adbPath, ['shell', 'am', 'start', '-a', 'android.intent.action.SENDTO', '-d', `smsto:${internationalNumber}`])
+        const fallbackCmd = `"${adbPath}" shell am start -a android.intent.action.SENDTO -d "smsto:${internationalNumber}"`
+        await execAsync(fallbackCmd)
         
         return { 
           success: true, 
