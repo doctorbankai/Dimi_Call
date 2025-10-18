@@ -912,17 +912,31 @@ export default function ContactsPage() {
   ], []);
 
   const [visibleColumns, setVisibleColumns] = useState<string[]>(() => {
-    // Initialiser avec tous les IDs de colonnes pour rendre toutes les colonnes visibles par défaut
-    // S'assurer que 'dureeAppel' est toujours inclus si présent dans tableColumns
-    const initialVisible = tableColumns.map(col => col.id);
-    if (!initialVisible.includes('dureeAppel')) {
-      // S'assurer que dureeAppel est ajouté seulement s'il fait partie des colonnes possibles
-      if (tableColumns.find(col => col.id === 'dureeAppel')) {
-        initialVisible.push('dureeAppel');
+    // Clé de stockage pour la persistance des colonnes visibles (vue Contacts/Table)
+    const STORAGE_KEY = 'dc_contacts_table_visible_columns';
+    const allIds = tableColumns.map(col => col.id);
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+      if (raw) {
+        const saved = JSON.parse(raw) as string[];
+        // Ne garder que les ID valides et afficher les nouvelles colonnes par défaut
+        const filtered = saved.filter(id => allIds.includes(id));
+        const extras = allIds.filter(id => !filtered.includes(id));
+        return [...filtered, ...extras];
       }
+    } catch (e) {
+      console.error('[ContactsPage] Lecture des colonnes visibles échouée:', e);
     }
-    return initialVisible;
+    return allIds;
   });
+
+  // Persister les modifications de colonnes visibles
+  useEffect(() => {
+    const STORAGE_KEY = 'dc_contacts_table_visible_columns';
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(visibleColumns));
+    } catch {}
+  }, [visibleColumns]);
 
   // Ajouter le hook SMS
   const { sendSmsAction } = useSmsAction();

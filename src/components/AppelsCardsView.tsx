@@ -247,10 +247,26 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   };
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => {
+    // Par défaut, toutes les colonnes sont visibles
     const defaultVisible: Record<string, boolean> = {};
     COLUMN_HEADERS.forEach(header => {
       defaultVisible[header] = true;
     });
+    // Tenter de charger la configuration sauvegardée
+    try {
+      const saved = localStorage.getItem('appels2-visible-columns');
+      if (saved) {
+        const parsed = JSON.parse(saved) as Record<string, boolean>;
+        const merged: Record<string, boolean> = {};
+        // Ne garder que les colonnes connues et ajouter les nouvelles en visible par défaut
+        COLUMN_HEADERS.forEach(header => {
+          merged[header] = typeof parsed[header] === 'boolean' ? parsed[header] : true;
+        });
+        return merged;
+      }
+    } catch (e) {
+      console.error('[AppelsCardsView] Lecture des colonnes visibles échouée:', e);
+    }
     return defaultVisible;
   })
 
@@ -782,11 +798,21 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   }, [selectedContact, isAutocallActive, filteredContacts, onCall, onUpdateContact, onSelectContact])
 
   const toggleColumnVisibility = (header: string) => {
-    setVisibleColumns(prev => ({
-      ...prev,
-      [header]: !prev[header]
-    }));
+    setVisibleColumns(prev => {
+      const next = { ...prev, [header]: !prev[header] };
+      try {
+        localStorage.setItem('appels2-visible-columns', JSON.stringify(next));
+      } catch {}
+      return next;
+    });
   };
+
+  // Persister toute modification de visibilité (y compris changements en masse)
+  useEffect(() => {
+    try {
+      localStorage.setItem('appels2-visible-columns', JSON.stringify(visibleColumns));
+    } catch {}
+  }, [visibleColumns]);
 
   const handleDeleteContact = (contactId: string) => {
     // Implement delete logic if needed

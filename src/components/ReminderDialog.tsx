@@ -5,6 +5,7 @@ import { RelativeDateSelector } from './RelativeDateSelector';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { SingleDayPicker } from '@/components/ui/single-day-picker';
 import { TimePicker } from '@/components/ui/time-picker';
 import { X } from 'lucide-react';
 import { cn } from '../lib/utils';
@@ -59,6 +60,28 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
       setErrors({});
     }
   }, [isOpen, initialDate, initialTime]);
+
+  // Gérer la sélection via le calendrier shadcn
+  const handleCalendarSelect = (date: Date | undefined) => {
+    if (!date) return;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const iso = `${year}-${month}-${day}`;
+
+    setState(prev => ({
+      ...prev,
+      selectedDate: iso,
+      useRelativeSelector: false,
+      hasUnsavedChanges: true
+    }));
+
+    const validation = DateCalculationService.validateDateRange(iso);
+    setErrors(prev => ({
+      ...prev,
+      date: validation.isValid ? undefined : validation.errorMessage
+    }));
+  };
 
   // Gérer le changement de date manuelle
   const handleManualDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,13 +231,18 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
                   value={state.selectedDate}
                   onChange={handleManualDateChange}
                   placeholder="YYYY-MM-DD"
-                  className={cn(
-                    "transition-all duration-200",
-                    errors.date && "border-destructive focus:border-destructive"
-                  )}
+                  className={cn("sr-only")}
                   aria-label="Date du rappel"
                   aria-describedby={errors.date ? "date-error" : undefined}
                   aria-invalid={!!errors.date}
+                />
+                <SingleDayPicker
+                  id="reminder-date-picker"
+                  placeholder="YYYY-MM-DD"
+                  value={state.selectedDate ? new Date(state.selectedDate) : undefined}
+                  onSelect={handleCalendarSelect}
+                  className={cn("w-full")}
+                  container={dialogContentRef.current}
                 />
                 {errors.date && (
                   <p 
@@ -284,6 +312,7 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
             onDateChange={handleRelativeDateChange}
             currentDate={state.selectedDate}
             disabled={false}
+            portalContainer={dialogContentRef.current}
           />
 
           {/* Actions */}

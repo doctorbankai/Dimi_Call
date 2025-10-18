@@ -17,9 +17,10 @@ type TProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "onSelect" | "value"
   value?: Date | undefined;
   placeholder: string;
   labelVariant?: "P" | "PP" | "PPP";
+  container?: HTMLElement | null;
 };
 
-function SingleDayPicker({ id, onSelect, className, placeholder, labelVariant = "PPP", value, ...props }: TProps) {
+function SingleDayPicker({ id, onSelect, className, placeholder, labelVariant = "PPP", value, container, ...props }: TProps) {
   const { isOpen, onClose, onToggle } = useDisclosure();
 
   const handleSelect = (date: Date | undefined) => {
@@ -41,7 +42,7 @@ function SingleDayPicker({ id, onSelect, className, placeholder, labelVariant = 
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent align="center" className="w-fit p-0">
+      <PopoverContent align="center" className="w-fit p-0" container={container}>
         <SingleCalendar mode="single" selected={value} onSelect={handleSelect} initialFocus />
       </PopoverContent>
     </Popover>
