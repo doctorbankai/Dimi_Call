@@ -383,7 +383,7 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
     }
   }, [tableTabs.length])
 
-  const [autoSearchMode, setAutoSearchMode] = useState<'disabled' | 'linkedin' | 'google' | 'link'>(() => {
+  const [autoSearchMode, setAutoSearchMode] = useState<'disabled' | 'linkedin' | 'linkedin-name' | 'linkedin-name-type' | 'google' | 'link'>(() => {
     try {
       // Unifier la clé de stockage avec le dropdown et les autres vues
       const KEYS = ['dimicall-auto-search-mode', 'auto-search-mode']
@@ -394,9 +394,9 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
       }
       console.log('🔎 [AUTO-SEARCH] Chargement mode depuis localStorage:', saved)
 
-      if (saved && ['disabled', 'linkedin', 'google', 'link'].includes(saved)) {
+      if (saved && ['disabled', 'linkedin', 'linkedin-name', 'linkedin-name-type', 'google', 'link'].includes(saved)) {
         console.log('✅ [AUTO-SEARCH] Mode valide trouvé:', saved)
-        return saved as 'disabled' | 'linkedin' | 'google' | 'link'
+        return saved as 'disabled' | 'linkedin' | 'linkedin-name' | 'linkedin-name-type' | 'google' | 'link'
       }
 
       console.log('ℹ️ [AUTO-SEARCH] Aucun mode valide, défaut linkedin')
@@ -1571,7 +1571,20 @@ Dimitri MOREL - Arcanis Conseil`;
         // Recherche automatique selon le mode configur
         if (autoSearchMode === 'linkedin') {
           handleLinkedInSearch(targetContact);
-          showNotification('info', 'Ouverture automatique LinkedIn', 2000);
+          showNotification('info', 'Ouverture automatique LinkedIn (Complet)', 2000);
+        } else if (autoSearchMode === 'linkedin-name') {
+          // Mode simple: Prénom + Nom uniquement
+          const prenom = targetContact.prenom || '';
+          const nom = targetContact.nom || '';
+          searchLinkedIn(prenom, nom);
+          showNotification('info', 'Ouverture automatique LinkedIn (Prénom + Nom)', 2000);
+        } else if (autoSearchMode === 'linkedin-name-type') {
+          // Mode intermédiaire: Prénom + Nom + Type (ou Source si Type n'existe pas)
+          const prenom = targetContact.prenom || '';
+          const nom = targetContact.nom || '';
+          const typeOrSource = (targetContact as any).type || targetContact.source || '';
+          searchLinkedIn(prenom, nom, typeOrSource);
+          showNotification('info', 'Ouverture automatique LinkedIn (Prénom + Nom + Type)', 2000);
         } else if (autoSearchMode === 'google') {
           handleGoogleSearch(targetContact);
           showNotification('info', 'Ouverture automatique Google', 2000);
@@ -2918,10 +2931,16 @@ Dimitri MOREL - Arcanis Conseil`;
                                       <X className="mr-2 h-4 w-4" />
                                       <span>Désactivé</span>
                                     </DropdownMenuRadioItem>
-                                    <DropdownMenuRadioItem value="linkedin" className="cursor-pointer">
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuRadioItem value="linkedin-name" className="cursor-pointer">
                                       <Linkedin className="mr-2 h-4 w-4 text-blue-500" />
-                                      <span>LinkedIn</span>
+                                      <span>LinkedIn (Prénom + Nom)</span>
                                     </DropdownMenuRadioItem>
+                                    <DropdownMenuRadioItem value="linkedin-name-type" className="cursor-pointer">
+                                      <Linkedin className="mr-2 h-4 w-4 text-blue-500" />
+                                      <span>LinkedIn (Prénom + Nom + Type)</span>
+                                    </DropdownMenuRadioItem>
+                                    <DropdownMenuSeparator />
                                     <DropdownMenuRadioItem value="google" className="cursor-pointer">
                                       <Globe className="mr-2 h-4 w-4 text-green-500" />
                                       <span>Google</span>

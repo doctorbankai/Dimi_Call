@@ -111,8 +111,8 @@ type AppelsCardsViewProps = {
   onSearch: (value: string) => void
   onImportDialog: () => void
   onExportDialog: () => void
-  autoSearchMode: 'disabled' | 'linkedin' | 'google' | 'link'
-  onAutoSearchModeChange: (mode: 'disabled' | 'linkedin' | 'google' | 'link') => void
+  autoSearchMode: 'disabled' | 'linkedin' | 'linkedin-name' | 'linkedin-name-type' | 'google' | 'link'
+  onAutoSearchModeChange: (mode: 'disabled' | 'linkedin' | 'linkedin-name' | 'linkedin-name-type' | 'google' | 'link') => void
 }
 
 type FormState = Pick<
@@ -842,37 +842,53 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
           <StatusCompletionChart contacts={contacts} compact className="flex-shrink-0" />
           {viewMode === 'cards' && (
             <>
-              <Tabs value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)} className="w-auto">
-                <TabsList className="h-9">
-                  <TabsTrigger 
-                    value="disabled" 
-                    className="text-xs data-[state=active]:bg-neutral-900 data-[state=active]:text-white dark:data-[state=active]:bg-neutral-100 dark:data-[state=active]:text-neutral-900"
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-2 shrink-0"
+                    title="Mode de recherche automatique"
                   >
-                    Désactivé
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="linkedin" 
-                    className="text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white dark:data-[state=active]:bg-blue-500"
-                  >
-                    <Linkedin className="h-3.5 w-3.5 mr-1.5" />
-                    LinkedIn
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="google" 
-                    className="text-xs data-[state=active]:bg-green-600 data-[state=active]:text-white dark:data-[state=active]:bg-green-500"
-                  >
-                    <Globe className="h-3.5 w-3.5 mr-1.5" />
-                    Google
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="link" 
-                    className="text-xs data-[state=active]:bg-purple-600 data-[state=active]:text-white dark:data-[state=active]:bg-purple-500"
-                  >
-                    <Eye className="h-3.5 w-3.5 mr-1.5" />
-                    Lien
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+                    {autoSearchMode === 'linkedin' && <Linkedin className="h-4 w-4 text-blue-600" />}
+                    {autoSearchMode === 'linkedin-name' && <Linkedin className="h-4 w-4 text-blue-600" />}
+                    {autoSearchMode === 'linkedin-name-type' && <Linkedin className="h-4 w-4 text-blue-600" />}
+                    {autoSearchMode === 'google' && <Globe className="h-4 w-4 text-green-600" />}
+                    {autoSearchMode === 'link' && <Eye className="h-4 w-4 text-purple-600" />}
+                    {autoSearchMode === 'disabled' && <X className="h-4 w-4" />}
+                    <span className="sr-only">Changer le mode automatique</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" side="bottom" sideOffset={5} className="w-64">
+                  <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1">
+                    Mode automatique
+                  </DropdownMenuLabel>
+                  <DropdownMenuRadioGroup value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)}>
+                    <DropdownMenuRadioItem value="disabled" className="cursor-pointer">
+                      <X className="mr-2 h-4 w-4" />
+                      <span>Désactivé</span>
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuRadioItem value="linkedin-name" className="cursor-pointer">
+                      <Linkedin className="mr-2 h-4 w-4 text-blue-600" />
+                      <span>LinkedIn (Prénom + Nom)</span>
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="linkedin-name-type" className="cursor-pointer">
+                      <Linkedin className="mr-2 h-4 w-4 text-blue-600" />
+                      <span>LinkedIn (Prénom + Nom + Type)</span>
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuRadioItem value="google" className="cursor-pointer">
+                      <Globe className="mr-2 h-4 w-4 text-green-600" />
+                      <span>Google</span>
+                    </DropdownMenuRadioItem>
+                    <DropdownMenuRadioItem value="link" className="cursor-pointer">
+                      <Eye className="mr-2 h-4 w-4 text-purple-600" />
+                      <span>Lien</span>
+                    </DropdownMenuRadioItem>
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -1765,14 +1781,14 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             className="h-9 px-2 shrink-0"
                             title="Mode de recherche automatique"
                           >
-                            {autoSearchMode === 'linkedin' && <Linkedin className="h-4 w-4 text-blue-600" />}
+                            {(autoSearchMode === 'linkedin' || autoSearchMode === 'linkedin-name' || autoSearchMode === 'linkedin-name-type') && <Linkedin className="h-4 w-4 text-blue-600" />}
                             {autoSearchMode === 'google' && <Globe className="h-4 w-4 text-green-600" />}
                             {autoSearchMode === 'link' && <Eye className="h-4 w-4 text-purple-600" />}
                             {autoSearchMode === 'disabled' && <X className="h-4 w-4" />}
                             <span className="sr-only">Changer le mode automatique</span>
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" side="bottom" sideOffset={5} className="w-56">
+                        <DropdownMenuContent align="start" side="bottom" sideOffset={5} className="w-64">
                           <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1">
                             Mode automatique
                           </DropdownMenuLabel>
@@ -1781,10 +1797,16 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                               <X className="mr-2 h-4 w-4" />
                               <span>Désactivé</span>
                             </DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="linkedin" className="cursor-pointer">
+                            <DropdownMenuSeparator />
+                            <DropdownMenuRadioItem value="linkedin-name" className="cursor-pointer">
                               <Linkedin className="mr-2 h-4 w-4 text-blue-600" />
-                              <span>LinkedIn</span>
+                              <span>LinkedIn (Prénom + Nom)</span>
                             </DropdownMenuRadioItem>
+                            <DropdownMenuRadioItem value="linkedin-name-type" className="cursor-pointer">
+                              <Linkedin className="mr-2 h-4 w-4 text-blue-600" />
+                              <span>LinkedIn (Prénom + Nom + Type)</span>
+                            </DropdownMenuRadioItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuRadioItem value="google" className="cursor-pointer">
                               <Globe className="mr-2 h-4 w-4 text-green-600" />
                               <span>Google</span>

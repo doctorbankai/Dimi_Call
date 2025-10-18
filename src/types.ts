@@ -127,6 +127,9 @@ export interface ElectronAPI {
   onUpdateDownloaded: (callback: (updateInfo: any) => void) => void;
 }
 
+// Type pour le mode de recherche automatique
+export type AutoSearchMode = 'disabled' | 'linkedin' | 'linkedin-name' | 'linkedin-name-type' | 'google' | 'link';
+
 export interface Window {
   // ... existing code ...
 }

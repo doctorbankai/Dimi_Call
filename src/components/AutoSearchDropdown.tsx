@@ -23,11 +23,11 @@ export const saveAutoSearchMode = (mode: string) => {
   }
 }
 
-export const loadAutoSearchMode = (): 'disabled' | 'linkedin' | 'google' | 'link' => {
+export const loadAutoSearchMode = (): 'disabled' | 'linkedin' | 'linkedin-name' | 'linkedin-name-type' | 'google' | 'link' => {
   try {
     const saved = localStorage.getItem(AUTO_SEARCH_MODE_KEY)
-    if (saved && ['disabled', 'linkedin', 'google', 'link'].includes(saved)) {
-      return saved as 'disabled' | 'linkedin' | 'google' | 'link'
+    if (saved && ['disabled', 'linkedin', 'linkedin-name', 'linkedin-name-type', 'google', 'link'].includes(saved)) {
+      return saved as 'disabled' | 'linkedin' | 'linkedin-name' | 'linkedin-name-type' | 'google' | 'link'
     }
   } catch (error) {
     console.error('Erreur lors du chargement du mode de recherche automatique:', error)
@@ -40,8 +40,8 @@ interface AutoSearchDropdownProps {
   onLinkedInSearch: () => void
   onGoogleSearch: () => void
   onDirectLink: () => void
-  autoSearchMode: 'disabled' | 'linkedin' | 'google' | 'link'
-  onAutoSearchModeChange: (mode: 'disabled' | 'linkedin' | 'google' | 'link') => void
+  autoSearchMode: 'disabled' | 'linkedin' | 'linkedin-name' | 'linkedin-name-type' | 'google' | 'link'
+  onAutoSearchModeChange: (mode: 'disabled' | 'linkedin' | 'linkedin-name' | 'linkedin-name-type' | 'google' | 'link') => void
 }
 
 export const AutoSearchDropdown: React.FC<AutoSearchDropdownProps> = ({
@@ -68,8 +68,24 @@ export const AutoSearchDropdown: React.FC<AutoSearchDropdownProps> = ({
       try {
         switch (autoSearchMode) {
           case 'linkedin':
+            // Mode complet: Prénom + Nom + Type + Source
             if (selectedContact.prenom || selectedContact.nom) {
               onLinkedInSearch()
+            }
+            break
+          case 'linkedin-name':
+            // Mode simple: Prénom + Nom uniquement
+            if (selectedContact.prenom || selectedContact.nom) {
+              const { searchLinkedIn } = require('../lib/utils')
+              searchLinkedIn(selectedContact.prenom || '', selectedContact.nom || '')
+            }
+            break
+          case 'linkedin-name-type':
+            // Mode intermédiaire: Prénom + Nom + Type (ou Source si Type n'existe pas)
+            if (selectedContact.prenom || selectedContact.nom) {
+              const { searchLinkedIn } = require('../lib/utils')
+              const typeOrSource = selectedContact.type || selectedContact.source || ''
+              searchLinkedIn(selectedContact.prenom || '', selectedContact.nom || '', typeOrSource)
             }
             break
           case 'google':
@@ -120,10 +136,16 @@ export const AutoSearchDropdown: React.FC<AutoSearchDropdownProps> = ({
             <X className="mr-2 h-4 w-4" />
             <span>Désactivé</span>
           </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="linkedin">
+          <DropdownMenuSeparator />
+          <DropdownMenuRadioItem value="linkedin-name">
             <Linkedin className="mr-2 h-4 w-4 text-blue-500" />
-            <span>LinkedIn</span>
+            <span>LinkedIn (Prénom + Nom)</span>
           </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="linkedin-name-type">
+            <Linkedin className="mr-2 h-4 w-4 text-blue-500" />
+            <span>LinkedIn (Prénom + Nom + Type)</span>
+          </DropdownMenuRadioItem>
+          <DropdownMenuSeparator />
           <DropdownMenuRadioItem value="google">
             <Globe className="mr-2 h-4 w-4 text-green-500" />
             <span>Google</span>

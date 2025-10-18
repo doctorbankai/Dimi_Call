@@ -319,31 +319,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
       )}
 
       {/* KPIs alignés en une ligne sur grands écrans */}
-      <div className="grid w-full grid-cols-1 gap-4 xl:grid-cols-4 mt-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Durée moyenne d'appel</CardTitle>
-            <CardDescription>En secondes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-center py-8">
-              <div className="text-4xl font-bold tabular-nums">{averageDurationSeconds.toLocaleString()}</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Durée moyenne (décrochés)</CardTitle>
-            <CardDescription>En secondes</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-center py-8">
-              <div className="text-4xl font-bold tabular-nums">{averageAnsweredDurationSeconds.toLocaleString()}</div>
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="grid w-full grid-cols-1 gap-4 xl:grid-cols-2 mt-4">
         <Card>
           <CardHeader>
             <CardTitle>RDV obtenus</CardTitle>
