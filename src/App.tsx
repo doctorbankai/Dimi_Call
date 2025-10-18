@@ -1055,8 +1055,8 @@ Dimitri MOREL - Arcanis Conseil`;
 
   // Search handlers - SupprimÃ©s, voir plus bas pour les nouvelles versions avec type et source
 
-  const handleSms = useCallback(async (civilite: string, smsType?: SmsType, contact?: Contact) => {
-    const target = contact || selectedContact;
+  const handleSms = useCallback(async (civilite: string, smsType?: SmsType, contact?: Contact, dateISO?: string, time?: string) => {
+    let target = contact || selectedContact;
     if (!target) {
       showNotification('info', "Slectionnez un contact pour envoyer un SMS.");
       return;
@@ -1074,7 +1074,14 @@ Dimitri MOREL - Arcanis Conseil`;
       return;
     }
 
-    // GÃ©nÃ©rer le contenu du SMS selon le type et les templates configurÃ©s
+    // Générer le contenu du SMS selon le type et les templates configurés
+    // Appliquer d'éventuelles valeurs de date/heure fournies par le dialogue
+    if (target && (dateISO || time)) {
+      target = { ...target,
+        dateRDV: dateISO || target.dateRDV,
+        heureRDV: time || target.heureRDV,
+      } as Contact;
+    }
     let messageBody = '';
     try {
       messageBody = generateSmsMessage(target, (smsType as SmsType) || SmsType.PremierContact, civilite as Civility);
@@ -3361,8 +3368,8 @@ Dimitri MOREL - Arcanis Conseil`;
                 onClose={() => setIsSmsDialogOpen(false)}
                 contact={selectedContact}
                 onUpdateContact={updateContact}
-                onSendSms={async (civility, smsType) => {
-                  await handleSms(civility as string, smsType);
+                onSendSms={async (civility, smsType, dateISO, time) => {
+                  await handleSms(civility as string, smsType, undefined, dateISO, time);
                   setIsSmsDialogOpen(false);
                 }}
               />
@@ -3727,4 +3734,6 @@ Dimitri MOREL - Arcanis Conseil`;
 };
 
 export default App;
+
+
 

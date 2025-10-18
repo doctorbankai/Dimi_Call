@@ -1865,24 +1865,33 @@ app.whenReady().then(async () => {
       
       // Échapper les caractères spéciaux pour le shell
       const escapeShellArg = (arg: string) => {
-        // Remplacer les guillemets doubles par des guillemets échappés
-        return arg.replace(/"/g, '\\"').replace(/\$/g, '\\$').replace(/`/g, '\\`')
+        // Échapper les caractères sensibles pour /system/bin/sh et normaliser
+        return arg
+          .replace(/\\/g, '\\\\')       // backslash
+          .replace(/"/g, '\\"')          // double quote
+          .replace(/\$/g, '\\$')          // dollar
+          .replace(/`/g, '\\`')            // backtick
+          .replace(/\r?\n/g, ' ')          // newlines -> spaces
       }
       
       // Encoder le message pour l'URL (méthode 1)
-      const encodedMessage = encodeURIComponent(messageBody)
+      // Normaliser d'abord les retours à la ligne pour éviter une URI invalide
+      const encodedMessage = encodeURIComponent(String(messageBody).replace(/\r?\n/g, ' '))
       
       // Échapper le message pour le shell (méthodes 2 et 3)
-      const escapedMessage = escapeShellArg(messageBody)
+      const escapedMessage = escapeShellArg(String(messageBody))
       
       // Essayer plusieurs approches dans l'ordre
+      // Utiliser le schéma "smsto:" pour une compatibilité maximale avec les apps SMS
       const approaches = [
-        // 1. Intent direct vers Messages de Google avec URI
-        `"${getAdbPath()}" shell am start -a android.intent.action.SENDTO -d "sms:${internationalNumber}?body=${encodedMessage}"`,
-        // 2. Intent SENDTO avec sms_body
-        `"${getAdbPath()}" shell am start -a android.intent.action.SENDTO -d "sms:${internationalNumber}" --es sms_body "${escapedMessage}"`,
-        // 3. Intent VIEW avec URI sms
-        `"${getAdbPath()}" shell am start -a android.intent.action.VIEW -d "sms:${internationalNumber}" --es sms_body "${escapedMessage}"`
+        // 1. Intent VIEW avec smsto + body dans l'URI (souvent le plus robuste)
+        `"${getAdbPath()}" shell am start -a android.intent.action.VIEW -d "smsto:${internationalNumber}?body=${encodedMessage}"`,
+        // 2. Intent SENDTO avec smsto + body dans l'URI
+        `"${getAdbPath()}" shell am start -a android.intent.action.SENDTO -d "smsto:${internationalNumber}?body=${encodedMessage}"`,
+        // 3. Intent SENDTO avec smsto et extra sms_body
+        `"${getAdbPath()}" shell am start -a android.intent.action.SENDTO -d "smsto:${internationalNumber}" --es sms_body "${escapedMessage}"`,
+        // 4. Intent VIEW avec smsto et extra sms_body (dernier recours)
+        `"${getAdbPath()}" shell am start -a android.intent.action.VIEW -d "smsto:${internationalNumber}" --es sms_body "${escapedMessage}"`
       ]
       
       let lastError = ""
@@ -1906,6 +1915,40 @@ app.whenReady().then(async () => {
         }
       }
       
+      // Fallback 5: Ouvrir l'app SMS puis simuler la saisie du message
+      try {
+        console.log('[ADB] Fallback saisie simulée: ouverture compose sans body')
+        const openCmd = `"${getAdbPath()}" shell am start -a android.intent.action.SENDTO -d "smsto:${internationalNumber}"`
+        await execAsync(openCmd)
+
+        // petite pause pour que le champ de saisie soit focalisé
+        await new Promise(resolve => setTimeout(resolve, 400))
+
+        const toInput = String(messageBody)
+          .replace(/\r?\n/g, ' ')
+          .replace(/\\/g, '\\\\')
+          .replace(/"/g, '\\"')
+          .replace(/&/g, '\\&')
+          .replace(/\|/g, '\\|')
+          .replace(/</g, '\\<')
+          .replace(/>/g, '\\>')
+          .replace(/;/g, '\\;')
+          .replace(/\$/g, '\\$')
+          .replace(/\(/g, '\\(')
+          .replace(/\)/g, '\\)')
+          .replace(/ /g, '%s')
+
+        const typeCmd = `"${getAdbPath()}" shell input text "${toInput}"`
+        const { stderr: typeErr } = await execAsync(typeCmd)
+        if (!typeErr || typeErr.includes('Warning')) {
+          return { success: true, message: 'SMS préparé via saisie simulée' }
+        }
+        lastError = typeErr || lastError
+      } catch (e) {
+        lastError = (e as Error)?.message || String(e)
+        console.log(`[ADB] Fallback saisie simulée échoué: ${lastError}`)
+      }
+
       // Si toutes les approches ont échoué
       throw new Error(`Toutes les méthodes ont échoué. Dernière erreur: ${lastError}`)
       

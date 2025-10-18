@@ -10,9 +10,9 @@ export function useSmsAction() {
       // Nettoyage du numéro de téléphone
       const cleanedPhoneNumber = phoneNumber.replace(/\D/g, '');
       
-      // Méthode 1: URI sms: avec le paramètre body (fonctionne sur certains navigateurs/appareils)
-      const encodedMessage = encodeURIComponent(message);
-      const smsUri = `sms:${cleanedPhoneNumber}?body=${encodedMessage}`;
+      // Méthode 1: URI smsto: avec le paramètre body (fonctionne sur certains navigateurs/appareils)
+      const encodedMessage = encodeURIComponent(String(message).replace(/\r?\n/g, ' '));
+      const smsUri = `smsto:${cleanedPhoneNumber}?body=${encodedMessage}`;
       
       // Ouvrir dans un nouvel onglet
       window.open(smsUri, '_blank');
@@ -24,10 +24,10 @@ export function useSmsAction() {
       
       // Commande ADB 1 : Intent SENDTO avec extra sms_body
       const escapedMessage = message.replace(/"/g, '\\"').replace(/'/g, "\\'");
-      console.info(`Méthode 1 : adb shell am start -a android.intent.action.SENDTO -d sms:${cleanedPhoneNumber} --es sms_body "${escapedMessage}"`);
+      console.info(`Méthode 1 : adb shell am start -a android.intent.action.SENDTO -d smsto:${cleanedPhoneNumber} --es sms_body "${escapedMessage.replace(/\r?\n/g, ' ')}"`);
       
       // Commande ADB 2 : Intent VIEW avec paramètre body dans l'URI
-      console.info(`Méthode 2 : adb shell am start -a android.intent.action.VIEW -d "sms:${cleanedPhoneNumber}?body=${encodedMessage}"`);
+      console.info(`Méthode 2 : adb shell am start -a android.intent.action.VIEW -d "smsto:${cleanedPhoneNumber}?body=${encodedMessage}"`);
       
       // Commande ADB 3 : Lancer l'app puis simuler la saisie (méthode alternative)
       const spaceEscapedMessage = message.replace(/ /g, '%s');

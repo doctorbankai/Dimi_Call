@@ -51,8 +51,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const escapedMessage = message.replace(/"/g, '\\"').replace(/'/g, "\\'");
     
     // Utiliser la commande ADB recommandée pour ouvrir l'application Messages avec un message pré-rempli
-    // Méthode 1 - Utilisation de l'intent SENDTO avec l'extra sms_body
-    const adbCommand = `adb shell am start -a android.intent.action.SENDTO -d sms:${cleanedPhoneNumber} --es sms_body "${escapedMessage}"`;
+    // Méthode 1 - Utilisation de VIEW avec smsto et body dans l'URI (plus robuste)
+    const encodedMessage = encodeURIComponent(String(message).replace(/\r?\n/g, ' '));
+    const adbCommand = `adb shell am start -a android.intent.action.VIEW -d "smsto:${cleanedPhoneNumber}?body=${encodedMessage}"`;
 
     console.log('[SMS API] Tentative d\'exécution de la commande ADB:', adbCommand);
 
@@ -64,13 +65,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         console.warn('[SMS API] Avertissement de la commande ADB (stderr):', stderr);
       }
 
-      // En cas d'échec silencieux, essayer la méthode alternative avec le paramètre ?body= dans l'URI
+      // En cas d'échec silencieux, essayer la méthode alternative SENDTO + sms_body
       if (stdout.includes('Error') || stderr.includes('Error')) {
         console.log('[SMS API] Première méthode échouée, tentative avec la méthode alternative');
         
-        // Méthode 2 - Utilisation de l'intent VIEW avec le paramètre body dans l'URI
-        const encodedMessage = encodeURIComponent(message);
-        const alternativeCommand = `adb shell am start -a android.intent.action.VIEW -d "sms:${cleanedPhoneNumber}?body=${encodedMessage}"`;
+        // Méthode 2 - Utilisation de l'intent SENDTO avec extra sms_body
+        const alternativeCommand = `adb shell am start -a android.intent.action.SENDTO -d smsto:${cleanedPhoneNumber} --es sms_body "${escapedMessage.replace(/\r?\n/g, ' ')}"`;
         
         console.log('[SMS API] Tentative d\'exécution de la commande ADB alternative:', alternativeCommand);
         const altResult = await execPromise(alternativeCommand);
@@ -97,9 +97,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       try {
         console.log('[SMS API] Première méthode échouée, tentative avec la méthode alternative');
         
-        // Méthode 2 - Utilisation de l'intent VIEW avec le paramètre body dans l'URI
-        const encodedMessage = encodeURIComponent(message);
-        const alternativeCommand = `adb shell am start -a android.intent.action.VIEW -d "sms:${cleanedPhoneNumber}?body=${encodedMessage}"`;
+        // Méthode 2 - Utilisation de l'intent SENDTO avec extra sms_body
+        const alternativeCommand = `adb shell am start -a android.intent.action.SENDTO -d smsto:${cleanedPhoneNumber} --es sms_body "${escapedMessage.replace(/\r?\n/g, ' ')}"`;
         
         console.log('[SMS API] Tentative d\'exécution de la commande ADB alternative:', alternativeCommand);
         const { stdout, stderr } = await execPromise(alternativeCommand);
