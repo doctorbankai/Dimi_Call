@@ -45,14 +45,14 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string>('');
 
-  // Initialiser les champs avec les donnÃ©es existantes du contact
+  // Initialiser les champs avec les données existantes du contact
   useEffect(() => {
     if (contact) {
-      // PrÃ©-remplir la date si elle existe dans le contact
+      // Pré-remplir la date si elle existe dans le contact
       if (contact.dateRDV) {
         try {
           const dateRDV = new Date(contact.dateRDV);
-          // VÃ©rifier que la date est valide
+          // Vérifier que la date est valide
           if (!isNaN(dateRDV.getTime())) {
             setSelectedDate(dateRDV);
           }
@@ -61,7 +61,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
         }
       }
       
-      // PrÃ©-remplir l'heure si elle existe dans le contact
+      // Pré-remplir l'heure si elle existe dans le contact
       if (contact.heureRDV) {
         setSelectedTime(contact.heureRDV);
       }
@@ -95,7 +95,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
       return;
     }
 
-    // CrÃ©er un contact modifiÃ© avec la date et l'heure sÃ©lectionnÃ©es si nÃ©cessaire
+    // Créer un contact modifié avec la date et l'heure sélectionnées si nécessaire
     const contactWithDateTime = { ...contact };
     if (needsDateTime && selectedDate && selectedTime) {
       contactWithDateTime.dateRDV = format(selectedDate, 'yyyy-MM-dd');
@@ -110,7 +110,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
       onClose();
     } catch (error) {
       console.error('Erreur lors de l\'ouverture de Gmail:', error);
-      showNotification('error', 'Impossible d\'ouvrir Gmail. VÃ©rifiez que votre navigateur autorise les pop-ups.');
+      showNotification('error', 'Impossible d\'ouvrir Gmail. Vérifiez que votre navigateur autorise les pop-ups.');
     }
   };
 
@@ -127,7 +127,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
   ];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="GÃ©nÃ©rer un Email" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Générer un Email" size="md">
       <div className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -140,7 +140,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
           <div className="space-y-3">
             <ShadcnSelect value={civility} onValueChange={(value) => setCivility(value as Civility)}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="CivilitÃ©" />
+                <SelectValue placeholder="Civilité" />
               </SelectTrigger>
               <SelectContent className="z-[20001]">
                 {civilityOptions.map((option) => (
@@ -184,7 +184,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDate ? format(selectedDate, 'PPP', { locale: fr }) : <span>SÃ©lectionner une date</span>}
+                      {selectedDate ? format(selectedDate, 'PPP', { locale: fr }) : <span>Sélectionner une date</span>}
                     </ShadcnButton>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0 z-[20001]">
@@ -215,7 +215,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
         )}
         
         <div className="bg-muted text-muted-foreground p-3 rounded text-sm">
-          <strong>AperÃ§u:</strong> Email {emailTypeOptions.find(opt => opt.value === emailType)?.label} pour {civilityOptions.find(opt => opt.value === civility)?.label} {contact.prenom} {contact.nom}
+          <strong>Aperçu:</strong> Email {emailTypeOptions.find(opt => opt.value === emailType)?.label} pour {civilityOptions.find(opt => opt.value === civility)?.label} {contact.prenom} {contact.nom}
           {needsDateTime && selectedDate && selectedTime && (
             <div className="mt-1">
               <strong>Rendez-vous:</strong> {format(selectedDate, 'PPPP', { locale: fr })} Ã€Â  {selectedTime}
@@ -230,7 +230,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
             onClick={handleGenerateEmail}
             disabled={needsDateTime && (!selectedDate || !selectedTime)}
           >
-            GÃ©nÃ©rer Email Gmail
+            Générer Email Gmail
           </Button>
         </div>
       </div>
@@ -288,7 +288,7 @@ const SmsDialog: React.FC<SmsDialogProps> = ({ isOpen, onClose, contact, onSendS
 
   const needsDateTime = smsType === SmsType.D0Visio || smsType === SmsType.R0Interne || smsType === SmsType.R0Externe;
 
-    // Mettre Ã  jour la prÃ©visualisation du message Ã  chaque changement
+    // Mettre Ã  jour la prévisualisation du message Ã  chaque changement
   useEffect(() => {
     if (!contact) return;
     try {
@@ -330,13 +330,13 @@ const handleSendSms = () => {
             <label className="block text-sm font-medium mb-1 text-foreground">Contact</label>
             <div className="p-2 bg-muted text-muted-foreground rounded border text-sm">
               <div><strong>Nom:</strong> {contact.prenom} {contact.nom}</div>
-              <div><strong>TÃ©lÃ©phone:</strong> {contact.telephone}</div>
+              <div><strong>Téléphone:</strong> {contact.telephone}</div>
             </div>
           </div>
           <div className="space-y-3">
             <ShadcnSelect value={civility} onValueChange={(value) => setCivility(value as Civility)}>
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="CivilitÃ©" />
+                <SelectValue placeholder="Civilité" />
               </SelectTrigger>
               <SelectContent className="z-[20001]">
                 {civilityOptions.map((option) => (
@@ -365,7 +365,7 @@ const handleSendSms = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div></div>
           <div>
-            <label className="block text-sm font-medium mb-1 text-foreground">PrÃ©visualisation du message</label>
+            <label className="block text-sm font-medium mb-1 text-foreground">Prévisualisation du message</label>
             <div className="h-full p-3 bg-muted/40 text-foreground rounded border text-sm whitespace-pre-wrap">
               {previewMessage}
             </div>
@@ -389,7 +389,7 @@ const handleSendSms = () => {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDate ? format(selectedDate, 'PPP', { locale: fr }) : <span>SÃ©lectionner une date</span>}
+                      {selectedDate ? format(selectedDate, 'PPP', { locale: fr }) : <span>Sélectionner une date</span>}
                     </ShadcnButton>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0 z-[20001]">
@@ -420,7 +420,7 @@ const handleSendSms = () => {
         )}
 
         <div className="bg-muted text-muted-foreground p-3 rounded text-sm">
-          <strong>AperÃ§u:</strong> SMS {smsTypeOptions.find(opt => opt.value === smsType)?.label} pour {civilityOptions.find(opt => opt.value === civility)?.label} {contact.prenom} {contact.nom}
+          <strong>Aperçu:</strong> SMS {smsTypeOptions.find(opt => opt.value === smsType)?.label} pour {civilityOptions.find(opt => opt.value === civility)?.label} {contact.prenom} {contact.nom}
           {needsDateTime && selectedDate && selectedTime && (
             <div className="mt-1">
               <strong>Rendez-vous:</strong> {format(selectedDate, 'PPPP', { locale: fr })} Ã€Â  {selectedTime}
@@ -451,7 +451,7 @@ interface RappelDialogProps {
 }
 
 const RappelDialog: React.FC<RappelDialogProps> = ({ isOpen, onClose, contact, onSave }) => {
-  // Utiliser notre nouveau ReminderDialog avec les sÃ©lecteurs relatifs
+  // Utiliser notre nouveau ReminderDialog avec les sélecteurs relatifs
   return (
     <ReminderDialog
       isOpen={isOpen}
@@ -523,13 +523,13 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
   const [commentairePersonnel, setCommentairePersonnel] = useState('');
 
   const statutMaritalOptions = [
-    { value: '', label: 'SÃ©lectionner...' },
-    { value: 'reset', label: 'Ã¢ÂÅ’ RÃ©initialiser' },
+    { value: '', label: 'Sélectionner...' },
+    { value: 'reset', label: 'Ã¢ÂÅ’ Réinitialiser' },
     ...Object.values(QualificationStatutMarital).map(s => ({value: s, label: s}))
   ];
   const situationProOptions = [
-    { value: '', label: 'SÃ©lectionner...' },
-    { value: 'reset', label: 'Ã¢ÂÅ’ RÃ©initialiser' },
+    { value: '', label: 'Sélectionner...' },
+    { value: 'reset', label: 'Ã¢ÂÅ’ Réinitialiser' },
     ...Object.values(QualificationSituationPro).map(s => ({value: s, label: s}))
   ];
 
@@ -546,7 +546,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
       setResultat('N/A');
     }
     
-    // GÃ©nÃ©rer le commentaire en excluant les valeurs non dÃ©finies
+    // Générer le commentaire en excluant les valeurs non définies
     const commentParts: string[] = ['Qualification:'];
     
     if (statutMarital && statutMarital !== 'reset') {
@@ -558,26 +558,26 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
     }
     
     if (rev > 0) {
-      commentParts.push(`Revenus foyer: ${rev}â‚¬`);
+      commentParts.push(`Revenus foyer: ${rev}€`);
     }
     
     if (chg > 0) {
-      commentParts.push(`Charges foyer: ${chg}â‚¬`);
+      commentParts.push(`Charges foyer: ${chg}€`);
     }
     
     if (liq > 0) {
-      commentParts.push(`LiquiditÃ©s disponibles: ${liq}â‚¬`);
+      commentParts.push(`Liquidités disponibles: ${liq}€`);
     }
     
     if (eff > 0) {
-      commentParts.push(`Effort d'Ã©pargne: ${eff}â‚¬`);
+      commentParts.push(`Effort d'épargne: ${eff}€`);
     }
     
     if (rev > 0 && chg > 0) {
-      commentParts.push(`RÃ©sultat calculÃ©: ${calculatedResult.toFixed(2)}`);
+      commentParts.push(`Résultat calculé: ${calculatedResult.toFixed(2)}`);
     }
     
-    // Si aucune information n'a Ã©tÃ© saisie, afficher un message par dÃ©faut
+    // Si aucune information n'a été saisie, afficher un message par défaut
     if (commentParts.length === 1) {
       setCommentaire('Qualification: Aucune information saisie.');
     } else {
@@ -619,7 +619,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
         <DialogHeader>
           <DialogTitle className="text-xl font-semibold">Qualification du Contact</DialogTitle>
           <DialogDescription>
-            Saisissez les informations pour qualifier le contact et gÃ©nÃ©rer un commentaire automatique.
+            Saisissez les informations pour qualifier le contact et générer un commentaire automatique.
           </DialogDescription>
         </DialogHeader>
         
@@ -645,7 +645,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Revenus du foyer (â‚¬)</Label>
+              <Label className="text-sm font-medium">Revenus du foyer (€)</Label>
               <ShadcnInput
                 type="number"
                 value={revenus}
@@ -655,7 +655,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Charges du foyer (â‚¬)</Label>
+              <Label className="text-sm font-medium">Charges du foyer (€)</Label>
               <ShadcnInput
                 type="number"
                 value={charges}
@@ -665,7 +665,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium">RÃ©sultat calculÃ©</Label>
+              <Label className="text-sm font-medium">Résultat calculé</Label>
               <ShadcnInput
                 value={resultat}
                 readOnly
@@ -676,7 +676,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium">LiquiditÃ©s disponibles (â‚¬)</Label>
+              <Label className="text-sm font-medium">Liquidités disponibles (€)</Label>
               <ShadcnInput
                 type="number"
                 value={liquidites}
@@ -686,7 +686,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Effort d'Ã©pargne (â‚¬)</Label>
+              <Label className="text-sm font-medium">Effort d'épargne (€)</Label>
               <ShadcnInput
                 type="number"
                 value={effortEpargne}
@@ -707,7 +707,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
               onChange={(e) => setCommentaire(e.target.value)}
               rows={4}
               className="w-full resize-none bg-input text-foreground border-slate-300 dark:border-slate-600"
-              placeholder="Commentaire automatique basÃ© sur les informations saisies..."
+              placeholder="Commentaire automatique basé© sur les informations saisies..."
             />
           </div>
 
