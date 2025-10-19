@@ -3,7 +3,7 @@ import * as path from 'path'
 import { app, shell, BrowserWindow, ipcMain, globalShortcut, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { exec } from 'child_process'
+import { exec, execFile, spawn } from 'child_process'
 import { promisify } from 'util'
 import * as fs from 'fs'
 import electronUpdater from 'electron-updater'
@@ -34,6 +34,7 @@ if (updateConfig.enabled) {
 dotenv.config({ path: path.resolve(app.getAppPath(), '..', '.env') })
 
 const execAsync = promisify(exec)
+const execFileAsync = promisify(execFile)
 
 // État de mise à jour
 let updateInfo: any = null
@@ -1871,6 +1872,43 @@ app.whenReady().then(async () => {
     }
   }
 
+  // Lance adb avec spawn et log en temps réel stdout/stderr
+  const spawnAdbWithLogging = (adbPath: string, args: string[], label: string) => {
+    return new Promise<{ code: number; stdout: string; stderr: string }>((resolve) => {
+      try {
+        const pretty = `${adbPath} ${args.map(a => (a.includes(' ') ? '"' + a.replace(/"/g, '\\"') + '"' : a)).join(' ')}`
+        logToRenderer(`[ADB-SEND-SMS] 🔧 ${label} spawn: ${pretty}`)
+        const child = spawn(adbPath, args, { windowsHide: true })
+
+        let out = ''
+        let err = ''
+        child.stdout.on('data', (d) => {
+          const s = d.toString()
+          out += s
+          logToRenderer(`[ADB-SEND-SMS] 🔹 ${label} stdout: ${s.trim() || '(vide)'}`)
+        })
+        child.stderr.on('data', (d) => {
+          const s = d.toString()
+          err += s
+          logToRenderer(`[ADB-SEND-SMS] 🔴 ${label} stderr: ${s.trim() || '(vide)'}`, 'error')
+        })
+        child.on('close', (code) => {
+          logToRenderer(`[ADB-SEND-SMS] 🔷 ${label} exit code: ${code}`)
+          resolve({ code: typeof code === 'number' ? code : -1, stdout: out, stderr: err })
+        })
+        child.on('error', (e) => {
+          const msg = e instanceof Error ? e.message : String(e)
+          logToRenderer(`[ADB-SEND-SMS] ⚠️ ${label} process error: ${msg}`, 'error')
+          resolve({ code: -1, stdout: out, stderr: `${err}\n${msg}` })
+        })
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e)
+        logToRenderer(`[ADB-SEND-SMS] ⚠️ ${label} spawn setup error: ${msg}`, 'error')
+        resolve({ code: -1, stdout: '', stderr: msg })
+      }
+    })
+  }
+
   ipcMain.handle('adb:send-sms', async (event, phoneNumber, messageBody) => {
     logToRenderer(`[ADB-SEND-SMS] 🚀 Début de l'envoi SMS vers ${phoneNumber}`)
     logToRenderer(`[ADB-SEND-SMS] 📝 Message original (${messageBody.length} caractères): ${messageBody.substring(0, 100)}...`)
@@ -1904,42 +1942,44 @@ app.whenReady().then(async () => {
       
       logToRenderer(`[ADB-SEND-SMS] 🔐 Message échappé (${escapedMessage.length} caractères): ${escapedMessage.substring(0, 100)}...`)
       
-      // Essayer plusieurs approches dans l'ordre
+      // Essayer plusieurs approches dans l'ordre (spawn + logs temps réel)
       // IMPORTANT : --es sms_body en premier car il gère mieux les URLs
-      const approaches = [
+      // NB: on passe la valeur de sms_body avec des guillemets dans le token
+      // pour que le shell Android la traite comme un seul argument.
+      const approachesArgs: string[][] = [
         // 1. Intent SENDTO avec smsto et extra sms_body (meilleur pour URLs)
-        `"${adbPath}" shell am start -a android.intent.action.SENDTO -d "smsto:${internationalNumber}" --es sms_body "${escapedMessage}"`,
+        ['shell', 'am', 'start', '-a', 'android.intent.action.SENDTO', '-d', `smsto:${internationalNumber}`, '--es', 'sms_body', `"${escapedMessage}"`],
         // 2. Intent VIEW avec smsto et extra sms_body
-        `"${adbPath}" shell am start -a android.intent.action.VIEW -d "smsto:${internationalNumber}" --es sms_body "${escapedMessage}"`,
+        ['shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', `smsto:${internationalNumber}`, '--es', 'sms_body', `"${escapedMessage}"`],
         // 3. Intent SENDTO avec sms: et extra sms_body (sans le 'to')
-        `"${adbPath}" shell am start -a android.intent.action.SENDTO -d "sms:${internationalNumber}" --es sms_body "${escapedMessage}"`,
+        ['shell', 'am', 'start', '-a', 'android.intent.action.SENDTO', '-d', `sms:${internationalNumber}`, '--es', 'sms_body', `"${escapedMessage}"`],
         // 4. Intent VIEW avec sms: et extra sms_body
-        `"${adbPath}" shell am start -a android.intent.action.VIEW -d "sms:${internationalNumber}" --es sms_body "${escapedMessage}"`
+        ['shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', `sms:${internationalNumber}`, '--es', 'sms_body', `"${escapedMessage}"`]
       ]
       
       let lastError = ""
+      logToRenderer(`[ADB-SEND-SMS] 🔄 Tentative de ${approachesArgs.length} méthodes...`)
       
-      logToRenderer(`[ADB-SEND-SMS] 🔄 Tentative de ${approaches.length} méthodes...`)
-      
-      for (const [index, command] of approaches.entries()) {
+      for (const [index, args] of approachesArgs.entries()) {
         try {
-          logToRenderer(`\n[ADB-SEND-SMS] 🎯 Méthode ${index + 1}/${approaches.length}`)
-          logToRenderer(`[ADB-SEND-SMS] 📤 Commande: ${command.substring(0, 200)}...`)
-          
-          const { stdout, stderr } = await execAsync(command)
-          
-          logToRenderer(`[ADB-SEND-SMS] 📥 stdout: ${stdout || '(vide)'}`)
-          logToRenderer(`[ADB-SEND-SMS] 📥 stderr: ${stderr || '(vide)'}`)
-          
-          if (!stderr || stderr.includes('Warning') || stderr.includes('Starting:')) {
+          const asCommand = `adb ${['shell', ...args.slice(1)].join(' ')}`
+          logToRenderer(`\n[ADB-SEND-SMS] 🎯 Méthode ${index + 1}/${approachesArgs.length}`)
+          logToRenderer(`[ADB-SEND-SMS] 📤 Commande (device): ${asCommand.substring(0, 300)}...`)
+
+          // Exécuter avec spawn pour logs temps réel
+          const { code, stdout, stderr } = await spawnAdbWithLogging(adbPath, args, `M${index + 1}`)
+
+          // Heuristique de succès: code 0 et aucun message d'erreur critique
+          const stderrLower = (stderr || '').toLowerCase()
+          const ok = code === 0 && !stderrLower.includes('no closing quote')
+          if (ok) {
             logToRenderer(`[ADB-SEND-SMS] ✅ Méthode ${index + 1} RÉUSSIE - App ouverte`)
             return { 
               success: true, 
               message: `SMS préparé avec succès (méthode ${index + 1})` 
             }
           }
-          
-          lastError = stderr
+          lastError = stderr || `exit ${code}`
           logToRenderer(`[ADB-SEND-SMS] ⚠️ Méthode ${index + 1} a retourné stderr, on continue...`, 'warn')
         } catch (error) {
           lastError = error instanceof Error ? error.message : String(error)
@@ -1952,8 +1992,7 @@ app.whenReady().then(async () => {
       // Fallback 5: Ouvrir l'app SMS sans message (l'utilisateur devra taper manuellement)
       try {
         logToRenderer('[ADB-SEND-SMS] 🆘 Fallback final: ouverture SMS sans message pré-rempli', 'warn')
-        const fallbackCmd = `"${adbPath}" shell am start -a android.intent.action.SENDTO -d "smsto:${internationalNumber}"`
-        await execAsync(fallbackCmd)
+        await spawnAdbWithLogging(adbPath, ['shell', 'am', 'start', '-a', 'android.intent.action.SENDTO', '-d', `smsto:${internationalNumber}`], 'FB')
         
         return { 
           success: true, 
