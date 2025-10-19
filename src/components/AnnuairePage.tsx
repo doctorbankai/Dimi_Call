@@ -47,7 +47,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { StatusEventRecord } from '@/types/statusEvent';
-import { formatPhoneNumber } from '../services/dataService';
+import { formatPhoneNumber, importContactsFromFile } from '../services/dataService';
 import { ViewSwitcher, type ViewMode } from './ViewSwitcher';
 import { AnnuaireTable, AnnuaireEditableField } from './AnnuaireTable';
 import { AnnuaireCardsView } from './AnnuaireCardsView';
@@ -989,7 +989,7 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
       console.log('🔄 [MAPPING] Début de l\'importation avec mapping:', mapping);
       
       // Import réel des contacts via localDbService
-      const { importContactsFromFile } = await import('../services/dataService');
+      // import statique (déplacé en haut) pour compatibilité production
       const imported = await importContactsFromFile(mappingDialog.file, mapping, options);
       console.log(`📥 [MAPPING] ${imported.length} contacts importés (après exclusion éventuelle)`);
       

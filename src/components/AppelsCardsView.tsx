@@ -80,6 +80,7 @@ import * as XLSX from 'xlsx'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { shortcutService } from '../services/shortcutService'
+import { exportContactsToFile, exportGoogleContactsCSV, exportGoogleCalendarCSV, importContactsFromFile } from '../services/dataService'
 import { ViewSwitcher, ViewMode } from '@/components/ViewSwitcher'
 import { PaginatedContactTable } from '@/components/PaginatedContactTable'
 import type { ContactTableRef } from '@/components/ContactTable'
@@ -399,8 +400,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
 
     let exportCount = 0;
 
-    // Import dynamique des fonctions d'export
-    const { exportContactsToFile, exportGoogleContactsCSV, exportGoogleCalendarCSV } = await import('../services/dataService');
+    // Import statique des fonctions d'export (compatibilité production)
 
     // Exporter la table CSV si sélectionnée
     if (exportOptions.table) {
@@ -510,7 +510,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       console.log('ðŸ”„ [MAPPING] Début de l\'importation avec mapping:', mapping)
       
       // Import réel des contacts
-      const { importContactsFromFile } = await import('../services/dataService')
+      // import statique (déplacé en haut) pour compatibilité production
       const imported = await importContactsFromFile(mappingDialog.file, mapping, options)
       console.log(`ðŸ“¥ [MAPPING] ${imported.length} contacts importés (après exclusion éventuelle)`)
       
