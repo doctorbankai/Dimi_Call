@@ -1924,13 +1924,13 @@ app.whenReady().then(async () => {
       }
       logToRenderer(`[ADB-SEND-SMS] 📞 Numéro normalisé: ${internationalNumber}`)
       
-      // Normaliser le message : apostrophes typographiques et sauts de ligne
+      // Normaliser le message : apostrophes typographiques et sauts de ligne (conserver les retours à la ligne)
       const normalizedMessage = String(messageBody)
         .replace(/\u2019/g, "'")         // ' → '
         .replace(/\u2018/g, "'")         // ' → '
         .replace(/\u201C/g, '"')         // " → "
         .replace(/\u201D/g, '"')         // " → "
-        .replace(/\r?\n+/g, ' ')         // newlines -> spaces
+        .replace(/\r?\n/g, '\n')         // normaliser CRLF/CR en LF et conserver
         .trim()
       
       logToRenderer(`[ADB-SEND-SMS] 📝 Message normalisé (${normalizedMessage.length} caractères): ${normalizedMessage.substring(0, 100)}...`)
