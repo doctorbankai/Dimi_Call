@@ -23,8 +23,8 @@ const DEFAULT_CONFIG: StatusConfigMap = {
   [ContactStatus.ARappeler]: { label: 'À rappeler', color: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-200', dot: 'bg-yellow-500', visible: true },
   [ContactStatus.PasInteresse]: { label: 'Pas intéressé', color: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-200', dot: 'bg-red-500', visible: true },
   [ContactStatus.Argumente]: { label: 'Argumenté', color: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-200', dot: 'bg-blue-500', visible: true },
-  [ContactStatus.DO]: { label: 'DO', color: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200', dot: 'bg-emerald-500', visible: true },
-  [ContactStatus.RO]: { label: 'RO', color: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-200', dot: 'bg-green-500', visible: true },
+  [ContactStatus.D0]: { label: 'D0', color: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200', dot: 'bg-emerald-500', visible: true },
+  [ContactStatus.R0]: { label: 'R0', color: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-200', dot: 'bg-green-500', visible: true },
   [ContactStatus.ListeNoire]: { label: 'Liste noire', color: 'bg-gray-800 text-gray-100 border-gray-600 dark:bg-gray-700 dark:text-gray-100', dot: 'bg-gray-600', visible: true },
   [ContactStatus.Premature]: { label: 'Prématuré', color: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-200', dot: 'bg-purple-500', visible: true },
   [ContactStatus.A0]: { label: 'A0', color: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-200', dot: 'bg-indigo-500', visible: true },
@@ -35,7 +35,7 @@ type StatusConfigPerMode = Record<CallMode, StatusConfigMap>;
 function getCurrentModeFromStorage(): CallMode {
   try {
     const raw = localStorage.getItem(MODE_STORAGE_KEY) as CallMode | null;
-    return raw === CallMode.Mandataire ? CallMode.Mandataire : CallMode.Client;
+    return raw === CallMode.Apporteur ? CallMode.Apporteur : CallMode.Client;
   } catch {
     return CallMode.Client;
   }
@@ -51,8 +51,8 @@ export class StatusConfigService {
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<StatusConfigPerMode> | null;
         const client = parsed?.[CallMode.Client] || { ...DEFAULT_CONFIG };
-        const mandataire = parsed?.[CallMode.Mandataire] || { ...DEFAULT_CONFIG };
-        return { [CallMode.Client]: client, [CallMode.Mandataire]: mandataire } as StatusConfigPerMode;
+        const apporteur = parsed?.[CallMode.Apporteur] || { ...DEFAULT_CONFIG };
+        return { [CallMode.Client]: client, [CallMode.Apporteur]: apporteur } as StatusConfigPerMode;
       }
 
       // Migration depuis V1
@@ -61,7 +61,7 @@ export class StatusConfigService {
         const parsedLegacy = JSON.parse(legacy) as StatusConfigMap;
         const migrated: StatusConfigPerMode = {
           [CallMode.Client]: { ...DEFAULT_CONFIG, ...(parsedLegacy || {}) },
-          [CallMode.Mandataire]: { ...DEFAULT_CONFIG },
+          [CallMode.Apporteur]: { ...DEFAULT_CONFIG },
         } as StatusConfigPerMode;
         // Sauvegarder immédiatement au nouveau format
         localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(migrated));
@@ -71,14 +71,14 @@ export class StatusConfigService {
       // Par défaut si rien en storage
       const defaults: StatusConfigPerMode = {
         [CallMode.Client]: { ...DEFAULT_CONFIG },
-        [CallMode.Mandataire]: { ...DEFAULT_CONFIG },
+        [CallMode.Apporteur]: { ...DEFAULT_CONFIG },
       } as StatusConfigPerMode;
       localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(defaults));
       return defaults;
     } catch {
       return {
         [CallMode.Client]: { ...DEFAULT_CONFIG },
-        [CallMode.Mandataire]: { ...DEFAULT_CONFIG },
+        [CallMode.Apporteur]: { ...DEFAULT_CONFIG },
       } as StatusConfigPerMode;
     }
   }

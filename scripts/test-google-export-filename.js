@@ -71,8 +71,8 @@ function exportGoogleContactsCSV(contacts) {
   // Filtrer les contacts par statut
   const filteredContacts = contacts.filter(contact => 
     contact.statut === ContactStatus.ARappeler ||
-    contact.statut === ContactStatus.DO ||
-    contact.statut === ContactStatus.RO
+    contact.statut === ContactStatus.D0 ||
+    contact.statut === ContactStatus.R0
   );
 
   if (filteredContacts.length === 0) {
@@ -135,7 +135,7 @@ const testContacts = [
     nom: 'Martin',
     telephone: '+33 6 98 76 54 32',
     email: 'marie@test.com',
-    statut: ContactStatus.DO
+    statut: ContactStatus.D0
   }
 ];
 

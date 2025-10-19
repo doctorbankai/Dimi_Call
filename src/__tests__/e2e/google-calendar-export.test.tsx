@@ -107,7 +107,7 @@ describe('Google Calendar Export E2E', () => {
       telephone: '+33 6 98 76 54 32',
       email: 'marie.martin@example.com',
       source: 'École Commerce',
-      statut: ContactStatus.DO,
+      statut: ContactStatus.D0,
       commentaire: 'Très intéressée',
       dateRappel: '2024-01-16',
       heureRappel: '', // Sans heure (toute la journée)
@@ -125,7 +125,7 @@ describe('Google Calendar Export E2E', () => {
       telephone: '+33 6 11 22 33 44',
       email: 'pierre.durand@example.com',
       source: 'Référence',
-      statut: ContactStatus.RO,
+      statut: ContactStatus.R0,
       commentaire: '',
       dateRappel: '', // Pas de rappel
       heureRappel: '',

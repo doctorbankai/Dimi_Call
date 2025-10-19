@@ -6,7 +6,7 @@ export enum Theme {
 
 export enum CallMode {
   Client = 'client',
-  Mandataire = 'mandataire',
+  Apporteur = 'apporteur',
 }
 
 export enum ContactStatus {
@@ -16,8 +16,8 @@ export enum ContactStatus {
   ARappeler = "À rappeler",
   PasInteresse = "Pas intéressé",
   Argumente = "Argumenté",
-  DO = "DO",
-  RO = "RO",
+  D0 = "D0",
+  R0 = "R0",
   ListeNoire = "Liste noire",
   Premature = "Prématuré",
   A0 = "A0",

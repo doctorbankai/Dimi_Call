@@ -70,8 +70,8 @@ const ContactInfoCard: React.FC<ContactInfoCardProps> = ({ contact, theme, activ
 
   const getStatusConfig = (status: string) => {
     const configs: Record<string, { color: string; icon: React.ComponentType<any> }> = {
-      'DO': { color: 'bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-800', icon: Zap },
-      'RO': { color: 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-800', icon: Building2 },
+      'D0': { color: 'bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-800', icon: Zap },
+      'R0': { color: 'bg-blue-500/10 text-blue-700 border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-800', icon: Building2 },
       'À rappeler': { color: 'bg-amber-500/10 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-800', icon: Clock },
       'Pas intéressé': { color: 'bg-red-500/10 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-800', icon: FileText },
       'Argumenté': { color: 'bg-purple-500/10 text-purple-700 border-purple-200 dark:bg-purple-500/10 dark:text-purple-400 dark:border-purple-800', icon: MessageCircle },

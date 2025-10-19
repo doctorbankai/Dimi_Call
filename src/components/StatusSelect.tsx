@@ -34,7 +34,7 @@ const StatusSelect: React.FC<StatusSelectProps> = ({
   const statusOptions = useMemo(() => {
     const baseOptions = Object.values(ContactStatus).filter((status) => {
       if (!StatusConfigService.isVisible(status, mode)) return false;
-      if (status === ContactStatus.A0 && mode !== CallMode.Mandataire) return false;
+      if (status === ContactStatus.A0 && mode !== CallMode.Apporteur) return false;
       return true;
     });
 

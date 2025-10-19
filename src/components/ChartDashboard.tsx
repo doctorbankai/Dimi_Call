@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Contact } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell, LabelList } from 'recharts';
  
 
 type ChartDashboardProps = {
@@ -73,42 +73,59 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
     // Compter les statuts finaux
     const map = new Map<string, number>();
     for (const ev of latestByContact.values()) {
-      const k = String(ev.new_status || ev.newStatus || '');
+      let k = String(ev.new_status || ev.newStatus || '');
       // Exclure les statuts vides ou "Non défini"
       if (!k || k === 'Non défini') continue;
+      
+      // Normaliser les anciens statuts DO/RO vers D0/R0
+      if (k === 'DO') k = 'D0';
+      if (k === 'RO') k = 'R0';
+      
       map.set(k, (map.get(k) || 0) + 1);
     }
-    const entries = Array.from(map.entries()).map(([label, value]) => ({ label, value }));
-    const sorted = entries.sort((a, b) => b.value - a.value);
-    const top = sorted.slice(0, 6);
-    const others = sorted.slice(6);
-    const othersSum = others.reduce((acc, d) => acc + d.value, 0);
-    const withOthers = othersSum > 0 ? [...top, { label: 'Autres', value: othersSum }] : top;
     
-    // Utiliser les couleurs des badges de statuts
+    // Utiliser les couleurs des badges de statuts (correspondant à statusConfigService)
     const getStatusColorFromLabel = (label: string): string => {
-      // Mapping des labels vers les ContactStatus
+      // Mapping des labels vers les couleurs HSL correspondant aux couleurs Tailwind
       const statusMap: Record<string, string> = {
-        'Non défini': 'hsl(var(--muted))',
-        'Mauvais num': 'hsl(0 84.2% 60.2%)',
-        'Répondeur': 'hsl(45 93.4% 47.5%)',
-        'À rappeler': 'hsl(43 96.4% 56.3%)',
-        'Pas intéressé': 'hsl(215.4 16.3% 46.9%)',
-        'Argumenté': 'hsl(221.2 83.2% 53.3%)',
-        'DO': 'hsl(142.1 76.2% 36.3%)',
-        'RO': 'hsl(160 84.1% 39.4%)',
-        'Liste noire': 'hsl(240 5.9% 10%)',
-        'Prématuré': 'hsl(280 87.3% 65.1%)',
-        'A0': 'hsl(239 84.3% 67.8%)',
+        'Non défini': 'hsl(220 8.9% 46.1%)', // gray
+        'Mauvais num': 'hsl(0 84.2% 60.2%)', // red
+        'Répondeur': 'hsl(24.6 95% 53.1%)', // orange
+        'À rappeler': 'hsl(47.9 95.8% 53.1%)', // yellow
+        'Pas intéressé': 'hsl(0 84.2% 60.2%)', // red (corrigé)
+        'Argumenté': 'hsl(221.2 83.2% 53.3%)', // blue
+        'D0': 'hsl(142.1 76.2% 36.3%)', // emerald
+        'R0': 'hsl(142.1 70.6% 45.3%)', // green
+        'Liste noire': 'hsl(240 5.9% 10%)', // gray-800
+        'Prématuré': 'hsl(280 87.3% 65.1%)', // purple
+        'A0': 'hsl(239 84.3% 67.8%)', // indigo
       };
       return statusMap[label] || 'hsl(var(--chart-1))';
     };
     
-    return withOthers.map((d) => ({ 
-      label: d.label, 
-      value: d.value, 
-      fill: getStatusColorFromLabel(d.label) 
-    }));
+    // Ordre des statuts défini
+    const statusOrder = ['Mauvais num', 'Répondeur', 'À rappeler', 'Pas intéressé', 'Argumenté', 'D0', 'R0', 'Liste noire', 'Prématuré'];
+    
+    // Créer un tableau avec tous les statuts dans l'ordre
+    const orderedData = statusOrder
+      .map(label => ({
+        label,
+        value: map.get(label) || 0,
+        fill: getStatusColorFromLabel(label)
+      }))
+      .filter(d => d.value > 0); // Ne garder que ceux qui ont des valeurs
+    
+    // Ajouter les statuts non listés (comme A0 ou autres) à la fin
+    const listedStatuses = new Set(statusOrder);
+    const unlisted = Array.from(map.entries())
+      .filter(([label]) => !listedStatuses.has(label))
+      .map(([label, value]) => ({
+        label,
+        value,
+        fill: getStatusColorFromLabel(label)
+      }));
+    
+    return [...orderedData, ...unlisted];
   }, [localEvents]);
 
   const radialConfig = useMemo(() => {
@@ -135,12 +152,12 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
       }
     }
     
-    // Définition des règles d'agrégation (DO et RO au lieu de D0 et R0)
+    // Définition des règles d'agrégation (D0 et R0)
     const statusMapping = {
-      'Contacté': ['Mauvais num', 'Répondeur', 'À rappeler', 'Pas intéressé', 'Argumenté', 'DO', 'RO'],
-      'Décroché': ['À rappeler', 'Pas intéressé', 'Argumenté', 'DO', 'RO'],
-      'Argumenté': ['Argumenté', 'DO', 'RO'],
-      'Pris': ['DO', 'RO']
+      'Contacté': ['Mauvais num', 'Répondeur', 'À rappeler', 'Pas intéressé', 'Argumenté', 'D0', 'R0'],
+      'Décroché': ['À rappeler', 'Pas intéressé', 'Argumenté', 'D0', 'R0'],
+      'Argumenté': ['Argumenté', 'D0', 'R0'],
+      'Pris': ['D0', 'R0']
     };
 
     // Initialisation des compteurs
@@ -153,7 +170,11 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
 
     // Parcours des derniers statuts par contact
     latestByContact.forEach((event) => {
-      const status = String(event.new_status || event.newStatus || '');
+      let status = String(event.new_status || event.newStatus || '');
+      
+      // Normaliser les anciens statuts DO/RO vers D0/R0
+      if (status === 'DO') status = 'D0';
+      if (status === 'RO') status = 'R0';
       
       // Comptage pour chaque catégorie applicable
       Object.entries(statusMapping).forEach(([category, statuses]) => {
@@ -163,22 +184,22 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
       });
     });
 
-    // Transformation en format pour Recharts
+    // Transformation en format pour Recharts avec couleurs correspondantes
     return [
-      { category: 'Contacté', value: counts['Contacté'], fill: 'var(--chart-1)' },
-      { category: 'Décroché', value: counts['Décroché'], fill: 'var(--chart-2)' },
-      { category: 'Argumenté', value: counts['Argumenté'], fill: 'var(--chart-3)' },
-      { category: 'Pris', value: counts['Pris'], fill: 'var(--chart-4)' }
+      { category: 'Contacté', value: counts['Contacté'], fill: 'hsl(24.6 95% 53.1%)' }, // orange (Répondeur)
+      { category: 'Décroché', value: counts['Décroché'], fill: 'hsl(47.9 95.8% 53.1%)' }, // yellow (À rappeler)
+      { category: 'Argumenté', value: counts['Argumenté'], fill: 'hsl(221.2 83.2% 53.3%)' }, // blue (Argumenté)
+      { category: 'Pris', value: counts['Pris'], fill: 'hsl(142.1 76.2% 36.3%)' } // emerald (D0)
     ];
   }, [localEvents]);
 
   // Configuration du graphique d'entonnoir
   const funnelConfig = {
     value: { label: 'Événements' },
-    'Contacté': { label: 'Contacté', color: 'var(--chart-1)' },
-    'Décroché': { label: 'Décroché', color: 'var(--chart-2)' },
-    'Argumenté': { label: 'Argumenté', color: 'var(--chart-3)' },
-    'Pris': { label: 'Pris', color: 'var(--chart-4)' }
+    'Contacté': { label: 'Contacté', color: 'hsl(24.6 95% 53.1%)' }, // orange (Répondeur)
+    'Décroché': { label: 'Décroché', color: 'hsl(47.9 95.8% 53.1%)' }, // yellow (À rappeler)
+    'Argumenté': { label: 'Argumenté', color: 'hsl(221.2 83.2% 53.3%)' }, // blue (Argumenté)
+    'Pris': { label: 'Pris', color: 'hsl(142.1 76.2% 36.3%)' } // emerald (D0)
   } as const;
 
   // KPIs globaux basés sur la base locale (derniers événements par contact)
@@ -261,7 +282,13 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
     let sum = 0;
     let count = 0;
     latestByContact.forEach((ev: any) => {
-      const label = String(ev.new_status || ev.newStatus || '').toLowerCase();
+      let label = String(ev.new_status || ev.newStatus || '');
+      
+      // Normaliser les anciens statuts DO/RO vers D0/R0
+      if (label === 'DO') label = 'D0';
+      if (label === 'RO') label = 'R0';
+      
+      label = label.toLowerCase();
       if (excludedLabels.has(label)) return;
       if (ev.dureeAppel) {
         const secs = parseDuration(String(ev.dureeAppel));
@@ -318,10 +345,16 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
                 cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
                 content={<ChartTooltipContent indicator="line" />} 
               />
-              <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="value" radius={[4, 4, 0, 0]} isAnimationActive={false}>
                 {radialData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
+                <LabelList 
+                  dataKey="value" 
+                  position="top" 
+                  fill="hsl(var(--foreground))" 
+                  fontSize={12}
+                />
               </Bar>
             </BarChart>
           </ChartContainer>
@@ -371,10 +404,16 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
                 />
                 <YAxis allowDecimals={false} />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                <Bar dataKey="value" radius={[8, 8, 0, 0]} isAnimationActive={false}>
                   {funnelData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.fill} />
                   ))}
+                  <LabelList 
+                    dataKey="value" 
+                    position="top" 
+                    fill="hsl(var(--foreground))" 
+                    fontSize={12}
+                  />
                 </Bar>
               </BarChart>
             </ChartContainer>
@@ -392,33 +431,6 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
           </CardContent>
         </Card>
       )}
-
-      {/* KPIs alignés en une ligne sur grands écrans */}
-      <div className="grid w-full grid-cols-1 gap-4 xl:grid-cols-2 mt-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>RDV obtenus</CardTitle>
-            <CardDescription>Total</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-center py-8">
-              <div className="text-4xl font-bold tabular-nums">{totalRDV.toLocaleString()}</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Rappels</CardTitle>
-            <CardDescription>Total</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-center py-8">
-              <div className="text-4xl font-bold tabular-nums">{totalRappels.toLocaleString()}</div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       <Card className="w-full mt-4">
         <CardHeader>

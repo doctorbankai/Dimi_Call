@@ -34,7 +34,7 @@ const testContacts = [
     telephone: '+33 1 23 45 67 89',
     email: 'marie.martin@example.com',
     source: 'Université Lyon',
-    statut: ContactStatus.DO,
+    statut: ContactStatus.D0,
     commentaire: 'Rendez-vous confirmé',
     dateRappel: '2024-01-16',
     heureRappel: '09:00',

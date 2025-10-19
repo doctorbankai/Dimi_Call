@@ -168,8 +168,8 @@ const normalizeStatusLabel = (status?: string | null): string => {
   if (key.includes('rappeler')) return 'À rappeler';
   if (key.includes('pasinter')) return 'Pas intéressé';
   if (key.includes('argument')) return 'Argumenté';
-  if (key === 'do') return 'DO';
-  if (key === 'ro') return 'RO';
+  if (key === 'do') return 'D0';
+  if (key === 'ro') return 'R0';
   if (key.includes('listenoi')) return 'Liste noire';
   if (key.includes('prematur')) return 'Prématuré';
   if (key === 'a0') return 'A0';

@@ -62,8 +62,8 @@ export const ShortcutConfigDialog: React.FC<ShortcutConfigDialogProps> = ({
       [ContactStatus.ARappeler]: 'À rappeler',
       [ContactStatus.PasInteresse]: 'Pas intéressé',
       [ContactStatus.Argumente]: 'Argumenté',
-      [ContactStatus.DO]: 'DO',
-      [ContactStatus.RO]: 'RO',
+      [ContactStatus.D0]: 'D0',
+      [ContactStatus.R0]: 'R0',
       [ContactStatus.ListeNoire]: 'Liste noire'
     };
     return labelMap[status] || status;
@@ -109,8 +109,8 @@ export const ShortcutConfigDialog: React.FC<ShortcutConfigDialogProps> = ({
       [ContactStatus.ARappeler]: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-200',
       [ContactStatus.PasInteresse]: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-200',
       [ContactStatus.Argumente]: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-200',
-      [ContactStatus.DO]: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200',
-      [ContactStatus.RO]: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-200',
+      [ContactStatus.D0]: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200',
+      [ContactStatus.R0]: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-200',
       [ContactStatus.ListeNoire]: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/30 dark:text-slate-200'
     };
     return colors[status] || colors[ContactStatus.NonDefini];
@@ -241,7 +241,7 @@ export const ShortcutConfigDialog: React.FC<ShortcutConfigDialogProps> = ({
                       </SelectTrigger>
                       <SelectContent>
                         {availableStatuses.map((status) => {
-                          if (status === ContactStatus.A0 && mode !== CallMode.Mandataire) return null;
+                          if (status === ContactStatus.A0 && mode !== CallMode.Apporteur) return null;
                           return (
                             <SelectItem key={status} value={status}>
                               <div className="flex items-center gap-2">

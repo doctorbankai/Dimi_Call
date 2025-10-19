@@ -178,7 +178,14 @@ export default function LocalDBViewer() {
                     <TableCell className="px-2 py-1.5 text-xs text-center whitespace-nowrap">
                       <span className="truncate block max-w-[180px] mx-auto" title={email}>{email}</span>
                     </TableCell>
-                    <TableCell className="px-2 py-1.5 text-xs text-center whitespace-nowrap font-medium">{(ev as any).new_status ?? (ev as any).newStatus ?? ''}</TableCell>
+                    <TableCell className="px-2 py-1.5 text-xs text-center whitespace-nowrap font-medium">
+                      {(() => {
+                        let status = (ev as any).new_status ?? (ev as any).newStatus ?? '';
+                        if (status === 'DO') status = 'D0';
+                        if (status === 'RO') status = 'R0';
+                        return status;
+                      })()}
+                    </TableCell>
                     <TableCell className="px-2 py-1.5 text-xs text-center whitespace-nowrap">{comment}</TableCell>
                     <TableCell className="px-2 py-1.5 text-xs text-center whitespace-nowrap">{ev.dateRappel || ''}</TableCell>
                     <TableCell className="px-2 py-1.5 text-xs text-center whitespace-nowrap">{ev.heureRappel || ''}</TableCell>
@@ -234,11 +241,25 @@ export default function LocalDBViewer() {
               </div>
               <div>
                 <div className="text-muted-foreground">Ancien statut</div>
-                <div className="font-medium">{selectedEvent.old_status || '-'}</div>
+                <div className="font-medium">
+                  {(() => {
+                    let status = selectedEvent.old_status || '-';
+                    if (status === 'DO') status = 'D0';
+                    if (status === 'RO') status = 'R0';
+                    return status;
+                  })()}
+                </div>
               </div>
               <div>
                 <div className="text-muted-foreground">Nouveau statut</div>
-                <div className="font-medium">{selectedEvent.new_status}</div>
+                <div className="font-medium">
+                  {(() => {
+                    let status = selectedEvent.new_status;
+                    if (status === 'DO') status = 'D0';
+                    if (status === 'RO') status = 'R0';
+                    return status;
+                  })()}
+                </div>
               </div>
               <div>
                 <div className="text-muted-foreground">Mail</div>

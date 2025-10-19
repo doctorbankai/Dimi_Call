@@ -1070,16 +1070,16 @@ export const generateGmailComposeUrl = (
       const data = JSON.parse(saved);
       // Choisir templates/signature selon le mode
       const modeSaved = localStorage.getItem(MODE_STORAGE_KEY) as CallMode | null;
-      const isMandataire = modeSaved === CallMode.Mandataire;
+      const isApporteur = modeSaved === CallMode.Apporteur;
 
-      if (isMandataire && data.mandataireTemplates) {
-        templates = data.mandataireTemplates;
+      if (isApporteur && data.apporteurTemplates) {
+        templates = data.apporteurTemplates;
       } else if (data.templates) {
         templates = data.templates;
       }
 
-      if (isMandataire && data.mandataireSignature) {
-        signature = data.mandataireSignature;
+      if (isApporteur && data.apporteurSignature) {
+        signature = data.apporteurSignature;
       } else if (data.signature) {
         signature = data.signature;
       }
@@ -1162,14 +1162,14 @@ Suite à notre appel, je vous confirme {rdv} à {adresse}. Prévoir 30 minutes p
 
   // Charger les templates personnalisés si disponibles
   let templates: Record<string, any> | null = null;
-  let useMandataire = false;
+  let useApporteur = false;
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     const modeSaved = localStorage.getItem(MODE_STORAGE_KEY) as CallMode | null;
-    useMandataire = modeSaved === CallMode.Mandataire;
+    useApporteur = modeSaved === CallMode.Apporteur;
     if (saved) {
       const parsed = JSON.parse(saved);
-      templates = useMandataire ? parsed?.mandataireSmsTemplates : parsed?.smsTemplates;
+      templates = useApporteur ? parsed?.apporteurSmsTemplates : parsed?.smsTemplates;
     }
   } catch (e) {
     console.warn('Erreur chargement templates SMS, utilisation des valeurs par défaut');
@@ -1328,11 +1328,11 @@ const buildNotesField = (contact: Contact): string => {
 
 // Export contacts to Google Contacts CSV format
 export const exportGoogleContactsCSV = (contacts: Contact[]): void => {
-  // Filtrer les contacts par statut (À rappeler, DO, RO, A0)
+  // Filtrer les contacts par statut (À rappeler, D0, R0, A0)
   const filteredContacts = contacts.filter(contact => 
     contact.statut === ContactStatus.ARappeler ||
-    contact.statut === ContactStatus.DO ||
-    contact.statut === ContactStatus.RO ||
+    contact.statut === ContactStatus.D0 ||
+    contact.statut === ContactStatus.R0 ||
     contact.statut === ContactStatus.A0
   );
 

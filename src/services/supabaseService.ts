@@ -1183,8 +1183,8 @@ class SupabaseService {
       'À rappeler': ContactStatus.ARappeler,
       'Pas intéressé': ContactStatus.PasInteresse,
       'Argumenté': ContactStatus.Argumente,
-      'DO': ContactStatus.DO,
-      'RO': ContactStatus.RO,
+      'D0': ContactStatus.D0,
+      'R0': ContactStatus.R0,
       'Liste noire': ContactStatus.ListeNoire,
       'Prématuré': ContactStatus.Premature,
     };

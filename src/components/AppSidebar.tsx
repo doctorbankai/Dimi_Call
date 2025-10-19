@@ -154,18 +154,6 @@ export function AppSidebar({
           <SidebarGroup>
             <SidebarGroupLabel>Modes</SidebarGroupLabel>
             <SidebarMenu>
-              {pagesVisibility.showAppelsPage && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    isActive={viewMode === 'table'}
-                    onClick={() => onChangeViewMode('table')}
-                    className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
-                  >
-                    <Phone className="w-4 h-4" />
-                    <span>Appels</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
               <SidebarMenuItem>
                 <SidebarMenuButton
                   isActive={viewMode === 'appels-cards'}
@@ -221,7 +209,7 @@ export function AppSidebar({
             </SidebarMenu>
           </SidebarGroup>
 
-          {/* Mode Client/Mandataire Section */}
+          {/* Mode Client/Apporteur Section */}
           <SidebarGroup className="group-data-[collapsible=icon]:hidden">
             <SidebarGroupLabel>Mode d'appel</SidebarGroupLabel>
             <SidebarMenu>
@@ -232,14 +220,14 @@ export function AppSidebar({
                       Client
                     </Badge>
                     <Switch
-                      checked={mode === CallMode.Mandataire}
+                      checked={mode === CallMode.Apporteur}
                       onCheckedChange={(checked) => {
-                        const newMode = checked ? CallMode.Mandataire : CallMode.Client;
+                        const newMode = checked ? CallMode.Apporteur : CallMode.Client;
                         setMode(newMode);
                       }}
                     />
-                    <Badge variant={mode === CallMode.Mandataire ? 'default' : 'secondary'} className="text-xs">
-                      Mandataire
+                    <Badge variant={mode === CallMode.Apporteur ? 'default' : 'secondary'} className="text-xs">
+                      Apporteur
                     </Badge>
                   </div>
                 </div>

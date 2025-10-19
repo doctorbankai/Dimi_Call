@@ -51,7 +51,7 @@ describe('Export/Import Integration Flow', () => {
       telephone: '+33 1 23 45 67 89',
       email: 'marie.martin@example.com',
       source: 'Université Lyon',
-      statut: ContactStatus.DO,
+      statut: ContactStatus.D0,
       commentaire: 'Rendez-vous confirmé',
       dateRappel: '2024-01-16',
       heureRappel: '09:00',
@@ -326,7 +326,7 @@ describe('Export/Import Integration Flow', () => {
     const { exportGoogleContactsCSV } = require('../../services/dataService');
 
     const mixedStatusContacts: Contact[] = [
-      ...testContacts, // Jean (À rappeler), Marie (DO)
+      ...testContacts, // Jean (À rappeler), Marie (D0)
       {
         id: uuidv4(),
         numeroLigne: 3,
@@ -335,7 +335,7 @@ describe('Export/Import Integration Flow', () => {
         telephone: '+33 7 98 76 54 32',
         email: 'pierre.durand@example.com',
         source: 'Référence client',
-        statut: ContactStatus.RO,
+        statut: ContactStatus.R0,
         commentaire: 'Contrat signé',
         dateRappel: '',
         heureRappel: '',
@@ -410,7 +410,7 @@ describe('Export/Import Integration Flow', () => {
         ]);
         
         // Vérifier que seuls les contacts avec les bons statuts sont exportés
-        expect(rows).toHaveLength(3); // Jean (À rappeler), Marie (DO), Pierre (RO)
+        expect(rows).toHaveLength(3); // Jean (À rappeler), Marie (D0), Pierre (R0)
         
         const exportedNames = rows.map(row => row[0]); // Given Name
         expect(exportedNames).toContain('Jean');

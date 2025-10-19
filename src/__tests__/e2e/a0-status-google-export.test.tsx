@@ -109,7 +109,7 @@ describe('A0 Status Google Export E2E', () => {
       telephone: '+33 7 98 76 54 32',
       email: 'pierre.durand@example.com',
       source: 'Référence',
-      statut: ContactStatus.DO,
+      statut: ContactStatus.D0,
       commentaire: 'Rendez-vous confirmé',
       dateRappel: '',
       heureRappel: '',
@@ -165,7 +165,7 @@ describe('A0 Status Google Export E2E', () => {
     const contactsButton = screen.getByTitle(/Exporter.*contacts.*vers Google Contacts/);
     expect(contactsButton).toBeInTheDocument();
 
-    // Vérifier que le badge affiche 3 (ARappeler + A0 + DO)
+    // Vérifier que le badge affiche 3 (ARappeler + A0 + D0)
     const badge = contactsButton.querySelector('[data-slot="badge"]');
     expect(badge).toHaveTextContent('3');
   });
@@ -178,7 +178,7 @@ describe('A0 Status Google Export E2E', () => {
     });
 
     // Chercher le bouton Google Contacts et vérifier le tooltip
-    const contactsButton = screen.getByTitle(/Exporter 3 contacts \(À rappeler, DO, RO, A0\) vers Google Contacts/);
+    const contactsButton = screen.getByTitle(/Exporter 3 contacts \(À rappeler, D0, R0, A0\) vers Google Contacts/);
     expect(contactsButton).toBeInTheDocument();
   });
 
@@ -258,7 +258,7 @@ describe('A0 Status Google Export E2E', () => {
     const mixedContacts: Contact[] = [
       { ...mockContacts[0], statut: ContactStatus.ARappeler }, // Éligible
       { ...mockContacts[1], statut: ContactStatus.A0 },        // Éligible
-      { ...mockContacts[2], statut: ContactStatus.RO },        // Éligible
+      { ...mockContacts[2], statut: ContactStatus.R0 },        // Éligible
       { ...mockContacts[3], statut: ContactStatus.PasInteresse } // Non éligible
     ];
 

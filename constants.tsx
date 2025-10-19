@@ -342,8 +342,8 @@ export const STATUS_COLORS: Record<ContactStatus, { bg: string; text: string; da
   [ContactStatus.ARappeler]: { bg: "bg-amber-200", text: "text-amber-700", darkBg: "dark:bg-amber-500", darkText: "dark:text-amber-900" },
   [ContactStatus.PasInteresse]: { bg: "bg-slate-200", text: "text-slate-700", darkBg: "dark:bg-slate-600", darkText: "dark:text-slate-100" },
   [ContactStatus.Argumente]: { bg: "bg-blue-200", text: "text-blue-700", darkBg: "dark:bg-blue-600", darkText: "dark:text-blue-100" },
-  [ContactStatus.DO]: { bg: "bg-green-200", text: "text-green-700", darkBg: "dark:bg-green-600", darkText: "dark:text-green-100" },
-  [ContactStatus.RO]: { bg: "bg-emerald-200", text: "text-emerald-700", darkBg: "dark:bg-emerald-700", darkText: "dark:text-emerald-100" },
+  [ContactStatus.D0]: { bg: "bg-green-200", text: "text-green-700", darkBg: "dark:bg-green-600", darkText: "dark:text-green-100" },
+  [ContactStatus.R0]: { bg: "bg-emerald-200", text: "text-emerald-700", darkBg: "dark:bg-emerald-700", darkText: "dark:text-emerald-100" },
   [ContactStatus.ListeNoire]: { bg: "bg-zinc-800", text: "text-zinc-200", darkBg: "dark:bg-black", darkText: "dark:text-gray-400" },
   [ContactStatus.Premature]: { bg: "bg-pink-200", text: "text-pink-700", darkBg: "dark:bg-pink-600", darkText: "dark:text-pink-100" },
 };

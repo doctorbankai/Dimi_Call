@@ -243,17 +243,17 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 }) => {
   const [activeCategory, setActiveCategory] = useState<SettingsCategory>('email');
   const [templates, setTemplates] = useState<EmailTemplates>(defaultTemplates);
-  const [mandataireTemplates, setMandataireTemplates] = useState<EmailTemplates>(defaultTemplates);
+  const [apporteurTemplates, setApporteurTemplates] = useState<EmailTemplates>(defaultTemplates);
   const [signature, setSignature] = useState('');
-  const [mandataireSignature, setMandataireSignature] = useState('');
+  const [apporteurSignature, setApporteurSignature] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
   const [selectedEmailType, setSelectedEmailType] = useState<EmailType>(EmailType.PremierContact);
   const [selectedSmsType, setSelectedSmsType] = useState<SmsType>(SmsType.PremierContact);
   const [localCalcomUrl, setLocalCalcomUrl] = useState<string>(calcomUrl || 'https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true');
   const [localSmsTemplate, setLocalSmsTemplate] = useState<string>(smsTemplate || DEFAULT_SMS_TEMPLATE);
-  const [localSmsTemplateMandataire, setLocalSmsTemplateMandataire] = useState<string>(smsTemplate || DEFAULT_SMS_TEMPLATE);
+  const [localSmsTemplateApporteur, setLocalSmsTemplateApporteur] = useState<string>(smsTemplate || DEFAULT_SMS_TEMPLATE);
   const [smsTemplates, setSmsTemplates] = useState<SmsTemplates>(defaultSmsTemplates);
-  const [mandataireSmsTemplates, setMandataireSmsTemplates] = useState<SmsTemplates>(defaultSmsTemplates);
+  const [apporteurSmsTemplates, setApporteurSmsTemplates] = useState<SmsTemplates>(defaultSmsTemplates);
   const [shortcuts, setShortcuts] = useState<ShortcutConfig[]>([]);
   const [shortcutsChanged, setShortcutsChanged] = useState(false);
   const [appVersion, setAppVersion] = useState<string>('Chargement...');
@@ -261,7 +261,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   const [callMode, setCallMode] = useState<CallMode>(() => {
     try {
       const saved = localStorage.getItem(MODE_STORAGE_KEY);
-      return saved === CallMode.Mandataire ? CallMode.Mandataire : CallMode.Client;
+      return saved === CallMode.Apporteur ? CallMode.Apporteur : CallMode.Client;
     } catch {
       return CallMode.Client;
     }
@@ -343,10 +343,10 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         const data = JSON.parse(saved);
         if (data.templates) setTemplates(data.templates);
         if (data.signature) setSignature(data.signature);
-        // mode mandataire
-        if (data.mandataireTemplates) setMandataireTemplates(data.mandataireTemplates);
-        if (data.mandataireSignature) setMandataireSignature(data.mandataireSignature);
-        if (data.smsMandataire) setLocalSmsTemplateMandataire(data.smsMandataire);
+        // mode apporteur
+        if (data.apporteurTemplates) setApporteurTemplates(data.apporteurTemplates);
+        if (data.apporteurSignature) setApporteurSignature(data.apporteurSignature);
+        if (data.smsApporteur) setLocalSmsTemplateApporteur(data.smsApporteur);
       } catch (error) {
         console.error('Erreur lors du chargement des templates:', error);
       }
@@ -358,7 +358,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       try {
         const data = JSON.parse(savedSms);
         if (data.smsTemplates) setSmsTemplates(data.smsTemplates);
-        if (data.mandataireSmsTemplates) setMandataireSmsTemplates(data.mandataireSmsTemplates);
+        if (data.apporteurSmsTemplates) setApporteurSmsTemplates(data.apporteurSmsTemplates);
       } catch (error) {
         console.error('Erreur lors du chargement des templates SMS:', error);
       }
@@ -438,8 +438,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   }, [isOpen, activeCategory]);
 
   const handleTemplateChange = (field: 'subject' | 'body', value: string) => {
-    if (callMode === CallMode.Mandataire) {
-      setMandataireTemplates(prev => ({
+    if (callMode === CallMode.Apporteur) {
+      setApporteurTemplates(prev => ({
         ...prev,
         [selectedEmailType]: {
           ...prev[selectedEmailType],
@@ -459,8 +459,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   };
 
   const handleSignatureChange = (value: string) => {
-    if (callMode === CallMode.Mandataire) {
-      setMandataireSignature(value);
+    if (callMode === CallMode.Apporteur) {
+      setApporteurSignature(value);
     } else {
       setSignature(value);
     }
@@ -531,9 +531,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       const data = {
         templates,
         signature,
-        mandataireTemplates,
-        mandataireSignature,
-        smsMandataire: localSmsTemplateMandataire,
+        apporteurTemplates,
+        apporteurSignature,
+        smsApporteur: localSmsTemplateApporteur,
         lastModified: new Date().toISOString()
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
@@ -541,7 +541,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       // Sauvegarde des templates SMS structurés
       const smsData = {
         smsTemplates,
-        mandataireSmsTemplates,
+        apporteurSmsTemplates,
         lastModified: new Date().toISOString()
       };
       localStorage.setItem(SMS_STORAGE_KEY, JSON.stringify(smsData));
@@ -556,7 +556,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       
       // Sauvegarder le template SMS si il a changé
       if (onSmsTemplateChange) {
-        const toSave = callMode === CallMode.Mandataire ? localSmsTemplateMandataire : localSmsTemplate;
+        const toSave = callMode === CallMode.Apporteur ? localSmsTemplateApporteur : localSmsTemplate;
         if (toSave !== smsTemplate) onSmsTemplateChange(toSave);
       }
       
@@ -1155,7 +1155,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   };
 
   const renderEmailSettings = () => {
-    const templatesByMode = callMode === CallMode.Mandataire ? mandataireTemplates : templates;
+    const templatesByMode = callMode === CallMode.Apporteur ? apporteurTemplates : templates;
     const currentTemplate = templatesByMode[selectedEmailType];
     const emailInfo = emailTypeLabels[selectedEmailType];
 
@@ -1177,7 +1177,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           <CardContent>
             <Input
               id="signature-input"
-              value={callMode === CallMode.Mandataire ? mandataireSignature : signature}
+              value={callMode === CallMode.Apporteur ? apporteurSignature : signature}
               onChange={(e) => handleSignatureChange(e.target.value)}
               placeholder="Votre nom et fonction"
             />
@@ -1309,19 +1309,19 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           {/* Bandeau mode actif */}
           <div className="flex items-center justify-between p-3 rounded-md bg-accent/30 border">
             <div className="text-sm">
-              Mode actif : <strong>{callMode === CallMode.Mandataire ? 'Mandataire' : 'Client'}</strong>
+              Mode actif : <strong>{callMode === CallMode.Apporteur ? 'Apporteur' : 'Client'}</strong>
             </div>
             <div className="flex items-center gap-2">
               <Badge variant={callMode === CallMode.Client ? 'default' : 'secondary'} className="text-[10px]">Client</Badge>
               <Switch
-                checked={callMode === CallMode.Mandataire}
+                checked={callMode === CallMode.Apporteur}
                 onCheckedChange={(checked) => {
-                  const newMode = checked ? CallMode.Mandataire : CallMode.Client;
+                  const newMode = checked ? CallMode.Apporteur : CallMode.Client;
                   setCallMode(newMode);
                   try { localStorage.setItem(MODE_STORAGE_KEY, newMode); } catch {}
                 }}
               />
-              <Badge variant={callMode === CallMode.Mandataire ? 'default' : 'secondary'} className="text-[10px]">Mandataire</Badge>
+              <Badge variant={callMode === CallMode.Apporteur ? 'default' : 'secondary'} className="text-[10px]">Apporteur</Badge>
             </div>
           </div>
 
@@ -1376,11 +1376,11 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   );
 
   const handleSmsTemplateChange = (value: string) => {
-    const templatesByMode = callMode === CallMode.Mandataire ? mandataireSmsTemplates : smsTemplates;
+    const templatesByMode = callMode === CallMode.Apporteur ? apporteurSmsTemplates : smsTemplates;
     const updatedTemplates = { ...templatesByMode, [selectedSmsType]: value };
     
-    if (callMode === CallMode.Mandataire) {
-      setMandataireSmsTemplates(updatedTemplates);
+    if (callMode === CallMode.Apporteur) {
+      setApporteurSmsTemplates(updatedTemplates);
     } else {
       setSmsTemplates(updatedTemplates);
     }
@@ -1388,7 +1388,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   };
 
   const renderSmsSettings = () => {
-    const templatesByMode = callMode === CallMode.Mandataire ? mandataireSmsTemplates : smsTemplates;
+    const templatesByMode = callMode === CallMode.Apporteur ? apporteurSmsTemplates : smsTemplates;
     const currentTemplate = templatesByMode[selectedSmsType];
     const smsInfo = smsTypeLabels[selectedSmsType];
 
@@ -1452,19 +1452,19 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               {/* Bandeau mode actif */}
               <div className="flex items-center justify-between p-3 rounded-md bg-accent/30 border">
                 <div className="text-sm">
-                  Mode actif : <strong>{callMode === CallMode.Mandataire ? 'Mandataire' : 'Client'}</strong>
+                  Mode actif : <strong>{callMode === CallMode.Apporteur ? 'Apporteur' : 'Client'}</strong>
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant={callMode === CallMode.Client ? 'default' : 'secondary'} className="text-[10px]">Client</Badge>
                   <Switch
-                    checked={callMode === CallMode.Mandataire}
+                    checked={callMode === CallMode.Apporteur}
                     onCheckedChange={(checked) => {
-                      const newMode = checked ? CallMode.Mandataire : CallMode.Client;
+                      const newMode = checked ? CallMode.Apporteur : CallMode.Client;
                       setCallMode(newMode);
                       try { localStorage.setItem(MODE_STORAGE_KEY, newMode); } catch {}
                     }}
                   />
-                  <Badge variant={callMode === CallMode.Mandataire ? 'default' : 'secondary'} className="text-[10px]">Mandataire</Badge>
+                  <Badge variant={callMode === CallMode.Apporteur ? 'default' : 'secondary'} className="text-[10px]">Apporteur</Badge>
                 </div>
               </div>
 
@@ -1693,7 +1693,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       {availableStatuses.map((status) => {
-                        if (status === ContactStatus.A0 && callMode !== CallMode.Mandataire) return null;
+                        if (status === ContactStatus.A0 && callMode !== CallMode.Apporteur) return null;
                         return (
                           <SelectItem key={status} value={status}>
                             <Badge className={cn("text-xs font-normal border", getStatusColor(status))}>
@@ -1971,19 +1971,19 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             <span className="sm:hidden">Réglages</span>
           </DialogTitle>
           <div className="flex items-center gap-2 sm:gap-4">
-            {/* Toggle mode Client / Mandataire */}
+            {/* Toggle mode Client / Apporteur */}
             <div className="flex items-center gap-1.5 sm:gap-2">
               <Badge variant={callMode === CallMode.Client ? 'default' : 'secondary'} className="text-[10px] sm:text-xs px-1.5 sm:px-2">Client</Badge>
               <Switch
-                checked={callMode === CallMode.Mandataire}
+                checked={callMode === CallMode.Apporteur}
                 onCheckedChange={(checked) => {
-                  const newMode = checked ? CallMode.Mandataire : CallMode.Client;
+                  const newMode = checked ? CallMode.Apporteur : CallMode.Client;
                   setCallMode(newMode);
                   try { localStorage.setItem(MODE_STORAGE_KEY, newMode); } catch {}
                 }}
                 className="scale-75 sm:scale-100"
               />
-              <Badge variant={callMode === CallMode.Mandataire ? 'default' : 'secondary'} className="text-[10px] sm:text-xs px-1.5 sm:px-2 hidden xs:inline-flex">Mandataire</Badge>
+              <Badge variant={callMode === CallMode.Apporteur ? 'default' : 'secondary'} className="text-[10px] sm:text-xs px-1.5 sm:px-2 hidden xs:inline-flex">Apporteur</Badge>
             </div>
             <button onClick={onClose} className="p-1 rounded-full hover:bg-muted">
               <X className="w-4 h-4 sm:w-5 sm:h-5" />

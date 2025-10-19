@@ -381,7 +381,7 @@ Jean,Dupont,0123456789,jean@test.com,École Test,À rappeler,Test comment`;
         telephone: '+33 1 23 45 67 89',
         email: 'marie.martin@example.com',
         source: 'Site web',
-        statut: ContactStatus.DO,
+        statut: ContactStatus.D0,
         commentaire: 'Rendez-vous confirmé',
         dateRappel: '',
         heureRappel: '',
@@ -402,7 +402,7 @@ Jean,Dupont,0123456789,jean@test.com,École Test,À rappeler,Test comment`;
         telephone: '+33 7 98 76 54 32',
         email: 'pierre.durand@example.com',
         source: 'Référence',
-        statut: ContactStatus.RO,
+        statut: ContactStatus.R0,
         commentaire: 'Contrat signé',
         dateRappel: '',
         heureRappel: '',
@@ -461,7 +461,7 @@ Jean,Dupont,0123456789,jean@test.com,École Test,À rappeler,Test comment`;
         expect(data).toHaveLength(4); // Headers + 3 contacts filtrés
         
         const [headers, ...rows] = data;
-        expect(rows).toHaveLength(3); // Jean (À rappeler), Marie (DO), Pierre (RO)
+        expect(rows).toHaveLength(3); // Jean (À rappeler), Marie (D0), Pierre (R0)
         
         // Vérifier que Sophie (Pas intéressé) n'est pas incluse
         const names = rows.map(row => row[0]); // Given Name
@@ -527,7 +527,7 @@ Jean,Dupont,0123456789,jean@test.com,École Test,À rappeler,Test comment`;
         expect(marieNotes).toContain('Source: Site web');
         expect(marieNotes).toContain('Date RDV: 2024-01-20');
         expect(marieNotes).toContain('Heure RDV: 10:00');
-        expect(marieNotes).toContain('Statut: DO');
+        expect(marieNotes).toContain('Statut: D0');
         
         // Vérifier les notes pour Pierre (avec appel)
         const pierreRow = rows.find(row => row[0] === 'Pierre');
@@ -535,7 +535,7 @@ Jean,Dupont,0123456789,jean@test.com,École Test,À rappeler,Test comment`;
         const pierreNotes = pierreRow[4];
         expect(pierreNotes).toContain('Date appel: 2024-01-05');
         expect(pierreNotes).toContain('Heure appel: 16:00');
-        expect(pierreNotes).toContain('Statut: RO');
+        expect(pierreNotes).toContain('Statut: R0');
         
         return 'mocked-csv-content';
       });
@@ -595,7 +595,7 @@ Jean,Dupont,0123456789,jean@test.com,École Test,À rappeler,Test comment`;
         },
         {
           ...mockContacts[1],
-          statut: ContactStatus.DO
+          statut: ContactStatus.D0
         },
         {
           ...mockContacts[2],
@@ -608,7 +608,7 @@ Jean,Dupont,0123456789,jean@test.com,École Test,À rappeler,Test comment`;
       expect(Papa.unparse).toHaveBeenCalled();
       const csvData = Papa.unparse.mock.calls[0][0];
       
-      // Vérifier que seuls les contacts avec statuts éligibles sont inclus (A0 et DO)
+      // Vérifier que seuls les contacts avec statuts éligibles sont inclus (A0 et D0)
       expect(csvData).toHaveLength(2);
       expect(csvData[0]['First Name']).toBe('Jean');
       expect(csvData[1]['First Name']).toBe('Marie');

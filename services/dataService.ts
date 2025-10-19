@@ -513,11 +513,11 @@ const buildNotesField = (contact: Contact): string => {
 
 // Export contacts to Google Contacts CSV format
 export const exportGoogleContactsCSV = (contacts: Contact[]): void => {
-  // Filtrer les contacts par statut (À rappeler, DO, RO)
+  // Filtrer les contacts par statut (À rappeler, D0, R0)
   const filteredContacts = contacts.filter(contact => 
     contact.statut === ContactStatus.ARappeler ||
-    contact.statut === ContactStatus.DO ||
-    contact.statut === ContactStatus.RO
+    contact.statut === ContactStatus.D0 ||
+    contact.statut === ContactStatus.R0
   );
 
   if (filteredContacts.length === 0) {

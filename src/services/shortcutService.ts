@@ -16,8 +16,8 @@ export const DEFAULT_SHORTCUTS: ShortcutConfig[] = [
   { key: 'F5', status: ContactStatus.ARappeler, label: 'À rappeler' },
   { key: 'F6', status: ContactStatus.PasInteresse, label: 'Pas intéressé' },
   { key: 'F7', status: ContactStatus.Argumente, label: 'Argumenté' },
-  { key: 'F8', status: ContactStatus.DO, label: 'DO' },
-  { key: 'F9', status: ContactStatus.RO, label: 'RO' },
+  { key: 'F8', status: ContactStatus.D0, label: 'D0' },
+  { key: 'F9', status: ContactStatus.R0, label: 'R0' },
   { key: 'F10', status: ContactStatus.ListeNoire, label: 'Liste noire' }
 ];
 
@@ -145,8 +145,8 @@ class ShortcutService {
       [ContactStatus.ARappeler]: 'À rappeler',
       [ContactStatus.PasInteresse]: 'Pas intéressé',
       [ContactStatus.Argumente]: 'Argumenté',
-      [ContactStatus.DO]: 'DO',
-      [ContactStatus.RO]: 'RO',
+      [ContactStatus.D0]: 'D0',
+      [ContactStatus.R0]: 'R0',
       [ContactStatus.ListeNoire]: 'Liste noire'
     };
     return labelMap[status] || status;

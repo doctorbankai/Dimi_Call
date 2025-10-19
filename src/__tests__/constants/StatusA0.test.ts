@@ -39,8 +39,8 @@ describe('A0 Status Integration', () => {
       'À rappeler',
       'Pas intéressé',
       'Argumenté',
-      'DO',
-      'RO',
+      'D0',
+      'R0',
       'Liste noire',
       'Prématuré',
       'A0'

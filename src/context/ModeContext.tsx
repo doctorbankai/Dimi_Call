@@ -14,7 +14,7 @@ export const ModeProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [mode, setModeState] = useState<CallMode>(() => {
     try {
       const saved = localStorage.getItem(MODE_STORAGE_KEY);
-      return saved === CallMode.Mandataire ? CallMode.Mandataire : CallMode.Client;
+      return saved === CallMode.Apporteur ? CallMode.Apporteur : CallMode.Client;
     } catch {
       return CallMode.Client;
     }

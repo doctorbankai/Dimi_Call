@@ -369,8 +369,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   const googleContactsCount = useMemo(() => {
     const filteredContacts = contacts.filter(contact =>
       contact.statut === ContactStatus.ARappeler ||
-      contact.statut === ContactStatus.DO ||
-      contact.statut === ContactStatus.RO ||
+      contact.statut === ContactStatus.D0 ||
+      contact.statut === ContactStatus.R0 ||
       contact.statut === ContactStatus.A0
     );
     return filteredContacts.length;
@@ -426,7 +426,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     if (exportOptions.contacts) {
       try {
         if (googleContactsCount === 0) {
-          toast.info('Aucun contact à exporter vers Google Contacts (statuts: À rappeler, DO, RO, A0)');
+          toast.info('Aucun contact à exporter vers Google Contacts (statuts: À rappeler, D0, R0, A0)');
         } else {
           exportGoogleContactsCSV(contacts);
           exportCount++;
@@ -459,20 +459,39 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setIsDragOver(true)
+    // Ne déclencher que si on entre dans le conteneur principal
+    if (e.currentTarget === e.target) {
+      setIsDragOver(true)
+    }
   }
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
+    // Maintenir l'état actif pendant le survol
+    if (!isDragOver) {
+      setIsDragOver(true)
+    }
     setIsDragActive(true)
   }
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setIsDragActive(false)
-    setIsDragOver(false)
+    // Ne déclencher que si on quitte réellement le conteneur principal
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX
+    const y = e.clientY
+    
+    if (
+      x <= rect.left ||
+      x >= rect.right ||
+      y <= rect.top ||
+      y >= rect.bottom
+    ) {
+      setIsDragActive(false)
+      setIsDragOver(false)
+    }
   }
 
   const handleDrop = async (e: React.DragEvent) => {

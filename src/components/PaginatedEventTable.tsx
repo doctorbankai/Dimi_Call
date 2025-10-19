@@ -116,7 +116,12 @@ export default function PaginatedEventTable() {
         ev.nom || '',
         ev.telephone || '',
         email,
-        (ev as any).new_status || (ev as any).newStatus || '',
+        (() => {
+          let status = (ev as any).new_status || (ev as any).newStatus || '';
+          if (status === 'DO') status = 'D0';
+          if (status === 'RO') status = 'R0';
+          return status;
+        })(),
         comment,
         ev.dateRappel || '', ev.heureRappel || '', ev.dateRDV || '', ev.heureRDV || '',
         ev.dateAppel || '', ev.heureAppel || '', ev.dateEntree || '', ev.heureEntree || '',
@@ -246,7 +251,12 @@ export default function PaginatedEventTable() {
       const contacts: Contact[] = selected.map((ev, idx) => {
         const email = (ev as any).email || (ev as any).mail || ''
         const comment = (ev as any).commentaire || (ev as any).comment || ''
-        const rawStatus = (ev as any).new_status ?? (ev as any).newStatus ?? ''
+        let rawStatus = (ev as any).new_status ?? (ev as any).newStatus ?? ''
+        
+        // Normaliser les anciens statuts DO/RO vers D0/R0
+        if (rawStatus === 'DO') rawStatus = 'D0';
+        if (rawStatus === 'RO') rawStatus = 'R0';
+        
         const status = Object.values(ContactStatus).includes(rawStatus as ContactStatus)
           ? (rawStatus as ContactStatus)
           : ContactStatus.NonDefini
@@ -506,7 +516,13 @@ export default function PaginatedEventTable() {
                       {editing?.id === ev.id && (editing.field === 'new_status') ? (
                         <input className="h-7 px-2 text-xs border rounded w-full" value={editing.value} autoFocus onChange={(e) => setEditing({ ...editing, value: e.target.value })} onBlur={commitEdit} onKeyDown={onKeyDown} />
                       ) : (
-                        (ev as any).new_status ?? (ev as any).newStatus ?? ''
+                        (() => {
+                          let status = (ev as any).new_status ?? (ev as any).newStatus ?? '';
+                          // Normaliser les anciens statuts DO/RO vers D0/R0
+                          if (status === 'DO') status = 'D0';
+                          if (status === 'RO') status = 'R0';
+                          return status;
+                        })()
                       )}
                     </TableCell>
                     <TableCell className="px-2 py-1.5 text-xs text-center whitespace-nowrap" onDoubleClick={() => startEdit('commentaire', comment)}>

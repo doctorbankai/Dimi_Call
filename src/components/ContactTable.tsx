@@ -25,15 +25,12 @@ import {
   ArrowUp, ArrowDown, Zap, Timer, Hourglass, Upload, FileSpreadsheet, Users, CloudUpload, Hash, FolderOpen, X, Bell
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { formatPhoneNumber } from '../services/dataService';
 import { ReminderDialog } from './ReminderDialog';
 import { ColumnTypeSelector } from './ColumnTypeSelector';
 import StatusSelect from './StatusSelect';
 import { useColumnTypes } from '../hooks/useColumnTypes';
 import { useCallMode } from '../context/ModeContext';
-import ImportMappingDialog from './ImportMappingDialog';
-import * as XLSX from 'xlsx';
-import { importContactsFromFile, normalizeHeader } from '../services/dataService';
+import { formatPhoneNumber } from '../services/dataService';
 
 // Clés de stockage pour la persistance des préférences de table
 const COLUMN_ORDER_STORAGE_KEY = 'dimicall-column-order';
@@ -548,21 +545,9 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
   // Ref pour tracker si le scroll doit être automatique (uniquement au clic)
   const shouldAutoScrollRef = useRef(false);
 
-  // États pour le drag & drop
-  const [isDragOver, setIsDragOver] = useState(false);
-  const [isDragActive, setIsDragActive] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const dropzoneRef = useRef<HTMLDivElement>(null);
+  // Supprimé : États pour le drag & drop de fichiers (maintenant géré par PaginatedContactTable)
 
-  // État pour le dialogue de mappage d'import
-  const [mappingDialog, setMappingDialog] = useState<{
-    open: boolean;
-    file?: File | null;
-    headers: string[];
-    preview: string[][];
-    originalPreview: string[][];
-    phonesRemoved: string[];
-  }>({ open: false, file: null, headers: [], preview: [], originalPreview: [], phonesRemoved: [] });
+  // Supprimé : État pour le dialogue de mappage d'import (maintenant géré par PaginatedContactTable)
 
   // État pour le dialog de rappel
   const [reminderDialog, setReminderDialog] = useState<{
@@ -1018,135 +1003,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
     setDragOverColumn(null);
   };
 
-  // Gestionnaires drag & drop pour les fichiers
-  const handleFileDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (e.dataTransfer.types.includes('Files')) {
-      setIsDragActive(true);
-      setIsDragOver(true);
-    }
-  }, []);
-
-  const handleFileDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    // Ne réinitialiser que si on quitte vraiment la zone de drop
-    if (!dropzoneRef.current?.contains(e.relatedTarget as Node)) {
-      setIsDragOver(false);
-      if (!isProcessing) {
-        setIsDragActive(false);
-      }
-    }
-  }, [isProcessing]);
-
-  const handleFileDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (e.dataTransfer.types.includes('Files')) {
-      e.dataTransfer.dropEffect = 'copy';
-      setIsDragOver(true);
-    }
-  }, []);
-
-  const handleFileDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    setIsDragOver(false);
-    setIsDragActive(false);
-    
-    if (!onFileImport) return;
-    
-    const files = Array.from(e.dataTransfer.files);
-    const validFiles = files.filter(file => {
-      const extension = file.name.split('.').pop()?.toLowerCase();
-      return ['csv', 'xlsx', 'xls', 'tsv'].includes(extension || '');
-    });
-    
-    if (validFiles.length === 0) {
-      // Notification d'erreur pour format invalide
-      return;
-    }
-    
-    const file = validFiles[0]; // Prendre le premier fichier valide
-
-    try {
-      setIsProcessing(true);
-      // Ouvrir le dialogue de mappage avant import
-      await prepareAndOpenMappingDialog(file);
-    } catch (error) {
-      console.error('Erreur lors de l\'import:', error);
-    } finally {
-      setIsProcessing(false);
-      setIsDragActive(false);
-    }
-  }, [onFileImport]);
-
-  // Prépare l'aperçu des en-têtes et premières lignes pour le dialogue
-  const prepareAndOpenMappingDialog = async (file: File) => {
-    const ext = file.name.split('.').pop()?.toLowerCase();
-    let headers: string[] = [];
-    let preview: string[][] = [];
-
-    if (ext === 'csv' || ext === 'tsv') {
-      const text = await file.text();
-      const rows = text.split(/\r?\n/).filter(Boolean).slice(0, 6).map((line) => line.split(ext === 'tsv' ? '\t' : ';').length > 1 ? line.split(ext === 'tsv' ? '\t' : ';') : line.split(','));
-      headers = rows[0] || [];
-      preview = rows.slice(1);
-    } else {
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(new Uint8Array(buf), { type: 'array' });
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const aoa = XLSX.utils.sheet_to_json(ws, { header: 1 }) as any[];
-      headers = (aoa[0] as string[]).map((h) => (h ? String(h) : ''));
-      preview = (aoa.slice(1) as string[][]) || [];
-    }
-
-    setMappingDialog({ open: true, file, headers, preview, originalPreview: preview, phonesRemoved: [] });
-  };
-
-  const expectedTargets = useMemo(() => {
-    const options = [
-      { label: 'Prénom', value: 'prenom' },
-      { label: 'Nom', value: 'nom' },
-      { label: 'Téléphone', value: 'telephone' },
-      { label: 'Mail', value: 'email' },
-      { label: 'Source', value: 'source' },
-      { label: 'Type', value: 'type' },
-      { label: 'Qualité', value: 'qualite' },
-      { label: 'Lien', value: 'lien' },
-      { label: 'Date Rappel', value: 'dateRappel' },
-      { label: 'Heure Rappel', value: 'heureRappel' },
-      { label: 'Date Appel', value: 'dateAppel' },
-      { label: 'Heure Appel', value: 'heureAppel' },
-      { label: 'Statut', value: 'statut' },
-      { label: 'Commentaire', value: 'commentaire' },
-      { label: 'Date RDV', value: 'dateRDV' },
-      { label: 'Heure RDV', value: 'heureRDV' },
-      { label: 'Durée Appel', value: 'dureeAppel' },
-      { label: 'Sexe', value: 'sexe' },
-      { label: 'Don', value: 'don' },
-      { label: 'Date', value: 'date' },
-      { label: 'UID', value: 'uid' },
-    ];
-    return options;
-  }, []);
-
-  const requiredTargets = useMemo(() => ['prenom', 'nom', 'telephone'], []);
-
-  const autoSuggestMapping = useMemo(() => {
-    const m: Record<string, string> = {};
-    mappingDialog.headers.forEach((h) => {
-      const norm = normalizeHeader(h);
-      const match = expectedTargets.find((opt) => opt.value === norm);
-      if (match) m[h] = match.value;
-    });
-    return m;
-  }, [mappingDialog.headers, expectedTargets]);
+  // Supprimé : Gestionnaires drag & drop pour les fichiers (maintenant géré par PaginatedContactTable)
 
   // Composant d'état vide sobre (shadcn)
   const EmptyState = () => (
@@ -1186,158 +1043,15 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
     </div>
   );
 
-  // Overlay de drag & drop amélioré avec Framer Motion
-  const DragOverlay = ({ isDragOver }: { isDragOver: boolean }) => (
-    <AnimatePresence>
-      {isDragOver && (
-        <motion.div 
-          className="absolute inset-0 z-50 flex items-center justify-center"
-          style={{
-            background: "rgba(59, 130, 246, 0.05)",
-            backdropFilter: "blur(8px)",
-          }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          <motion.div 
-            className="text-center space-y-6 p-8"
-            initial={{ scale: 0.8, y: 20 }}
-            animate={{ scale: 1, y: 0 }}
-            exit={{ scale: 0.8, y: -20 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
-          >
-            {/* Animation de drop zone fluide */}
-            <div className="relative">
-              <motion.div 
-                className="absolute inset-0 w-32 h-32 mx-auto rounded-full border-4 border-blue-500/30"
-                animate={{ 
-                  scale: [1, 1.2, 1],
-                  rotate: [0, 180, 360] 
-                }}
-                transition={{ 
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "linear" 
-                }}
-              />
-              <motion.div 
-                className="relative w-32 h-32 mx-auto rounded-full border-4 border-dashed border-blue-500 bg-blue-500/10 flex items-center justify-center"
-                animate={{ scale: [0.9, 1.1, 0.9] }}
-                transition={{ 
-                  duration: 1.5,
-                  repeat: Infinity,
-                  ease: "easeInOut" 
-                }}
-              >
-                <motion.div
-                  animate={{ y: [0, -8, 0] }}
-                  transition={{ 
-                    duration: 1.2,
-                    repeat: Infinity,
-                    ease: "easeInOut" 
-                  }}
-                >
-                  <Upload className="w-16 h-16 text-blue-500" />
-                </motion.div>
-              </motion.div>
-            </div>
-            
-            <motion.div 
-              className="space-y-2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.1 }}
-            >
-              <motion.h3 
-                className="text-3xl font-bold text-blue-600"
-                animate={{ scale: [1, 1.02, 1] }}
-                transition={{ 
-                  duration: 2,
-                  repeat: Infinity,
-                  ease: "easeInOut" 
-                }}
-              >
-                Relâchez pour importer
-              </motion.h3>
-              <motion.p 
-                className="text-xl text-blue-500/80"
-                initial={{ y: 5 }}
-                animate={{ y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                Vos contacts seront ajoutés automatiquement
-              </motion.p>
-            </motion.div>
-            
-            {/* Particules modernes et sobres */}
-            <div className="absolute inset-0 pointer-events-none">
-              {[...Array(6)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute w-1 h-1 bg-blue-400/60 rounded-full"
-                  style={{
-                    left: `${20 + (i * 12)}%`,
-                    top: `${15 + (i % 3) * 25}%`,
-                  }}
-                  animate={{
-                    scale: [0, 1, 0],
-                    opacity: [0, 0.8, 0],
-                    y: [0, -20, 0]
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    delay: i * 0.3,
-                    ease: "easeInOut"
-                  }}
-                />
-              ))}
-              
-              {/* Lignes géométriques animées */}
-              {[...Array(3)].map((_, i) => (
-                <motion.div
-                  key={`line-${i}`}
-                  className="absolute w-6 h-0.5 bg-blue-400/40"
-                  style={{
-                    left: `${15 + (i * 25)}%`,
-                    top: `${20 + (i * 20)}%`,
-                    transformOrigin: 'center'
-                  }}
-                  animate={{
-                    scaleX: [0, 1, 0],
-                    opacity: [0, 0.6, 0],
-                    rotate: [0, 90, 0]
-                  }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    delay: i * 0.5,
-                    ease: "easeInOut"
-                  }}
-                />
-              ))}
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
+  // Supprimé : Overlay de drag & drop (maintenant géré par PaginatedContactTable)
 
   return (
     <>
       <div className="contact-table-container h-full">
       {/* Table unique avec en-tête sticky pour alignement correct */}
       <div 
-        ref={(node) => {
-          dropzoneRef.current = node;
-          scrollContainerRef.current = node;
-        }}
-        className={cn(
-          "border rounded-t-lg scrollbar-hidden relative bg-background transition-all duration-300 h-full overflow-x-auto",
-          isDragActive && "ring-2 ring-blue-500 ring-offset-2"
-        )}
+        ref={scrollContainerRef}
+        className="border rounded-t-lg scrollbar-hidden relative bg-background transition-all duration-300 h-full overflow-x-auto"
         style={{
           // CRITICAL: Configuration pour sticky header
           position: 'relative',
@@ -1345,10 +1059,6 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
           overflow: 'hidden',
           display: 'block' // Force block display pour sticky
         }}
-        onDragEnter={handleFileDragEnter}
-        onDragLeave={handleFileDragLeave}
-        onDragOver={handleFileDragOver}
-        onDrop={handleFileDrop}
       >
         {/* État vide ou table */}
         <AnimatePresence mode="wait">
@@ -1509,8 +1219,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
             )}
           </AnimatePresence>
           
-          {/* Overlay de drag & drop */}
-          <DragOverlay isDragOver={isDragOver} />
+          {/* Supprimé : Overlay de drag & drop (maintenant géré par PaginatedContactTable) */}
         </div>
       </div>
 
@@ -1526,50 +1235,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
         />
       )}
 
-      {/* Dialog de mappage d'import */}
-      <ImportMappingDialog
-        isOpen={mappingDialog.open}
-        onClose={() => setMappingDialog((s) => ({ ...s, open: false }))}
-        fileName={mappingDialog.file?.name}
-        detectedHeaders={mappingDialog.headers}
-        previewRows={mappingDialog.preview}
-        expectedTargets={expectedTargets}
-        requiredTargets={requiredTargets}
-        onPreviewUpdate={(updatedRows) => setMappingDialog((s) => ({ ...s, preview: updatedRows }))}
-        onRemovedPhonesChange={(phones) => setMappingDialog((s) => ({ ...s, phonesRemoved: phones }))}
-        onConfirm={async (mapping, options) => {
-          try {
-            if (!mappingDialog.file) {
-              console.log('❌ [MAPPING] Aucun fichier dans le dialogue');
-              return;
-            }
-            console.log('🔄 [MAPPING] Début de l\'importation avec mapping:', mapping);
-            const imported = await importContactsFromFile(mappingDialog.file, mapping, options);
-            console.log(`📥 [MAPPING] ${imported.length} contacts importés (après exclusion éventuelle)`);
-            // Signal global pour injection dans l'onglet actif
-            try {
-              const ext = mappingDialog.file.name.split('.').pop()?.toLowerCase();
-              const source = (ext === 'xlsx' || ext === 'xls') ? 'xlsx' : (ext === 'csv' || ext === 'tsv') ? 'csv' : 'csv';
-              console.log('📡 [MAPPING] Déclenchement de l\'événement dimicall-imported-contacts');
-              window.dispatchEvent(new CustomEvent('dimicall-imported-contacts', {
-                detail: {
-                  contacts: imported,
-                  fileName: mappingDialog.file.name,
-                  source
-                }
-              }));
-              console.log('✅ [MAPPING] Événement déclenché avec succès');
-            } catch (error) {
-              console.error('❌ [MAPPING] Erreur lors du déclenchement de l\'événement:', error);
-            }
-            // Fermer le dialog
-            setMappingDialog({ open: false, file: null, headers: [], preview: [], originalPreview: [], phonesRemoved: [] });
-            console.log('🔒 [MAPPING] Dialogue fermé');
-          } catch (e) {
-            console.error('❌ [MAPPING] Erreur lors de l\'importation:', e);
-          }
-        }}
-      />
+      {/* Supprimé : Dialog de mappage d'import (maintenant géré par PaginatedContactTable) */}
     </>
   );
 });

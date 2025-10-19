@@ -5,7 +5,7 @@ import { useCallMode } from './context/ModeContext';
 import { APP_NAME, COLUMN_HEADERS, CONTACT_DATA_KEYS, headerIcons } from './constants';
 import { ContactTable, ContactTableRef } from './components/ContactTable';
 import { PaginatedContactTable } from './components/PaginatedContactTable';
-import { AppelsCardsView, TableTab } from './components/AppelsCardsView';
+import { AppelsCardsView } from './components/AppelsCardsView';
 import { EmailDialog, RappelDialog, RendezVousDialog, QualificationDialog, GenericInfoDialog } from './components/Dialogs';
 import { SmsDialogImproved as SmsDialog } from './components/SmsDialogImproved';
 import Calendar2 from './pages/Calendar2';
@@ -99,6 +99,14 @@ import {
 
 // Cl de stockage pour la visibilit des colonnes
 const VISIBLE_COLUMNS_STORAGE_KEY = 'dimicall-visible-columns';
+
+// Type pour les onglets de table
+export type TableTab = {
+  id: string
+  name: string
+  color?: string
+  contacts: Contact[]
+}
 
 
 // Composant DonutChart moderne
@@ -230,7 +238,12 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     try {
       const saved = localStorage.getItem('dimicall-view-mode') as ViewMode | null
-      if (saved === 'table' || saved === 'appels-cards' || saved === 'graph' || saved === 'db' || saved === 'calendar-2' || saved === 'annuaire') {
+      // Migration automatique : si l'ancienne vue 'table' est sauvegardée, la remplacer par 'appels-cards'
+      if (saved === 'table') {
+        localStorage.setItem('dimicall-view-mode', 'appels-cards')
+        return 'appels-cards'
+      }
+      if (saved === 'appels-cards' || saved === 'graph' || saved === 'db' || saved === 'calendar-2' || saved === 'annuaire') {
         return saved
       }
     } catch (error) {
@@ -440,7 +453,7 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
 
   // Persister le mode automatique pour toutes les vues qui lisent la même clé
   useEffect(() => {
-    try { localStorage.setItem('dimicall-auto-search-mode', autoSearchMode) } catch {}
+    try { localStorage.setItem('dimicall-auto-search-mode', autoSearchMode) } catch { }
   }, [autoSearchMode])
   const [splitPanelOpen, setSplitPanelOpen] = useState<boolean>(() => {
     try {
@@ -501,16 +514,16 @@ Bien à vous,
 Dimitri MOREL - Arcanis Conseil`;
   });
 
-  // Template SMS Mandataire spar
-  const [smsTemplateMandataire, setSmsTemplateMandataire] = useState<string>(() => {
+  // Template SMS Apporteur séparé
+  const [smsTemplateApporteur, setSmsTemplateApporteur] = useState<string>(() => {
     try {
       const savedAll = localStorage.getItem('dimicall_email_templates');
       if (savedAll) {
         const data = JSON.parse(savedAll);
-        if (data.smsMandataire) return data.smsMandataire as string;
+        if (data.smsApporteur) return data.smsApporteur as string;
       }
     } catch { }
-    return `Bonjour {civilite} {nom},\n\nJe vous contacte dans le cadre de la gestion de votre dossier mandataire. Voici les informations et liens ddis.\n\nBien à vous,`;
+    return `Bonjour {civilite} {nom},\n\nJe vous contacte dans le cadre de la gestion de votre dossier apporteur. Voici les informations et liens dédiés.\n\nBien à vous,`;
   });
 
   // tat intelligent pour les colonnes visibles bas sur les donnes relles
@@ -525,7 +538,7 @@ Dimitri MOREL - Arcanis Conseil`;
       return {};
     }
   });
-  
+
   // Ref pour garder une trace de l'initialisation des colonnes
   const columnsInitializedRef = useRef(false);
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
@@ -534,7 +547,7 @@ Dimitri MOREL - Arcanis Conseil`;
   // Fonction pour dtecter les colonnes disponibles dans les donnes
   const detectAvailableColumns = useCallback((contactsData: Contact[]) => {
     console.log('🔎 detectAvailableColumns appelé avec', contactsData?.length || 0, 'contacts');
-    
+
     if (!contactsData || contactsData.length === 0) {
       // Colonnes par dfaut minimales si pas de donnes
       const defaultColumns = ["#", "Sexe", "Prnom", "Nom", "Tlphone", "Mail", "Statut", "Commentaire"];
@@ -551,7 +564,7 @@ Dimitri MOREL - Arcanis Conseil`;
           console.log('✅ Préférences existantes conservées (pas de contacts):', prevVisible);
           return prevVisible;
         }
-        
+
         // Sinon, initialiser avec les valeurs par défaut
         console.log('⚠️ Initialisation avec valeurs par défaut (pas de contacts)');
         const defaultVisibility = defaultColumns.reduce((acc, col) => {
@@ -621,7 +634,7 @@ Dimitri MOREL - Arcanis Conseil`;
       // Si les colonnes sont djà initialises et qu'on a des prfrences sauvegardes,
       // ne pas les craser
       const hasExistingPreferences = Object.keys(prevVisible).length > 0;
-      
+
       const newVisibleColumns = newAvailableColumns.reduce((acc, col) => {
         // Garder la prfrence existante si elle existe, sinon true par dfaut
         acc[col] = prevVisible[col] !== undefined ? prevVisible[col] : true;
@@ -1108,7 +1121,8 @@ Dimitri MOREL - Arcanis Conseil`;
     // G�n�rer le contenu du SMS selon le type et les templates configur�s
     // Appliquer d'�ventuelles valeurs de date/heure fournies par le dialogue
     if (target && (dateISO || time)) {
-      target = { ...target,
+      target = {
+        ...target,
         dateRDV: dateISO || target.dateRDV,
         heureRDV: time || target.heureRDV,
       } as Contact;
@@ -1272,10 +1286,8 @@ Dimitri MOREL - Arcanis Conseil`;
         }
         // Maintenir les colonnes dtectes en mettant aussi  jour le global
         setContacts(updatedContacts);
-        // Ne pas changer de vue si on est déjà sur "Appels 2" (appels-cards)
-        if (viewMode !== 'appels-cards') {
-          setViewMode('table');
-        }
+        // S'assurer qu'on est sur la vue Appels avec Cards/Table
+        setViewMode('appels-cards');
       } else {
         setContacts(updatedContacts);
       }
@@ -1328,8 +1340,8 @@ Dimitri MOREL - Arcanis Conseil`;
   const googleContactsCount = useMemo(() => {
     const filteredContacts = contacts.filter(contact =>
       contact.statut === ContactStatus.ARappeler ||
-      contact.statut === ContactStatus.DO ||
-      contact.statut === ContactStatus.RO ||
+      contact.statut === ContactStatus.D0 ||
+      contact.statut === ContactStatus.R0 ||
       contact.statut === ContactStatus.A0
     );
     console.log('[DEBUG] googleContactsCount:', filteredContacts.length, 'sur', contacts.length, 'contacts');
@@ -1358,16 +1370,16 @@ Dimitri MOREL - Arcanis Conseil`;
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
   // Garder une référence des anciennes valeurs pour détecter les vrais changements
-  const prevCountsRef = useRef({ 
-    contactsLength: 0, 
-    googleCount: 0, 
-    calendarCount: 0 
+  const prevCountsRef = useRef({
+    contactsLength: 0,
+    googleCount: 0,
+    calendarCount: 0
   });
 
   // Fermer le menu d'export quand les compteurs changent (pas au chargement initial)
   useEffect(() => {
     const prev = prevCountsRef.current;
-    const hasChanged = 
+    const hasChanged =
       prev.contactsLength !== contacts.length ||
       prev.googleCount !== googleContactsCount ||
       prev.calendarCount !== calendarRemindersCount;
@@ -1471,7 +1483,7 @@ Dimitri MOREL - Arcanis Conseil`;
     if (exportOptions.contacts) {
       try {
         if (googleContactsCount === 0) {
-          showNotification('info', 'Aucun contact à exporter vers Google Contacts (statuts: À rappeler, DO, RO, A0)');
+          showNotification('info', 'Aucun contact à exporter vers Google Contacts (statuts: À rappeler, D0, R0, A0)');
         } else {
           exportGoogleContactsCSV(contacts);
           exportCount++;
@@ -1768,10 +1780,8 @@ Dimitri MOREL - Arcanis Conseil`;
         }
 
         setContacts(updatedContacts) // maintenir la liste globale en cohrence
-        // Ne pas changer de vue si on est déjà sur "Appels 2" (appels-cards)
-        if (viewMode !== 'appels-cards') {
-          setViewMode('table')
-        }
+        // S'assurer qu'on est sur la vue Appels avec Cards/Table
+        setViewMode('appels-cards')
         setCallStates({});
         setSelectedContact(null);
         console.log(`? [IMPORT] Importation termine: ${updatedContacts.length} contacts`);
@@ -2546,12 +2556,12 @@ Dimitri MOREL - Arcanis Conseil`;
 
   // Fonction pour sauvegarder le nouveau template SMS
   const handleSaveSmsTemplate = useCallback((newTemplate: string) => {
-    if (mode === CallMode.Mandataire) {
-      setSmsTemplateMandataire(newTemplate);
+    if (mode === CallMode.Apporteur) {
+      setSmsTemplateApporteur(newTemplate);
       try {
         const savedAll = localStorage.getItem('dimicall_email_templates');
         const data = savedAll ? JSON.parse(savedAll) : {};
-        data.smsMandataire = newTemplate;
+        data.smsApporteur = newTemplate;
         localStorage.setItem('dimicall_email_templates', JSON.stringify(data));
       } catch { }
     } else {
@@ -2792,7 +2802,7 @@ Dimitri MOREL - Arcanis Conseil`;
                               {(viewMode === 'graph' ? graphRange.start : dbRange.start) && (viewMode === 'graph' ? graphRange.end : dbRange.end) ? `${viewMode === 'graph' ? graphRange.start : dbRange.start} → ${viewMode === 'graph' ? graphRange.end : dbRange.end}` : 'Plage'}
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="p-2" align="start">
+                          <PopoverContent className="p-2 w-auto" align="end" side="bottom" sideOffset={4}>
                             <UiCalendar
                               mode="range"
                               selected={{ from: (viewMode === 'graph' ? graphRange.start : dbRange.start) ? new Date(viewMode === 'graph' ? graphRange.start : dbRange.start) : undefined, to: (viewMode === 'graph' ? graphRange.end : dbRange.end) ? new Date(viewMode === 'graph' ? graphRange.end : dbRange.end) : undefined } as any}
