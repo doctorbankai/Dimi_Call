@@ -1221,6 +1221,41 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
     await fetchContacts(dateRange);
   }, [clearSelection, dateRange, fetchContacts, hasSelection, selectedContacts]);
 
+  const handleResetAllContacts = useCallback(async () => {
+    try {
+      // Récupérer tous les événements
+      const allEvents = await localDbService.getAll();
+      const allEventIds = allEvents
+        .map((event) => event.id)
+        .filter((id): id is number => typeof id === 'number');
+      
+      if (allEventIds.length === 0) {
+        toast.info('Aucun contact à supprimer');
+        return;
+      }
+
+      // Supprimer tous les événements
+      await localDbService.deleteByIds(allEventIds);
+      
+      // Réinitialiser l'état
+      clearSelection();
+      setContacts([]);
+      setFilteredContacts([]);
+      
+      // Recharger les données
+      await fetchContacts(dateRange);
+      
+      toast.success('Base de données réinitialisée', {
+        description: `${allEventIds.length} contact${allEventIds.length > 1 ? 's' : ''} supprimé${allEventIds.length > 1 ? 's' : ''}`
+      });
+    } catch (error) {
+      console.error('[Annuaire] Erreur lors de la réinitialisation', error);
+      toast.error('Erreur', {
+        description: 'Impossible de réinitialiser la base de données'
+      });
+    }
+  }, [clearSelection, dateRange, fetchContacts]);
+
   const handleTransferSelected = useCallback(() => {
     if (!hasSelection) {
       return;
@@ -1635,6 +1670,45 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
                   className="bg-red-500 hover:bg-red-600 text-white"
                 >
                   Supprimer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-9"
+                title="Réinitialiser toute la base de données"
+                disabled={contacts.length === 0}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Réinitialiser tout
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="text-destructive">⚠️ Attention : Réinitialisation totale</AlertDialogTitle>
+                <AlertDialogDescription className="space-y-2">
+                  <p className="font-semibold">Vous êtes sur le point de supprimer TOUS les contacts de l'annuaire ({contacts.length} contact{contacts.length > 1 ? 's' : ''}).</p>
+                  <p>Cette action est <span className="font-bold text-destructive">IRRÉVERSIBLE</span> et supprimera définitivement :</p>
+                  <ul className="list-disc list-inside space-y-1 text-sm">
+                    <li>Tous les contacts</li>
+                    <li>Tout l'historique des appels</li>
+                    <li>Tous les rappels et rendez-vous</li>
+                    <li>Tous les commentaires</li>
+                  </ul>
+                  <p className="font-semibold mt-4">Êtes-vous absolument certain de vouloir continuer ?</p>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleResetAllContacts}
+                  className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                >
+                  Oui, tout supprimer
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>

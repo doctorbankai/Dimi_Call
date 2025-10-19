@@ -174,7 +174,6 @@ export function AppSidebar({
                 >
                   <Phone className="w-4 h-4" />
                   <span>Appels</span>
-                  <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0 h-4 group-data-[collapsible=icon]:hidden">Preview</Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
@@ -217,7 +216,6 @@ export function AppSidebar({
                 >
                   <BookOpen className="w-4 h-4" />
                   <span>Annuaire</span>
-                  <Badge variant="secondary" className="ml-auto text-[10px] px-1.5 py-0 h-4 group-data-[collapsible=icon]:hidden">Preview</Badge>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>

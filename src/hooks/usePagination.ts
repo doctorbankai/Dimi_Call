@@ -30,7 +30,16 @@ export function usePagination<T>({
   initialPage = 1,
 }: UsePaginationProps<T>): UsePaginationReturn<T> {
   const [currentPage, setCurrentPage] = useState(initialPage);
-  const [itemsPerPage, setItemsPerPageState] = useState(initialItemsPerPage);
+  const [itemsPerPage, setItemsPerPageState] = useState(() => {
+    // Charger la préférence sauvegardée depuis localStorage
+    try {
+      const saved = localStorage.getItem('dimicall-items-per-page');
+      const n = saved ? parseInt(saved, 10) : NaN;
+      return Number.isFinite(n) && n > 0 ? n : initialItemsPerPage;
+    } catch {
+      return initialItemsPerPage;
+    }
+  });
 
   // Calculer les valeurs dérivées
   const totalItems = data.length;

@@ -1460,9 +1460,7 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                             !isSelected && "hover:bg-muted/50",
                             "cursor-pointer transition-colors duration-150",
                             // Style lorsque la ligne est sélectionnée
-                            isSelected && (theme === Theme.Dark
-                              ? "bg-blue-900/60 text-oled-text"
-                              : "bg-blue-200 text-light-text"),
+                            isSelected && "bg-blue-500/20 dark:bg-blue-500/30 text-foreground",
                             // Style spécifique Ã  l'appel actif
                             isActiveCall && (!isSelected
                               ? (theme === Theme.Dark

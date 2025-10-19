@@ -56,8 +56,23 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
   }, []);
   // Répartition des statuts basée sur la base locale
   const radialData = useMemo(() => {
-    const map = new Map<string, number>();
+    // Grouper par contact_id et garder seulement le dernier événement
+    const latestByContact = new Map<string, any>();
     for (const ev of localEvents) {
+      const contactId = String(ev.contact_id || '');
+      if (!contactId) continue;
+      
+      const existing = latestByContact.get(contactId);
+      const evDate = new Date(ev.applied_at || 0).getTime();
+      
+      if (!existing || new Date(existing.applied_at || 0).getTime() < evDate) {
+        latestByContact.set(contactId, ev);
+      }
+    }
+    
+    // Compter les statuts finaux
+    const map = new Map<string, number>();
+    for (const ev of latestByContact.values()) {
       const k = String(ev.new_status || ev.newStatus || '');
       // Exclure les statuts vides ou "Non défini"
       if (!k || k === 'Non défini') continue;
@@ -106,6 +121,20 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
 
   // Données d'entonnoir de conversion
   const funnelData = useMemo(() => {
+    // Grouper par contact_id et garder seulement le dernier événement
+    const latestByContact = new Map<string, any>();
+    for (const ev of localEvents) {
+      const contactId = String(ev.contact_id || '');
+      if (!contactId) continue;
+      
+      const existing = latestByContact.get(contactId);
+      const evDate = new Date(ev.applied_at || 0).getTime();
+      
+      if (!existing || new Date(existing.applied_at || 0).getTime() < evDate) {
+        latestByContact.set(contactId, ev);
+      }
+    }
+    
     // Définition des règles d'agrégation (DO et RO au lieu de D0 et R0)
     const statusMapping = {
       'Contacté': ['Mauvais num', 'Répondeur', 'À rappeler', 'Pas intéressé', 'Argumenté', 'DO', 'RO'],
@@ -122,8 +151,8 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
       'Pris': 0
     };
 
-    // Parcours des événements locaux
-    localEvents.forEach((event) => {
+    // Parcours des derniers statuts par contact
+    latestByContact.forEach((event) => {
       const status = String(event.new_status || event.newStatus || '');
       
       // Comptage pour chaque catégorie applicable
@@ -152,9 +181,38 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
     'Pris': { label: 'Pris', color: 'var(--chart-4)' }
   } as const;
 
-  // KPIs globaux basés sur la base locale (événements)
-  const totalRDV = useMemo(() => localEvents.filter((e) => !!e.dateRDV).length, [localEvents]);
-  const totalRappels = useMemo(() => localEvents.filter((e) => !!e.dateRappel).length, [localEvents]);
+  // KPIs globaux basés sur la base locale (derniers événements par contact)
+  const totalRDV = useMemo(() => {
+    const latestByContact = new Map<string, any>();
+    for (const ev of localEvents) {
+      const contactId = String(ev.contact_id || '');
+      if (!contactId) continue;
+      
+      const existing = latestByContact.get(contactId);
+      const evDate = new Date(ev.applied_at || 0).getTime();
+      
+      if (!existing || new Date(existing.applied_at || 0).getTime() < evDate) {
+        latestByContact.set(contactId, ev);
+      }
+    }
+    return Array.from(latestByContact.values()).filter((e) => !!e.dateRDV).length;
+  }, [localEvents]);
+  
+  const totalRappels = useMemo(() => {
+    const latestByContact = new Map<string, any>();
+    for (const ev of localEvents) {
+      const contactId = String(ev.contact_id || '');
+      if (!contactId) continue;
+      
+      const existing = latestByContact.get(contactId);
+      const evDate = new Date(ev.applied_at || 0).getTime();
+      
+      if (!existing || new Date(existing.applied_at || 0).getTime() < evDate) {
+        latestByContact.set(contactId, ev);
+      }
+    }
+    return Array.from(latestByContact.values()).filter((e) => !!e.dateRappel).length;
+  }, [localEvents]);
 
   // Durée d'appel utilitaire (mm:ss -> secondes)
   const parseDuration = (mmss?: string) => {
@@ -180,6 +238,20 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
 
   // Durée moyenne des appels décrochés uniquement (exclure certains statuts)
   const averageAnsweredDurationSeconds = useMemo(() => {
+    // Grouper par contact_id et garder seulement le dernier événement
+    const latestByContact = new Map<string, any>();
+    for (const ev of localEvents) {
+      const contactId = String(ev.contact_id || '');
+      if (!contactId) continue;
+      
+      const existing = latestByContact.get(contactId);
+      const evDate = new Date(ev.applied_at || 0).getTime();
+      
+      if (!existing || new Date(existing.applied_at || 0).getTime() < evDate) {
+        latestByContact.set(contactId, ev);
+      }
+    }
+    
     // Exclure certains statuts d'événement (par libellé)
     const excludedLabels = new Set<string>([
       'Mauvais num',
@@ -188,7 +260,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
     ].map((s) => s.toLowerCase()));
     let sum = 0;
     let count = 0;
-    localEvents.forEach((ev: any) => {
+    latestByContact.forEach((ev: any) => {
       const label = String(ev.new_status || ev.newStatus || '').toLowerCase();
       if (excludedLabels.has(label)) return;
       if (ev.dureeAppel) {
@@ -238,11 +310,14 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
         </CardHeader>
         <CardContent className="flex-1 pb-0 w-full" style={{ width: '100%' }}>
           <ChartContainer config={radialConfig as any} className="w-full h-[500px]" style={{ width: '100%' }}>
-            <BarChart data={radialData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+            <BarChart accessibilityLayer data={radialData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="label" />
-              <YAxis />
-              <ChartTooltip content={<ChartTooltipContent hideLabel nameKey="label" />} />
+              <XAxis dataKey="label" tickLine={false} tickMargin={10} axisLine={false} />
+              <YAxis allowDecimals={false} />
+              <ChartTooltip 
+                cursor={{ fill: 'rgba(0, 0, 0, 0.1)' }}
+                content={<ChartTooltipContent indicator="line" />} 
+              />
               <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                 {radialData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -360,7 +435,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
             <BarChart data={eventsByDay} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
               <CartesianGrid vertical={false} />
               <XAxis dataKey="label" tickLine={false} tickMargin={10} axisLine={false} minTickGap={24} allowDuplicatedCategory={false} />
-              <YAxis width={40} />
+              <YAxis width={40} allowDecimals={false} />
               <ChartTooltip content={<ChartTooltipContent hideLabel nameKey="count" />} />
               <Bar dataKey="count" fill="var(--color-count)" radius={[4, 4, 0, 0]} />
             </BarChart>

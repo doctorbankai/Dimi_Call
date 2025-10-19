@@ -2810,15 +2810,6 @@ Dimitri MOREL - Arcanis Conseil`;
                             />
                           </PopoverContent>
                         </Popover>
-                        {viewMode === 'graph' && (
-                          <Button variant="outline" size="sm" className="h-8" onClick={() => {
-                            const r = graphRange
-                            const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: 'graph', start: r.start, end: r.end } })
-                            window.dispatchEvent(evt)
-                          }}>
-                            <RefreshCw className="h-4 w-4 mr-2" /> Actualiser
-                          </Button>
-                        )}
                       </div>
                     </div>
                   </div>
