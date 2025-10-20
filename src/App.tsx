@@ -1561,10 +1561,9 @@ Dimitri MOREL - Arcanis Conseil`;
 
     const prenom = targetContact.prenom || '';
     const nom = targetContact.nom || '';
-    const type = (targetContact as any).type || '';
-    const source = targetContact.source || '';
 
-    searchGoogle(prenom, nom, type, source);
+    // Ne passer que le prénom et le nom (type et source ignorés)
+    searchGoogle(prenom, nom);
   }, [selectedContact, showNotification]);
 
   const handleDirectLink = useCallback((contact?: Contact) => {

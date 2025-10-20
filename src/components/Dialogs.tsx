@@ -524,12 +524,12 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
 
   const statutMaritalOptions = [
     { value: '', label: 'Sélectionner...' },
-    { value: 'reset', label: 'Ã¢ÂÅ’ Réinitialiser' },
+    { value: 'reset', label: '↻ Réinitialiser' },
     ...Object.values(QualificationStatutMarital).map(s => ({value: s, label: s}))
   ];
   const situationProOptions = [
     { value: '', label: 'Sélectionner...' },
-    { value: 'reset', label: 'Ã¢ÂÅ’ Réinitialiser' },
+    { value: 'reset', label: '↻ Réinitialiser' },
     ...Object.values(QualificationSituationPro).map(s => ({value: s, label: s}))
   ];
 

@@ -48,7 +48,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
     shared: number
     blacklist: number
     normalized: string[]
-    details: { phone: string; source: 'shared' | 'blacklist'; rows: number[] }[]
+    details: { phone: string; source: 'shared' | 'blacklist'; rows: number[]; prenom?: string; nom?: string }[]
   }>({ shared: 0, blacklist: 0, normalized: [], details: [] })
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [isCheckingPhones, setIsCheckingPhones] = useState(false)
@@ -58,6 +58,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
   const [originalPreview, setOriginalPreview] = useState<string[][]>(previewRows || [])
   const [removedPhones, setRemovedPhones] = useState<string[]>([])
   const [statusMessage, setStatusMessage] = useState<string>('')
+  const dialogContentRef = React.useRef<HTMLDivElement>(null)
 
   const requiredSet = useMemo(() => new Set(requiredTargets), [requiredTargets])
 
@@ -124,7 +125,18 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
       .flat()
       .map(normalizePhoneNumber)
       .filter(Boolean) as string[]
+    
+    console.log('[ImportMappingDialog] 🔍 Vérification Supabase', {
+      previewRowsCount: previewRows.length,
+      phoneColumn,
+      phoneIndex,
+      importedPhonesCount: importedPhones.length,
+      importedPhonesSample: importedPhones.slice(0, 3),
+      supabaseReady: state.supabaseReady
+    })
+    
     if (importedPhones.length === 0) {
+      console.log('[ImportMappingDialog] ⚠️ Aucun numéro importé détecté')
       setPhoneWarnings({ shared: 0, blacklist: 0, normalized: [], details: [] })
       return
     }
@@ -139,41 +151,73 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
         const client = supabaseService.getClient()
         const uniquePhones = Array.from(new Set(importedPhones))
         const batches = chunk(uniquePhones, 500)
-        let sharedMatches: string[] = []
-        let blacklistMatches: string[] = []
-        const details: { phone: string; source: 'shared' | 'blacklist'; rows: number[] }[] = []
+        const sharedMatches: string[] = []
+        const blacklistMatches: string[] = []
+        const details: { phone: string; source: 'shared' | 'blacklist'; rows: number[]; prenom?: string; nom?: string }[] = []
         for (const batch of batches) {
           if (abort) return
           const [{ data: sharedData, error: sharedError }, { data: blacklistData, error: blacklistError }] = await Promise.all([
-            client.from('shared_phone_numbers').select('normalized_phone').in('normalized_phone', batch),
-            client.from('shared_blacklist_numbers').select('normalized_phone').in('normalized_phone', batch)
+            client.from('shared_phone_numbers').select('normalized_phone, prenom, nom').in('normalized_phone', batch),
+            client.from('shared_blacklist_numbers').select('normalized_phone, prenom, nom').in('normalized_phone', batch)
           ])
           if (sharedError || blacklistError) {
-            console.error('[ImportMappingDialog] Erreur vérification numéros', sharedError || blacklistError)
+            console.error('[ImportMappingDialog] ❌ Erreur vérification numéros', sharedError || blacklistError)
             continue
           }
-          const sharedBatch = (sharedData || []).map((row: any) => row.normalized_phone)
-          const blacklistBatch = (blacklistData || []).map((row: any) => row.normalized_phone)
-          sharedMatches = sharedMatches.concat(sharedBatch)
-          blacklistMatches = blacklistMatches.concat(blacklistBatch)
-          sharedBatch.forEach((num) => {
-            const rows = previewRows.reduce<number[]>((acc, row, idx) => {
-              const candidates = extractPhoneCandidates(row?.[phoneIndex])
-              const match = candidates.some((candidate) => normalizePhoneNumber(candidate) === num)
-              if (match) acc.push(idx + 1)
-              return acc
-            }, [])
-            details.push({ phone: num, source: 'shared', rows })
+          
+          console.log('[ImportMappingDialog] 📊 Résultats Supabase', {
+            batchSize: batch.length,
+            sharedDataCount: (sharedData || []).length,
+            blacklistDataCount: (blacklistData || []).length,
+            sharedData: sharedData?.slice(0, 2),
+            blacklistData: blacklistData?.slice(0, 2)
           })
-          blacklistBatch.forEach((num) => {
-            const rows = previewRows.reduce<number[]>((acc, row, idx) => {
-              const candidates = extractPhoneCandidates(row?.[phoneIndex])
-              const match = candidates.some((candidate) => normalizePhoneNumber(candidate) === num)
-              if (match) acc.push(idx + 1)
-              return acc
-            }, [])
-            details.push({ phone: num, source: 'blacklist', rows })
-          })
+          
+          // Traiter les numéros partagés
+          if (Array.isArray(sharedData)) {
+            for (const item of sharedData) {
+              const num = item.normalized_phone
+              if (num) {
+                sharedMatches.push(num)
+                const rows = previewRows.reduce<number[]>((acc, row, idx) => {
+                  const candidates = extractPhoneCandidates(row?.[phoneIndex])
+                  const match = candidates.some((candidate) => normalizePhoneNumber(candidate) === num)
+                  if (match) acc.push(idx + 1)
+                  return acc
+                }, [])
+                details.push({ 
+                  phone: num, 
+                  source: 'shared', 
+                  rows,
+                  prenom: item.prenom || undefined,
+                  nom: item.nom || undefined
+                })
+              }
+            }
+          }
+          
+          // Traiter les numéros en liste noire
+          if (Array.isArray(blacklistData)) {
+            for (const item of blacklistData) {
+              const num = item.normalized_phone
+              if (num) {
+                blacklistMatches.push(num)
+                const rows = previewRows.reduce<number[]>((acc, row, idx) => {
+                  const candidates = extractPhoneCandidates(row?.[phoneIndex])
+                  const match = candidates.some((candidate) => normalizePhoneNumber(candidate) === num)
+                  if (match) acc.push(idx + 1)
+                  return acc
+                }, [])
+                details.push({ 
+                  phone: num, 
+                  source: 'blacklist', 
+                  rows,
+                  prenom: item.prenom || undefined,
+                  nom: item.nom || undefined
+                })
+              }
+            }
+          }
         }
         setPhoneWarnings({
           shared: sharedMatches.length,
@@ -303,7 +347,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1400px] w-full max-h-[95vh] overflow-hidden flex flex-col p-3 sm:p-4 lg:p-6">
+        <DialogContent ref={dialogContentRef} className="max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1400px] w-full max-h-[95vh] overflow-hidden flex flex-col p-3 sm:p-4 lg:p-6">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Importer et mapper les colonnes</DialogTitle>
             <DialogDescription>
@@ -506,7 +550,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                             <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm w-full max-w-full sm:max-w-md">
                               <SelectValue placeholder="Choisir un champ" />
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent container={dialogContentRef.current}>
                               <SelectItem value="no-mapping">(Ignorer)</SelectItem>
                               {expectedTargets.map((opt) => {
                                 const isAlreadyAssigned = assignedTargets.has(opt.value) && mapping[h] !== opt.value
@@ -629,7 +673,14 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                   className="rounded-md border border-border/70 bg-muted/40 p-3 space-y-2"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">{item.formattedPhone}</span>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="font-medium">{item.formattedPhone}</span>
+                      {(item.prenom || item.nom) && (
+                        <span className="text-[11px] text-muted-foreground">
+                          {[item.prenom, item.nom].filter(Boolean).join(' ')}
+                        </span>
+                      )}
+                    </div>
                     <span
                       className={cn(
                         'text-[10px] sm:text-xs rounded px-2 py-0.5 border',

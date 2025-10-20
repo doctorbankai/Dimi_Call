@@ -3,6 +3,10 @@ import { v4 as uuidv4 } from 'uuid'; // For generating unique IDs
 import Papa from 'papaparse'; // For CSV parsing
 import * as XLSX from 'xlsx'; // For Excel parsing and writing
 import { ExportColumnService } from './exportColumnService';
+import { normalizePhoneNumber as normalizePhone } from './phoneUtils';
+
+// Re-export normalizePhoneNumber for backward compatibility
+export { normalizePhoneNumber } from './phoneUtils';
 
 const LOCAL_STORAGE_KEY = 'dimiCallContacts';
 const CALL_STATES_KEY = 'dimiCallCallStates';
@@ -520,31 +524,81 @@ const analyzeHeaders = (headers: string[]): {
   };
 };
 
-// Fonction pour détecter le délimiteur d'un fichier
-const detectDelimiter = async (file: File): Promise<string> => {
+// Fonction pour détecter le délimiteur d'un fichier de manière robuste
+const detectDelimiter = async (file: File): Promise<{ delimiter: string; confidence: number }> => {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      const firstLine = text.split('\n')[0];
       
-      // Compter les délimiteurs potentiels
-      const tabCount = (firstLine.match(/\t/g) || []).length;
-      const commaCount = (firstLine.match(/,/g) || []).length;
-      const semicolonCount = (firstLine.match(/;/g) || []).length;
+      // Analyser les 3 premières lignes pour plus de précision
+      const lines = text.split('\n').slice(0, 3).filter(line => line.trim());
       
-      // Déterminer le délimiteur le plus probable
-      if (tabCount > commaCount && tabCount > semicolonCount) {
-        resolve('\t'); // TSV
-      } else if (semicolonCount > commaCount) {
-        resolve(';'); // CSV européen
-      } else {
-        resolve(','); // CSV standard
+      if (lines.length === 0) {
+        console.warn('⚠️ Fichier vide ou illisible, délimiteur par défaut: virgule');
+        resolve({ delimiter: ',', confidence: 0 });
+        return;
       }
+      
+      // Compter les délimiteurs sur chaque ligne
+      const delimiters = [
+        { char: '\t', name: 'TAB', counts: [] as number[] },
+        { char: ';', name: 'point-virgule', counts: [] as number[] },
+        { char: ',', name: 'virgule', counts: [] as number[] }
+      ];
+      
+      lines.forEach(line => {
+        // Ignorer les délimiteurs à l'intérieur des guillemets
+        const withoutQuoted = line.replace(/"[^"]*"/g, '');
+        
+        delimiters.forEach(d => {
+          const count = (withoutQuoted.match(new RegExp(d.char === '\t' ? '\t' : `\\${d.char}`, 'g')) || []).length;
+          d.counts.push(count);
+        });
+      });
+      
+      // Calculer la cohérence (variance faible = bon délimiteur)
+      const scores = delimiters.map(d => {
+        const avg = d.counts.reduce((a, b) => a + b, 0) / d.counts.length;
+        const variance = d.counts.reduce((sum, count) => sum + Math.pow(count - avg, 2), 0) / d.counts.length;
+        
+        // Score = moyenne des occurrences / (variance + 1)
+        // Plus le score est élevé, plus le délimiteur est cohérent
+        const score = avg / (Math.sqrt(variance) + 1);
+        
+        return {
+          delimiter: d.char,
+          name: d.name,
+          avgCount: avg,
+          variance: variance,
+          score: score
+        };
+      });
+      
+      // Trier par score décroissant
+      scores.sort((a, b) => b.score - a.score);
+      
+      const best = scores[0];
+      const confidence = Math.min(100, Math.round((best.score / (scores[1]?.score || 1)) * 50));
+      
+      console.log('🔍 Détection du délimiteur CSV:');
+      console.log(`  ✅ Délimiteur détecté: ${best.name} (${best.delimiter === '\t' ? 'TAB' : best.delimiter})`);
+      console.log(`  📊 Confiance: ${confidence}%`);
+      console.log(`  📈 Moyenne d'occurrences: ${best.avgCount.toFixed(1)}`);
+      console.log(`  📉 Variance: ${best.variance.toFixed(2)}`);
+      
+      if (confidence < 30) {
+        console.warn(`⚠️ Confiance faible (${confidence}%), le fichier pourrait être mal formaté`);
+      }
+      
+      resolve({ delimiter: best.delimiter, confidence });
     };
-    reader.onerror = () => resolve(','); // Par défaut CSV
-    // Lire seulement les premiers 1024 caractères pour la détection
-    reader.readAsText(file.slice(0, 1024));
+    reader.onerror = () => {
+      console.error('❌ Erreur lors de la lecture du fichier pour détection du délimiteur');
+      resolve({ delimiter: ',', confidence: 0 });
+    };
+    // Lire les premiers 2048 caractères pour une meilleure détection
+    reader.readAsText(file.slice(0, 2048), 'UTF-8');
   });
 };
 
@@ -569,7 +623,7 @@ export const importContactsFromFile = async (
   const fileExtension = file.name.split('.').pop()?.toLowerCase();
   
   const rawPhonesToRemove = options?.phonesToRemove || []
-  const normalizedPhones = rawPhonesToRemove.map(normalizePhoneNumber).filter(Boolean) as string[]
+  const normalizedPhones = rawPhonesToRemove.map(normalizePhone).filter(Boolean) as string[]
   const phonesToExclude = new Set(normalizedPhones)
   console.log('[importContactsFromFile] 🔍 Exclusion de numéros normalisés', { 
     bruts: JSON.stringify(rawPhonesToRemove), 
@@ -579,9 +633,16 @@ export const importContactsFromFile = async (
   })
 
   if (fileExtension === 'csv' || fileExtension === 'tsv') {
-    // Détecter automatiquement le délimiteur
-    const delimiter = await detectDelimiter(file);
-    console.log(`Délimiteur détecté: "${delimiter === '\t' ? 'TAB' : delimiter}"`);
+    // Détecter automatiquement le délimiteur avec analyse de confiance
+    const { delimiter, confidence } = await detectDelimiter(file);
+    
+    // Afficher un toast informatif pour l'utilisateur
+    if (typeof window !== 'undefined' && (window as any).toast) {
+      const delimiterName = delimiter === '\t' ? 'TAB' : delimiter === ';' ? 'point-virgule (;)' : 'virgule (,)';
+      (window as any).toast.info(`Délimiteur détecté: ${delimiterName}`, {
+        description: confidence > 70 ? 'Confiance élevée' : confidence > 30 ? 'Confiance moyenne' : 'Confiance faible - vérifiez le résultat'
+      });
+    }
     
     return new Promise((resolve, reject) => {
       const contacts: Contact[] = [];
@@ -592,6 +653,9 @@ export const importContactsFromFile = async (
         header: true,
         skipEmptyLines: true,
         delimiter: delimiter, // Utiliser le délimiteur détecté
+        quoteChar: '"', // Gérer les guillemets pour les champs contenant le délimiteur
+        escapeChar: '"', // Caractère d'échappement
+        newline: '', // Auto-détection des sauts de ligne
         chunkSize: 1024 * 512, // 512KB chunks pour plus de stabilité
         chunk: (results: any, parser: any) => {
           // Validation des en-têtes sur le premier chunk seulement
@@ -650,7 +714,7 @@ export const importContactsFromFile = async (
 
                 // Format phone number after mapping
                 if (contactData.telephone) {
-                  const normalizedPhone = normalizePhoneNumber(contactData.telephone)
+                  const normalizedPhone = normalizePhone(contactData.telephone)
                   if (normalizedPhone && phonesToExclude.has(normalizedPhone)) {
                     console.log('[importContactsFromFile] 🚫 Ligne supprimée (CSV/TSV)', {
                       numeroOriginal: contactData.telephone,
@@ -827,7 +891,7 @@ export const importContactsFromFile = async (
 
                 // Format phone number after mapping
                 if (contactData.telephone) {
-                  const normalizedPhone = normalizePhoneNumber(String(contactData.telephone));
+                  const normalizedPhone = normalizePhone(String(contactData.telephone));
                   if (normalizedPhone && phonesToExclude.has(normalizedPhone)) {
                     console.log('[importContactsFromFile] 🚫 Ligne supprimée (Excel)', {
                       numeroOriginal: contactData.telephone,
@@ -1818,22 +1882,7 @@ function chunkArray<T>(arr: T[], size: number): T[][] {
   return result
 }
 
-export const normalizePhoneNumber = (phone: string): string | null => {
-  if (!phone) return null
-  let cleaned = phone.replace(/[^0-9+]/g, '')
-  if (!cleaned) return null
-  if (cleaned.startsWith('00')) {
-    cleaned = `+${cleaned.slice(2)}`
-  }
-  if (!cleaned.startsWith('+')) {
-    if (cleaned.startsWith('0') && cleaned.length === 10) {
-      cleaned = `+33${cleaned.slice(1)}`
-    } else {
-      cleaned = `+${cleaned}`
-    }
-  }
-  return cleaned
-}
+// normalizePhoneNumber is now imported from phoneUtils.ts (see top of file)
 
 /*
 *

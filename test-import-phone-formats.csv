@@ -1,0 +1,14 @@
+Prénom,Nom,Téléphone,Email,Source
+Jean,Dupont,695905812,jean.dupont@example.com,Test Format 1
+Marie,Martin,06 95 90 58 12,marie.martin@example.com,Test Format 2
+Pierre,Durand,+33 6 95 90 58 12,pierre.durand@example.com,Test Format 3
+Sophie,Bernard,0695905812,sophie.bernard@example.com,Test Format 4
+Luc,Petit,+33695905812,luc.petit@example.com,Test Format 5
+Emma,Roux,33695905812,emma.roux@example.com,Test Format 6
+Thomas,Blanc,0033695905812,thomas.blanc@example.com,Test Format 7
+Julie,Moreau,+330695905812,julie.moreau@example.com,Test Format 8
+Antoine,Simon,06.95.90.58.12,antoine.simon@example.com,Test Format 9
+Camille,Laurent,06-95-90-58-12,camille.laurent@example.com,Test Format 10
+Nicolas,Leroy,(0)6 95 90 58 12,nicolas.leroy@example.com,Test Format 11
+Sarah,Bonnet,06 12 34 56 78,sarah.bonnet@example.com,Numéro différent
+Paul,Garnier,+33 6 12 34 56 78,paul.garnier@example.com,Numéro différent 2

@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Délimiteurs CSV - DimiCall</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .test-section h2 {
+            color: #764ba2;
+            margin-top: 0;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            background: white;
+            border-left: 4px solid #667eea;
+        }
+        .success {
+            border-left-color: #4caf50;
+            background: #e8f5e9;
+        }
+        .error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        .info {
+            border-left-color: #2196f3;
+            background: #e3f2fd;
+        }
+        pre {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 13px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        .download-link {
+            display: inline-block;
+            margin: 10px 5px;
+            padding: 8px 16px;
+            background: #4caf50;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            transition: transform 0.2s;
+        }
+        .download-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test des Délimiteurs CSV</h1>
+        <p class="subtitle">Vérification de la détection automatique des délimiteurs (virgule, point-virgule, tabulation)</p>
+
+        <!-- Section 1: Génération des fichiers de test -->
+        <div class="test-section">
+            <h2>📝 Étape 1: Générer les fichiers de test</h2>
+            <p>Créez des fichiers CSV avec différents délimiteurs pour tester l'importation.</p>
+            <button onclick="generateCSVComma()">Générer CSV avec virgules (,)</button>
+            <button onclick="generateCSVSemicolon()">Générer CSV avec point-virgules (;)</button>
+            <button onclick="generateTSV()">Générer TSV avec tabulations</button>
+            <button onclick="generateCSVMixed()">Générer CSV mixte (avec guillemets)</button>
+            <div id="generate-result"></div>
+        </div>
+
+        <!-- Section 2: Test de détection -->
+        <div class="test-section">
+            <h2>🔍 Étape 2: Tester la détection</h2>
+            <p>Importez un fichier CSV pour tester la détection automatique du délimiteur.</p>
+            <input type="file" id="file-input" accept=".csv,.tsv" style="margin: 10px 0;">
+            <button onclick="testDelimiterDetection()">Analyser le fichier</button>
+            <div id="detection-result"></div>
+        </div>
+
+        <!-- Section 3: Résultats -->
+        <div class="test-section">
+            <h2>📊 Résultats des tests</h2>
+            <div id="test-results"></div>
+        </div>
+    </div>
+
+    <script>
+        // Données de test
+        const testData = [
+            { prenom: 'Jean', nom: 'Dupont', telephone: '0612345678', email: 'jean.dupont@example.com', source: 'HEC Paris', statut: 'À rappeler', commentaire: 'Intéressé par nos services' },
+            { prenom: 'Marie', nom: 'Martin', telephone: '0623456789', email: 'marie.martin@example.com', source: 'ESSEC', statut: 'RDV fixé', commentaire: 'RDV le 15/03' },
+            { prenom: 'Pierre', nom: 'Durand', telephone: '0634567890', email: 'pierre.durand@example.com', source: 'Sciences Po', statut: 'Non joignable', commentaire: 'Rappeler demain' },
+            { prenom: 'Sophie', nom: 'Bernard', telephone: '0645678901', email: 'sophie.bernard@example.com', source: 'Polytechnique', statut: 'Intéressé', commentaire: 'Demande de documentation' },
+            { prenom: 'Luc', nom: 'Petit', telephone: '0656789012', email: 'luc.petit@example.com', source: 'Centrale Paris', statut: 'À rappeler', commentaire: 'Pas disponible cette semaine' }
+        ];
+
+        // Données avec caractères spéciaux pour tester les guillemets
+        const testDataMixed = [
+            { prenom: 'Jean', nom: 'Dupont', telephone: '0612345678', email: 'jean.dupont@example.com', source: 'HEC Paris', statut: 'À rappeler', commentaire: 'Intéressé, mais occupé' },
+            { prenom: 'Marie', nom: 'Martin', telephone: '0623456789', email: 'marie.martin@example.com', source: 'ESSEC Business School', statut: 'RDV fixé', commentaire: 'RDV le 15/03, à 14h30' },
+            { prenom: 'Pierre', nom: 'Durand', telephone: '0634567890', email: 'pierre.durand@example.com', source: 'Sciences Po Paris', statut: 'Non joignable', commentaire: 'Rappeler demain, avant 10h' }
+        ];
+
+        function generateCSVComma() {
+            const headers = ['Prénom', 'Nom', 'Téléphone', 'Mail', 'École/Source', 'Statut', 'Commentaire'];
+            const rows = testData.map(d => [d.prenom, d.nom, d.telephone, d.email, d.source, d.statut, d.commentaire]);
+            const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+            downloadFile(csv, 'test-virgule.csv', 'text/csv');
+            showResult('generate-result', 'success', '✅ Fichier CSV avec virgules généré !');
+        }
+
+        function generateCSVSemicolon() {
+            const headers = ['Prénom', 'Nom', 'Téléphone', 'Mail', 'École/Source', 'Statut', 'Commentaire'];
+            const rows = testData.map(d => [d.prenom, d.nom, d.telephone, d.email, d.source, d.statut, d.commentaire]);
+            const csv = [headers, ...rows].map(row => row.join(';')).join('\n');
+            downloadFile(csv, 'test-point-virgule.csv', 'text/csv');
+            showResult('generate-result', 'success', '✅ Fichier CSV avec point-virgules généré !');
+        }
+
+        function generateTSV() {
+            const headers = ['Prénom', 'Nom', 'Téléphone', 'Mail', 'École/Source', 'Statut', 'Commentaire'];
+            const rows = testData.map(d => [d.prenom, d.nom, d.telephone, d.email, d.source, d.statut, d.commentaire]);
+            const tsv = [headers, ...rows].map(row => row.join('\t')).join('\n');
+            downloadFile(tsv, 'test-tabulation.tsv', 'text/tab-separated-values');
+            showResult('generate-result', 'success', '✅ Fichier TSV avec tabulations généré !');
+        }
+
+        function generateCSVMixed() {
+            const headers = ['Prénom', 'Nom', 'Téléphone', 'Mail', 'École/Source', 'Statut', 'Commentaire'];
+            const rows = testDataMixed.map(d => [
+                d.prenom, 
+                d.nom, 
+                d.telephone, 
+                d.email, 
+                `"${d.source}"`, // Guillemets pour les champs avec espaces
+                d.statut, 
+                `"${d.commentaire}"` // Guillemets pour les champs avec virgules
+            ]);
+            const csv = [headers, ...rows].map(row => row.join(',')).join('\n');
+            downloadFile(csv, 'test-mixte-guillemets.csv', 'text/csv');
+            showResult('generate-result', 'success', '✅ Fichier CSV mixte avec guillemets généré !');
+        }
+
+        function downloadFile(content, filename, mimeType) {
+            const blob = new Blob(['\uFEFF' + content], { type: mimeType + ';charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+        }
+
+        async function testDelimiterDetection() {
+            const fileInput = document.getElementById('file-input');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                showResult('detection-result', 'error', '❌ Veuillez sélectionner un fichier');
+                return;
+            }
+
+            try {
+                const result = await detectDelimiter(file);
+                const delimiterName = result.delimiter === '\t' ? 'TAB (tabulation)' : 
+                                     result.delimiter === ';' ? 'point-virgule (;)' : 
+                                     'virgule (,)';
+                
+                const confidenceClass = result.confidence > 70 ? 'success' : 
+                                       result.confidence > 30 ? 'info' : 'error';
+                
+                const html = `
+                    <div class="result ${confidenceClass}">
+                        <h3>🔍 Résultat de la détection</h3>
+                        <div class="stats">
+                            <div class="stat-card">
+                                <div class="stat-value">${delimiterName}</div>
+                                <div class="stat-label">Délimiteur détecté</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">${result.confidence}%</div>
+                                <div class="stat-label">Confiance</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value">${result.avgCount.toFixed(1)}</div>
+                                <div class="stat-label">Occurrences moyennes</div>
+                            </div>
+                        </div>
+                        <h4>📋 Aperçu des données:</h4>
+                        <pre>${result.preview}</pre>
+                    </div>
+                `;
+                
+                document.getElementById('detection-result').innerHTML = html;
+                
+                // Ajouter au résumé des tests
+                addTestResult(file.name, delimiterName, result.confidence);
+                
+            } catch (error) {
+                showResult('detection-result', 'error', `❌ Erreur: ${error.message}`);
+            }
+        }
+
+        async function detectDelimiter(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const text = e.target.result;
+                    
+                    // Analyser les 3 premières lignes
+                    const lines = text.split('\n').slice(0, 3).filter(line => line.trim());
+                    
+                    if (lines.length === 0) {
+                        reject(new Error('Fichier vide'));
+                        return;
+                    }
+                    
+                    // Compter les délimiteurs
+                    const delimiters = [
+                        { char: '\t', name: 'TAB', counts: [] },
+                        { char: ';', name: 'point-virgule', counts: [] },
+                        { char: ',', name: 'virgule', counts: [] }
+                    ];
+                    
+                    lines.forEach(line => {
+                        // Ignorer les délimiteurs dans les guillemets
+                        const withoutQuoted = line.replace(/"[^"]*"/g, '');
+                        
+                        delimiters.forEach(d => {
+                            const regex = d.char === '\t' ? /\t/g : new RegExp(`\\${d.char}`, 'g');
+                            const count = (withoutQuoted.match(regex) || []).length;
+                            d.counts.push(count);
+                        });
+                    });
+                    
+                    // Calculer les scores
+                    const scores = delimiters.map(d => {
+                        const avg = d.counts.reduce((a, b) => a + b, 0) / d.counts.length;
+                        const variance = d.counts.reduce((sum, count) => sum + Math.pow(count - avg, 2), 0) / d.counts.length;
+                        const score = avg / (Math.sqrt(variance) + 1);
+                        
+                        return {
+                            delimiter: d.char,
+                            name: d.name,
+                            avgCount: avg,
+                            variance: variance,
+                            score: score
+                        };
+                    });
+                    
+                    scores.sort((a, b) => b.score - a.score);
+                    const best = scores[0];
+                    const confidence = Math.min(100, Math.round((best.score / (scores[1]?.score || 1)) * 50));
+                    
+                    // Aperçu des premières lignes
+                    const preview = lines.slice(0, 3).join('\n');
+                    
+                    resolve({
+                        delimiter: best.delimiter,
+                        confidence: confidence,
+                        avgCount: best.avgCount,
+                        preview: preview
+                    });
+                };
+                reader.onerror = () => reject(new Error('Erreur de lecture du fichier'));
+                reader.readAsText(file.slice(0, 2048), 'UTF-8');
+            });
+        }
+
+        function addTestResult(filename, delimiter, confidence) {
+            const resultsDiv = document.getElementById('test-results');
+            const timestamp = new Date().toLocaleTimeString('fr-FR');
+            
+            const resultHTML = `
+                <div class="result ${confidence > 70 ? 'success' : confidence > 30 ? 'info' : 'error'}">
+                    <strong>${timestamp}</strong> - ${filename}<br>
+                    Délimiteur: <strong>${delimiter}</strong> | Confiance: <strong>${confidence}%</strong>
+                </div>
+            `;
+            
+            resultsDiv.innerHTML = resultHTML + resultsDiv.innerHTML;
+        }
+
+        function showResult(elementId, type, message) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="result ${type}">${message}</div>`;
+        }
+    </script>
+</body>
+</html>
