@@ -19,10 +19,10 @@ const IMPORTED_TABLE_METADATA_KEY = 'dimicall_imported_table_metadata';
 export const formatPhoneNumber = (phoneStr: string): string => {
   // Handle null, undefined, or empty inputs
   if (!phoneStr || typeof phoneStr !== 'string') return '';
-  
+
   // Clean all characters except digits and +
   let cleaned = phoneStr.replace(/[^\d+]/g, "");
-  
+
   // Early return for empty cleaned string
   if (!cleaned) return phoneStr;
 
@@ -33,7 +33,7 @@ export const formatPhoneNumber = (phoneStr: string): string => {
     // If 10 digits, take first 9; if 9 digits, use as is
     const num = digits.length === 10 ? digits.slice(0, 9) : digits;
     if (num.length === 9) {
-      return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7,9)}`;
+      return `+33 ${num[0]} ${num.slice(1, 3)} ${num.slice(3, 5)} ${num.slice(5, 7)} ${num.slice(7, 9)}`;
     }
   }
 
@@ -46,10 +46,10 @@ export const formatPhoneNumber = (phoneStr: string): string => {
       const num = digits.length === 8 ? digits : digits.slice(0, 9);
       if (num.length === 8) {
         // Truncated mobile number
-        return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7)}`;
+        return `+33 ${num[0]} ${num.slice(1, 3)} ${num.slice(3, 5)} ${num.slice(5, 7)} ${num.slice(7)}`;
       } else {
         // Standard 9-digit mobile
-        return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7,9)}`;
+        return `+33 ${num[0]} ${num.slice(1, 3)} ${num.slice(3, 5)} ${num.slice(5, 7)} ${num.slice(7, 9)}`;
       }
     }
   }
@@ -60,7 +60,7 @@ export const formatPhoneNumber = (phoneStr: string): string => {
     const digits = matchExtraDigits[1];
     // Take first 9 digits
     const num = digits.slice(0, 9);
-    return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7,9)}`;
+    return `+33 ${num[0]} ${num.slice(1, 3)} ${num.slice(3, 5)} ${num.slice(5, 7)} ${num.slice(7, 9)}`;
   }
 
   // Pattern 4: Truncated numbers (9 digits starting with 0, mobile/landline)
@@ -68,7 +68,7 @@ export const formatPhoneNumber = (phoneStr: string): string => {
   if (matchTruncated) {
     const num = matchTruncated[1];
     // Format as truncated with last digit isolated
-    return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7)}`;
+    return `+33 ${num[0]} ${num.slice(1, 3)} ${num.slice(3, 5)} ${num.slice(5, 7)} ${num.slice(7)}`;
   }
 
   // Pattern 4b: Special case for numbers like '0069540063' (10 digits but should be truncated)
@@ -77,7 +77,7 @@ export const formatPhoneNumber = (phoneStr: string): string => {
   if (matchSpecialTruncated) {
     const num = matchSpecialTruncated[1];
     // Format as truncated with last digit isolated
-    return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7)}`;
+    return `+33 ${num[0]} ${num.slice(1, 3)} ${num.slice(3, 5)} ${num.slice(5, 7)} ${num.slice(7)}`;
   }
 
   // Pattern 5: Standard +33(0) format - remove the 0 after +33
@@ -94,61 +94,61 @@ export const formatPhoneNumber = (phoneStr: string): string => {
   const matchCorrectPlus33 = cleaned.match(/^\+33(\d{9})$/);
   if (matchCorrectPlus33) {
     const num = matchCorrectPlus33[1];
-    return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7,9)}`;
+    return `+33 ${num[0]} ${num.slice(1, 3)} ${num.slice(3, 5)} ${num.slice(5, 7)} ${num.slice(7, 9)}`;
   }
 
   // Pattern 8: Standard 10-digit number starting with 0
   const matchStandard10 = cleaned.match(/^0(\d{9})$/);
   if (matchStandard10) {
     const num = matchStandard10[1];
-    return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7,9)}`;
+    return `+33 ${num[0]} ${num.slice(1, 3)} ${num.slice(3, 5)} ${num.slice(5, 7)} ${num.slice(7, 9)}`;
   }
 
   // Pattern 9: 9-digit mobile numbers (6 or 7 prefix)
   const matchMobile9 = cleaned.match(/^([67]\d{8})$/);
   if (matchMobile9) {
     const num = matchMobile9[1];
-    return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7,9)}`;
+    return `+33 ${num[0]} ${num.slice(1, 3)} ${num.slice(3, 5)} ${num.slice(5, 7)} ${num.slice(7, 9)}`;
   }
 
   // Pattern 10: 9-digit landline numbers (1-5 prefix)
   const matchLandline9 = cleaned.match(/^([1-5]\d{8})$/);
   if (matchLandline9) {
     const num = matchLandline9[1];
-    return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7,9)}`;
+    return `+33 ${num[0]} ${num.slice(1, 3)} ${num.slice(3, 5)} ${num.slice(5, 7)} ${num.slice(7, 9)}`;
   }
 
   // Pattern 11: 8-digit mobile numbers (truncated, no leading 0)
   const matchTruncatedMobile = cleaned.match(/^([67]\d{7})$/);
   if (matchTruncatedMobile) {
     const num = matchTruncatedMobile[1];
-    return `+33 ${num[0]} ${num.slice(1,3)} ${num.slice(3,5)} ${num.slice(5,7)} ${num.slice(7)}`;
+    return `+33 ${num[0]} ${num.slice(1, 3)} ${num.slice(3, 5)} ${num.slice(5, 7)} ${num.slice(7)}`;
   }
 
   // Pattern 12: +33 with malformed digits (handle extra 0s or irregular lengths)
   const matchPlus33Variant = cleaned.match(/^\+33(.+)$/);
   if (matchPlus33Variant) {
     let numPart = matchPlus33Variant[1];
-    
+
     // Remove leading 0s
     while (numPart.startsWith('0') && numPart.length > 9) {
       numPart = numPart.substring(1);
     }
-    
+
     // If exactly 9 digits, format normally
     if (numPart.length === 9) {
-      return `+33 ${numPart[0]} ${numPart.slice(1,3)} ${numPart.slice(3,5)} ${numPart.slice(5,7)} ${numPart.slice(7,9)}`;
+      return `+33 ${numPart[0]} ${numPart.slice(1, 3)} ${numPart.slice(3, 5)} ${numPart.slice(5, 7)} ${numPart.slice(7, 9)}`;
     }
-    
+
     // If 8 digits and starts with 6/7, format as truncated mobile
     if (numPart.length === 8 && /^[67]/.test(numPart)) {
-      return `+33 ${numPart[0]} ${numPart.slice(1,3)} ${numPart.slice(3,5)} ${numPart.slice(5,7)} ${numPart.slice(7)}`;
+      return `+33 ${numPart[0]} ${numPart.slice(1, 3)} ${numPart.slice(3, 5)} ${numPart.slice(5, 7)} ${numPart.slice(7)}`;
     }
-    
+
     // If more than 9 digits, take first 9
     if (numPart.length > 9) {
       const truncated = numPart.slice(0, 9);
-      return `+33 ${truncated[0]} ${truncated.slice(1,3)} ${truncated.slice(3,5)} ${truncated.slice(5,7)} ${truncated.slice(7,9)}`;
+      return `+33 ${truncated[0]} ${truncated.slice(1, 3)} ${truncated.slice(3, 5)} ${truncated.slice(5, 7)} ${truncated.slice(7, 9)}`;
     }
   }
 
@@ -222,7 +222,7 @@ const formatExcelDate = (serial: number | string): string => {
     if (isNaN(num)) return serial;
     serial = num;
   }
-  
+
   if (typeof serial === 'number' && serial > 1 && serial < 100000) {
     // C'est probablement un numéro de série Excel
     const date = excelSerialToDate(serial);
@@ -231,7 +231,7 @@ const formatExcelDate = (serial: number | string): string => {
     const year = date.getFullYear();
     return `${month}/${day}/${year}`;
   }
-  
+
   return String(serial);
 };
 
@@ -247,21 +247,21 @@ const formatExcelTime = (serial: number | string): string => {
     if (isNaN(num)) return serial;
     serial = num;
   }
-  
+
   if (typeof serial === 'number' && serial >= 0 && serial < 1) {
     // C'est une fraction de jour (heure Excel)
     const totalMinutes = Math.round(serial * 1440); // 1440 minutes dans un jour
     let hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-    
+
     // Convertir en format 12 heures avec AM/PM
     const period = hours >= 12 ? 'PM' : 'AM';
     if (hours > 12) hours -= 12;
     if (hours === 0) hours = 12;
-    
+
     return `${hours}:${String(minutes).padStart(2, '0')} ${period}`;
   }
-  
+
   return String(serial);
 };
 
@@ -279,7 +279,7 @@ const normalizeString = (str: string): string => {
 export const normalizeHeader = (header: string): string => {
   // Nettoyage fort pour détecter les variantes (accents, espaces, slashes, etc.)
   const cleaned = normalizeString(header);
-  
+
   // Mapping étendu avec variantes normalisées (sans ponctuation)
   const mapping: Record<string, string> = {
     // PRÉNOM - toutes variantes
@@ -287,7 +287,7 @@ export const normalizeHeader = (header: string): string => {
     'firstname': 'prenom',
     'firstnme': 'prenom',
     'fname': 'prenom',
-    
+
     // NOM - toutes variantes
     'nom': 'nom',
     'lastname': 'nom',
@@ -295,7 +295,7 @@ export const normalizeHeader = (header: string): string => {
     'lname': 'nom',
     'surname': 'nom',
     'familyname': 'nom',
-    
+
     // TÉLÉPHONE/NUMÉRO - très flexible
     'telephone': 'telephone',
     'phone': 'telephone',
@@ -308,7 +308,7 @@ export const normalizeHeader = (header: string): string => {
     'portable': 'telephone',
     'cellulaire': 'telephone',
     'cell': 'telephone',
-    
+
     // EMAIL - toutes variantes
     'email': 'email',
     'mail': 'email',
@@ -316,7 +316,7 @@ export const normalizeHeader = (header: string): string => {
     'courriel': 'email',
     'adressemail': 'email',
     'emailaddress': 'email',
-    
+
     // SOURCE/ÉCOLE - toutes variantes (mapping vers 'source')
     'source': 'source',
     'ecole': 'source',
@@ -329,7 +329,7 @@ export const normalizeHeader = (header: string): string => {
     'universite': 'source',
     'school': 'source',
     'provenance': 'source',
-    
+
     // STATUT - toutes variantes
     'statut': 'statut',
     'statutappel': 'statut',
@@ -337,7 +337,7 @@ export const normalizeHeader = (header: string): string => {
     'callstatus': 'statut',
     'etat': 'statut',
     'state': 'statut',
-    
+
     // COMMENTAIRE - toutes variantes
     'commentaire': 'commentaire',
     'commentaires': 'commentaire',
@@ -350,69 +350,69 @@ export const normalizeHeader = (header: string): string => {
     'remarques': 'commentaire',
     'observation': 'commentaire',
     'observations': 'commentaire',
-    
+
     // SEXE - toutes variantes
     'sexe': 'sexe',
     'genre': 'sexe',
     'gender': 'sexe',
     'civilite': 'sexe',
     'civility': 'sexe',
-    
+
     // TYPE - toutes variantes
     'type': 'type',
     'categorie': 'type',
     'category': 'type',
     'typologie': 'type',
-    
+
     // QUALITÉ - toutes variantes
     'qualite': 'qualite',
     'quality': 'qualite',
     'niveau': 'qualite',
     'grade': 'qualite',
-    
+
     // DATE RAPPEL - toutes variantes
     'daterappel': 'dateRappel',
     'datederappel': 'dateRappel',
     'rappeldate': 'dateRappel',
     'callbackdate': 'dateRappel',
-    
+
     // HEURE RAPPEL - toutes variantes
     'heurerappel': 'heureRappel',
     'heurederappel': 'heureRappel',
     'rappelheure': 'heureRappel',
     'callbacktime': 'heureRappel',
-    
+
     // DATE APPEL - toutes variantes
     'dateappel': 'dateAppel',
     'datedappel': 'dateAppel',
     'appeldate': 'dateAppel',
     'calldate': 'dateAppel',
-    
+
     // HEURE APPEL - toutes variantes
     'heureappel': 'heureAppel',
     'heuredappel': 'heureAppel',
     'appelheure': 'heureAppel',
     'calltime': 'heureAppel',
-    
+
     // DATE RDV - toutes variantes
     'daterdv': 'dateRDV',
     'daterendezvous': 'dateRDV',
     'rdvdate': 'dateRDV',
     'appointmentdate': 'dateRDV',
-    
+
     // HEURE RDV - toutes variantes
     'heurerdv': 'heureRDV',
     'heurerendezvous': 'heureRDV',
     'rdvheure': 'heureRDV',
     'appointmenttime': 'heureRDV',
-    
+
     // DURÉE APPEL - toutes variantes
     'dureeappel': 'dureeAppel',
     'dureedappel': 'dureeAppel',
     'callduration': 'dureeAppel',
     'duration': 'dureeAppel',
     'duree': 'dureeAppel',
-    
+
     // LIEN - toutes variantes
     'lien': 'lien',
     'link': 'lien',
@@ -423,38 +423,38 @@ export const normalizeHeader = (header: string): string => {
     'siteinternet': 'lien',
     'webpage': 'lien',
     'weblink': 'lien',
-    
+
     // DON - toutes variantes
     'don': 'don',
     'donation': 'don',
     'montant': 'don',
     'amount': 'don',
     'contribution': 'don',
-    
+
     // DATE - toutes variantes
     'date': 'date',
     'dategeneral': 'date',
     'generaldate': 'date',
-    
+
     // UID - toutes variantes
     'uid': 'uid',
     'id': 'uid',
     'identifier': 'uid',
     'identifiant': 'uid',
     'uniqueid': 'uid',
-    
+
     // ACTIONS - toutes variantes
     'actions': 'actions',
     'action': 'actions',
     'activites': 'actions',
     'activities': 'actions'
   };
-  
+
   // Recherche directe
   if (mapping[cleaned]) {
     return mapping[cleaned];
   }
-  
+
   // Fallback: correspondance partielle (ex: "ecole/source" → "ecolesource")
   for (const [key, value] of Object.entries(mapping)) {
     if (cleaned.includes(key) || key.includes(cleaned)) {
@@ -462,52 +462,52 @@ export const normalizeHeader = (header: string): string => {
       return value;
     }
   }
-  
+
   // Si aucun mapping trouvé, retourner le header nettoyé (normalisé)
   console.warn(`⚠️ En-tête non reconnu: "${header}" → "${cleaned}"`);
   return cleaned;
 };
 
 // Fonction pour valider et analyser les en-têtes
-const analyzeHeaders = (headers: string[]): { 
-  valid: boolean; 
-  warnings: string[]; 
+const analyzeHeaders = (headers: string[]): {
+  valid: boolean;
+  warnings: string[];
   suggestions: string[];
   mappings: Record<string, string>;
 } => {
   const warnings: string[] = [];
   const suggestions: string[] = [];
   const mappings: Record<string, string> = {};
-  
+
   const requiredFields = ['prenom', 'nom', 'telephone'];
   const foundFields: Set<string> = new Set();
-  
+
   headers.forEach(header => {
     const normalized = normalizeHeader(header);
     mappings[header] = normalized;
-    
+
     if (requiredFields.includes(normalized)) {
       foundFields.add(normalized);
     }
-    
+
     // Vérifications spécifiques
     if (header !== header.trim()) {
       warnings.push(`⚠️ En-tête avec espaces: "${header}"`);
     }
-    
+
     if (normalized === removeAccents(header.trim().toLowerCase()) && header !== normalized) {
       suggestions.push(`💡 "${header}" sera normalisé en "${normalized}"`);
     }
   });
-  
+
   // Vérifier les champs obligatoires
   const missingFields = requiredFields.filter(field => !foundFields.has(field));
   if (missingFields.length > 0) {
     warnings.push(`❌ Champs obligatoires manquants: ${missingFields.join(', ')}`);
-    
+
     // Suggestions basées sur les en-têtes existants
     missingFields.forEach(missing => {
-      const similarHeaders = headers.filter(h => 
+      const similarHeaders = headers.filter(h =>
         removeAccents(h.toLowerCase()).includes(missing.substring(0, 3))
       );
       if (similarHeaders.length > 0) {
@@ -515,7 +515,7 @@ const analyzeHeaders = (headers: string[]): {
       }
     });
   }
-  
+
   return {
     valid: missingFields.length === 0,
     warnings,
@@ -530,42 +530,42 @@ const detectDelimiter = async (file: File): Promise<{ delimiter: string; confide
     const reader = new FileReader();
     reader.onload = (e) => {
       const text = e.target?.result as string;
-      
+
       // Analyser les 3 premières lignes pour plus de précision
       const lines = text.split('\n').slice(0, 3).filter(line => line.trim());
-      
+
       if (lines.length === 0) {
         console.warn('⚠️ Fichier vide ou illisible, délimiteur par défaut: virgule');
         resolve({ delimiter: ',', confidence: 0 });
         return;
       }
-      
+
       // Compter les délimiteurs sur chaque ligne
       const delimiters = [
         { char: '\t', name: 'TAB', counts: [] as number[] },
         { char: ';', name: 'point-virgule', counts: [] as number[] },
         { char: ',', name: 'virgule', counts: [] as number[] }
       ];
-      
+
       lines.forEach(line => {
         // Ignorer les délimiteurs à l'intérieur des guillemets
         const withoutQuoted = line.replace(/"[^"]*"/g, '');
-        
+
         delimiters.forEach(d => {
           const count = (withoutQuoted.match(new RegExp(d.char === '\t' ? '\t' : `\\${d.char}`, 'g')) || []).length;
           d.counts.push(count);
         });
       });
-      
+
       // Calculer la cohérence (variance faible = bon délimiteur)
       const scores = delimiters.map(d => {
         const avg = d.counts.reduce((a, b) => a + b, 0) / d.counts.length;
         const variance = d.counts.reduce((sum, count) => sum + Math.pow(count - avg, 2), 0) / d.counts.length;
-        
+
         // Score = moyenne des occurrences / (variance + 1)
         // Plus le score est élevé, plus le délimiteur est cohérent
         const score = avg / (Math.sqrt(variance) + 1);
-        
+
         return {
           delimiter: d.char,
           name: d.name,
@@ -574,23 +574,23 @@ const detectDelimiter = async (file: File): Promise<{ delimiter: string; confide
           score: score
         };
       });
-      
+
       // Trier par score décroissant
       scores.sort((a, b) => b.score - a.score);
-      
+
       const best = scores[0];
       const confidence = Math.min(100, Math.round((best.score / (scores[1]?.score || 1)) * 50));
-      
+
       console.log('🔍 Détection du délimiteur CSV:');
       console.log(`  ✅ Délimiteur détecté: ${best.name} (${best.delimiter === '\t' ? 'TAB' : best.delimiter})`);
       console.log(`  📊 Confiance: ${confidence}%`);
       console.log(`  📈 Moyenne d'occurrences: ${best.avgCount.toFixed(1)}`);
       console.log(`  📉 Variance: ${best.variance.toFixed(2)}`);
-      
+
       if (confidence < 30) {
         console.warn(`⚠️ Confiance faible (${confidence}%), le fichier pourrait être mal formaté`);
       }
-      
+
       resolve({ delimiter: best.delimiter, confidence });
     };
     reader.onerror = () => {
@@ -602,6 +602,52 @@ const detectDelimiter = async (file: File): Promise<{ delimiter: string; confide
   });
 };
 
+// Retire le BOM UTF-8 s'il est présent (U+FEFF en tête de fichier)
+const stripBOM = (s: string) => (s && s.charCodeAt(0) === 0xFEFF ? s.slice(1) : s);
+
+// Split CSV "safe" (gère guillemets et "" échappés), pour ; , et TAB
+function splitCSVLine(line: string, delimiter: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (ch === delimiter && !inQuotes) {
+      out.push(cur);
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+// Détection de délimiteur simple et robuste
+function detectDelimiterFromHeader(headerLine: string): string {
+  if (headerLine.includes(';')) return ';';     // cas FR prioritaire
+  if (headerLine.includes('\t')) return '\t';
+  if (headerLine.includes(',')) return ',';
+  return ';'; // fallback raisonnable
+}
+
+// Extracteur pour la modale (mapping/aperçu)
+export async function extractCsvHeaders(file: File): Promise<{ headers: string[]; delimiter: string }> {
+  const t = await file.text();
+  const firstLine = stripBOM(t).split(/\r?\n/)[0] ?? '';
+  const delimiter = detectDelimiterFromHeader(firstLine);
+  const headers = splitCSVLine(firstLine, delimiter)
+    .map(h => h.trim().replace(/^"|"$/g, ''));
+  return { headers, delimiter };
+}
+
 // Import contacts from file (CSV or Excel)
 export const importContactsFromFile = async (
   file: File,
@@ -611,39 +657,135 @@ export const importContactsFromFile = async (
   // 🔍 Vérification préliminaire de la taille du fichier
   const fileSizeInMB = file.size / (1024 * 1024);
   console.log(`📄 Traitement du fichier: ${file.name} (${fileSizeInMB.toFixed(1)}MB)`);
-  
+
   if (fileSizeInMB > 50) {
     throw new Error(`❌ Fichier trop volumineux (${fileSizeInMB.toFixed(1)}MB). Limite: 50MB pour éviter les crashes.`);
   }
-  
+
   if (fileSizeInMB > 20) {
     console.warn(`⚠️ Fichier volumineux (${fileSizeInMB.toFixed(1)}MB), traitement avec précautions...`);
   }
-  
+
   const fileExtension = file.name.split('.').pop()?.toLowerCase();
-  
+
   const rawPhonesToRemove = options?.phonesToRemove || []
   const normalizedPhones = rawPhonesToRemove.map(normalizePhone).filter(Boolean) as string[]
   const phonesToExclude = new Set(normalizedPhones)
-  console.log('[importContactsFromFile] 🔍 Exclusion de numéros normalisés', { 
-    bruts: JSON.stringify(rawPhonesToRemove), 
+  console.log('[importContactsFromFile] 🔍 Exclusion de numéros normalisés', {
+    bruts: JSON.stringify(rawPhonesToRemove),
     brutsLength: rawPhonesToRemove.length,
     normalisés: JSON.stringify(normalizedPhones),
     normalisésLength: normalizedPhones.length
   })
 
   if (fileExtension === 'csv' || fileExtension === 'tsv') {
-    // Détecter automatiquement le délimiteur avec analyse de confiance
-    const { delimiter, confidence } = await detectDelimiter(file);
-    
-    // Afficher un toast informatif pour l'utilisateur
-    if (typeof window !== 'undefined' && (window as any).toast) {
-      const delimiterName = delimiter === '\t' ? 'TAB' : delimiter === ';' ? 'point-virgule (;)' : 'virgule (,)';
-      (window as any).toast.info(`Délimiteur détecté: ${delimiterName}`, {
-        description: confidence > 70 ? 'Confiance élevée' : confidence > 30 ? 'Confiance moyenne' : 'Confiance faible - vérifiez le résultat'
-      });
-    }
-    
+    // 🔧 Parsing manuel direct pour garantir la compatibilité avec tous les délimiteurs
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const text = e.target?.result as string;
+          const textNoBom = stripBOM(text);
+          const lines = textNoBom.split(/\r?\n/).filter(line => line.trim());
+
+          if (lines.length === 0) {
+            reject(new Error('Fichier CSV vide'));
+            return;
+          }
+
+          // Fonction de split CSV safe (gère les guillemets)
+          function splitCSVLine(line: string, delimiter: string): string[] {
+            const out: string[] = [];
+            let cur = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+              const ch = line[i];
+              if (ch === '"') {
+                if (inQuotes && line[i + 1] === '"') {
+                  cur += '"';
+                  i++;
+                } else {
+                  inQuotes = !inQuotes;
+                }
+              } else if (ch === delimiter && !inQuotes) {
+                out.push(cur);
+                cur = '';
+              } else {
+                cur += ch;
+              }
+            }
+            out.push(cur);
+            return out;
+          }
+
+          // Détection robuste du délimiteur
+          const headerLine = lines[0];
+          const delimiter = detectDelimiterFromHeader(headerLine);
+          console.log('🔍 [CSV] Délimiteur détecté:', delimiter === '\t' ? 'TAB' : delimiter === ';' ? '; (point-virgule - CSV FR)' : ', (virgule)');
+
+          // Afficher un toast informatif
+          if (typeof window !== 'undefined' && (window as any).toast) {
+            const delimiterName = delimiter === '\t' ? 'TAB' : delimiter === ';' ? 'point-virgule (;)' : 'virgule (,)';
+            (window as any).toast.info(`Délimiteur: ${delimiterName}`, {
+              description: 'Import en cours...'
+            });
+          }
+
+          console.log('📄 [CSV] Lignes:', lines.length, '- Première ligne:', lines[0].substring(0, 100));
+
+          // Parser les en-têtes avec split CSV-safe
+          const originalHeaders = splitCSVLine(lines[0], delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
+          console.log('✅ [CSV] Colonnes détectées:', originalHeaders.length, '-', originalHeaders);
+
+          const contacts: Contact[] = [];
+
+          // Parser les données avec split CSV-safe
+          for (let i = 1; i < lines.length; i++) {
+            try {
+              const values = splitCSVLine(lines[i], delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
+              const contactData: Partial<Contact> = {
+                id: uuidv4(),
+                numeroLigne: i,
+              };
+
+              originalHeaders.forEach((originalHeader, index) => {
+                const normalized = headerMapping && headerMapping[originalHeader]
+                  ? (headerMapping[originalHeader] === 'no-mapping' ? null : headerMapping[originalHeader])
+                  : normalizeHeader(originalHeader);
+
+                if (normalized && values[index]) {
+                  (contactData as any)[normalized] = values[index];
+                }
+              });
+
+              // Format phone number
+              if (contactData.telephone) {
+                const normalizedPhone = normalizePhone(contactData.telephone);
+                if (normalizedPhone && phonesToExclude.has(normalizedPhone)) {
+                  continue;
+                }
+                contactData.telephone = formatPhoneNumber(contactData.telephone);
+              }
+
+              if (contactData.prenom || contactData.nom || contactData.telephone || contactData.email) {
+                contacts.push(contactData as Contact);
+              }
+            } catch (rowError) {
+              console.warn(`⚠️ Erreur ligne ${i}:`, rowError);
+            }
+          }
+
+          console.log(`✅ [CSV] Import terminé: ${contacts.length} contacts`);
+          resolve(contacts);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.onerror = () => reject(new Error('Erreur lecture fichier'));
+      reader.readAsText(file, 'UTF-8');
+    });
+
+    /* ANCIEN CODE PAPA PARSE - Remplacé par parsing manuel
     return new Promise((resolve, reject) => {
       const contacts: Contact[] = [];
       let rowIndex = 0;
@@ -782,6 +924,7 @@ export const importContactsFromFile = async (
         transformHeader: (header: string) => normalizeHeader(header.trim()),
       });
     });
+    */
   } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -789,9 +932,9 @@ export const importContactsFromFile = async (
         try {
           console.log(`📊 Lecture du fichier Excel en cours...`);
           const data = new Uint8Array(e.target?.result as ArrayBuffer);
-          
+
           // 🛡️ Options optimisées pour les gros fichiers
-          const workbook = XLSX.read(data, { 
+          const workbook = XLSX.read(data, {
             type: 'array',
             dense: fileSizeInMB > 10, // Mode dense pour les gros fichiers
             cellText: false, // Éviter la conversion automatique de texte
@@ -801,20 +944,20 @@ export const importContactsFromFile = async (
             cellDates: false, // Éviter la conversion de dates automatique
             sheetStubs: false // Ignorer les cellules vides
           });
-          
+
           const sheetName = workbook.SheetNames[0];
           const worksheet = workbook.Sheets[sheetName];
-          
+
           // 📄 Traitement Excel optimisé avec gestion progressive
           const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: "" });
-          
+
           if (jsonData.length === 0) {
             throw new Error('Le fichier Excel est vide');
           }
-          
+
           // 1. Extraire les en-têtes originaux de la première ligne
           let originalHeaders = (jsonData[0] as string[]).map(h => h ? h.toString().trim() : '');
-          
+
           // 🔍 Détection et correction automatique des fichiers Excel mal formatés
           // Si tous les en-têtes sont dans une seule cellule avec des délimiteurs
           if (originalHeaders.length === 1 && originalHeaders[0]) {
@@ -828,7 +971,7 @@ export const importContactsFromFile = async (
                   console.warn(`⚠️ Fichier Excel mal formaté détecté: tous les en-têtes dans une seule cellule`);
                   console.log(`🔧 Correction automatique avec délimiteur "${delimiter}": ${splitHeaders.length} colonnes détectées`);
                   originalHeaders = splitHeaders;
-                  
+
                   // Corriger aussi toutes les lignes de données
                   for (let i = 1; i < jsonData.length; i++) {
                     const row = jsonData[i] as any[];
@@ -836,7 +979,7 @@ export const importContactsFromFile = async (
                       jsonData[i] = row[0].split(delimiter).map((cell: string) => cell.trim());
                     }
                   }
-                  
+
                   if (typeof window !== 'undefined' && (window as any).toast) {
                     (window as any).toast.warning('Fichier Excel corrigé automatiquement', {
                       description: `Format CSV détecté dans une cellule unique. ${splitHeaders.length} colonnes extraites.`
@@ -847,7 +990,7 @@ export const importContactsFromFile = async (
               }
             }
           }
-          
+
           const normalizedHeaders = originalHeaders.map(h => {
             if (headerMapping && headerMapping[h]) {
               // Si la colonne est mappée à "no-mapping", on l'ignore
@@ -859,7 +1002,7 @@ export const importContactsFromFile = async (
             return normalizeHeader(h);
           });
           const contacts: Contact[] = [];
-          
+
           // 📊 Validation des en-têtes pour Excel (en filtrant les colonnes ignorées)
           const filteredHeaders = normalizedHeaders.filter(h => h !== null);
           const headerAnalysis = analyzeHeaders(filteredHeaders);
@@ -867,27 +1010,27 @@ export const importContactsFromFile = async (
           console.log('En-têtes détectés:', originalHeaders);
           console.log('Mappings:', headerAnalysis.mappings);
           console.log('Colonnes ignorées:', originalHeaders.filter((_, i) => normalizedHeaders[i] === null));
-          
+
           if (headerAnalysis.warnings.length > 0) {
             console.warn('⚠️ Avertissements:', headerAnalysis.warnings);
           }
-          
+
           // 🚀 Traitement optimisé par chunks avec gestion mémoire
           const chunkSize = fileSizeInMB > 20 ? 50 : fileSizeInMB > 10 ? 100 : 250; // Plus petits chunks pour gros fichiers
           const totalRows = jsonData.length - 1;
           let processedRows = 0;
-          
+
           console.log(`⚙️ Traitement par chunks de ${chunkSize} lignes...`);
-          
+
           for (let i = 1; i < jsonData.length; i += chunkSize) {
             const chunk = jsonData.slice(i, i + chunkSize);
             const chunkContacts: Contact[] = [];
-            
+
             for (let j = 0; j < chunk.length; j++) {
               try {
                 const row = chunk[j] as any[];
                 if (!row || row.length === 0) continue; // Ignorer les lignes vides
-                
+
                 const contactData: Partial<Contact> = {
                   id: uuidv4(),
                   numeroLigne: i + j,
@@ -903,7 +1046,7 @@ export const importContactsFromFile = async (
                     // Ignorer les colonnes marquées comme "no-mapping" (null)
                     if (normalizedField && row[index] !== undefined && row[index] !== null) {
                       let cellValue = row[index];
-                      
+
                       // Conversion spéciale pour les dates et heures Excel
                       if (normalizedField === 'dateRappel' || normalizedField === 'dateAppel' || normalizedField === 'dateRDV') {
                         cellValue = formatExcelDate(cellValue);
@@ -912,7 +1055,7 @@ export const importContactsFromFile = async (
                       } else {
                         cellValue = cellValue.toString().trim();
                       }
-                      
+
                       if (cellValue) {
                         (contactData as any)[normalizedField] = cellValue;
                       }
@@ -954,24 +1097,24 @@ export const importContactsFromFile = async (
                 // Continuer avec la ligne suivante
               }
             }
-            
+
             // Ajouter le chunk traité aux contacts globaux
             contacts.push(...chunkContacts);
             processedRows += chunk.length;
-            
+
             // 🔄 Pause progressive pour éviter le blocage de l'UI et la saturation mémoire
             const pauseDuration = fileSizeInMB > 20 ? 25 : fileSizeInMB > 10 ? 15 : 10;
             if (i % (chunkSize * 3) === 0) {
               console.log(`⏳ Progression: ${Math.round((processedRows / totalRows) * 100)}% (${contacts.length} contacts valides)`);
               await new Promise(resolve => setTimeout(resolve, pauseDuration));
-              
+
               // 🧹 Forcer le garbage collection si possible
               if ((window as any).gc) {
                 (window as any).gc();
               }
             }
           }
-          
+
           resolve(contacts);
         } catch (error) {
           reject(error);
@@ -989,25 +1132,25 @@ export const importContactsFromFile = async (
 export const exportContactsToFile = (contacts: Contact[], format: 'csv' | 'xlsx'): void => {
   try {
     console.log(`📤 Export de ${contacts.length} contacts au format ${format.toUpperCase()}`);
-    
+
     // Valider la configuration avant l'export
     if (!ExportColumnService.validateColumnConfiguration()) {
       throw new Error('Configuration des colonnes d\'export invalide');
     }
-    
+
     // Réorganiser les données selon le nouvel ordre
     const reorderedData = ExportColumnService.reorderDataForExport(contacts);
-    
+
     if (reorderedData.length === 0) {
       console.warn('Aucune donnée à exporter');
       return;
     }
-    
+
     // Obtenir les en-têtes dans le bon ordre
     const headers = ExportColumnService.getExportHeaders(contacts[0]);
-    
+
     // Convertir les objets réorganisés en tableaux pour Papa.unparse et XLSX
-    const data = reorderedData.map(row => 
+    const data = reorderedData.map(row =>
       headers.map(header => {
         const value = row[header];
         return value !== undefined ? value : '';
@@ -1023,7 +1166,7 @@ export const exportContactsToFile = (contacts: Contact[], format: 'csv' | 'xlsx'
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const seconds = String(now.getSeconds()).padStart(2, '0');
     const timestamp = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`;
-    
+
     if (format === 'csv') {
       const csvContent = Papa.unparse([headers, ...data]);
       const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1035,24 +1178,24 @@ export const exportContactsToFile = (contacts: Contact[], format: 'csv' | 'xlsx'
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       console.log(`✅ Export CSV réussi avec le nouvel ordre de colonnes: ${headers.length} colonnes`);
     } else if (format === 'xlsx') {
       const worksheet = XLSX.utils.aoa_to_sheet([headers, ...data]);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Contacts');
       XLSX.writeFile(workbook, `DimiCall_${timestamp}.xlsx`);
-      
+
       console.log(`✅ Export XLSX réussi avec le nouvel ordre de colonnes: ${headers.length} colonnes`);
     }
-    
+
     // Afficher les statistiques de l'export
     const stats = ExportColumnService.getConfigurationStats();
     console.log(`📊 Statistiques: ${stats.totalColumns} colonnes configurées (${stats.virtualColumns} virtuelles)`);
-    
+
   } catch (error) {
     console.error('❌ Erreur lors de l\'export:', error);
-    
+
     // Fallback vers l'ancien format en cas d'erreur
     console.log('🔄 Tentative de fallback vers l\'ancien format...');
     try {
@@ -1060,7 +1203,7 @@ export const exportContactsToFile = (contacts: Contact[], format: 'csv' | 'xlsx'
       console.log('✅ Fallback réussi avec l\'ancien format');
     } catch (fallbackError) {
       console.error('❌ Échec du fallback:', fallbackError);
-      throw new Error(`Export impossible: ${error.message}`);
+      throw new Error(`Export impossible: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 };
@@ -1101,7 +1244,7 @@ const exportContactsToFileLegacy = (contacts: Contact[], format: 'csv' | 'xlsx')
   const minutes = String(now.getMinutes()).padStart(2, '0');
   const seconds = String(now.getSeconds()).padStart(2, '0');
   const timestamp = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`;
-  
+
   if (format === 'csv') {
     const csvContent = Papa.unparse([headers, ...data]);
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1131,13 +1274,13 @@ export const generateGmailComposeUrl = (
   const contactLastName = contact.nom || '';
   const titre = civility === Civility.Madame ? "Madame" : "Monsieur";
   const params = new URLSearchParams({ to: emailTo });
-  
+
   // Charger les templates personnalisés
   const STORAGE_KEY = 'dimicall_email_templates';
   const MODE_STORAGE_KEY = 'dimicall-call-mode';
   let subject = "";
   let bodyTemplate = "";
-  
+
   // Templates par défaut
   const defaultTemplates = {
     [EmailType.PremierContact]: {
@@ -1161,7 +1304,7 @@ export const generateGmailComposeUrl = (
   // Essayer de charger les templates personnalisés
   let templates = defaultTemplates;
   let signature = signatureName || '';
-  
+
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -1297,7 +1440,7 @@ Suite à notre appel, je vous confirme {rdv} à {adresse}. Prévoir 30 minutes p
         const formattedDate = new Intl.DateTimeFormat('fr-FR', dateOptions).format(date);
         rdvDetails = `notre entretien du ${formattedDate} à ${contact.heureRDV}`;
       }
-    } catch {}
+    } catch { }
   }
 
   // Adresse par défaut si non fournie via remplacement manuel ultérieur
@@ -1320,24 +1463,24 @@ Suite à notre appel, je vous confirme {rdv} à {adresse}. Prévoir 30 minutes p
 // Fonction auxiliaire pour construire le champ Notes pour Google Contacts
 const buildNotesField = (contact: Contact): string => {
   const notes = [];
-  
+
   // Informations de base
   if (contact.numeroLigne) {
     notes.push(`Ligne: ${contact.numeroLigne}`);
   }
-  
+
   if (contact.source) {
     notes.push(`Source: ${contact.source}`);
   }
-  
+
   // Statut (toujours inclus)
   notes.push(`Statut: ${contact.statut}`);
-  
+
   // Commentaires
   if (contact.commentaire) {
     notes.push(`Commentaire: ${contact.commentaire}`);
   }
-  
+
   // Dates et heures de rappel
   if (contact.dateRappel) {
     const rappelInfo = [`Date rappel: ${contact.dateRappel}`];
@@ -1346,7 +1489,7 @@ const buildNotesField = (contact: Contact): string => {
     }
     notes.push(rappelInfo.join(' - '));
   }
-  
+
   // Dates et heures de RDV
   if (contact.dateRDV) {
     const rdvInfo = [`Date RDV: ${contact.dateRDV}`];
@@ -1355,7 +1498,7 @@ const buildNotesField = (contact: Contact): string => {
     }
     notes.push(rdvInfo.join(' - '));
   }
-  
+
   // Dates et heures d'appel
   if (contact.dateAppel) {
     const appelInfo = [`Date appel: ${contact.dateAppel}`];
@@ -1367,67 +1510,67 @@ const buildNotesField = (contact: Contact): string => {
     }
     notes.push(appelInfo.join(' - '));
   }
-  
+
   // Lien internet
   if (contact.lien) {
     notes.push(`Lien: ${contact.lien}`);
   }
-  
+
   // Informations personnelles supplémentaires
   if (contact.sexe) {
     notes.push(`Sexe: ${contact.sexe}`);
   }
-  
+
   if (contact.don) {
     notes.push(`Don: ${contact.don}`);
   }
-  
+
   if (contact.qualite) {
     notes.push(`Qualité: ${contact.qualite}`);
   }
-  
+
   if (contact.type) {
     notes.push(`Type: ${contact.type}`);
   }
-  
+
   if (contact.date) {
     notes.push(`Date générale: ${contact.date}`);
   }
-  
+
   // Informations utilisateur
   if (contact.utilisateur) {
     notes.push(`Utilisateur: ${contact.utilisateur}`);
   }
-  
+
   // Statuts spécialisés
   if (contact.statutAppel) {
     notes.push(`Statut appel: ${contact.statutAppel}`);
   }
-  
+
   if (contact.statutRDV) {
     notes.push(`Statut RDV: ${contact.statutRDV}`);
   }
-  
+
   if (contact.commentaireRDV) {
     notes.push(`Commentaire RDV: ${contact.commentaireRDV}`);
   }
-  
+
   // Identifiants techniques (optionnels, pour le debug)
   if (contact.uid) {
     notes.push(`UID: ${contact.uid}`);
   }
-  
+
   if (contact.uid_supabase) {
     notes.push(`UID Supabase: ${contact.uid_supabase}`);
   }
-  
+
   return notes.join(' | ');
 };
 
 // Export contacts to Google Contacts CSV format
 export const exportGoogleContactsCSV = (contacts: Contact[]): void => {
   // Filtrer les contacts par statut (À rappeler, D0, R0, A0)
-  const filteredContacts = contacts.filter(contact => 
+  const filteredContacts = contacts.filter(contact =>
     contact.statut === ContactStatus.ARappeler ||
     contact.statut === ContactStatus.D0 ||
     contact.statut === ContactStatus.R0 ||
@@ -1481,10 +1624,10 @@ export const exportGoogleContactsCSV = (contacts: Contact[]): void => {
   // Génération du CSV avec encodage UTF-8 BOM
   const csvContent = Papa.unparse(googleContactsData);
   const bom = '\uFEFF'; // UTF-8 BOM pour la compatibilité Google Contacts
-  const blob = new Blob([bom + csvContent], { 
-    type: 'text/csv;charset=utf-8;' 
+  const blob = new Blob([bom + csvContent], {
+    type: 'text/csv;charset=utf-8;'
   });
-  
+
   // Generate filename with format: google-contacts-export-YYYY-MM-DD-HH-MM-SS
   const now = new Date();
   const year = now.getFullYear();
@@ -1494,7 +1637,7 @@ export const exportGoogleContactsCSV = (contacts: Contact[]): void => {
   const minutes = String(now.getMinutes()).padStart(2, '0');
   const seconds = String(now.getSeconds()).padStart(2, '0');
   const timestamp = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`;
-  
+
   // Téléchargement du fichier
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
@@ -1510,9 +1653,9 @@ export const exportGoogleContactsCSV = (contacts: Contact[]): void => {
 /**
  * Sauvegarde de la table importée avec protection contre la saturation
  */
-export const saveImportedTable = (contacts: Contact[], metadata?: { 
-  fileName?: string; 
-  importDate?: string; 
+export const saveImportedTable = (contacts: Contact[], metadata?: {
+  fileName?: string;
+  importDate?: string;
   source?: 'csv' | 'xlsx' | 'supabase';
   totalRows?: number;
 }): void => {
@@ -1520,7 +1663,7 @@ export const saveImportedTable = (contacts: Contact[], metadata?: {
     // 🛡️ Protection contre les gros fichiers
     const maxContacts = 5000; // Limite à 5000 contacts pour éviter la saturation
     const limitedContacts = contacts.length > maxContacts ? contacts.slice(0, maxContacts) : contacts;
-    
+
     const dataToSave = {
       contacts: limitedContacts,
       metadata: {
@@ -1533,14 +1676,14 @@ export const saveImportedTable = (contacts: Contact[], metadata?: {
         version: '1.0'
       }
     };
-    
+
     // 🔍 Vérification de la taille avant sauvegarde
     const serialized = JSON.stringify(dataToSave);
     const sizeInMB = new Blob([serialized]).size / (1024 * 1024);
-    
+
     if (sizeInMB > 4) { // Limite à 4MB pour être sûr
       console.warn(`⚠️ Fichier trop volumineux (${sizeInMB.toFixed(1)}MB), sauvegarde des métadonnées uniquement`);
-      
+
       // Sauvegarde seulement les métadonnées pour les gros fichiers
       const metadataOnly = {
         contacts: [], // Tableau vide
@@ -1550,24 +1693,24 @@ export const saveImportedTable = (contacts: Contact[], metadata?: {
           reason: 'Fichier trop volumineux pour localStorage'
         }
       };
-      
+
       localStorage.setItem(IMPORTED_TABLE_KEY, JSON.stringify(metadataOnly));
       console.log(`💾 Métadonnées sauvegardées uniquement (fichier ${sizeInMB.toFixed(1)}MB trop volumineux)`);
       return;
     }
-    
+
     localStorage.setItem(IMPORTED_TABLE_KEY, JSON.stringify(dataToSave));
-    
+
     if (contacts.length > maxContacts) {
       console.log(`💾 Table importée sauvegardée: ${limitedContacts.length}/${contacts.length} contacts (tronqué pour économiser l'espace)`);
     } else {
       console.log(`💾 Table importée sauvegardée: ${contacts.length} contacts`);
     }
-    
+
   } catch (error) {
     if (error instanceof DOMException && error.name === 'QuotaExceededError') {
       console.error('❌ LocalStorage saturé ! Sauvegarde des métadonnées uniquement...');
-      
+
       // Tentative de sauvegarde des métadonnées uniquement
       try {
         const metadataOnly = {
@@ -1582,7 +1725,7 @@ export const saveImportedTable = (contacts: Contact[], metadata?: {
             version: '1.0'
           }
         };
-        
+
         // Nettoyer d'abord l'ancien contenu
         clearImportedTable();
         localStorage.setItem(IMPORTED_TABLE_KEY, JSON.stringify(metadataOnly));
@@ -1599,11 +1742,11 @@ export const saveImportedTable = (contacts: Contact[], metadata?: {
 /**
  * Chargement de la table importée sauvegardée avec gestion des métadonnées seules
  */
-export const loadImportedTable = (): { 
-  contacts: Contact[]; 
-  metadata?: { 
-    fileName: string; 
-    importDate: string; 
+export const loadImportedTable = (): {
+  contacts: Contact[];
+  metadata?: {
+    fileName: string;
+    importDate: string;
     source: 'csv' | 'xlsx' | 'supabase';
     totalRows: number;
     version: string;
@@ -1611,21 +1754,21 @@ export const loadImportedTable = (): {
     truncatedFrom?: number;
     metadataOnly?: boolean;
     reason?: string;
-  } 
+  }
 } | null => {
   try {
     const saved = localStorage.getItem(IMPORTED_TABLE_KEY);
     if (!saved) return null;
-    
+
     const parsed = JSON.parse(saved);
-    
+
     // Validation basique des données
     if (!parsed.contacts || !Array.isArray(parsed.contacts)) {
       console.warn('⚠️ Format de table importée invalide, suppression...');
       clearImportedTable();
       return null;
     }
-    
+
     // 📊 Gestion des différents cas de sauvegarde
     if (parsed.metadata?.metadataOnly) {
       console.log(`📂 Métadonnées chargées (${parsed.metadata.totalRows} contacts originaux - ${parsed.metadata.reason})`);
@@ -1634,7 +1777,7 @@ export const loadImportedTable = (): {
     } else {
       console.log(`📂 Table importée chargée: ${parsed.contacts.length} contacts (${parsed.metadata?.fileName || 'Sans nom'})`);
     }
-    
+
     return parsed;
   } catch (error) {
     console.error('❌ Erreur lors du chargement de la table importée:', error);
@@ -1677,16 +1820,16 @@ export const optimizeMemoryUsage = (): void => {
       (window as any).gc();
       console.log('🧹 Garbage collection forcé');
     }
-    
+
     // 📊 Afficher les informations mémoire si disponible
     if ((performance as any).memory) {
       const memory = (performance as any).memory;
       const used = Math.round(memory.usedJSHeapSize / 1048576);
       const total = Math.round(memory.totalJSHeapSize / 1048576);
       const limit = Math.round(memory.jsHeapSizeLimit / 1048576);
-      
+
       console.log(`💾 Mémoire: ${used}MB utilisés / ${total}MB total (limite: ${limit}MB)`);
-      
+
       // ⚠️ Avertissement si proche de la limite
       if (used / limit > 0.8) {
         console.warn(`⚠️ Utilisation mémoire élevée: ${Math.round((used / limit) * 100)}%`);
@@ -1709,13 +1852,13 @@ export const checkStorageQuota = (): { available: boolean; usedMB: number; perce
         totalSize += localStorage[key].length + key.length;
       }
     }
-    
+
     const usedMB = totalSize / (1024 * 1024);
     const estimatedLimit = 10; // ~10MB limite typique
     const percentage = (usedMB / estimatedLimit) * 100;
-    
+
     console.log(`💽 LocalStorage: ${usedMB.toFixed(1)}MB utilisés (~${percentage.toFixed(0)}%)`);
-    
+
     return {
       available: percentage < 80, // Considérer comme disponible si moins de 80%
       usedMB: usedMB,
@@ -1730,9 +1873,9 @@ export const checkStorageQuota = (): { available: boolean; usedMB: number; perce
 /**
  * Obtenir les métadonnées de la table importée sans charger les données
  */
-export const getImportedTableMetadata = (): { 
-  fileName: string; 
-  importDate: string; 
+export const getImportedTableMetadata = (): {
+  fileName: string;
+  importDate: string;
   source: 'csv' | 'xlsx' | 'supabase';
   totalRows: number;
   version: string;
@@ -1740,7 +1883,7 @@ export const getImportedTableMetadata = (): {
   try {
     const saved = localStorage.getItem(IMPORTED_TABLE_KEY);
     if (!saved) return null;
-    
+
     const parsed = JSON.parse(saved);
     return parsed.metadata || null;
   } catch {
@@ -1757,7 +1900,7 @@ export const formatDateForGoogleCalendar = (dateStr: string): string => {
   if (!dateStr || dateStr.trim() === '') {
     throw new Error('Date invalide pour le formatage Google Calendar');
   }
-  
+
   // Détection du format: si contient '-', c'est YYYY-MM-DD, sinon c'est DD/MM/YYYY
   if (dateStr.includes('-')) {
     // Format YYYY-MM-DD
@@ -1785,22 +1928,22 @@ export const formatTimeForGoogleCalendar = (timeStr: string): string => {
   if (!timeStr || timeStr.trim() === '') {
     return '';
   }
-  
+
   const [hours, minutes] = timeStr.split(':');
   if (!hours || !minutes) {
     throw new Error(`Format d'heure invalide: ${timeStr}. Attendu: HH:mm`);
   }
-  
+
   const hour24 = parseInt(hours, 10);
   const mins = parseInt(minutes, 10);
-  
+
   if (isNaN(hour24) || isNaN(mins) || hour24 < 0 || hour24 > 23 || mins < 0 || mins > 59) {
     throw new Error(`Heure invalide: ${timeStr}`);
   }
-  
+
   const hour12 = hour24 === 0 ? 12 : hour24 > 12 ? hour24 - 12 : hour24;
   const ampm = hour24 >= 12 ? 'PM' : 'AM';
-  
+
   return `${hour12}:${minutes.padStart(2, '0')} ${ampm}`;
 };
 
@@ -1811,12 +1954,12 @@ export const calculateEndTime = (startTime: string): string => {
   if (!startTime || startTime.trim() === '') {
     return '';
   }
-  
+
   const [hours, minutes] = startTime.split(':');
   if (!hours || !minutes) {
     throw new Error(`Format d'heure invalide: ${startTime}. Attendu: HH:mm`);
   }
-  
+
   // Retourner la même heure (créneau de 0 minutes)
   return formatTimeForGoogleCalendar(startTime);
 };
@@ -1826,13 +1969,13 @@ export const calculateEndTime = (startTime: string): string => {
  */
 export const buildReminderDescription = (contact: Contact): string => {
   const details = [];
-  
+
   if (contact.telephone) details.push(`Téléphone: ${contact.telephone}`);
   if (contact.email) details.push(`Email: ${contact.email}`);
   if (contact.statut) details.push(`Statut: ${contact.statut}`);
   if (contact.source) details.push(`Source: ${contact.source}`);
   if (contact.commentaire) details.push(`Commentaire: ${contact.commentaire}`);
-  
+
   return details.join('\n');
 };
 
@@ -1843,7 +1986,7 @@ export const buildReminderDescription = (contact: Contact): string => {
  */
 export const exportGoogleCalendarCSV = (contacts: Contact[]): void => {
   // Filtrer les contacts ayant des dates de rappel définies
-  const contactsWithReminders = contacts.filter(contact => 
+  const contactsWithReminders = contacts.filter(contact =>
     contact.dateRappel && contact.dateRappel.trim() !== ''
   );
 
@@ -1879,10 +2022,10 @@ export const exportGoogleCalendarCSV = (contacts: Contact[]): void => {
   // Génération du CSV avec encodage UTF-8 BOM
   const csvContent = Papa.unparse(calendarEvents);
   const bom = '\uFEFF'; // UTF-8 BOM pour la compatibilité Google Calendar
-  const blob = new Blob([bom + csvContent], { 
-    type: 'text/csv;charset=utf-8;' 
+  const blob = new Blob([bom + csvContent], {
+    type: 'text/csv;charset=utf-8;'
   });
-  
+
   // Generate filename with format: google-calendar-export-YYYY-MM-DD-HH-MM-SS
   const now = new Date();
   const year = now.getFullYear();
@@ -1893,7 +2036,7 @@ export const exportGoogleCalendarCSV = (contacts: Contact[]): void => {
   const seconds = String(now.getSeconds()).padStart(2, '0');
   const timestamp = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`;
   const filename = `google-calendar-export-${timestamp}.csv`;
-  
+
   // Téléchargement automatique du fichier
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
@@ -1903,7 +2046,7 @@ export const exportGoogleCalendarCSV = (contacts: Contact[]): void => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  
+
   // Nettoyer l'URL pour libérer la mémoire
   URL.revokeObjectURL(url);
 };
@@ -1943,21 +2086,21 @@ export const reorderContactColumns = (contact: Contact): Contact => {
   ];
 
   const reordered: any = {};
-  
+
   // D'abord, ajouter les colonnes dans l'ordre spécifié
   columnOrder.forEach(key => {
     if (key in contact) {
       reordered[key] = (contact as any)[key];
     }
   });
-  
+
   // Ensuite, ajouter les colonnes restantes qui ne sont pas dans l'ordre spécifié
   Object.keys(contact).forEach(key => {
     if (!columnOrder.includes(key) && !(key in reordered)) {
       reordered[key] = (contact as any)[key];
     }
   });
-  
+
   return reordered as Contact;
 };
 

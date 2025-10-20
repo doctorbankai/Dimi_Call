@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Import CSV Point-Virgule</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test Import CSV avec Point-Virgule</h1>
+    
+    <div class="test-section">
+        <h2>📁 Sélectionner un fichier CSV</h2>
+        <input type="file" id="fileInput" accept=".csv,.tsv">
+        <button onclick="testImport()">Tester l'import</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        // Fonction de détection du délimiteur (copie de dataService.ts)
+        async function detectDelimiter(file) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const text = e.target.result;
+                    const lines = text.split('\n').slice(0, 3).filter(line => line.trim());
+                    
+                    if (lines.length === 0) {
+                        resolve({ delimiter: ',', confidence: 0 });
+                        return;
+                    }
+                    
+                    const delimiters = [
+                        { char: '\t', name: 'TAB', counts: [] },
+                        { char: ';', name: 'point-virgule', counts: [] },
+                        { char: ',', name: 'virgule', counts: [] }
+                    ];
+                    
+                    lines.forEach(line => {
+                        const withoutQuoted = line.replace(/"[^"]*"/g, '');
+                        delimiters.forEach(d => {
+                            const count = (withoutQuoted.match(new RegExp(d.char === '\t' ? '\t' : `\\${d.char}`, 'g')) || []).length;
+                            d.counts.push(count);
+                        });
+                    });
+                    
+                    const scores = delimiters.map(d => {
+                        const avg = d.counts.reduce((a, b) => a + b, 0) / d.counts.length;
+                        const variance = d.counts.reduce((sum, count) => sum + Math.pow(count - avg, 2), 0) / d.counts.length;
+                        const score = avg / (Math.sqrt(variance) + 1);
+                        
+                        return {
+                            delimiter: d.char,
+                            name: d.name,
+                            avgCount: avg,
+                            variance: variance,
+                            score: score
+                        };
+                    });
+                    
+                    scores.sort((a, b) => b.score - a.score);
+                    const best = scores[0];
+                    const confidence = Math.min(100, Math.round((best.score / (scores[1]?.score || 1)) * 50));
+                    
+                    resolve({ delimiter: best.delimiter, confidence, name: best.name });
+                };
+                reader.readAsText(file.slice(0, 2048), 'UTF-8');
+            });
+        }
+
+        // Import manuel si Papa Parse échoue
+        function manualParse(file, delimiter) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const text = e.target.result;
+                    const lines = text.split(/\r?\n/).filter(line => line.trim());
+                    
+                    if (lines.length === 0) {
+                        reject(new Error('Fichier vide'));
+                        return;
+                    }
+                    
+                    const headers = lines[0].split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
+                    const data = [];
+                    
+                    for (let i = 1; i < lines.length; i++) {
+                        const values = lines[i].split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''));
+                        const row = {};
+                        headers.forEach((header, index) => {
+                            row[header] = values[index] || '';
+                        });
+                        data.push(row);
+                    }
+                    
+                    resolve({ data, headers });
+                };
+                reader.onerror = () => reject(new Error('Erreur lecture'));
+                reader.readAsText(file, 'UTF-8');
+            });
+        }
+
+        async function testImport() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Veuillez sélectionner un fichier');
+                return;
+            }
+            
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = '<p>⏳ Traitement en cours...</p>';
+            
+            try {
+                // Étape 1: Détection du délimiteur
+                const { delimiter, confidence, name } = await detectDelimiter(file);
+                
+                let html = `<div class="test-section ${confidence > 50 ? 'success' : 'warning'}">`;
+                html += `<h3>✅ Étape 1: Détection du délimiteur</h3>`;
+                html += `<p><strong>Délimiteur détecté:</strong> ${name} (${delimiter === '\t' ? 'TAB' : delimiter})</p>`;
+                html += `<p><strong>Confiance:</strong> ${confidence}%</p>`;
+                html += `</div>`;
+                
+                // Étape 2: Tentative avec Papa Parse
+                html += `<div class="test-section">`;
+                html += `<h3>🔄 Étape 2: Parsing avec Papa Parse</h3>`;
+                
+                Papa.parse(file, {
+                    header: true,
+                    delimiter: delimiter,
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        const fields = results.meta.fields;
+                        
+                        // Vérifier si le parsing a échoué (une seule colonne avec délimiteur)
+                        if (fields.length === 1 && fields[0].includes(delimiter)) {
+                            html += `<p class="error">❌ Papa Parse a échoué: délimiteur non reconnu</p>`;
+                            html += `<p>Colonne unique détectée: "${fields[0]}"</p>`;
+                            html += `</div>`;
+                            
+                            // Étape 3: Parsing manuel
+                            html += `<div class="test-section">`;
+                            html += `<h3>🔧 Étape 3: Parsing manuel</h3>`;
+                            
+                            manualParse(file, delimiter).then(result => {
+                                html += `<p class="success">✅ Parsing manuel réussi!</p>`;
+                                html += `<p><strong>Colonnes détectées:</strong> ${result.headers.length}</p>`;
+                                html += `<p><strong>Lignes de données:</strong> ${result.data.length}</p>`;
+                                html += `<h4>En-têtes:</h4>`;
+                                html += `<pre>${JSON.stringify(result.headers, null, 2)}</pre>`;
+                                html += `<h4>Aperçu des données (5 premières lignes):</h4>`;
+                                html += `<table><thead><tr>`;
+                                result.headers.forEach(h => html += `<th>${h}</th>`);
+                                html += `</tr></thead><tbody>`;
+                                result.data.slice(0, 5).forEach(row => {
+                                    html += `<tr>`;
+                                    result.headers.forEach(h => html += `<td>${row[h] || ''}</td>`);
+                                    html += `</tr>`;
+                                });
+                                html += `</tbody></table>`;
+                                html += `</div>`;
+                                resultsDiv.innerHTML = html;
+                            });
+                        } else {
+                            html += `<p class="success">✅ Papa Parse a réussi!</p>`;
+                            html += `<p><strong>Colonnes détectées:</strong> ${fields.length}</p>`;
+                            html += `<p><strong>Lignes de données:</strong> ${results.data.length}</p>`;
+                            html += `<h4>En-têtes:</h4>`;
+                            html += `<pre>${JSON.stringify(fields, null, 2)}</pre>`;
+                            html += `<h4>Aperçu des données (5 premières lignes):</h4>`;
+                            html += `<table><thead><tr>`;
+                            fields.forEach(h => html += `<th>${h}</th>`);
+                            html += `</tr></thead><tbody>`;
+                            results.data.slice(0, 5).forEach(row => {
+                                html += `<tr>`;
+                                fields.forEach(h => html += `<td>${row[h] || ''}</td>`);
+                                html += `</tr>`;
+                            });
+                            html += `</tbody></table>`;
+                            html += `</div>`;
+                            resultsDiv.innerHTML = html;
+                        }
+                    },
+                    error: function(error) {
+                        html += `<p class="error">❌ Erreur Papa Parse: ${error.message}</p>`;
+                        html += `</div>`;
+                        resultsDiv.innerHTML = html;
+                    }
+                });
+                
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="test-section error">
+                    <h3>❌ Erreur</h3>
+                    <p>${error.message}</p>
+                </div>`;
+            }
+        }
+    </script>
+</body>
+</html>
