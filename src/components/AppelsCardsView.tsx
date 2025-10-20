@@ -110,7 +110,7 @@ type AppelsCardsViewProps = {
   onRendezVous: () => void
   onCalCom: () => void
   onQualification: () => void
-  onLinkedInSearch: () => void
+  onLinkedInSearch: (mode?: 'name' | 'name-type') => void
   onGoogleSearch: () => void
   onDirectLink: () => void
   onExport: () => void
@@ -1394,8 +1394,23 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
               </div>
               <div className="border-b bg-card/70 px-6 py-2.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="outline" size="sm" className="h-8 gap-1.5 px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2]" onClick={onLinkedInSearch}>
-                    <Linkedin className="h-4 w-4" /> LinkedIn
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 gap-1.5 px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2]"
+                    onClick={() => onLinkedInSearch('name')}
+                  >
+                    <Linkedin className="h-4 w-4" /> 
+                    <span>LinkedIn</span>
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-8 gap-1.5 px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2]"
+                    onClick={() => onLinkedInSearch('name-type')}
+                  >
+                    <Linkedin className="h-4 w-4" /> 
+                    <span>LinkedIn+</span>
                   </Button>
                   <Button variant="outline" size="sm" className="h-8 gap-1.5 px-3 bg-[#4285F4] hover:bg-[#357AE8] text-white border-[#4285F4]" onClick={onGoogleSearch}>
                     <Globe className="h-4 w-4" /> Google
@@ -1954,27 +1969,38 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                     {/* Groupe 2: Boutons de recherche manuelle LinkedIn/Google/Lien */}
                     <div className="flex items-center gap-2 flex-wrap shrink-0">
                       <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={onLinkedInSearch}
-                          disabled={!selectedContactId}
-                          className="h-8 gap-1.5 px-2 sm:px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2] shrink-0"
-                          title="Rechercher sur LinkedIn"
-                        >
-                          <Linkedin className="h-4 w-4" />
-                          <span className="hidden sm:inline">LinkedIn</span>
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={onGoogleSearch}
-                          disabled={!selectedContactId}
-                          className="h-8 gap-1.5 px-2 sm:px-3 bg-[#4285F4] hover:bg-[#357AE8] text-white border-[#4285F4] shrink-0"
-                          title="Rechercher sur Google"
-                        >
-                          <Globe className="h-4 w-4" />
-                          <span className="hidden sm:inline">Google</span>
-                        </Button>
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onLinkedInSearch('name')}
+                        disabled={!selectedContactId}
+                        className="h-8 gap-1.5 px-2 sm:px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2] shrink-0"
+                        title="Rechercher sur LinkedIn (Prénom + Nom)"
+                      >
+                        <Linkedin className="h-4 w-4" />
+                        <span className="hidden sm:inline">LinkedIn</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onLinkedInSearch('name-type')}
+                        disabled={!selectedContactId}
+                        className="h-8 gap-1.5 px-2 sm:px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2] shrink-0"
+                        title="Rechercher sur LinkedIn (Prénom + Nom + Type)"
+                      >
+                        <Linkedin className="h-4 w-4" />
+                        <span className="hidden sm:inline">LinkedIn+</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onGoogleSearch}
+                        disabled={!selectedContactId}
+                        className="h-8 gap-1.5 px-2 sm:px-3 bg-[#4285F4] hover:bg-[#357AE8] text-white border-[#4285F4] shrink-0"
+                        title="Rechercher sur Google"
+                      >
+                        <Globe className="h-4 w-4" />
+                        <span className="hidden sm:inline">Google</span>
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"

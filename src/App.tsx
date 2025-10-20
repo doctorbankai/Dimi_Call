@@ -1513,8 +1513,21 @@ Dimitri MOREL - Arcanis Conseil`;
   }, [exportOptions, contacts, googleContactsCount, calendarRemindersCount, showNotification]);
 
   // Handlers pour les recherches LinkedIn et Google
-  const handleLinkedInSearch = useCallback((contact?: Contact) => {
-    const targetContact = contact || selectedContact;
+  const handleLinkedInSearch = useCallback((modeOrContact?: 'name' | 'name-type' | Contact, contact?: Contact) => {
+    // Déterminer si le premier paramètre est un mode ou un contact
+    let mode: 'name' | 'name-type' | undefined;
+    let targetContact: Contact | null;
+
+    if (typeof modeOrContact === 'object' && modeOrContact !== null) {
+      // Premier paramètre est un contact (ancien comportement)
+      targetContact = modeOrContact;
+      mode = undefined;
+    } else {
+      // Premier paramètre est un mode (nouveau comportement)
+      mode = modeOrContact as 'name' | 'name-type' | undefined;
+      targetContact = contact || selectedContact;
+    }
+
     if (!targetContact) {
       showNotification('error', 'Veuillez sélectionner un contact');
       return;
@@ -1525,7 +1538,18 @@ Dimitri MOREL - Arcanis Conseil`;
     const type = (targetContact as any).type || '';
     const source = targetContact.source || '';
 
-    searchLinkedIn(prenom, nom, type, source);
+    // Si mode est spécifié, utiliser ce mode, sinon utiliser le mode complet par défaut
+    if (mode === 'name') {
+      // Mode simple: Prénom + Nom uniquement
+      searchLinkedIn(prenom, nom);
+    } else if (mode === 'name-type') {
+      // Mode intermédiaire: Prénom + Nom + Type (ou Source si Type vide)
+      const typeOrSource = type || source;
+      searchLinkedIn(prenom, nom, typeOrSource);
+    } else {
+      // Mode complet par défaut: Prénom + Nom + Type + Source
+      searchLinkedIn(prenom, nom, type, source);
+    }
   }, [selectedContact, showNotification]);
 
   const handleGoogleSearch = useCallback((contact?: Contact) => {
@@ -3337,7 +3361,7 @@ Dimitri MOREL - Arcanis Conseil`;
                     onRendezVous={() => selectedContact && setIsRendezVousDialogOpen(true)}
                     onCalCom={() => handleCalendarClick()}
                     onQualification={() => selectedContact && setIsQualificationDialogOpen(true)}
-                    onLinkedInSearch={() => handleLinkedInSearch()}
+                    onLinkedInSearch={(mode) => handleLinkedInSearch(mode)}
                     onGoogleSearch={() => handleGoogleSearch()}
                     onDirectLink={() => handleDirectLink()}
                     onExport={() => handleUnifiedExport()}
