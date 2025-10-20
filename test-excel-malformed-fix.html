@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test - Correction Excel Mal Formaté</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .test-case {
+            background: #ecf0f1;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+        .test-case.success {
+            border-left-color: #27ae60;
+            background: #d5f4e6;
+        }
+        .test-case.error {
+            border-left-color: #e74c3c;
+            background: #fadbd8;
+        }
+        .input {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .output {
+            background: #34495e;
+            color: #2ecc71;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .log.warn {
+            background: #fff3cd;
+            border-color: #ffc107;
+        }
+        .log.success {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background: #3498db;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background: #f2f2f2;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Test - Correction Automatique Excel Mal Formaté</h1>
+        
+        <p>Ce test simule la logique de détection et correction des fichiers Excel où toutes les colonnes sont dans une seule cellule.</p>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Tests Exécutés</div>
+                <div class="stat-value" id="totalTests">0</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                <div class="stat-label">Tests Réussis</div>
+                <div class="stat-value" id="passedTests">0</div>
+            </div>
+            <div class="stat-card" style="background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);">
+                <div class="stat-label">Tests Échoués</div>
+                <div class="stat-value" id="failedTests">0</div>
+            </div>
+        </div>
+
+        <button onclick="runAllTests()">▶️ Exécuter Tous les Tests</button>
+        <button onclick="clearResults()">🗑️ Effacer les Résultats</button>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        let totalTests = 0;
+        let passedTests = 0;
+        let failedTests = 0;
+
+        // Fonction de correction (copie de la logique du code)
+        function detectAndFixMalformedExcel(jsonData) {
+            const logs = [];
+            let originalHeaders = jsonData[0].map(h => h ? h.toString().trim() : '');
+            
+            logs.push({ type: 'info', message: `📊 En-têtes originaux: ${originalHeaders.length} colonne(s)` });
+            logs.push({ type: 'info', message: `📝 Contenu: "${originalHeaders[0]}"` });
+            
+            // Détection et correction
+            if (originalHeaders.length === 1 && originalHeaders[0]) {
+                const singleHeader = originalHeaders[0];
+                const delimiters = [';', '\t', ','];
+                
+                for (const delimiter of delimiters) {
+                    if (singleHeader.includes(delimiter)) {
+                        const splitHeaders = singleHeader.split(delimiter).map(h => h.trim());
+                        
+                        if (splitHeaders.length > 1) {
+                            logs.push({ 
+                                type: 'warn', 
+                                message: `⚠️ Fichier Excel mal formaté détecté: tous les en-têtes dans une seule cellule` 
+                            });
+                            logs.push({ 
+                                type: 'success', 
+                                message: `🔧 Correction automatique avec délimiteur "${delimiter}": ${splitHeaders.length} colonnes détectées` 
+                            });
+                            
+                            originalHeaders = splitHeaders;
+                            
+                            // Corriger toutes les lignes de données
+                            for (let i = 1; i < jsonData.length; i++) {
+                                const row = jsonData[i];
+                                if (row.length === 1 && row[0] && typeof row[0] === 'string' && row[0].includes(delimiter)) {
+                                    jsonData[i] = row[0].split(delimiter).map(cell => cell.trim());
+                                }
+                            }
+                            
+                            logs.push({ 
+                                type: 'success', 
+                                message: `✅ ${jsonData.length - 1} ligne(s) de données corrigées` 
+                            });
+                            
+                            break;
+                        }
+                    }
+                }
+            } else {
+                logs.push({ type: 'success', message: '✅ Fichier correctement formaté, aucune correction nécessaire' });
+            }
+            
+            return { headers: originalHeaders, data: jsonData, logs };
+        }
+
+        // Tests
+        function runTest(name, input, expectedColumns, shouldFix) {
+            totalTests++;
+            
+            const result = detectAndFixMalformedExcel(JSON.parse(JSON.stringify(input)));
+            const success = result.headers.length === expectedColumns;
+            
+            if (success) {
+                passedTests++;
+            } else {
+                failedTests++;
+            }
+            
+            updateStats();
+            
+            const testDiv = document.createElement('div');
+            testDiv.className = `test-case ${success ? 'success' : 'error'}`;
+            testDiv.innerHTML = `
+                <h3>${success ? '✅' : '❌'} Test ${totalTests}: ${name}</h3>
+                
+                <h4>📥 Entrée (${input.length} lignes, ${input[0].length} colonne(s)):</h4>
+                <div class="input">${JSON.stringify(input, null, 2)}</div>
+                
+                <h4>📤 Sortie (${result.data.length} lignes, ${result.headers.length} colonne(s)):</h4>
+                <div class="output">Headers: ${JSON.stringify(result.headers)}</div>
+                
+                <h4>📋 Logs:</h4>
+                ${result.logs.map(log => `<div class="log ${log.type}">${log.message}</div>`).join('')}
+                
+                <h4>📊 Résultat:</h4>
+                <table>
+                    <tr>
+                        <th>Critère</th>
+                        <th>Attendu</th>
+                        <th>Obtenu</th>
+                        <th>Statut</th>
+                    </tr>
+                    <tr>
+                        <td>Nombre de colonnes</td>
+                        <td>${expectedColumns}</td>
+                        <td>${result.headers.length}</td>
+                        <td>${result.headers.length === expectedColumns ? '✅' : '❌'}</td>
+                    </tr>
+                    <tr>
+                        <td>Correction appliquée</td>
+                        <td>${shouldFix ? 'Oui' : 'Non'}</td>
+                        <td>${result.logs.some(l => l.message.includes('Correction automatique')) ? 'Oui' : 'Non'}</td>
+                        <td>${(result.logs.some(l => l.message.includes('Correction automatique')) === shouldFix) ? '✅' : '❌'}</td>
+                    </tr>
+                </table>
+                
+                ${result.headers.length > 1 ? `
+                    <h4>📋 Aperçu des données:</h4>
+                    <table>
+                        <tr>${result.headers.map(h => `<th>${h}</th>`).join('')}</tr>
+                        ${result.data.slice(1, 4).map(row => 
+                            `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`
+                        ).join('')}
+                    </table>
+                ` : ''}
+            `;
+            
+            document.getElementById('results').appendChild(testDiv);
+        }
+
+        function runAllTests() {
+            clearResults();
+            
+            // Test 1: Fichier mal formaté avec point-virgule
+            runTest(
+                'Fichier mal formaté - Point-virgule',
+                [
+                    ['Date Rappel;Heure Rappel;Sexe;Prénom;Nom;Numéro;Mail'],
+                    ['06/10/2025;8:00 AM;M;Jean;Dupont;0601020304;jean@test.fr'],
+                    ['07/10/2025;9:00 AM;F;Marie;Martin;0602030405;marie@test.fr']
+                ],
+                7,
+                true
+            );
+            
+            // Test 2: Fichier mal formaté avec virgule
+            runTest(
+                'Fichier mal formaté - Virgule',
+                [
+                    ['First Name,Last Name,Email,Phone'],
+                    ['John,Doe,john@test.com,1234567890'],
+                    ['Jane,Smith,jane@test.com,0987654321']
+                ],
+                4,
+                true
+            );
+            
+            // Test 3: Fichier mal formaté avec tabulation
+            runTest(
+                'Fichier mal formaté - Tabulation',
+                [
+                    ['Prénom\tNom\tTéléphone'],
+                    ['Pierre\tDurand\t0601020304'],
+                    ['Sophie\tBernard\t0602030405']
+                ],
+                3,
+                true
+            );
+            
+            // Test 4: Fichier correctement formaté
+            runTest(
+                'Fichier correctement formaté',
+                [
+                    ['Prénom', 'Nom', 'Téléphone', 'Email'],
+                    ['Jean', 'Dupont', '0601020304', 'jean@test.fr'],
+                    ['Marie', 'Martin', '0602030405', 'marie@test.fr']
+                ],
+                4,
+                false
+            );
+            
+            // Test 5: Fichier avec beaucoup de colonnes
+            runTest(
+                'Fichier mal formaté - Nombreuses colonnes',
+                [
+                    ['Date Rappel;Heure Rappel;Sexe;Prénom;Nom;Numéro;Mail;Source;Type;Qualité;Lien;Commentaire'],
+                    ['06/10/2025;8:00 AM;M;Jean;Dupont;0601020304;jean@test.fr;Web;Client;A;http://test.fr;Bon contact']
+                ],
+                12,
+                true
+            );
+            
+            // Test 6: Fichier vide
+            runTest(
+                'Fichier avec en-tête vide',
+                [
+                    [''],
+                    ['']
+                ],
+                1,
+                false
+            );
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            totalTests = 0;
+            passedTests = 0;
+            failedTests = 0;
+            updateStats();
+        }
+
+        function updateStats() {
+            document.getElementById('totalTests').textContent = totalTests;
+            document.getElementById('passedTests').textContent = passedTests;
+            document.getElementById('failedTests').textContent = failedTests;
+        }
+
+        // Exécuter les tests au chargement
+        window.onload = () => {
+            console.log('🧪 Page de test chargée. Cliquez sur "Exécuter Tous les Tests" pour commencer.');
+        };
+    </script>
+</body>
+</html>

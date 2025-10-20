@@ -813,7 +813,41 @@ export const importContactsFromFile = async (
           }
           
           // 1. Extraire les en-têtes originaux de la première ligne
-          const originalHeaders = (jsonData[0] as string[]).map(h => h ? h.toString().trim() : '');
+          let originalHeaders = (jsonData[0] as string[]).map(h => h ? h.toString().trim() : '');
+          
+          // 🔍 Détection et correction automatique des fichiers Excel mal formatés
+          // Si tous les en-têtes sont dans une seule cellule avec des délimiteurs
+          if (originalHeaders.length === 1 && originalHeaders[0]) {
+            const singleHeader = originalHeaders[0];
+            // Détecter si c'est un CSV collé dans une cellule Excel
+            const delimiters = [';', '\t', ','];
+            for (const delimiter of delimiters) {
+              if (singleHeader.includes(delimiter)) {
+                const splitHeaders = singleHeader.split(delimiter).map(h => h.trim());
+                if (splitHeaders.length > 1) {
+                  console.warn(`⚠️ Fichier Excel mal formaté détecté: tous les en-têtes dans une seule cellule`);
+                  console.log(`🔧 Correction automatique avec délimiteur "${delimiter}": ${splitHeaders.length} colonnes détectées`);
+                  originalHeaders = splitHeaders;
+                  
+                  // Corriger aussi toutes les lignes de données
+                  for (let i = 1; i < jsonData.length; i++) {
+                    const row = jsonData[i] as any[];
+                    if (row.length === 1 && row[0] && typeof row[0] === 'string' && row[0].includes(delimiter)) {
+                      jsonData[i] = row[0].split(delimiter).map((cell: string) => cell.trim());
+                    }
+                  }
+                  
+                  if (typeof window !== 'undefined' && (window as any).toast) {
+                    (window as any).toast.warning('Fichier Excel corrigé automatiquement', {
+                      description: `Format CSV détecté dans une cellule unique. ${splitHeaders.length} colonnes extraites.`
+                    });
+                  }
+                  break;
+                }
+              }
+            }
+          }
+          
           const normalizedHeaders = originalHeaders.map(h => {
             if (headerMapping && headerMapping[h]) {
               // Si la colonne est mappée à "no-mapping", on l'ignore
