@@ -268,7 +268,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
       };
 
       if (file.name.endsWith('.csv') || file.name.endsWith('.tsv')) {
-        reader.readAsText(file);
+        reader.readAsText(file, 'UTF-8'); // Encodage explicite pour Electron
       } else {
         reader.readAsBinaryString(file);
       }

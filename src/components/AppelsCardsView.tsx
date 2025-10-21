@@ -583,16 +583,55 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
           const extension = file.name.substring(file.name.lastIndexOf('.')).toLowerCase()
 
           if (extension === '.csv' || extension === '.tsv') {
-            // Parse CSV/TSV
+            // Parse CSV/TSV avec détection automatique du délimiteur
             const text = data as string
-            const delimiter = extension === '.tsv' ? '\t' : ','
-            const lines = text.split('\n').filter(line => line.trim())
+            // Retirer le BOM UTF-8 si présent
+            const textNoBom = text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text
+            const lines = textNoBom.split(/\r?\n/).filter(line => line.trim())
             
             if (lines.length > 0) {
-              headers = lines[0].split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''))
+              // Détection automatique du délimiteur (priorité au point-virgule pour CSV FR)
+              const firstLine = lines[0]
+              let delimiter = ','
+              if (firstLine.includes(';')) {
+                delimiter = ';'
+              } else if (firstLine.includes('\t')) {
+                delimiter = '\t'
+              } else if (firstLine.includes(',')) {
+                delimiter = ','
+              }
+              
+              // Split CSV-safe (gère les guillemets)
+              function splitCSVLine(line: string, delim: string): string[] {
+                const out: string[] = []
+                let cur = ''
+                let inQuotes = false
+                for (let i = 0; i < line.length; i++) {
+                  const ch = line[i]
+                  if (ch === '"') {
+                    if (inQuotes && line[i + 1] === '"') { 
+                      cur += '"'
+                      i++
+                    } else { 
+                      inQuotes = !inQuotes
+                    }
+                  } else if (ch === delim && !inQuotes) {
+                    out.push(cur)
+                    cur = ''
+                  } else {
+                    cur += ch
+                  }
+                }
+                out.push(cur)
+                return out
+              }
+              
+              headers = splitCSVLine(lines[0], delimiter).map(h => h.trim().replace(/^"|"$/g, ''))
               preview = lines.slice(1, 6).map(line => 
-                line.split(delimiter).map(cell => cell.trim().replace(/^["']|["']$/g, ''))
+                splitCSVLine(line, delimiter).map(cell => cell.trim().replace(/^"|"$/g, ''))
               )
+              
+              console.log('🔍 [CSV] Délimiteur détecté:', delimiter === '\t' ? 'TAB' : delimiter, '- Colonnes:', headers.length)
             }
           } else {
             // Parse Excel
@@ -621,7 +660,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       }
 
       if (file.name.endsWith('.csv') || file.name.endsWith('.tsv')) {
-        reader.readAsText(file)
+        reader.readAsText(file, 'UTF-8') // Encodage explicite pour Electron
       } else {
         reader.readAsBinaryString(file)
       }
