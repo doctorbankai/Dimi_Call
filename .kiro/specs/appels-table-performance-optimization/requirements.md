@@ -1,143 +1,141 @@
-# Requirements Document
+# Requirements Document - Optimisation de Performance de la Table Appels
 
 ## Introduction
 
-This feature optimizes the "Appels" table performance by implementing TanStack Table v8 with TanStack Virtual for row virtualization. The current implementation renders all contacts regardless of visibility, causing significant performance degradation as the dataset grows. This optimization will maintain 100% visual and functional parity while dramatically improving rendering performance for large datasets (1000+ contacts).
+Ce document définit les exigences pour l'optimisation de performance de la table "Appels" dans DimiCall. La table actuelle utilise uniquement les composants shadcn/ui basiques (Table, TableRow, TableCell) sans bibliothèque de gestion de table, ce qui cause des problèmes de performance majeurs avec plus de 1000 lignes. Toutes les interactions (scroll, édition, tri, filtrage) sont extrêmement lentes car TOUTES les lignes sont rendues dans le DOM. L'objectif est de migrer vers TanStack Table v8 pour la gestion de table headless et TanStack Virtual v3 pour la virtualisation des lignes, tout en préservant 100% des fonctionnalités existantes et l'apparence visuelle.
 
 ## Glossary
 
-- **Appels Table**: The main contact management table in the application displaying contact information with inline editing capabilities
-- **TanStack Table**: A headless UI library (v8) for building powerful tables with features like sorting, filtering, and column management
-- **TanStack Virtual**: A headless UI library for virtualizing large lists by only rendering visible items
-- **Row Virtualization**: A technique that renders only the rows visible in the viewport plus a small overscan buffer
-- **ContactTable Component**: The core table component located at `src/components/ContactTable.tsx`
-- **PaginatedContactTable Component**: The wrapper component that handles pagination and file imports
-- **Viewport**: The visible area of the scrollable table container
-- **Overscan**: Additional rows rendered above and below the viewport to prevent blank spaces during fast scrolling
-- **Memoization**: React optimization technique to prevent unnecessary re-renders
-- **Sticky Header**: Table header that remains fixed at the top during scrolling
+- **ContactTable Component**: Le composant React principal qui affiche la table des contacts avec édition inline
+- **TanStack Table**: Bibliothèque headless UI (v8) pour construire des tables performantes avec tri, filtrage et gestion de colonnes
+- **TanStack Virtual**: Bibliothèque headless UI (v3) pour virtualiser de grandes listes en ne rendant que les éléments visibles
+- **Row Virtualization**: Technique de rendu qui n'affiche que les lignes visibles dans le viewport plus un buffer
+- **Inline Editing**: Capacité d'éditer les cellules directement dans la table sans dialogue modal
+- **Sticky Header**: En-tête de table qui reste fixe lors du scroll vertical
+- **Debouncing**: Technique pour retarder l'exécution d'une fonction jusqu'à ce qu'un certain temps se soit écoulé depuis le dernier appel
+- **Memoization**: Technique d'optimisation qui met en cache les résultats de calculs coûteux
+- **Re-render**: Processus par lequel React met à jour le DOM en réponse à des changements d'état
 
 ## Requirements
 
-### Requirement 1: Implement Row Virtualization
+### Requirement 1: Performance de Rendu avec Virtualisation
 
-**User Story:** As a user with a large contact database, I want the table to render smoothly regardless of dataset size, so that I can work efficiently without performance lag.
-
-#### Acceptance Criteria
-
-1. WHEN THE Appels Table contains more than 100 contacts, THE ContactTable Component SHALL render only the visible rows plus an overscan buffer of 10 rows
-2. WHEN THE user scrolls through the table, THE ContactTable Component SHALL dynamically render and unmount rows based on viewport position
-3. WHEN THE table is rendering virtualized rows, THE ContactTable Component SHALL maintain a total height equal to all rows to preserve scrollbar accuracy
-4. WHEN THE user scrolls rapidly, THE ContactTable Component SHALL display the overscan buffer to prevent blank spaces
-5. WHERE THE dataset contains 1000+ contacts, THE ContactTable Component SHALL maintain 60fps scroll performance
-
-### Requirement 2: Integrate TanStack Table Core
-
-**User Story:** As a developer, I want to use TanStack Table's built-in features for sorting, column management, and state handling, so that the codebase is maintainable and follows best practices.
+**User Story:** En tant qu'utilisateur avec plus de 1000 contacts, je veux que la table se charge instantanément et reste fluide lors du scroll, afin de pouvoir naviguer efficacement dans mes données.
 
 #### Acceptance Criteria
 
-1. THE ContactTable Component SHALL use TanStack Table's `useReactTable` hook for table state management
-2. THE ContactTable Component SHALL define column configurations using TanStack Table's `ColumnDef` type
-3. WHEN THE user clicks a sortable column header, THE ContactTable Component SHALL use TanStack Table's `getSortedRowModel` for sorting
-4. THE ContactTable Component SHALL use TanStack Table's `getCoreRowModel` for base row rendering
-5. THE ContactTable Component SHALL maintain all existing column visibility, drag-and-drop reordering, and type selection features
+1. WHEN THE ContactTable Component contient plus de 100 contacts, THE ContactTable Component SHALL render uniquement les lignes visibles dans le viewport plus un buffer de 10 lignes au-dessus et en-dessous
+2. WHEN THE utilisateur scroll verticalement dans la table, THE ContactTable Component SHALL mettre à jour dynamiquement les lignes rendues en moins de 16ms pour maintenir 60 FPS
+3. WHEN THE table affiche 1000+ contacts, THE ContactTable Component SHALL charger l'interface initiale en moins de 500ms
+4. WHEN THE utilisateur interagit avec une cellule, THE ContactTable Component SHALL limiter les re-renders aux seules cellules affectées via React.memo et useMemo
+5. WHEN THE table virtualise les lignes, THE ContactTable Component SHALL maintenir une hauteur totale précise pour que la scrollbar reflète le nombre réel de contacts
 
-### Requirement 3: Preserve Visual Appearance
+### Requirement 2: Préservation des Fonctionnalités d'Édition Inline
 
-**User Story:** As a user familiar with the current interface, I want the table to look exactly the same after optimization, so that my workflow is not disrupted.
-
-#### Acceptance Criteria
-
-1. THE ContactTable Component SHALL maintain the exact same visual styling including colors, spacing, borders, and shadows
-2. THE ContactTable Component SHALL preserve the sticky header with backdrop blur effect
-3. THE ContactTable Component SHALL maintain row hover states and selection highlighting
-4. THE ContactTable Component SHALL preserve all cell widgets including DateTimeCell, CommentWidget, and StatusSelect
-5. THE ContactTable Component SHALL maintain the active call row highlighting with green background
-
-### Requirement 4: Maintain Functional Parity
-
-**User Story:** As a user, I want all existing table features to work identically after optimization, so that I can continue my work without learning new behaviors.
+**User Story:** En tant qu'utilisateur, je veux pouvoir éditer toutes les cellules de la table exactement comme avant, afin de ne pas perdre mes habitudes de travail.
 
 #### Acceptance Criteria
 
-1. THE ContactTable Component SHALL support inline cell editing with double-click activation
-2. THE ContactTable Component SHALL maintain drag-and-drop column reordering functionality
-3. THE ContactTable Component SHALL preserve column visibility toggling
-4. THE ContactTable Component SHALL maintain sorting with visual indicators (arrows)
-5. THE ContactTable Component SHALL support row selection with auto-scroll to selected contact
-6. THE ContactTable Component SHALL preserve all keyboard shortcuts (Enter, Escape) for cell editing
-7. THE ContactTable Component SHALL maintain the reminder dialog integration
-8. THE ContactTable Component SHALL preserve the empty state display when no contacts exist
+1. WHEN THE utilisateur clique sur une cellule de statut, THE ContactTable Component SHALL afficher le StatusSelect dropdown avec tous les statuts disponibles
+2. WHEN THE utilisateur modifie un commentaire, THE ContactTable Component SHALL afficher le CommentWidget avec les commentaires rapides et sauvegarder automatiquement après 1 seconde d'inactivité
+3. WHEN THE utilisateur sélectionne une date (Date Rappel, Date RDV, Date Appel), THE ContactTable Component SHALL afficher le DateTimeCell avec le calendrier Popover
+4. WHEN THE utilisateur sélectionne une heure (Heure Rappel, Heure RDV, Heure Appel), THE ContactTable Component SHALL afficher le TimePickerWithClear avec les sélecteurs d'heures et minutes
+5. WHEN THE utilisateur double-clique sur une cellule éditable (Prénom, Nom, Téléphone, Email, Source), THE ContactTable Component SHALL activer le mode édition inline avec un Input
+6. WHEN THE utilisateur clique sur l'icône Bell dans la colonne Date Rappel, THE ContactTable Component SHALL ouvrir le ReminderDialog
 
-### Requirement 5: Optimize Re-render Performance
+### Requirement 3: Gestion Optimisée des Mises à Jour de Données
 
-**User Story:** As a user editing contact information, I want cell updates to be instant without lag, so that data entry is smooth and responsive.
+**User Story:** En tant qu'utilisateur, je veux que mes modifications soient sauvegardées rapidement sans ralentir l'interface, afin de pouvoir travailler efficacement.
 
 #### Acceptance Criteria
 
-1. THE ContactTable Component SHALL use React.memo for cell components to prevent unnecessary re-renders
-2. THE ContactTable Component SHALL use useCallback for event handlers to maintain referential equality
-3. THE ContactTable Component SHALL use useMemo for computed values like sorted contacts and visible columns
-4. WHEN THE user updates a single cell, THE ContactTable Component SHALL re-render only the affected cell, not the entire table
-5. THE ContactTable Component SHALL remove or optimize Framer Motion animations that cause performance bottlenecks
+1. WHEN THE utilisateur modifie une cellule, THE ContactTable Component SHALL appliquer un debounce de 300ms avant de déclencher onUpdateContact
+2. WHEN THE onUpdateContact est appelé, THE ContactTable Component SHALL mettre à jour uniquement la ligne concernée sans re-render de toute la table
+3. WHEN THE données de contacts changent (ajout, suppression, modification), THE ContactTable Component SHALL utiliser React.memo avec une comparaison shallow pour éviter les re-renders inutiles
+4. WHEN THE utilisateur trie ou filtre la table, THE ContactTable Component SHALL recalculer les données affichées en utilisant useMemo avec les dépendances appropriées
+5. WHEN THE table contient plus de 1000 contacts, THE ContactTable Component SHALL maintenir un temps de réponse inférieur à 100ms pour toute interaction utilisateur
 
-### Requirement 6: Maintain Pagination Integration
+### Requirement 4: Préservation de l'Interface Visuelle et des Composants
 
-**User Story:** As a user, I want pagination to work seamlessly with the optimized table, so that I can navigate through large datasets efficiently.
-
-#### Acceptance Criteria
-
-1. THE PaginatedContactTable Component SHALL pass paginated data to the virtualized ContactTable
-2. WHEN THE user changes pages, THE ContactTable Component SHALL reset scroll position to top
-3. THE ContactTable Component SHALL work correctly with all page size options (25, 50, 100)
-4. THE ContactTable Component SHALL maintain the current page in localStorage
-5. THE virtualization SHALL work independently of pagination, virtualizing only the current page's data
-
-### Requirement 7: Preserve Import and Export Features
-
-**User Story:** As a user, I want file import/export functionality to remain unchanged, so that my data workflows continue working.
+**User Story:** En tant qu'utilisateur, je veux que la table conserve exactement la même apparence et les mêmes composants, afin de ne pas être désorienté par les changements.
 
 #### Acceptance Criteria
 
-1. THE PaginatedContactTable Component SHALL maintain drag-and-drop file import functionality
-2. THE ContactTable Component SHALL preserve the ImportMappingDialog integration
-3. THE ContactTable Component SHALL maintain the empty state with import button
-4. THE ContactTable Component SHALL support all file formats (.csv, .tsv, .xlsx, .xls)
-5. THE ContactTable Component SHALL preserve the file import ref method `openImportMapping`
+1. WHEN THE table est affichée, THE ContactTable Component SHALL utiliser les mêmes composants shadcn/ui (Table, TableHeader, TableBody, TableRow, TableCell, TableHead)
+2. WHEN THE en-tête de table est visible, THE ContactTable Component SHALL maintenir le sticky header avec les mêmes styles CSS (position: sticky, backdrop-filter, box-shadow)
+3. WHEN THE utilisateur survole une ligne, THE ContactTable Component SHALL appliquer les mêmes classes de hover (hover:bg-muted/50)
+4. WHEN THE une ligne est sélectionnée, THE ContactTable Component SHALL appliquer les mêmes classes de sélection (bg-blue-500/20 dark:bg-blue-500/30)
+5. WHEN THE un appel est actif, THE ContactTable Component SHALL appliquer les mêmes classes d'appel actif (bg-green-900/20 hover:bg-green-900/30)
+6. WHEN THE table affiche les cellules, THE ContactTable Component SHALL utiliser les mêmes widgets existants (StatusSelect, CommentWidget, DateTimeCell, TimePickerWithClear)
 
-### Requirement 8: Ensure Accessibility and Keyboard Navigation
+### Requirement 5: Gestion du Tri et du Filtrage
 
-**User Story:** As a user who relies on keyboard navigation, I want all table interactions to remain accessible, so that I can work efficiently without a mouse.
-
-#### Acceptance Criteria
-
-1. THE ContactTable Component SHALL maintain keyboard focus management during virtualization
-2. THE ContactTable Component SHALL preserve tab navigation through editable cells
-3. THE ContactTable Component SHALL maintain Enter/Escape key handling for cell editing
-4. THE ContactTable Component SHALL preserve screen reader compatibility with semantic HTML table elements
-5. THE ContactTable Component SHALL maintain ARIA attributes for sortable columns
-
-### Requirement 9: Maintain Scroll Position and Auto-scroll
-
-**User Story:** As a user selecting contacts, I want the table to automatically scroll to show my selection, so that I don't lose track of the selected contact.
+**User Story:** En tant qu'utilisateur, je veux pouvoir trier et filtrer mes contacts rapidement, afin de trouver facilement les informations dont j'ai besoin.
 
 #### Acceptance Criteria
 
-1. WHEN THE user clicks a contact row, THE ContactTable Component SHALL auto-scroll to center the selected row in the viewport
-2. THE ContactTable Component SHALL use the `scrollToContact` ref method for programmatic scrolling
-3. THE ContactTable Component SHALL maintain smooth scroll behavior with `behavior: 'smooth'`
-4. THE ContactTable Component SHALL preserve the `shouldAutoScrollRef` flag to control auto-scroll behavior
-5. WHERE THE selected contact is already visible, THE ContactTable Component SHALL not trigger unnecessary scrolling
+1. WHEN THE utilisateur clique sur un en-tête de colonne triable, THE ContactTable Component SHALL trier les données en utilisant TanStack Table getSortedRowModel en moins de 100ms
+2. WHEN THE tri est appliqué, THE ContactTable Component SHALL afficher l'indicateur de tri approprié (ArrowUp, ArrowDown, ArrowUpDown)
+3. WHEN THE utilisateur change le tri, THE ContactTable Component SHALL persister la configuration de tri dans localStorage avec la clé 'dimicall-sort-config'
+4. WHEN THE table est rechargée, THE ContactTable Component SHALL restaurer la configuration de tri depuis localStorage
+5. WHEN THE utilisateur applique un filtre de recherche, THE ContactTable Component SHALL filtrer les données en utilisant TanStack Table getFilteredRowModel en moins de 100ms
 
-### Requirement 10: Optimize Column Type System
+### Requirement 6: Gestion de la Visibilité et de l'Ordre des Colonnes
 
-**User Story:** As a user with custom column types, I want the column type selector to work efficiently with virtualization, so that I can customize my table layout.
+**User Story:** En tant qu'utilisateur, je veux pouvoir masquer/afficher et réorganiser les colonnes comme avant, afin de personnaliser ma vue.
 
 #### Acceptance Criteria
 
-1. THE ContactTable Component SHALL maintain the `useColumnTypes` hook integration
-2. THE ContactTable Component SHALL preserve the ColumnTypeSelector component functionality
-3. THE ContactTable Component SHALL maintain column type persistence in localStorage
-4. THE ContactTable Component SHALL support all column types (text, date, time, dropdown, etc.)
-5. THE ContactTable Component SHALL render appropriate widgets based on column type configuration
+1. WHEN THE utilisateur toggle la visibilité d'une colonne, THE ContactTable Component SHALL utiliser TanStack Table column.toggleVisibility() et persister dans localStorage
+2. WHEN THE utilisateur drag-and-drop une colonne, THE ContactTable Component SHALL réorganiser les colonnes en utilisant TanStack Table setColumnOrder()
+3. WHEN THE ordre des colonnes change, THE ContactTable Component SHALL persister le nouvel ordre dans localStorage avec la clé 'dimicall-column-order'
+4. WHEN THE table est rechargée, THE ContactTable Component SHALL restaurer l'ordre et la visibilité des colonnes depuis localStorage
+5. WHEN THE utilisateur clique sur "Afficher toutes les colonnes", THE ContactTable Component SHALL rendre toutes les colonnes visibles via TanStack Table setColumnVisibility()
+
+### Requirement 7: Scroll Automatique et Navigation
+
+**User Story:** En tant qu'utilisateur, je veux que la table scroll automatiquement vers le contact sélectionné, afin de toujours voir le contact actif.
+
+#### Acceptance Criteria
+
+1. WHEN THE utilisateur clique sur une ligne, THE ContactTable Component SHALL scroll vers cette ligne en utilisant scrollToIndex de TanStack Virtual
+2. WHEN THE scroll automatique est déclenché, THE ContactTable Component SHALL centrer la ligne dans le viewport avec un comportement smooth
+3. WHEN THE contact sélectionné est déjà visible, THE ContactTable Component SHALL ne pas déclencher de scroll
+4. WHEN THE utilisateur scroll manuellement, THE ContactTable Component SHALL désactiver temporairement le scroll automatique
+5. WHEN THE scrollToContact est appelé via ref, THE ContactTable Component SHALL utiliser virtualizer.scrollToIndex() pour positionner la ligne
+
+### Requirement 8: Pagination Optimisée
+
+**User Story:** En tant qu'utilisateur, je veux que la pagination fonctionne de manière fluide avec la virtualisation, afin de naviguer efficacement dans de grandes listes.
+
+#### Acceptance Criteria
+
+1. WHEN THE utilisateur change de page, THE PaginatedContactTable Component SHALL mettre à jour les données affichées en moins de 100ms
+2. WHEN THE page change, THE PaginatedContactTable Component SHALL réinitialiser le scroll virtuel à la position 0
+3. WHEN THE utilisateur change le nombre d'éléments par page, THE PaginatedContactTable Component SHALL recalculer la virtualisation avec la nouvelle taille
+4. WHEN THE pagination est active, THE ContactTable Component SHALL virtualiser uniquement les contacts de la page courante
+5. WHEN THE utilisateur navigue entre les pages, THE PaginatedContactTable Component SHALL persister la page courante dans localStorage
+
+### Requirement 9: Compatibilité avec les Fonctionnalités Existantes
+
+**User Story:** En tant qu'utilisateur, je veux que toutes les fonctionnalités existantes continuent de fonctionner, afin de ne rien perdre dans la migration.
+
+#### Acceptance Criteria
+
+1. WHEN THE utilisateur utilise le drag-and-drop de fichiers, THE PaginatedContactTable Component SHALL afficher le DropZoneOverlay et ouvrir le ImportMappingDialog
+2. WHEN THE utilisateur ouvre le ReminderDialog, THE ContactTable Component SHALL afficher le dialogue avec les valeurs actuelles du contact
+3. WHEN THE utilisateur utilise les raccourcis clavier (F1-F10), THE ContactTable Component SHALL appliquer les actions correspondantes sur le contact sélectionné
+4. WHEN THE table affiche l'état d'appel, THE ContactTable Component SHALL afficher les indicateurs visuels appropriés (classes CSS, animations)
+5. WHEN THE utilisateur exporte les données, THE PaginatedContactTable Component SHALL exporter tous les contacts, pas seulement ceux de la page courante
+
+### Requirement 10: Mesures de Performance et Monitoring
+
+**User Story:** En tant que développeur, je veux pouvoir mesurer les performances de la table, afin de valider les optimisations et détecter les régressions.
+
+#### Acceptance Criteria
+
+1. WHEN THE table est en mode développement, THE ContactTable Component SHALL logger les temps de rendu dans la console avec console.time/timeEnd
+2. WHEN THE virtualisation est active, THE ContactTable Component SHALL afficher le nombre de lignes rendues vs total dans les DevTools
+3. WHEN THE utilisateur interagit avec la table, THE ContactTable Component SHALL maintenir un frame rate minimum de 60 FPS mesurable via React DevTools Profiler
+4. WHEN THE table charge plus de 1000 contacts, THE ContactTable Component SHALL utiliser moins de 200MB de mémoire mesurable via Chrome DevTools Memory Profiler
+5. WHEN THE optimisations sont appliquées, THE ContactTable Component SHALL réduire le temps de chargement initial d'au moins 80% par rapport à l'implémentation actuelle

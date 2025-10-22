@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Contact } from '../types';
 import { DateCalculationService } from '../services/dateCalculationService';
 import { RelativeDateSelector } from './RelativeDateSelector';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { SingleDayPicker } from '@/components/ui/single-day-picker';
@@ -168,11 +168,13 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent 
-        ref={dialogContentRef}
-        className="sm:max-w-md max-h-[85vh] overflow-y-auto w-[95vw] sm:w-full"
-        aria-describedby="reminder-description"
-      >
+      <DialogPortal>
+        <DialogOverlay className="z-[100000] pointer-events-none" />
+        <DialogContent 
+          ref={dialogContentRef}
+          className="sm:max-w-md max-h-[85vh] overflow-y-auto w-[95vw] sm:w-full z-[100001] pointer-events-auto"
+          aria-describedby="reminder-description"
+        >
         {/* Header avec bouton de fermeture */}
         <DialogHeader>
           <DialogTitle>Programmer un Rappel</DialogTitle>
@@ -211,7 +213,7 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
                   onSelect={handleCalendarSelect}
                   className={cn("w-full")}
                   container={dialogContentRef.current}
-                  zIndex={20100}
+                  zIndex={100002}
                   aria-label="Date du rappel"
                   aria-describedby={errors.date ? "date-error" : undefined}
                   aria-invalid={!!errors.date}
@@ -242,7 +244,7 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
                     aria-label="Heure du rappel (optionnelle)"
                     aria-describedby={errors.time ? "time-error" : "time-help"}
                     container={dialogContentRef.current}
-                    zIndex={20100}
+                    zIndex={100002}
                   />
                   <span className="absolute -top-2 right-2 text-xs text-muted-foreground bg-background px-1">
                     optionnelle
@@ -286,7 +288,7 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
             currentDate={state.selectedDate}
             disabled={false}
             portalContainer={dialogContentRef.current}
-            zIndex={20100}
+            zIndex={100002}
           />
 
           {/* Actions */}
@@ -309,7 +311,8 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
             </Button>
           </div>
         </div>
-      </DialogContent>
+        </DialogContent>
+      </DialogPortal>
     </Dialog>
   );
 };

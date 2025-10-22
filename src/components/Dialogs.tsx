@@ -10,7 +10,9 @@ import {
   DialogDescription, 
   DialogFooter, 
   DialogHeader, 
-  DialogTitle 
+  DialogTitle,
+  DialogOverlay,
+  DialogPortal
 } from '@/components/ui/dialog';
 import { Button as ShadcnButton } from '@/components/ui/button';
 import { Input as ShadcnInput } from '@/components/ui/input';
@@ -142,7 +144,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Civilité" />
               </SelectTrigger>
-              <SelectContent className="z-[20001]">
+              <SelectContent className="z-[100002]">
                 {civilityOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -155,7 +157,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Type d'email" />
               </SelectTrigger>
-              <SelectContent className="z-[20001]">
+              <SelectContent className="z-[100002]">
                 {emailTypeOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -187,7 +189,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
                       {selectedDate ? format(selectedDate, 'PPP', { locale: fr }) : <span>Sélectionner une date</span>}
                     </ShadcnButton>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[20001]">
+                  <PopoverContent className="w-auto p-0 z-[100002]">
                     <Calendar
                       mode="single"
                       selected={selectedDate}
@@ -207,7 +209,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
                   value={selectedTime}
                   onChange={handleTimeChange}
                   placeholder="HH:mm"
-                  zIndex={20001}
+                  zIndex={100002}
                 />
               </div>
             </div>
@@ -338,7 +340,7 @@ const handleSendSms = () => {
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Civilité" />
               </SelectTrigger>
-              <SelectContent className="z-[20001]">
+              <SelectContent className="z-[100002]">
                 {civilityOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -351,7 +353,7 @@ const handleSendSms = () => {
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Type de SMS" />
               </SelectTrigger>
-              <SelectContent className="z-[20001]">
+              <SelectContent className="z-[100002]">
                 {smsTypeOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
                     {option.label}
@@ -392,7 +394,7 @@ const handleSendSms = () => {
                       {selectedDate ? format(selectedDate, 'PPP', { locale: fr }) : <span>Sélectionner une date</span>}
                     </ShadcnButton>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 z-[20001]">
+                  <PopoverContent className="w-auto p-0 z-[100002]">
                     <Calendar
                       mode="single"
                       selected={selectedDate}
@@ -412,7 +414,7 @@ const handleSendSms = () => {
                   value={selectedTime}
                   onChange={handleTimeChange}
                   placeholder="HH:mm"
-                  zIndex={20001}
+                  zIndex={100002}
                 />
               </div>
             </div>
@@ -493,6 +495,7 @@ const RendezVousDialog: React.FC<RendezVousDialogProps> = ({ isOpen, onClose, co
             onChange={setTime} 
             placeholder="HH:mm"
             container={modalContentRef.current}
+            zIndex={100002}
           />
         </div>
         <div className="flex justify-end space-x-3 pt-4">
@@ -615,13 +618,15 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto bg-background">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-semibold">Qualification du Contact</DialogTitle>
-          <DialogDescription>
-            Saisissez les informations pour qualifier le contact et générer un commentaire automatique.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogPortal>
+        <DialogOverlay className="z-[100000] pointer-events-none" />
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto bg-background z-[100001] pointer-events-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-semibold">Qualification du Contact</DialogTitle>
+            <DialogDescription>
+              Saisissez les informations pour qualifier le contact et générer un commentaire automatique.
+            </DialogDescription>
+          </DialogHeader>
         
         <div className="space-y-6 py-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -734,7 +739,8 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
             Enregistrer Qualification
           </ShadcnButton>
         </DialogFooter>
-      </DialogContent>
+        </DialogContent>
+      </DialogPortal>
     </Dialog>
   );
 };

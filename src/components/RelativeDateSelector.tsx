@@ -34,7 +34,7 @@ export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
   disabled = false,
   className,
   portalContainer,
-  zIndex = 20100,
+  zIndex = 100002,
 }) => {
   const [state, setState] = useState<RelativeDateSelectorState>({
     quantity: '',

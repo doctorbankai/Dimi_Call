@@ -111,6 +111,17 @@ interface ContactDetailDraft {
 
 interface AnnuairePageProps {
   theme?: 'dark' | 'light';
+  onCall?: () => void;
+  onSms?: () => void;
+  onEmail?: () => void;
+  onQualification?: () => void;
+  onReminder?: () => void;
+  onRDV?: () => void;
+  onCalCom?: () => void;
+  onLinkedIn?: () => void;
+  onGoogle?: () => void;
+  onDirectLink?: () => void;
+  onContactSelect?: (contact: DirectoryContact | null) => void;
 }
 
 const TYPE_BADGE_LABELS: Record<HistoryType, string> = {
@@ -481,7 +492,20 @@ const loadEventsFromSQLite = async (start?: string, end?: string): Promise<Statu
 
 
 
-export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
+export function AnnuairePage({ 
+  theme = 'dark',
+  onCall,
+  onSms,
+  onEmail,
+  onQualification,
+  onReminder,
+  onRDV,
+  onCalCom,
+  onLinkedIn,
+  onGoogle,
+  onDirectLink,
+  onContactSelect
+}: AnnuairePageProps) {
   const [contacts, setContacts] = useState<DirectoryContact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<DirectoryContact[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1789,9 +1813,22 @@ export function AnnuairePage({ theme = 'dark' }: AnnuairePageProps) {
             <AnnuaireCardsView
               contacts={filteredContacts}
               selectedContactId={selectedContact?.id || null}
-              onSelectContact={(contact) => setSelectedContact(contact)}
+              onSelectContact={(contact) => {
+                setSelectedContact(contact)
+                onContactSelect?.(contact)
+              }}
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
+              onCall={selectedContact && onCall ? onCall : undefined}
+              onSms={selectedContact && onSms ? onSms : undefined}
+              onEmail={selectedContact && onEmail ? onEmail : undefined}
+              onQualification={selectedContact && onQualification ? onQualification : undefined}
+              onReminder={selectedContact && onReminder ? onReminder : undefined}
+              onRDV={selectedContact && onRDV ? onRDV : undefined}
+              onCalCom={selectedContact && onCalCom ? onCalCom : undefined}
+              onLinkedIn={selectedContact && onLinkedIn ? onLinkedIn : undefined}
+              onGoogle={selectedContact && onGoogle ? onGoogle : undefined}
+              onDirectLink={selectedContact && onDirectLink ? onDirectLink : undefined}
             />
           </div>
         ) : (

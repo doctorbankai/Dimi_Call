@@ -3400,6 +3400,17 @@ Dimitri MOREL - Arcanis Conseil`;
                 ) : viewMode === 'annuaire' ? (
                   <AnnuairePage
                     theme={theme === Theme.Dark ? 'dark' : 'light'}
+                    onContactSelect={(contact) => setSelectedContact(contact)}
+                    onCall={() => makePhoneCall()}
+                    onSms={() => selectedContact && setIsSmsDialogOpen(true)}
+                    onEmail={() => selectedContact && setIsEmailDialogOpen(true)}
+                    onQualification={() => selectedContact && setIsQualificationDialogOpen(true)}
+                    onReminder={() => selectedContact && setIsRappelDialogOpen(true)}
+                    onRDV={() => selectedContact && setIsRendezVousDialogOpen(true)}
+                    onCalCom={() => handleCalendarClick()}
+                    onLinkedIn={() => handleLinkedInSearch()}
+                    onGoogle={() => handleGoogleSearch()}
+                    onDirectLink={() => handleDirectLink()}
                   />
                 ) : (
                   <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">

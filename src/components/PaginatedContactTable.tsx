@@ -1,6 +1,7 @@
 import { forwardRef, useState } from 'react';
 import { Contact, CallStates, Theme } from '../types';
 import { ContactTable, ContactTableRef } from './ContactTable';
+import { VirtualizedContactTable, VirtualizedContactTableRef } from './VirtualizedContactTable';
 import { TablePagination } from './TablePagination';
 import { usePagination } from '../hooks/usePagination';
 import { DropZoneOverlay } from './DropZoneOverlay';
@@ -74,6 +75,20 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
   pageSizeOptions = [25, 50, 100],
   className = '',
 }, ref) => {
+  // Feature flag pour utiliser VirtualizedContactTable (activé par défaut)
+  const [useVirtualizedTable] = useState(() => {
+    try {
+      const saved = localStorage.getItem('dimicall-use-virtualized-table')
+      // Si pas de valeur sauvegardée, activer par défaut
+      if (saved === null || saved === undefined) {
+        return true
+      }
+      return saved === 'true'
+    } catch {
+      return true // Activer par défaut en cas d'erreur
+    }
+  })
+
   // États pour le drag & drop
   const [isDragOver, setIsDragOver] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
@@ -367,23 +382,43 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
       
       {/* Table avec données paginées */}
       <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
-        <ContactTable
-          ref={ref}
-          contacts={paginatedData}
-          callStates={callStates}
-          onSelectContact={handleSelectContact}
-          selectedContactId={selectedContactId}
-          onUpdateContact={onUpdateContact}
-          onDeleteContact={onDeleteContact}
-          activeCallContactId={activeCallContactId}
-          theme={theme}
-          visibleColumns={visibleColumns}
-          columnHeaders={columnHeaders}
-          contactDataKeys={contactDataKeys}
-          onToggleColumnVisibility={onToggleColumnVisibility}
-          availableColumns={availableColumns}
-          onFileImport={onFileImport}
-        />
+        {useVirtualizedTable ? (
+          <VirtualizedContactTable
+            ref={ref as React.Ref<VirtualizedContactTableRef>}
+            contacts={paginatedData}
+            callStates={callStates}
+            onSelectContact={handleSelectContact}
+            selectedContactId={selectedContactId}
+            onUpdateContact={onUpdateContact}
+            onDeleteContact={onDeleteContact}
+            activeCallContactId={activeCallContactId}
+            theme={theme}
+            visibleColumns={visibleColumns}
+            columnHeaders={columnHeaders}
+            contactDataKeys={contactDataKeys}
+            onToggleColumnVisibility={onToggleColumnVisibility}
+            availableColumns={availableColumns}
+            onFileImport={onFileImport}
+          />
+        ) : (
+          <ContactTable
+            ref={ref}
+            contacts={paginatedData}
+            callStates={callStates}
+            onSelectContact={handleSelectContact}
+            selectedContactId={selectedContactId}
+            onUpdateContact={onUpdateContact}
+            onDeleteContact={onDeleteContact}
+            activeCallContactId={activeCallContactId}
+            theme={theme}
+            visibleColumns={visibleColumns}
+            columnHeaders={columnHeaders}
+            contactDataKeys={contactDataKeys}
+            onToggleColumnVisibility={onToggleColumnVisibility}
+            availableColumns={availableColumns}
+            onFileImport={onFileImport}
+          />
+        )}
       </div>
       {paginationNode}
 
