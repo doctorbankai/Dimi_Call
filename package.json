@@ -25,7 +25,8 @@
     "generate-icons": "node scripts/generate-icons-robust.cjs",
     "generate-icons-alt": "electron-icon-maker --input=DDD.png --output=build",
     "generate-icons-old": "electron-icon-builder --input=DDD.png --output=build --flatten",
-    "publish": "npm run build && electron-builder --publish always"
+    "publish": "npm run build && electron-builder --publish always",
+    "bench:gen": "tsx scripts/generate-benchmark-data.ts"
   },
   "dependencies": {
     "@calcom/embed-react": "^1.5.3",
@@ -99,6 +100,7 @@
     "electron-icon-builder": "^2.0.1",
     "electron-icon-maker": "^0.0.5",
     "electron-vite": "4.0.1",
+    "tsx": "^4.19.1",
     "typescript": "~5.9.3",
     "vite": "^7.1.9",
     "vite-plugin-javascript-obfuscator": "^3.1.0"
@@ -112,106 +114,5 @@
     "type": "git",
     "url": "https://github.com/doctorbankai/Dimi_Call.git"
   },
-  "build": {
-    "publish": {
-      "provider": "github",
-      "owner": "doctorbankai",
-      "repo": "Dimi_Call"
-    },
-    "appId": "com.dimultra.dimicall",
-    "productName": "DimiCall",
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "dist/**/*",
-      "public/**/*",
-      "build/**/*"
-    ],
-    "asarUnpack": [
-      "dist/renderer/**/*"
-    ],
-    "afterPack": "scripts/fix-macos-permissions.cjs",
-    "mac": {
-      "icon": "build/icon.icns",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ],
-      "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
-      "extraResources": [
-        {
-          "from": "platform-tools-latest-darwin (2)/platform-tools",
-          "to": "platform-tools",
-          "filter": [
-            "**/*"
-          ]
-        }
-      ]
-    },
-    "win": {
-      "icon": "build/icon.ico",
-      "artifactName": "${productName}-${version}-win32-${arch}.${ext}",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "extraResources": [
-        {
-          "from": "platform-tools-latest-windows (4)/platform-tools",
-          "to": "platform-tools",
-          "filter": [
-            "**/*"
-          ]
-        }
-      ],
-      "extraFiles": [
-        {
-          "from": "node_modules/electron/dist/icudtl.dat",
-          "to": "icudtl.dat"
-        },
-        {
-          "from": "node_modules/electron/dist/*.pak",
-          "to": "./"
-        }
-      ]
-    },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": false,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        }
-      ]
-    },
-    "portable": {
-      "artifactName": "${productName}-${version}-portable.${ext}",
-      "unpackDirName": "DimiCall"
-    }
-  }
+  "build": {"publish": {"provider": "github","owner": "doctorbankai","repo": "Dimi_Call"},"appId": "com.dimultra.dimicall","productName": "DimiCall","directories": {"output": "release"},"files": ["dist/**/*","public/**/*","build/**/*"],"asarUnpack": ["dist/renderer/**/*"],"afterPack": "scripts/fix-macos-permissions.cjs","mac": {"icon": "build/icon.icns","target": [{"target": "dmg","arch": ["x64","arm64"]},{"target": "zip","arch": ["x64","arm64"]}],"artifactName": "${productName}-${version}-mac-${arch}.${ext}","extraResources": [{"from": "platform-tools-latest-darwin (2)/platform-tools","to": "platform-tools","filter": ["**/*"]}]},"win": {"icon": "build/icon.ico","artifactName": "${productName}-${version}-win32-${arch}.${ext}","target": [{"target": "nsis","arch": ["x64"]}],"extraResources": [{"from": "platform-tools-latest-windows (4)/platform-tools","to": "platform-tools","filter": ["**/*"]}],"extraFiles": [{"from": "node_modules/electron/dist/icudtl.dat","to": "icudtl.dat"},{"from": "node_modules/electron/dist/*.pak","to": "./"}]},"nsis": {"oneClick": true,"perMachine": false,"allowToChangeInstallationDirectory": false,"createDesktopShortcut": true,"createStartMenuShortcut": true},"linux": {"target": [{"target": "AppImage","arch": ["x64"]}]},"portable": {"artifactName": "${productName}-${version}-portable.${ext}","unpackDirName": "DimiCall"}}
 }
