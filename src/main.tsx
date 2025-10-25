@@ -5,6 +5,7 @@ import App from './App'
 import { LoadingPage } from './components/LoadingPage'
 import { useSupabaseAuth } from './lib/auth-client'
 import './index.css'
+import './styles/table-interactions.css'
 import { ModeProvider } from './context/ModeContext'
 
 // Fonction pour masquer l'écran de chargement HTML initial

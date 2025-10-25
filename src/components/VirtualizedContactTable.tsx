@@ -22,12 +22,29 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { useReactTable, getCoreRowModel, ColumnDef, ColumnSizingState } from '@tanstack/react-table';
 import { useDebouncedUpdate } from '../hooks/useDebouncedUpdate';
 import { useColumnAutosize, ColumnSizeConfig } from '../hooks/useColumnAutosize';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  horizontalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 // Storage keys
 const COLUMN_ORDER_STORAGE_KEY = 'dimicall-column-order';
 const COLUMN_ORDER_VERSION_KEY = 'dimicall-column-order-version';
 const COLUMN_ORDER_VERSION = '3.0';
 const SORT_CONFIG_STORAGE_KEY = 'dimicall-sort-config';
+const COLUMN_SIZING_STORAGE_KEY = 'dimicall-column-sizing';  // ✅ AJOUTÉ pour resize
 
 // Column configuration
 interface ColumnConfig {
@@ -400,6 +417,81 @@ const DateTimeCell = React.memo<DateTimeCellProps>(({ value, type, onChange, the
 });
 
 
+// ✅ AJOUTÉ : Composant SortableHeader pour drag & drop
+interface SortableHeaderProps {
+  column: any;
+  children: React.ReactNode;
+  style: React.CSSProperties;
+  onClick?: () => void;
+  onResizeHandleMouseDown?: (e: React.MouseEvent) => void;
+  onResizeHandleTouchStart?: (e: React.TouchEvent) => void;
+  onResizeHandleDoubleClick?: () => void;
+  isResizing?: boolean;
+}
+
+const SortableHeader: React.FC<SortableHeaderProps> = ({
+  column,
+  children,
+  style,
+  onClick,
+  onResizeHandleMouseDown,
+  onResizeHandleTouchStart,
+  onResizeHandleDoubleClick,
+  isResizing
+}) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: column.id });
+
+  const dragStyle = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={cn(
+        SHADCN_STYLES.headerCell,
+        "header-cell-interactive relative",
+        column.canSort && SHADCN_STYLES.headerCellSortable,
+        isDragging && "is-dragging",
+        isResizing && "is-resizing"
+      )}
+      style={{ ...style, ...dragStyle }}
+      onClick={onClick}
+    >
+      {/* Handle de drag - icône discrète */}
+      <div
+        className="drag-handle flex items-center justify-center w-3 h-full mr-1"
+        {...attributes}
+        {...listeners}
+      >
+        <div className="drag-handle-icon" />
+      </div>
+      
+      {children}
+      
+      {/* Resize handle */}
+      <div
+        onDoubleClick={onResizeHandleDoubleClick}
+        onMouseDown={onResizeHandleMouseDown}
+        onTouchStart={onResizeHandleTouchStart}
+        className={cn(
+          "column-resizer",
+          isResizing && "is-resizing"
+        )}
+      />
+    </div>
+  );
+};
+
 // Interface for exposed methods via ref
 export interface ContactTableRef {
   scrollToContact: (contactId: string) => void;
@@ -457,6 +549,37 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
     isOpen: false,
     contact: null
   });
+
+  // ✅ AJOUTÉ : Sensors pour drag & drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // Évite déclenchement accidentel
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // ✅ AJOUTÉ : Handler pour drag & drop
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (!over || active.id === over.id) return;
+    
+    const oldIndex = columnOrder.findIndex(id => id === active.id);
+    const newIndex = columnOrder.findIndex(id => id === over.id);
+    
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const newOrder = [...columnOrder];
+      newOrder.splice(newIndex, 0, newOrder.splice(oldIndex, 1)[0]);
+      setColumnOrder(newOrder);
+      
+      // Sync avec TanStack Table
+      table.setColumnOrder?.(newOrder);
+    }
+  }, [columnOrder]);
 
   // Responsive screen size
   const screenSize = useResponsiveColumns();
@@ -1017,10 +1140,14 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
     data: sortedContacts,
     columns: tanstackColumns,
     state: {
-      columnSizing
+      columnSizing,
+      columnOrder  // ✅ AJOUTÉ pour drag & drop
     },
     onColumnSizingChange: setColumnSizing,
-    columnResizeMode: 'onChange',
+    onColumnOrderChange: setColumnOrder,  // ✅ AJOUTÉ pour drag & drop
+    columnResizeMode: 'onChange',         // Resize en temps réel
+    columnResizeDirection: 'ltr',         // ✅ AJOUTÉ Direction resize
+    enableColumnResizing: true,           // ✅ AJOUTÉ Active resize
     getCoreRowModel: getCoreRowModel(),
     // On n'utilise pas le rowModel interne (on garde virtualizer)
     enableRowSelection: false,
@@ -1036,6 +1163,29 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
       }));
     }
   }, [autoSizes]);
+
+  // ✅ AJOUTÉ : Charger columnSizing depuis localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(COLUMN_SIZING_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setColumnSizing(prev => ({
+          ...prev,
+          ...parsed
+        }));
+      }
+    } catch {}
+  }, []);
+
+  // ✅ AJOUTÉ : Sauvegarder columnSizing dans localStorage
+  useEffect(() => {
+    try {
+      if (Object.keys(columnSizing).length > 0) {
+        localStorage.setItem(COLUMN_SIZING_STORAGE_KEY, JSON.stringify(columnSizing));
+      }
+    } catch {}
+  }, [columnSizing]);
 
   // Visible ordered columns avec tailles TanStack
   const visibleOrderedColumns = useMemo(() => {
@@ -1089,66 +1239,100 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
 
   return (
     <>
-      <div className="contact-table-container h-full">
-        <div 
-          ref={scrollContainerRef}
-          className={cn(SHADCN_STYLES.tableContainer, "scrollbar-hidden h-full overflow-auto")}
-          style={{
-            position: 'relative',
-            height: '100%',
-            overflow: 'auto',
-            display: 'block'
-          }}
-        >
-          <AnimatePresence mode="wait">
-            {contacts.length === 0 ? (
-              <EmptyState key="empty" />
-            ) : (
-              <div className="relative w-full min-w-[560px] md:min-w-0">
-                {/* Header */}
-                <div className={SHADCN_STYLES.tableHeader}>
-                  <div className={SHADCN_STYLES.headerRow}>
-                    {visibleOrderedColumns.map((column) => (
-                      <div
-                        key={column.id}
-                        className={cn(
-                          SHADCN_STYLES.headerCell,
-                          column.canSort && SHADCN_STYLES.headerCellSortable
-                        )}
-                        style={{ 
-                          width: column.calculatedWidth,
-                          minWidth: column.calculatedWidth,
-                          maxWidth: column.calculatedWidth,
-                          flexShrink: 0
-                        }}
-                        onClick={() => {
-                          if (column.canSort && column.key !== 'index') {
-                            handleSort(column.key as keyof Contact);
-                          }
-                        }}
-                      >
-                        <div className="flex items-center w-full min-w-0">
-                          <span className="text-xs font-medium text-muted-foreground truncate flex-1 min-w-0">
-                            {column.label}
-                          </span>
-                          {column.canSort && (
-                            <div className="flex items-center ml-1 flex-shrink-0">
-                              {sortConfig.key === column.key && sortConfig.direction === 'asc' && (
-                                <ArrowUp className={SHADCN_STYLES.sortIcon} />
-                              )}
-                              {sortConfig.key === column.key && sortConfig.direction === 'desc' && (
-                                <ArrowDown className={SHADCN_STYLES.sortIcon} />
-                              )}
-                              {sortConfig.key !== column.key && (
-                                <ArrowUpDown className={SHADCN_STYLES.sortIconInactive} />
-                              )}
-                            </div>
-                          )}
-                        </div>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <div className="contact-table-container h-full">
+          <div 
+            ref={scrollContainerRef}
+            className={cn(SHADCN_STYLES.tableContainer, "scrollbar-hidden h-full overflow-auto")}
+            style={{
+              position: 'relative',
+              height: '100%',
+              overflow: 'auto',
+              display: 'block'
+            }}
+          >
+            <AnimatePresence mode="wait">
+              {contacts.length === 0 ? (
+                <EmptyState key="empty" />
+              ) : (
+                <SortableContext
+                  items={columnOrder}
+                  strategy={horizontalListSortingStrategy}
+                >
+                  <div className="relative w-full min-w-[560px] md:min-w-0">
+                    {/* Header */}
+                    <div className={SHADCN_STYLES.tableHeader}>
+                      <div className={SHADCN_STYLES.headerRow}>
+                        {visibleOrderedColumns.map((column) => {
+                          const tanstackCol = table.getColumn(column.id);
+                          const isResizing = tanstackCol?.getIsResizing() ?? false;
+                          
+                          return (
+                            <SortableHeader
+                              key={column.id}
+                              column={column}
+                              style={{ 
+                                width: column.calculatedWidth,
+                                minWidth: column.calculatedWidth,
+                                maxWidth: column.calculatedWidth,
+                                flexShrink: 0
+                              }}
+                              onClick={() => {
+                                if (column.canSort && column.key !== 'index') {
+                                  handleSort(column.key as keyof Contact);
+                                }
+                              }}
+                              onResizeHandleMouseDown={(e) => {
+                                const header = table.getHeaderGroups()[0]?.headers.find(h => h.column.id === column.id);
+                                const handler = header?.getResizeHandler();
+                                handler?.(e);
+                              }}
+                              onResizeHandleTouchStart={(e) => {
+                                const header = table.getHeaderGroups()[0]?.headers.find(h => h.column.id === column.id);
+                                const handler = header?.getResizeHandler();
+                                handler?.(e);
+                              }}
+                              onResizeHandleDoubleClick={() => {
+                                // Auto-resize au contenu
+                                const autoSize = autoSizes[column.id];
+                                if (autoSize) {
+                                  setColumnSizing(prev => ({
+                                    ...prev,
+                                    [column.id]: autoSize
+                                  }));
+                                } else {
+                                  tanstackCol?.resetSize();
+                                }
+                              }}
+                              isResizing={isResizing}
+                            >
+                              <div className="flex items-center w-full min-w-0">
+                                <span className="text-xs font-medium text-muted-foreground truncate flex-1 min-w-0">
+                                  {column.label}
+                                </span>
+                                {column.canSort && (
+                                  <div className="flex items-center ml-1 flex-shrink-0">
+                                    {sortConfig.key === column.key && sortConfig.direction === 'asc' && (
+                                      <ArrowUp className={SHADCN_STYLES.sortIcon} />
+                                    )}
+                                    {sortConfig.key === column.key && sortConfig.direction === 'desc' && (
+                                      <ArrowDown className={SHADCN_STYLES.sortIcon} />
+                                    )}
+                                    {sortConfig.key !== column.key && (
+                                      <ArrowUpDown className={SHADCN_STYLES.sortIconInactive} />
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </SortableHeader>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
-                </div>
+                    </div>
                 
                 {/* Body with virtualization */}
                 <div style={{ position: 'relative', height: `${rowVirtualizer.getTotalSize()}px` }}>
@@ -1206,10 +1390,12 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
                   })}
                 </div>
               </div>
-            )}
-          </AnimatePresence>
+                </SortableContext>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
-      </div>
+      </DndContext>
 
       {reminderDialog.contact && (
         <ReminderDialog

@@ -1,0 +1,143 @@
+/* Table Column Resize & Drag Styles - Shadcn Compatible */
+
+/* ========================================
+   COLUMN RESIZING
+   ======================================== */
+
+.column-resizer {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background-color 150ms ease;
+  z-index: 10;
+  user-select: none;
+}
+
+.column-resizer:hover {
+  background: hsl(var(--primary) / 0.3);
+}
+
+.column-resizer.is-resizing {
+  background: hsl(var(--primary) / 0.6);
+}
+
+.column-resizer-indicator {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: hsl(var(--primary));
+  z-index: 50;
+  pointer-events: none;
+}
+
+/* ========================================
+   COLUMN DRAG & DROP
+   ======================================== */
+
+.drag-handle {
+  opacity: 0;
+  transition: opacity 150ms ease;
+  cursor: grab;
+  user-select: none;
+}
+
+.header-cell:hover .drag-handle {
+  opacity: 1;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.drag-handle-icon {
+  width: 4px;
+  height: 16px;
+  background: currentColor;
+  opacity: 0.3;
+  border-radius: 2px;
+}
+
+/* Feedback visuel pendant drag */
+.sortable-ghost {
+  opacity: 0.4;
+}
+
+.sortable-chosen {
+  transform: rotate(1deg);
+  box-shadow: 0 4px 12px hsl(var(--primary) / 0.2);
+}
+
+.sortable-drag {
+  opacity: 0.8;
+  box-shadow: 0 8px 24px hsl(var(--primary) / 0.3);
+  z-index: 100;
+}
+
+/* État dragging */
+.is-dragging {
+  opacity: 0.5;
+  background: hsl(var(--muted) / 0.5);
+}
+
+.drag-overlay {
+  background: hsl(var(--background));
+  border: 2px solid hsl(var(--primary) / 0.5);
+  box-shadow: 0 8px 24px hsl(var(--primary) / 0.3);
+  border-radius: 4px;
+}
+
+/* ========================================
+   HOVER STATES
+   ======================================== */
+
+.header-cell-interactive {
+  transition: background-color 150ms ease;
+}
+
+.header-cell-interactive:hover {
+  background: hsl(var(--muted) / 0.3);
+}
+
+.header-cell-interactive.is-resizing {
+  background: hsl(var(--muted) / 0.5);
+}
+
+.header-cell-interactive.is-dragging {
+  background: hsl(var(--muted) / 0.5);
+  opacity: 0.5;
+}
+
+/* ========================================
+   ACCESSIBILITY
+   ======================================== */
+
+.column-resizer:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+.drag-handle:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ========================================
+   RESPONSIVE
+   ======================================== */
+
+@media (max-width: 768px) {
+  .column-resizer {
+    width: 8px; /* Plus large sur mobile */
+    right: -4px;
+  }
+  
+  .drag-handle {
+    opacity: 1; /* Toujours visible sur mobile */
+  }
+}
