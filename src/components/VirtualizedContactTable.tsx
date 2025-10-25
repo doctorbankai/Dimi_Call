@@ -42,7 +42,130 @@ interface ColumnConfig {
 
 type SortDirection = 'asc' | 'desc' | null;
 
-const INPUT_BASE_CLASS = "h-8 px-2 text-xs border border-border/50 rounded-md bg-background/80 focus:bg-background focus:border-primary/50 transition-colors";
+const INPUT_BASE_CLASS = "h-8 px-3 py-1 text-sm border-0 bg-transparent focus:bg-accent/50 transition-colors";
+
+// Shadcn Table Classes Constants
+const SHADCN_STYLES = {
+  // Container
+  tableContainer: "rounded-md border bg-background",
+  
+  // Header
+  tableHeader: "sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
+  headerRow: "flex border-b",
+  headerCell: "h-10 flex items-center px-3 py-2 text-left text-xs font-medium text-muted-foreground select-none transition-colors",
+  headerCellSortable: "cursor-pointer hover:bg-muted/50",
+  headerCellFirst: "first:rounded-tl-md",
+  headerCellLast: "last:rounded-tr-md",
+  
+  // Body
+  tableBody: "relative",
+  bodyRow: "flex border-b border-border hover:bg-muted/50 cursor-pointer transition-colors",
+  bodyRowSelected: "bg-accent text-accent-foreground",
+  bodyRowActiveCall: "bg-green-50 hover:bg-green-100 dark:bg-green-950/50 dark:hover:bg-green-950/80",
+  bodyCell: "px-3 py-2 text-sm flex items-center flex-shrink-0",
+  
+  // Sort Icons
+  sortIcon: "h-3 w-3 text-muted-foreground transition-colors",
+  sortIconInactive: "h-3 w-3 text-muted-foreground/40",
+  sortIconContainer: "flex items-center ml-2"
+} as const;
+
+// Shadcn Spacing Configuration
+const SHADCN_SPACING = {
+  headerHeight: 40,      // h-10 in pixels
+  rowHeight: 36,         // Compact row height
+  cellPadding: 'px-3 py-2',
+  iconSize: 'h-3 w-3',
+  headerIconSize: 'h-3.5 w-3.5'
+} as const;
+
+// Column Resize Configuration
+const COLUMN_RESIZE_CONFIG = {
+  // Fixed-width columns (never resize)
+  fixed: {
+    '#': 50,
+    'Statut': 120,
+    'Date Rappel': 110,
+    'Heure Rappel': 80,
+    'Date RDV': 110,
+    'Heure RDV': 80,
+    'Date Appel': 110,
+    'Heure Appel': 80,
+    'Durée Appel': 70,
+    'Sexe': 60,
+    'Don': 60,
+    'Type': 80,
+    'Qualité': 80,
+    'Date': 100,
+    'UID': 100
+  },
+  
+  // Flexible columns (grow/shrink proportionally)
+  flexible: {
+    'Prénom': { min: 100, preferred: 140, grow: 1 },
+    'Nom': { min: 100, preferred: 140, grow: 1 },
+    'Téléphone': { min: 120, preferred: 150, grow: 0.5 },
+    'Mail': { min: 150, preferred: 220, grow: 2 },
+    'Source': { min: 80, preferred: 120, grow: 0.5 },
+    'Commentaire': { min: 200, preferred: 300, grow: 3 },
+    'Lien': { min: 120, preferred: 180, grow: 1.5 }
+  }
+} as const;
+
+// Mobile Column Configuration
+const MOBILE_COLUMN_CONFIG = {
+  sm: ['#', 'Prénom', 'Nom', 'Statut', 'Commentaire'],
+  md: ['#', 'Prénom', 'Nom', 'Téléphone', 'Statut', 'Commentaire', 'Date Rappel'],
+  lg: 'all' as const,
+  xl: 'all' as const
+};
+
+type ScreenSize = 'sm' | 'md' | 'lg' | 'xl';
+
+// Responsive Columns Hook
+const useResponsiveColumns = (): ScreenSize => {
+  const [screenSize, setScreenSize] = useState<ScreenSize>('lg');
+  
+  useEffect(() => {
+    const updateScreenSize = () => {
+      const width = window.innerWidth;
+      if (width < 768) setScreenSize('sm');
+      else if (width < 1024) setScreenSize('md');
+      else if (width < 1280) setScreenSize('lg');
+      else setScreenSize('xl');
+    };
+    
+    updateScreenSize();
+    
+    let timeoutId: NodeJS.Timeout;
+    const debouncedResize = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(updateScreenSize, 150);
+    };
+    
+    window.addEventListener('resize', debouncedResize);
+    return () => {
+      clearTimeout(timeoutId);
+      window.removeEventListener('resize', debouncedResize);
+    };
+  }, []);
+  
+  return screenSize;
+};
+
+// Get visible columns for screen size
+const getVisibleColumnsForScreenSize = (
+  columns: ColumnConfig[],
+  screenSize: ScreenSize
+): ColumnConfig[] => {
+  const allowedColumns = MOBILE_COLUMN_CONFIG[screenSize];
+  
+  if (allowedColumns === 'all') {
+    return columns;
+  }
+  
+  return columns.filter(col => allowedColumns.includes(col.label));
+};
 
 // Comment Widget Component - Memoized for performance
 interface CommentWidgetProps {
@@ -333,6 +456,9 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
     contact: null
   });
 
+  // Responsive screen size
+  const screenSize = useResponsiveColumns();
+
   // Debounced updates for better performance
   const { debouncedCommentUpdate, debouncedDateUpdate, debouncedTextUpdate } = useDebouncedUpdate({
     onUpdateContact,
@@ -508,12 +634,22 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
     });
   }, [contacts, sortConfig]);
 
+  // Dynamic overscan based on screen size
+  const getOverscan = useCallback((screenSize: ScreenSize): number => {
+    switch (screenSize) {
+      case 'sm': return 5;   // Mobile: fewer rows
+      case 'md': return 8;   // Tablet: moderate
+      case 'lg': return 10;  // Desktop: more rows
+      case 'xl': return 12;  // Wide: most rows
+    }
+  }, []);
+
   // Virtualization setup
   const rowVirtualizer = useVirtualizer({
     count: sortedContacts.length,
     getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => 40,
-    overscan: 10,
+    estimateSize: () => SHADCN_SPACING.rowHeight,
+    overscan: getOverscan(screenSize),
   });
 
   // Scroll to contact function
@@ -804,33 +940,87 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
     }
   };
 
-  // Visible ordered columns with calculated widths
-  const visibleOrderedColumns = useMemo(() => {
-    const result = columnOrder
-      .map(id => dynamicColumns.find(col => col.id === id))
-      .filter((col): col is ColumnConfig => {
-        if (!col) return false;
-        return visibleColumns[col.label] !== false;
+  // Calculate responsive column widths
+  const calculateResponsiveWidths = useMemo(() => {
+    try {
+      const containerWidth = scrollContainerRef.current?.clientWidth || 1200;
+      
+      // Validation
+      const validatedWidth = containerWidth < 320 ? 320 : containerWidth;
+      
+      // Get visible columns
+      let visibleCols = columnOrder
+        .map(id => dynamicColumns.find(col => col.id === id))
+        .filter((col): col is ColumnConfig => {
+          if (!col) return false;
+          return visibleColumns[col.label] !== false;
+        });
+      
+      // Apply responsive filtering based on screen size
+      visibleCols = getVisibleColumnsForScreenSize(visibleCols, screenSize);
+      
+      // Step 1: Calculate total width of fixed columns
+      const fixedColumns = visibleCols.filter(col => 
+        COLUMN_RESIZE_CONFIG.fixed[col.label as keyof typeof COLUMN_RESIZE_CONFIG.fixed]
+      );
+      
+      const fixedWidth = fixedColumns.reduce((sum, col) => 
+        sum + (COLUMN_RESIZE_CONFIG.fixed[col.label as keyof typeof COLUMN_RESIZE_CONFIG.fixed] || 0), 0
+      );
+      
+      // Step 2: Calculate available width for flexible columns
+      const availableWidth = Math.max(0, validatedWidth - fixedWidth - 20); // 20px margin
+      
+      // Step 3: Get flexible columns and calculate total weight
+      const flexibleColumns = visibleCols.filter(col =>
+        COLUMN_RESIZE_CONFIG.flexible[col.label as keyof typeof COLUMN_RESIZE_CONFIG.flexible]
+      );
+      
+      const totalWeight = flexibleColumns.reduce((sum, col) => {
+        const config = COLUMN_RESIZE_CONFIG.flexible[col.label as keyof typeof COLUMN_RESIZE_CONFIG.flexible];
+        return sum + (config?.grow || 1);
+      }, 0);
+      
+      // Step 4: Distribute available width proportionally
+      return visibleCols.map(col => {
+        // Fixed column
+        const fixedSize = COLUMN_RESIZE_CONFIG.fixed[col.label as keyof typeof COLUMN_RESIZE_CONFIG.fixed];
+        if (fixedSize) {
+          return { ...col, calculatedWidth: `${fixedSize}px` };
+        }
+        
+        // Flexible column
+        const flexConfig = COLUMN_RESIZE_CONFIG.flexible[col.label as keyof typeof COLUMN_RESIZE_CONFIG.flexible];
+        if (flexConfig && totalWeight > 0) {
+          const proportionalWidth = (availableWidth * flexConfig.grow) / totalWeight;
+          const finalWidth = Math.max(
+            flexConfig.min,
+            Math.min(proportionalWidth, flexConfig.preferred * 1.5)
+          );
+          return { ...col, calculatedWidth: `${Math.floor(finalWidth)}px` };
+        }
+        
+        // Fallback
+        return { ...col, calculatedWidth: '100px' };
       });
-    
-    // Calculate fixed widths for auto columns
-    const autoColumns = result.filter(col => col.width === 'auto');
-    const fixedColumns = result.filter(col => col.width !== 'auto');
-    
-    // Calculate total fixed width
-    const fixedWidth = fixedColumns.reduce((sum, col) => {
-      const width = parseInt(col.width || '0');
-      return sum + (isNaN(width) ? 0 : width);
-    }, 0);
-    
-    // Distribute remaining width among auto columns
-    const remainingWidth = autoColumns.length > 0 ? `calc((100% - ${fixedWidth}px) / ${autoColumns.length})` : '0px';
-    
-    return result.map(col => ({
-      ...col,
-      calculatedWidth: col.width === 'auto' ? remainingWidth : col.width
-    }));
-  }, [columnOrder, dynamicColumns, visibleColumns]);
+    } catch (error) {
+      console.error('Column width calculation failed:', error);
+      // Fallback to fixed widths
+      return columnOrder
+        .map(id => dynamicColumns.find(col => col.id === id))
+        .filter((col): col is ColumnConfig => {
+          if (!col) return false;
+          return visibleColumns[col.label] !== false;
+        })
+        .map(col => ({
+          ...col,
+          calculatedWidth: '100px'
+        }));
+    }
+  }, [columnOrder, dynamicColumns, visibleColumns, scrollContainerRef.current?.clientWidth, screenSize]);
+
+  // Visible ordered columns with calculated widths
+  const visibleOrderedColumns = calculateResponsiveWidths;
 
   // Empty state component
   const EmptyState = () => (
@@ -874,7 +1064,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
       <div className="contact-table-container h-full">
         <div 
           ref={scrollContainerRef}
-          className="border rounded-t-lg scrollbar-hidden relative bg-background transition-all duration-300 h-full overflow-x-auto"
+          className={cn(SHADCN_STYLES.tableContainer, "scrollbar-hidden h-full overflow-auto")}
           style={{
             position: 'relative',
             height: '100%',
@@ -888,28 +1078,19 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
             ) : (
               <div className="relative w-full min-w-[560px] md:min-w-0">
                 {/* Header */}
-                <div 
-                  className="sticky top-0 z-[101] bg-background border-b"
-                  style={{
-                    backdropFilter: 'blur(4px)',
-                    WebkitBackdropFilter: 'blur(4px)',
-                    willChange: 'transform',
-                    transform: 'translateZ(0)',
-                  }}
-                >
-                  <div className="flex border-b">
+                <div className={SHADCN_STYLES.tableHeader}>
+                  <div className={SHADCN_STYLES.headerRow}>
                     {visibleOrderedColumns.map((column) => (
                       <div
                         key={column.id}
                         className={cn(
-                          "text-foreground h-16 flex items-center justify-center px-2 py-1.5 text-center font-medium text-xs select-none transition-all duration-200 border-r last:border-r-0 flex-shrink-0",
-                          column.canSort ? "cursor-pointer hover:bg-muted" : ""
+                          SHADCN_STYLES.headerCell,
+                          column.canSort && SHADCN_STYLES.headerCellSortable
                         )}
                         style={{ 
                           width: column.calculatedWidth,
                           minWidth: column.minWidth,
                           maxWidth: column.calculatedWidth,
-                          boxShadow: 'rgba(0, 0, 0, 0.1) 0px 2px 8px 0px, rgba(0, 0, 0, 0.1) 0px 1px 4px -1px',
                         }}
                         onClick={() => {
                           if (column.canSort && column.key !== 'index') {
@@ -917,23 +1098,23 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
                           }
                         }}
                       >
-                        <div className="flex flex-col items-center justify-center gap-1 min-h-[40px]">
-                          <div className="flex items-center justify-center gap-1 w-full">
-                            <span className="inline-flex items-center gap-1.5 truncate text-xs font-medium [&>svg]:w-3.5 [&>svg]:h-3.5 [&>svg]:text-muted-foreground">
-                              {TABLE_HEADER_ICONS[column.label]}
-                              <span className="truncate">{column.label}</span>
-                            </span>
-                            {column.canSort && sortConfig.key === column.key && (
-                              <>
-                                {sortConfig.direction === 'asc' && <ArrowUp className="w-3 h-3 text-muted-foreground/50" />}
-                                {sortConfig.direction === 'desc' && <ArrowDown className="w-3 h-3 text-muted-foreground/50" />}
-                                {!sortConfig.direction && <ArrowUpDown className="w-3 h-3 text-muted-foreground/50" />}
-                              </>
-                            )}
-                            {column.canSort && sortConfig.key !== column.key && (
-                              <ArrowUpDown className="w-3 h-3 text-muted-foreground/50" />
-                            )}
-                          </div>
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-xs font-medium text-muted-foreground truncate">
+                            {column.label}
+                          </span>
+                          {column.canSort && (
+                            <div className={SHADCN_STYLES.sortIconContainer}>
+                              {sortConfig.key === column.key && sortConfig.direction === 'asc' && (
+                                <ArrowUp className={SHADCN_STYLES.sortIcon} />
+                              )}
+                              {sortConfig.key === column.key && sortConfig.direction === 'desc' && (
+                                <ArrowDown className={SHADCN_STYLES.sortIcon} />
+                              )}
+                              {sortConfig.key !== column.key && (
+                                <ArrowUpDown className={SHADCN_STYLES.sortIconInactive} />
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -953,14 +1134,9 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
                         data-contact-id={contact.id}
                         data-index={virtualRow.index}
                         className={cn(
-                          "flex border-b cursor-pointer transition-colors duration-150",
-                          !isSelected && "hover:bg-muted/50",
-                          isSelected && "bg-blue-500/20 dark:bg-blue-500/30 text-foreground",
-                          isActiveCall && (!isSelected
-                            ? (theme === Theme.Dark
-                                ? "bg-green-900/20 hover:bg-green-900/30"
-                                : "bg-green-100 hover:bg-green-200")
-                            : "")
+                          SHADCN_STYLES.bodyRow,
+                          isSelected && SHADCN_STYLES.bodyRowSelected,
+                          isActiveCall && !isSelected && SHADCN_STYLES.bodyRowActiveCall
                         )}
                         style={{
                           position: 'absolute',
@@ -978,9 +1154,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
                         {visibleOrderedColumns.map(column => (
                           <div
                             key={column.id}
-                            className={cn(
-                              "px-2 py-1.5 text-xs text-center flex items-center justify-center border-r last:border-r-0 flex-shrink-0"
-                            )}
+                            className={cn(SHADCN_STYLES.bodyCell)}
                             style={{ 
                               width: column.calculatedWidth,
                               minWidth: column.minWidth,

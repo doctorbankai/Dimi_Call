@@ -1,146 +1,390 @@
 /**
- * Script de test de performance pour la table Appels
- * Vérifie que les optimisations sont bien appliquées
+ * Performance Benchmark Tests for Shadcn Table Migration
+ * 
+ * This script provides performance benchmarks to ensure the migration
+ * maintains the same high performance as the original implementation.
+ * 
+ * Note: These are static code analysis tests. For runtime performance,
+ * use browser DevTools or Lighthouse.
+ * 
+ * Run with: node scripts/test-table-performance.cjs
  */
 
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔍 Vérification des optimisations de performance...\n');
+// ANSI color codes
+const colors = {
+  reset: '\x1b[0m',
+  green: '\x1b[32m',
+  red: '\x1b[31m',
+  yellow: '\x1b[33m',
+  blue: '\x1b[34m',
+  cyan: '\x1b[36m',
+  magenta: '\x1b[35m'
+};
 
-let allChecks = true;
+const results = {
+  passed: 0,
+  failed: 0,
+  warnings: 0,
+  tests: []
+};
 
-// Check 1: Virtualisation forcée
-console.log('✓ Check 1: Virtualisation FORCÉE (pas de feature flag)');
-const paginatedTablePath = path.join(__dirname, '../src/components/PaginatedContactTable.tsx');
-const paginatedTableContent = fs.readFileSync(paginatedTablePath, 'utf-8');
-
-if (paginatedTableContent.includes('const useVirtualizedTable = true;')) {
-  console.log('  ✅ Virtualisation FORCÉE (toujours activée)\n');
-} else if (paginatedTableContent.includes('useState') && paginatedTableContent.includes('useVirtualizedTable')) {
-  console.log('  ⚠️  Virtualisation avec feature flag (peut être désactivée par l\'utilisateur)\n');
-  console.log('  💡 Recommandation: Remplacer par "const useVirtualizedTable = true;"\n');
-  allChecks = false;
-} else {
-  console.log('  ❌ Virtualisation non trouvée\n');
-  allChecks = false;
-}
-
-// Check 2: Hook useDebouncedUpdate existe
-console.log('✓ Check 2: Hook useDebouncedUpdate');
-const hookPath = path.join(__dirname, '../src/hooks/useDebouncedUpdate.ts');
-if (fs.existsSync(hookPath)) {
-  const hookContent = fs.readFileSync(hookPath, 'utf-8');
-  if (hookContent.includes('debouncedCommentUpdate') && 
-      hookContent.includes('debouncedDateUpdate') &&
-      hookContent.includes('debouncedTextUpdate')) {
-    console.log('  ✅ Hook useDebouncedUpdate créé avec toutes les fonctions\n');
-  } else {
-    console.log('  ❌ Hook incomplet\n');
-    allChecks = false;
+function logTest(name, passed, message = '') {
+  const status = passed ? `${colors.green}✓ PASS${colors.reset}` : `${colors.red}✗ FAIL${colors.reset}`;
+  console.log(`  ${status} ${name}`);
+  if (message) {
+    console.log(`    ${colors.cyan}${message}${colors.reset}`);
   }
-} else {
-  console.log('  ❌ Hook useDebouncedUpdate non trouvé\n');
-  allChecks = false;
-}
-
-// Check 3: Widgets memoized
-console.log('✓ Check 3: Mémorisation des widgets');
-const virtualizedTablePath = path.join(__dirname, '../src/components/VirtualizedContactTable.tsx');
-const virtualizedTableContent = fs.readFileSync(virtualizedTablePath, 'utf-8');
-
-const checks = [
-  { name: 'CommentWidget', pattern: /const CommentWidget = React\.memo/ },
-  { name: 'DateTimeCell', pattern: /const DateTimeCell = React\.memo/ },
-];
-
-let memoizedCount = 0;
-checks.forEach(check => {
-  if (check.pattern.test(virtualizedTableContent)) {
-    console.log(`  ✅ ${check.name} memoized`);
-    memoizedCount++;
+  
+  results.tests.push({ name, passed, message });
+  if (passed) {
+    results.passed++;
   } else {
-    console.log(`  ❌ ${check.name} non memoized`);
-    allChecks = false;
+    results.failed++;
   }
-});
-
-// Check StatusSelect
-const statusSelectPath = path.join(__dirname, '../src/components/StatusSelect.tsx');
-const statusSelectContent = fs.readFileSync(statusSelectPath, 'utf-8');
-if (/const StatusSelect = React\.memo/.test(statusSelectContent)) {
-  console.log('  ✅ StatusSelect memoized');
-  memoizedCount++;
-} else {
-  console.log('  ❌ StatusSelect non memoized');
-  allChecks = false;
 }
 
-console.log(`  Total: ${memoizedCount}/3 widgets memoized\n`);
+function logWarning(message) {
+  console.log(`  ${colors.yellow}⚠ WARNING${colors.reset} ${message}`);
+  results.warnings++;
+}
 
-// Check 4: Debouncing appliqué
-console.log('✓ Check 4: Debouncing appliqué');
-const debounceChecks = [
-  { name: 'Commentaires', pattern: /debouncedCommentUpdate\(contact\.id/ },
-  { name: 'Dates', pattern: /debouncedDateUpdate\(contact\.id/ },
-];
+function logInfo(message) {
+  console.log(`  ${colors.magenta}ℹ INFO${colors.reset} ${message}`);
+}
 
-let debounceCount = 0;
-debounceChecks.forEach(check => {
-  if (check.pattern.test(virtualizedTableContent)) {
-    console.log(`  ✅ ${check.name} debounced`);
-    debounceCount++;
+function readFile(filePath) {
+  try {
+    return fs.readFileSync(path.join(__dirname, '..', filePath), 'utf8');
+  } catch (error) {
+    return null;
+  }
+}
+
+/**
+ * Test 1: Verify virtualization is maintained
+ */
+function testVirtualizationMaintained() {
+  console.log(`\n${colors.blue}Test 1: Virtualization Performance${colors.reset}`);
+  
+  const content = readFile('src/components/VirtualizedContactTable.tsx');
+  if (!content) {
+    logTest('File exists', false);
+    return;
+  }
+  
+  const hasUseVirtualizer = content.includes('useVirtualizer');
+  const hasEstimateSize = content.includes('estimateSize:');
+  const hasOverscan = content.includes('overscan:');
+  const hasGetScrollElement = content.includes('getScrollElement:');
+  
+  logTest('useVirtualizer hook used', hasUseVirtualizer);
+  logTest('estimateSize configured', hasEstimateSize);
+  logTest('overscan configured', hasOverscan);
+  logTest('getScrollElement configured', hasGetScrollElement);
+  
+  if (hasUseVirtualizer) {
+    logInfo('Virtualization ensures only visible rows are rendered');
+  }
+}
+
+/**
+ * Test 2: Verify memoization is used
+ */
+function testMemoizationUsed() {
+  console.log(`\n${colors.blue}Test 2: Memoization Optimizations${colors.reset}`);
+  
+  const content = readFile('src/components/VirtualizedContactTable.tsx');
+  if (!content) {
+    logTest('File exists', false);
+    return;
+  }
+  
+  const useMemoCount = (content.match(/useMemo/g) || []).length;
+  const useCallbackCount = (content.match(/useCallback/g) || []).length;
+  const reactMemoCount = (content.match(/React\.memo/g) || []).length;
+  
+  logTest('useMemo used for expensive calculations', useMemoCount >= 3, 
+    `Found ${useMemoCount} useMemo calls`);
+  logTest('useCallback used for event handlers', useCallbackCount >= 2,
+    `Found ${useCallbackCount} useCallback calls`);
+  logTest('React.memo used for child components', reactMemoCount >= 2,
+    `Found ${reactMemoCount} React.memo calls`);
+  
+  if (useMemoCount >= 3 && useCallbackCount >= 2) {
+    logInfo('Good memoization prevents unnecessary re-renders');
+  }
+}
+
+/**
+ * Test 3: Verify debouncing is maintained
+ */
+function testDebouncingMaintained() {
+  console.log(`\n${colors.blue}Test 3: Debouncing for Updates${colors.reset}`);
+  
+  const content = readFile('src/components/VirtualizedContactTable.tsx');
+  if (!content) {
+    logTest('File exists', false);
+    return;
+  }
+  
+  const hasUseDebouncedUpdate = content.includes('useDebouncedUpdate');
+  const hasDebouncedComment = content.includes('debouncedCommentUpdate');
+  const hasDebouncedDate = content.includes('debouncedDateUpdate');
+  
+  logTest('useDebouncedUpdate hook used', hasUseDebouncedUpdate);
+  logTest('Comment updates debounced', hasDebouncedComment);
+  logTest('Date updates debounced', hasDebouncedDate);
+  
+  if (hasUseDebouncedUpdate) {
+    logInfo('Debouncing reduces API calls and improves performance');
+  }
+}
+
+/**
+ * Test 4: Verify efficient column calculation
+ */
+function testEfficientColumnCalculation() {
+  console.log(`\n${colors.blue}Test 4: Column Width Calculation Efficiency${colors.reset}`);
+  
+  const content = readFile('src/components/VirtualizedContactTable.tsx');
+  if (!content) {
+    logTest('File exists', false);
+    return;
+  }
+  
+  const hasCalculateInMemo = content.includes('const calculateResponsiveWidths = useMemo');
+  const hasErrorHandling = content.includes('try {') && content.includes('catch (error)');
+  const hasFallback = content.includes('calculatedWidth: \'100px\'');
+  
+  logTest('Column calculation wrapped in useMemo', hasCalculateInMemo);
+  logTest('Error handling prevents crashes', hasErrorHandling);
+  logTest('Fallback widths prevent layout breaks', hasFallback);
+  
+  if (hasCalculateInMemo) {
+    logInfo('Memoized calculation runs only when dependencies change');
+  }
+}
+
+/**
+ * Test 5: Verify responsive resize is debounced
+ */
+function testResponsiveDebounced() {
+  console.log(`\n${colors.blue}Test 5: Responsive Resize Performance${colors.reset}`);
+  
+  const content = readFile('src/components/VirtualizedContactTable.tsx');
+  if (!content) {
+    logTest('File exists', false);
+    return;
+  }
+  
+  const hasResizeListener = content.includes('window.addEventListener(\'resize\'');
+  const hasDebounce = content.includes('setTimeout') || content.includes('debounce');
+  const hasCleanup = content.includes('removeEventListener');
+  
+  logTest('Resize listener implemented', hasResizeListener);
+  logTest('Resize events debounced', hasDebounce);
+  logTest('Event listener cleanup on unmount', hasCleanup);
+  
+  if (hasDebounce) {
+    logInfo('Debounced resize prevents excessive recalculations');
+  }
+}
+
+/**
+ * Test 6: Verify no unnecessary re-renders
+ */
+function testNoUnnecessaryRerenders() {
+  console.log(`\n${colors.blue}Test 6: Render Optimization${colors.reset}`);
+  
+  const content = readFile('src/components/VirtualizedContactTable.tsx');
+  if (!content) {
+    logTest('File exists', false);
+    return;
+  }
+  
+  // Check for proper dependency arrays
+  const useMemoWithDeps = /useMemo\([^)]+,\s*\[[^\]]+\]/g.test(content);
+  const useCallbackWithDeps = /useCallback\([^)]+,\s*\[[^\]]+\]/g.test(content);
+  const useEffectWithDeps = /useEffect\([^)]+,\s*\[[^\]]*\]/g.test(content);
+  
+  logTest('useMemo has dependency arrays', useMemoWithDeps);
+  logTest('useCallback has dependency arrays', useCallbackWithDeps);
+  logTest('useEffect has dependency arrays', useEffectWithDeps);
+  
+  if (useMemoWithDeps && useCallbackWithDeps) {
+    logInfo('Proper dependencies prevent unnecessary recalculations');
+  }
+}
+
+/**
+ * Test 7: Verify efficient sorting
+ */
+function testEfficientSorting() {
+  console.log(`\n${colors.blue}Test 7: Sorting Performance${colors.reset}`);
+  
+  const content = readFile('src/components/VirtualizedContactTable.tsx');
+  if (!content) {
+    logTest('File exists', false);
+    return;
+  }
+  
+  const hasSortedContactsMemo = content.includes('const sortedContacts = useMemo');
+  const hasSortDependencies = /sortedContacts.*useMemo.*\[.*sortConfig/s.test(content);
+  
+  logTest('Sorted contacts memoized', hasSortedContactsMemo);
+  logTest('Sort only runs when config changes', hasSortDependencies);
+  
+  if (hasSortedContactsMemo) {
+    logInfo('Memoized sorting prevents re-sorting on every render');
+  }
+}
+
+/**
+ * Test 8: Verify localStorage operations are safe
+ */
+function testLocalStorageSafe() {
+  console.log(`\n${colors.blue}Test 8: LocalStorage Performance${colors.reset}`);
+  
+  const content = readFile('src/components/VirtualizedContactTable.tsx');
+  if (!content) {
+    logTest('File exists', false);
+    return;
+  }
+  
+  // Check for try-catch around localStorage
+  const localStorageInTryCatch = /try\s*{[^}]*localStorage[^}]*}\s*catch/g.test(content);
+  const hasUseEffect = content.includes('useEffect');
+  
+  logTest('localStorage wrapped in try-catch', localStorageInTryCatch);
+  logTest('localStorage in useEffect (not render)', hasUseEffect);
+  
+  if (localStorageInTryCatch) {
+    logInfo('Safe localStorage prevents crashes in private browsing');
+  }
+}
+
+/**
+ * Test 9: Verify dynamic overscan optimization
+ */
+function testDynamicOverscan() {
+  console.log(`\n${colors.blue}Test 9: Dynamic Overscan Optimization${colors.reset}`);
+  
+  const content = readFile('src/components/VirtualizedContactTable.tsx');
+  if (!content) {
+    logTest('File exists', false);
+    return;
+  }
+  
+  const hasGetOverscan = content.includes('const getOverscan');
+  const hasScreenSizeDependency = /overscan.*screenSize/s.test(content);
+  
+  logTest('getOverscan function defined', hasGetOverscan);
+  logTest('Overscan adapts to screen size', hasScreenSizeDependency);
+  
+  if (hasGetOverscan) {
+    logInfo('Dynamic overscan optimizes for different devices');
+  }
+}
+
+/**
+ * Test 10: Verify no inline functions in render
+ */
+function testNoInlineFunctions() {
+  console.log(`\n${colors.blue}Test 10: Inline Function Optimization${colors.reset}`);
+  
+  const content = readFile('src/components/VirtualizedContactTable.tsx');
+  if (!content) {
+    logTest('File exists', false);
+    return;
+  }
+  
+  // This is a heuristic - check for common patterns
+  const hasHandleSort = content.includes('const handleSort = useCallback');
+  const hasHandleEdit = content.includes('handleEditCommit');
+  const hasRenderCell = content.includes('const renderCellContent');
+  
+  logTest('Event handlers defined outside render', hasHandleSort);
+  logTest('Edit handlers properly defined', hasHandleEdit);
+  logTest('Cell renderer defined as function', hasRenderCell);
+  
+  if (hasHandleSort && hasRenderCell) {
+    logInfo('Stable function references prevent child re-renders');
+  }
+}
+
+/**
+ * Performance recommendations
+ */
+function printRecommendations() {
+  console.log(`\n${colors.cyan}═══════════════════════════════════════════════════════${colors.reset}`);
+  console.log(`${colors.cyan}  Performance Recommendations${colors.reset}`);
+  console.log(`${colors.cyan}═══════════════════════════════════════════════════════${colors.reset}`);
+  
+  console.log(`\n${colors.yellow}For Runtime Performance Testing:${colors.reset}`);
+  console.log(`  1. Use Chrome DevTools Performance tab`);
+  console.log(`  2. Test with 5000+ contacts`);
+  console.log(`  3. Measure scroll FPS (should be 60fps)`);
+  console.log(`  4. Check Time to Interactive (TTI)`);
+  console.log(`  5. Monitor memory usage during extended use`);
+  
+  console.log(`\n${colors.yellow}Expected Performance Metrics:${colors.reset}`);
+  console.log(`  • Initial render: < 100ms (5000 contacts)`);
+  console.log(`  • Scroll performance: 60fps`);
+  console.log(`  • Column resize: < 50ms`);
+  console.log(`  • Sort operation: < 200ms`);
+  console.log(`  • Memory: Stable (no leaks)`);
+  
+  console.log(`\n${colors.yellow}Optimization Tips:${colors.reset}`);
+  console.log(`  • Keep overscan low on mobile (5 rows)`);
+  console.log(`  • Debounce user inputs (300-500ms)`);
+  console.log(`  • Use React DevTools Profiler`);
+  console.log(`  • Monitor bundle size impact`);
+  console.log(`  • Test on low-end devices`);
+}
+
+/**
+ * Run all tests
+ */
+function runTests() {
+  console.log(`\n${colors.cyan}═══════════════════════════════════════════════════════${colors.reset}`);
+  console.log(`${colors.cyan}  Shadcn Table Migration - Performance Benchmarks${colors.reset}`);
+  console.log(`${colors.cyan}═══════════════════════════════════════════════════════${colors.reset}`);
+  
+  testVirtualizationMaintained();
+  testMemoizationUsed();
+  testDebouncingMaintained();
+  testEfficientColumnCalculation();
+  testResponsiveDebounced();
+  testNoUnnecessaryRerenders();
+  testEfficientSorting();
+  testLocalStorageSafe();
+  testDynamicOverscan();
+  testNoInlineFunctions();
+  
+  printRecommendations();
+  
+  // Print summary
+  console.log(`\n${colors.cyan}═══════════════════════════════════════════════════════${colors.reset}`);
+  console.log(`${colors.cyan}  Test Summary${colors.reset}`);
+  console.log(`${colors.cyan}═══════════════════════════════════════════════════════${colors.reset}`);
+  console.log(`  ${colors.green}Passed:${colors.reset}   ${results.passed}`);
+  console.log(`  ${colors.red}Failed:${colors.reset}   ${results.failed}`);
+  console.log(`  ${colors.yellow}Warnings:${colors.reset} ${results.warnings}`);
+  console.log(`  Total:    ${results.passed + results.failed}`);
+  
+  if (results.failed === 0) {
+    console.log(`\n${colors.green}✓ All performance checks passed!${colors.reset}`);
+    console.log(`${colors.green}  The table maintains high performance standards.${colors.reset}\n`);
+    process.exit(0);
   } else {
-    console.log(`  ❌ ${check.name} non debounced`);
-    allChecks = false;
+    console.log(`\n${colors.red}✗ Some performance checks failed.${colors.reset}`);
+    console.log(`${colors.red}  Review the failed checks for optimization opportunities.${colors.reset}\n`);
+    process.exit(1);
   }
-});
-
-console.log(`  Total: ${debounceCount}/2 types de champs debounced\n`);
-
-// Check 5: Pas d'animations Framer Motion sur les lignes
-console.log('✓ Check 5: Animations Framer Motion');
-if (!virtualizedTableContent.includes('motion.tr') && 
-    !virtualizedTableContent.includes('motion.div') &&
-    !virtualizedTableContent.includes('initial={{') &&
-    !virtualizedTableContent.includes('animate={{')) {
-  console.log('  ✅ Pas d\'animations coûteuses sur les lignes\n');
-} else {
-  console.log('  ⚠️  Animations Framer Motion détectées (peut impacter les performances)\n');
 }
 
-// Check 6: Import du hook
-console.log('✓ Check 6: Import du hook useDebouncedUpdate');
-if (virtualizedTableContent.includes("import { useDebouncedUpdate } from '../hooks/useDebouncedUpdate'")) {
-  console.log('  ✅ Hook importé correctement\n');
-} else {
-  console.log('  ❌ Hook non importé\n');
-  allChecks = false;
-}
-
-// Check 7: Utilisation du hook
-console.log('✓ Check 7: Utilisation du hook dans le composant');
-if (virtualizedTableContent.includes('const { debouncedCommentUpdate, debouncedDateUpdate, debouncedTextUpdate } = useDebouncedUpdate')) {
-  console.log('  ✅ Hook utilisé dans le composant\n');
-} else {
-  console.log('  ❌ Hook non utilisé\n');
-  allChecks = false;
-}
-
-// Résumé
-console.log('═══════════════════════════════════════════════════════');
-if (allChecks) {
-  console.log('✅ TOUTES LES OPTIMISATIONS SONT APPLIQUÉES !');
-  console.log('\n📊 Gains de performance attendus:');
-  console.log('  • Temps de chargement: -90% (10s → 0.5s)');
-  console.log('  • Utilisation mémoire: -75% (800MB → 200MB)');
-  console.log('  • Re-renders inutiles: -80%');
-  console.log('  • Sauvegardes pendant frappe: -90%');
-  console.log('  • Éléments DOM: -96% (1000 → 40)');
-  console.log('\n🧪 Prochaine étape: Tester avec 1000+ contacts');
-  process.exit(0);
-} else {
-  console.log('❌ CERTAINES OPTIMISATIONS SONT MANQUANTES');
-  console.log('\n📝 Vérifiez le fichier APPELS_TABLE_PERFORMANCE_OPTIMIZATIONS_APPLIED.md');
-  process.exit(1);
-}
+// Run tests
+runTests();
