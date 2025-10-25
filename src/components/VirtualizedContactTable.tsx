@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef, useImperativeHandle, forwardRef, useLayoutEffect } from 'react';
 import { Contact, ContactStatus, CallStates, Theme } from '../types';
 import { QUICK_COMMENTS, TABLE_HEADER_ICONS, DEFAULT_COLUMN_ORDER } from '../constants';
 import { cn } from '../lib/utils';
@@ -19,7 +19,9 @@ import { ReminderDialog } from './ReminderDialog';
 import StatusSelect from './StatusSelect';
 import { formatPhoneNumber } from '../services/dataService';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { useReactTable, getCoreRowModel, ColumnDef, ColumnSizingState } from '@tanstack/react-table';
 import { useDebouncedUpdate } from '../hooks/useDebouncedUpdate';
+import { useColumnAutosize, ColumnSizeConfig } from '../hooks/useColumnAutosize';
 
 // Storage keys
 const COLUMN_ORDER_STORAGE_KEY = 'dimicall-column-order';
@@ -85,30 +87,30 @@ const COLUMN_RESIZE_CONFIG = {
   fixed: {
     '#': 50,
     'Statut': 120,
-    'Date Rappel': 110,
-    'Heure Rappel': 80,
-    'Date RDV': 110,
-    'Heure RDV': 80,
-    'Date Appel': 110,
-    'Heure Appel': 80,
-    'Durée Appel': 70,
-    'Sexe': 60,
-    'Don': 60,
+    'Date Rappel': 180,  // ✅ Augmenté pour "Sélectionner" + bouton Bell
+    'Heure Rappel': 120, // ✅ Augmenté pour "Heure" + bouton X
+    'Date RDV': 150,     // ✅ Augmenté pour "Sélectionner"
+    'Heure RDV': 120,    // ✅ Augmenté pour "Heure" + bouton X
+    'Date Appel': 150,   // ✅ Augmenté pour "Sélectionner"
+    'Heure Appel': 120,  // ✅ Augmenté pour "Heure" + bouton X
+    'Durée Appel': 110,  // ✅ Augmenté pour "Durée Appel" complet
+    'Sexe': 80,          // ✅ Augmenté pour "Sexe" complet
+    'Don': 80,           // ✅ Augmenté pour "Don" complet
     'Type': 80,
     'Qualité': 80,
     'Date': 100,
     'UID': 100
   },
   
-  // Flexible columns (grow/shrink proportionally)
+  // Flexible columns (avec max plus permissifs pour autosize)
   flexible: {
-    'Prénom': { min: 100, preferred: 140, grow: 1 },
-    'Nom': { min: 100, preferred: 140, grow: 1 },
-    'Téléphone': { min: 120, preferred: 150, grow: 0.5 },
-    'Mail': { min: 180, preferred: 250, grow: 2 },
-    'Source': { min: 100, preferred: 140, grow: 0.8 },
-    'Commentaire': { min: 250, preferred: 350, grow: 3 },
-    'Lien': { min: 140, preferred: 200, grow: 1.5 }
+    'Prénom': { min: 100, max: 250 },
+    'Nom': { min: 100, max: 250 },
+    'Téléphone': { min: 120, max: 200 },
+    'Mail': { min: 180, max: 600 },      // ✅ Augmenté pour emails longs
+    'Source': { min: 100, max: 250 },
+    'Commentaire': { min: 250, max: 800 }, // ✅ Augmenté pour commentaires longs
+    'Lien': { min: 140, max: 500 }        // ✅ Augmenté pour URLs longues
   }
 } as const;
 
@@ -944,188 +946,109 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
     }
   };
 
-  // Calculate content-based width hints for flexible columns
-  const getColumnContentHints = useMemo(() => {
-    const hints: Record<string, { minDynamic: number; preferredDynamic: number }> = {};
-    
-    // Sample visible rows (max 20 for performance)
-    const sampleSize = Math.min(20, sortedContacts.length);
-    const samples = sortedContacts.slice(0, sampleSize);
-    
-    if (samples.length === 0) return hints;
-    
-    // Helper: estimate width from text length
-    const estimateWidth = (text: string, isMonospace = false): number => {
-      const charWidth = isMonospace ? 8 : 7; // px per char at text-xs
-      const padding = 16; // px-3 = 12px * 2 sides ≈ 16px total
-      return (text.length * charWidth) + padding;
-    };
-    
-    // Analyze each flexible column
-    const flexibleColumnLabels = Object.keys(COLUMN_RESIZE_CONFIG.flexible);
-    
-    flexibleColumnLabels.forEach(label => {
-      const config = COLUMN_RESIZE_CONFIG.flexible[label as keyof typeof COLUMN_RESIZE_CONFIG.flexible];
-      if (!config) return;
-      
-      let maxWidth = 0;
-      let avgWidth = 0;
-      
-      samples.forEach(contact => {
-        let contentWidth = 0;
-        
-        switch (label) {
-          case 'Prénom':
-            contentWidth = estimateWidth(contact.prenom || 'N/A');
-            break;
-          case 'Nom':
-            contentWidth = estimateWidth(contact.nom || 'N/A');
-            break;
-          case 'Téléphone':
-            contentWidth = estimateWidth(contact.telephone || 'N/A', true) + 8; // monospace + icon
-            break;
-          case 'Mail':
-            const email = contact.email || 'N/A';
-            // Limit to reasonable display length
-            contentWidth = estimateWidth(email.substring(0, 40));
-            break;
-          case 'Source':
-            contentWidth = estimateWidth(contact.source || 'N/A');
-            break;
-          case 'Commentaire':
-            const comment = contact.commentaire || 'Commentaire...';
-            // Limit to 60 chars for hint calculation
-            contentWidth = estimateWidth(comment.substring(0, 60)) + 32; // + Zap button
-            break;
-          case 'Lien':
-            const lien = contact.lien || 'N/A';
-            // Limit to 50 chars
-            contentWidth = estimateWidth(lien.substring(0, 50));
-            break;
-        }
-        
-        maxWidth = Math.max(maxWidth, contentWidth);
-        avgWidth += contentWidth;
+  // Get visible columns first (needed for autosize)
+  const visibleOrderedColumnsBase = useMemo(() => {
+    let visibleCols = columnOrder
+      .map(id => dynamicColumns.find(col => col.id === id))
+      .filter((col): col is ColumnConfig => {
+        if (!col) return false;
+        return visibleColumns[col.label] !== false;
       });
+    
+    // Apply responsive filtering based on screen size
+    return getVisibleColumnsForScreenSize(visibleCols, screenSize);
+  }, [columnOrder, dynamicColumns, visibleColumns, screenSize]);
+
+  // Configuration des colonnes pour autosize Canvas
+  const columnSizeConfigs = useMemo((): ColumnSizeConfig[] => {
+    return visibleOrderedColumnsBase.map(col => ({
+      id: col.id,
+      label: col.label,
+      minSize: COLUMN_RESIZE_CONFIG.fixed[col.label as keyof typeof COLUMN_RESIZE_CONFIG.fixed]
+        || COLUMN_RESIZE_CONFIG.flexible[col.label as keyof typeof COLUMN_RESIZE_CONFIG.flexible]?.min
+        || 80,
+      maxSize: COLUMN_RESIZE_CONFIG.flexible[col.label as keyof typeof COLUMN_RESIZE_CONFIG.flexible]?.max || 200,
+      widgetPadding: 
+        col.id === 'statut' ? 120 :
+        col.id === 'dateRappel' ? 60 : // Bouton Bell + marge
+        col.id === 'commentaire' ? 32 : // Bouton Zap
+        col.id.includes('date') ? 40 :  // ✅ Augmenté pour bouton "Sélectionner" + icône + bouton X
+        col.id.includes('heure') ? 40 : // ✅ Augmenté pour bouton "Heure" + icône + bouton X
+        0
+    }));
+  }, [visibleOrderedColumnsBase]);
+
+  // Calculer les tailles automatiques avec Canvas (comme Excel AutoFit)
+  const autoSizes = useColumnAutosize({
+    data: sortedContacts,
+    columns: columnSizeConfigs,
+    sampleSize: 50,
+    enabled: true
+  });
+
+  // Définir les colonnes TanStack
+  const tanstackColumns = useMemo<ColumnDef<Contact>[]>(() => {
+    return visibleOrderedColumnsBase.map(col => ({
+      id: col.id,
+      header: col.label,
+      accessorKey: col.key === 'index' ? undefined : col.key,
+      accessorFn: col.key === 'index' 
+        ? (row) => contacts.indexOf(row) + 1
+        : undefined,
+      enableResizing: true,
+      minSize: COLUMN_RESIZE_CONFIG.fixed[col.label as keyof typeof COLUMN_RESIZE_CONFIG.fixed] 
+        || COLUMN_RESIZE_CONFIG.flexible[col.label as keyof typeof COLUMN_RESIZE_CONFIG.flexible]?.min 
+        || 80,
+      maxSize: COLUMN_RESIZE_CONFIG.flexible[col.label as keyof typeof COLUMN_RESIZE_CONFIG.flexible]?.max || 200,
+      size: undefined, // Laisse TanStack décider
+      meta: {
+        label: col.label,
+        icon: col.icon,
+        canSort: col.canSort
+      }
+    }));
+  }, [visibleOrderedColumnsBase, contacts]);
+
+  // State pour column sizing TanStack
+  const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
+
+  // Instancier TanStack Table
+  const table = useReactTable({
+    data: sortedContacts,
+    columns: tanstackColumns,
+    state: {
+      columnSizing
+    },
+    onColumnSizingChange: setColumnSizing,
+    columnResizeMode: 'onChange',
+    getCoreRowModel: getCoreRowModel(),
+    // On n'utilise pas le rowModel interne (on garde virtualizer)
+    enableRowSelection: false,
+    enableSorting: false // On garde notre tri custom
+  });
+
+  // Synchroniser autoSizes avec columnSizing
+  useLayoutEffect(() => {
+    if (Object.keys(autoSizes).length > 0) {
+      setColumnSizing(prev => ({
+        ...prev,
+        ...autoSizes
+      }));
+    }
+  }, [autoSizes]);
+
+  // Visible ordered columns avec tailles TanStack
+  const visibleOrderedColumns = useMemo(() => {
+    return visibleOrderedColumnsBase.map(col => {
+      const tanstackCol = table.getColumn(col.id);
+      const colSize = tanstackCol?.getSize() ?? 100;
       
-      avgWidth = avgWidth / samples.length;
-      
-      // Calculate dynamic min and preferred
-      // minDynamic: between static min and 2x static min, based on average content
-      const minDynamic = Math.max(
-        config.min,
-        Math.min(avgWidth * 1.1, config.min * 2)
-      );
-      
-      // preferredDynamic: based on max content seen, with multiplier per column type
-      let preferredMultiplier = 1.4;
-      if (label === 'Commentaire') preferredMultiplier = 1.8;
-      else if (label === 'Mail' || label === 'Lien') preferredMultiplier = 1.6;
-      
-      const preferredDynamic = Math.max(
-        config.preferred,
-        Math.min(maxWidth * 1.2, config.preferred * preferredMultiplier)
-      );
-      
-      hints[label] = {
-        minDynamic: Math.floor(minDynamic),
-        preferredDynamic: Math.floor(preferredDynamic)
+      return {
+        ...col,
+        calculatedWidth: `${colSize}px`
       };
     });
-    
-    return hints;
-  }, [sortedContacts, screenSize]);
-
-  // Calculate responsive column widths
-  const calculateResponsiveWidths = useMemo(() => {
-    try {
-      const containerWidth = scrollContainerRef.current?.clientWidth || 1200;
-      
-      // Validation
-      const validatedWidth = containerWidth < 320 ? 320 : containerWidth;
-      
-      // Get visible columns
-      let visibleCols = columnOrder
-        .map(id => dynamicColumns.find(col => col.id === id))
-        .filter((col): col is ColumnConfig => {
-          if (!col) return false;
-          return visibleColumns[col.label] !== false;
-        });
-      
-      // Apply responsive filtering based on screen size
-      visibleCols = getVisibleColumnsForScreenSize(visibleCols, screenSize);
-      
-      // Step 1: Calculate total width of fixed columns
-      const fixedColumns = visibleCols.filter(col => 
-        COLUMN_RESIZE_CONFIG.fixed[col.label as keyof typeof COLUMN_RESIZE_CONFIG.fixed]
-      );
-      
-      const fixedWidth = fixedColumns.reduce((sum, col) => 
-        sum + (COLUMN_RESIZE_CONFIG.fixed[col.label as keyof typeof COLUMN_RESIZE_CONFIG.fixed] || 0), 0
-      );
-      
-      // Step 2: Calculate available width for flexible columns
-      const availableWidth = Math.max(0, validatedWidth - fixedWidth - 20); // 20px margin
-      
-      // Step 3: Get flexible columns and calculate total weight
-      const flexibleColumns = visibleCols.filter(col =>
-        COLUMN_RESIZE_CONFIG.flexible[col.label as keyof typeof COLUMN_RESIZE_CONFIG.flexible]
-      );
-      
-      const totalWeight = flexibleColumns.reduce((sum, col) => {
-        const config = COLUMN_RESIZE_CONFIG.flexible[col.label as keyof typeof COLUMN_RESIZE_CONFIG.flexible];
-        return sum + (config?.grow || 1);
-      }, 0);
-      
-      // Step 4: Distribute available width proportionally with content hints
-      return visibleCols.map(col => {
-        // Fixed column
-        const fixedSize = COLUMN_RESIZE_CONFIG.fixed[col.label as keyof typeof COLUMN_RESIZE_CONFIG.fixed];
-        if (fixedSize) {
-          return { ...col, calculatedWidth: `${fixedSize}px` };
-        }
-        
-        // Flexible column with dynamic hints
-        const flexConfig = COLUMN_RESIZE_CONFIG.flexible[col.label as keyof typeof COLUMN_RESIZE_CONFIG.flexible];
-        if (flexConfig && totalWeight > 0) {
-          // Merge static config with dynamic hints
-          const hints = getColumnContentHints[col.label];
-          const minWidth = hints?.minDynamic || flexConfig.min;
-          const preferredWidth = hints?.preferredDynamic || flexConfig.preferred;
-          
-          // Calculate proportional width
-          const proportionalWidth = (availableWidth * flexConfig.grow) / totalWeight;
-          
-          // Clamp with dynamic bounds (use 1.8x for better expansion)
-          const finalWidth = Math.max(
-            minWidth,
-            Math.min(proportionalWidth, preferredWidth * 1.8)
-          );
-          
-          return { ...col, calculatedWidth: `${Math.floor(finalWidth)}px` };
-        }
-        
-        // Fallback
-        return { ...col, calculatedWidth: '100px' };
-      });
-    } catch (error) {
-      console.error('Column width calculation failed:', error);
-      // Fallback to fixed widths
-      return columnOrder
-        .map(id => dynamicColumns.find(col => col.id === id))
-        .filter((col): col is ColumnConfig => {
-          if (!col) return false;
-          return visibleColumns[col.label] !== false;
-        })
-        .map(col => ({
-          ...col,
-          calculatedWidth: '100px'
-        }));
-    }
-  }, [columnOrder, dynamicColumns, visibleColumns, scrollContainerRef.current?.clientWidth, screenSize, getColumnContentHints]);
-
-  // Visible ordered columns with calculated widths
-  const visibleOrderedColumns = calculateResponsiveWidths;
+  }, [visibleOrderedColumnsBase, table, columnSizing]);
 
   // Empty state component
   const EmptyState = () => (
