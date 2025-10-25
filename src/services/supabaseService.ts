@@ -1,12 +1,15 @@
 import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { Contact, ContactStatus } from '../types';
 
-// Configuration Supabase - À configurer via variables d'environnement ou interface utilisateur
-const DEFAULT_SUPABASE_URL = 'https://oqnagwoqlhqtnhfiakom.supabase.co';
-const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9xbmFnd29xbGhxdG5oZmlha29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk0MTY5MzAsImV4cCI6MjA2NDk5MjkzMH0.8IjJYZRT9B8PRsP40S7-wvY2achfwoZ6NEaZSFNHRgY';
+// Configuration Supabase - DOIT être configuré via variables d'environnement
+const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
 
-const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
-const SUPABASE_ANON_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY;
+// Vérification de la configuration au démarrage
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error('❌ Configuration Supabase manquante!');
+  console.error('Créez un fichier .env.local avec VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY');
+}
 
 
 

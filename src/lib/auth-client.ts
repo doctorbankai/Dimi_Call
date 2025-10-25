@@ -155,7 +155,7 @@ export const useSupabaseAuth = () => {
       }
     );
 
-    // 3. Vérification périodique de l'existence de l'utilisateur (toutes les 30 minutes)
+    // 3. Vérification périodique de l'existence de l'utilisateur et des sessions (toutes les 30 secondes)
     const userVerificationInterval = setInterval(async () => {
       // Ne pas faire de vérification pendant un appel ou hors-ligne
       if (isOffline() || isCallInProgress()) {
@@ -166,6 +166,7 @@ export const useSupabaseAuth = () => {
       const currentUser = currentSession.data.session?.user ?? null;
       
       if (currentUser) {
+        // Vérifier si l'utilisateur existe toujours
         const userStillExists = await verifyUserStillExists(currentUser);
         if (!userStillExists) {
           console.log('[Auth] 🚨 Utilisateur supprimé - déconnexion forcée');
@@ -183,8 +184,34 @@ export const useSupabaseAuth = () => {
             supabaseLogger.warn('User deleted but sign-out deferred (call in progress)');
           }
         }
+
+        // Vérifier les sessions concurrentes (backup de la surveillance temps réel)
+        try {
+          const { data: sessions, error } = await supabase
+            .from('active_sessions')
+            .select('session_id, created_at')
+            .eq('user_id', currentUser.id)
+            .order('created_at', { ascending: false });
+
+          if (!error && sessions && sessions.length > 1) {
+            // Plus d'une session active détectée
+            const currentSessionId = (currentSession.data.session as any)?.access_token?.substring(0, 20);
+            const isCurrentSessionNewest = sessions[0]?.session_id === currentSessionId;
+            
+            if (!isCurrentSessionNewest) {
+              console.warn('[Auth] 🚨 Session plus récente détectée - déconnexion');
+              supabaseLogger.warn('Newer session detected, signing out');
+              await supabase.auth.signOut();
+              if (typeof window !== 'undefined') {
+                alert('Votre compte a été connecté depuis un autre appareil. Vous avez été déconnecté.');
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('[Auth] Erreur lors de la vérification des sessions:', error);
+        }
       }
-    }, 30 * 60 * 1000); // Vérification toutes les 30 minutes
+    }, 30 * 1000); // Vérification toutes les 30 secondes (plus fréquent pour détecter rapidement)
 
     // Écouter les changements réseau et de stockage pour relâcher le maintien
     const handleOnline = async () => {
@@ -232,46 +259,83 @@ export const useSupabaseAuth = () => {
     };
   }, []);
 
-  // Fonction pour révoquer toutes les autres sessions du même utilisateur
-  const revokeOtherSessions = async () => {
+  // Fonction pour enregistrer la session active et révoquer les autres
+  const registerActiveSession = async (userId: string, sessionId: string) => {
     try {
-      console.log('[Auth] Révocation des autres sessions en cours...');
+      console.log('[Auth] Enregistrement de la session active...');
       
-      // Supabase ne fournit pas d'API directe pour révoquer les autres sessions,
-      // mais on peut utiliser une approche qui force le rafraîchissement des tokens
-      // ce qui invalidera les anciennes sessions
-      
-      // Méthode 1: Mettre à jour les métadonnées utilisateur pour forcer l'invalidation
-      const { error: updateError } = await supabase.auth.updateUser({
-        data: { 
-          last_sign_in_device: navigator.userAgent,
-          last_sign_in_timestamp: new Date().toISOString()
-        }
-      });
+      // Enregistrer cette session dans la table active_sessions
+      const { error: insertError } = await supabase
+        .from('active_sessions')
+        .upsert({
+          user_id: userId,
+          session_id: sessionId,
+          device_info: navigator.userAgent,
+          ip_address: 'client', // L'IP réelle sera capturée côté serveur si nécessaire
+          last_activity: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id,session_id'
+        });
 
-      if (updateError) {
-        console.warn('[Auth] Erreur lors de la mise à jour des métadonnées:', updateError);
-        supabaseLogger.warn('updateUser metadata failed', updateError);
-      }
-
-      // Méthode 2: Forcer le rafraîchissement du token actuel
-      const { error: refreshError } = await supabase.auth.refreshSession();
-      
-      if (refreshError) {
-        console.warn('[Auth] Erreur lors du rafraîchissement de session:', refreshError);
-        supabaseLogger.error('refreshSession failed during revokeOtherSessions', refreshError);
+      if (insertError) {
+        console.warn('[Auth] Erreur lors de l\'enregistrement de la session:', insertError);
+        supabaseLogger.warn('registerActiveSession failed', insertError);
       } else {
-        console.log('[Auth] ✅ Autres sessions révoquées avec succès');
-        supabaseLogger.log('Other sessions revoked via refresh');
+        console.log('[Auth] ✅ Session enregistrée avec succès');
+        supabaseLogger.log('Active session registered', { userId, sessionId: sessionId.substring(0, 10) + '...' });
       }
       
     } catch (error) {
-      console.error('[Auth] Erreur lors de la révocation des autres sessions:', error);
-      supabaseLogger.error('revokeOtherSessions threw', error);
+      console.error('[Auth] Erreur lors de l\'enregistrement de la session:', error);
+      supabaseLogger.error('registerActiveSession threw', error);
     }
   };
 
-  // Connexion par email et mot de passe avec soft-kick
+  // Fonction pour surveiller les sessions concurrentes en temps réel
+  const monitorConcurrentSessions = (userId: string, currentSessionId: string) => {
+    console.log('[Auth] Démarrage de la surveillance des sessions concurrentes...');
+    
+    // Écouter les changements dans la table active_sessions
+    const channel = supabase
+      .channel('session-monitor')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'active_sessions',
+          filter: `user_id=eq.${userId}`,
+        },
+        async (payload) => {
+          console.log('[Auth] Nouvelle session détectée:', payload);
+          
+          // Si une nouvelle session est créée et ce n'est pas la nôtre
+          if (payload.new && payload.new.session_id !== currentSessionId) {
+            console.warn('[Auth] 🚨 Connexion depuis un autre appareil détectée!');
+            supabaseLogger.warn('Concurrent session detected', {
+              newSessionId: payload.new.session_id?.substring(0, 10) + '...',
+              currentSessionId: currentSessionId.substring(0, 10) + '...'
+            });
+            
+            // Déconnecter cette session
+            await supabase.auth.signOut();
+            
+            // Afficher une notification à l'utilisateur
+            if (typeof window !== 'undefined') {
+              alert('Votre compte a été connecté depuis un autre appareil. Vous avez été déconnecté.');
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('[Auth] Arrêt de la surveillance des sessions');
+      channel.unsubscribe();
+    };
+  };
+
+  // Connexion par email et mot de passe avec protection anti-partage
   const signInWithPassword = async (email: string, password: string) => {
     console.log('[auth-client] Appel de signInWithPassword');
     setIsLoading(true);
@@ -290,17 +354,22 @@ export const useSupabaseAuth = () => {
       error: error ? { name: (error as any)?.name, message: (error as any)?.message, status: (error as any)?.status } : null
     });
     
-    // Si la connexion réussit, révoquer les autres sessions (soft-kick)
-    if (!error && data.session) {
-      console.log('[auth-client] Connexion réussie, mise à jour manuelle de la session.');
+    // Si la connexion réussit, enregistrer la session et surveiller les concurrentes
+    if (!error && data.session && data.user) {
+      console.log('[auth-client] Connexion réussie, enregistrement de la session.');
       setSession(data.session);
       setUser(data.user);
       supabaseLogger.log('signInWithPassword success', { userId: data.user?.id });
       
-      // Déclencher le soft-kick après un court délai pour laisser la session s'établir
-      setTimeout(() => {
-        revokeOtherSessions();
-      }, 1000);
+      // Enregistrer cette session comme active (déclenche le trigger SQL qui supprime les autres)
+      const sessionId = (data.session as any).access_token?.substring(0, 20) || crypto.randomUUID();
+      await registerActiveSession(data.user.id, sessionId);
+      
+      // Démarrer la surveillance des sessions concurrentes
+      const unsubscribe = monitorConcurrentSessions(data.user.id, sessionId);
+      
+      // Nettoyer la surveillance lors de la déconnexion
+      return () => unsubscribe();
     }
 
     setIsLoading(false);

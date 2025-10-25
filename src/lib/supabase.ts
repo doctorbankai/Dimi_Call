@@ -1,23 +1,43 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Configuration Supabase - À mettre à jour avec vos vraies clés API
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://oqnagwoqlhqtnhfiakom.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9xbmFnd29xbGhxdG5oZmlha29tIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk0MTY5MzAsImV4cCI6MjA2NDk5MjkzMH0.8IjJYZRT9B8PRsP40S7-wvY2achfwoZ6NEaZSFNHRgY';
+// Configuration Supabase - DOIT être configuré via variables d'environnement
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// LOGS DE DÉBOGAGE - Variables d'environnement
-console.log('🔧 [DEBUG] Variables d\'environnement Supabase:');
-console.log('🔧 [DEBUG] VITE_SUPABASE_URL depuis env:', import.meta.env.VITE_SUPABASE_URL);
-console.log('🔧 [DEBUG] VITE_SUPABASE_ANON_KEY depuis env:', import.meta.env.VITE_SUPABASE_ANON_KEY ? `${import.meta.env.VITE_SUPABASE_ANON_KEY.substring(0, 20)}...` : 'undefined');
-console.log('🔧 [DEBUG] URL utilisée:', supabaseUrl);
-console.log('🔧 [DEBUG] Clé utilisée:', supabaseAnonKey ? `${supabaseAnonKey.substring(0, 20)}...` : 'undefined');
-console.log('🔧 [DEBUG] Toutes les variables env:', Object.keys(import.meta.env));
+// Vérification de la configuration
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('❌ Configuration Supabase manquante!');
+  console.error('Créez un fichier .env.local avec:');
+  console.error('VITE_SUPABASE_URL=https://votre-projet.supabase.co');
+  console.error('VITE_SUPABASE_ANON_KEY=votre_cle_anon');
+  throw new Error('Configuration Supabase manquante - Voir .env.example');
+}
 
-// IMPORTANT: Pour obtenir votre vraie clé anon :
-// 1. Allez sur https://supabase.com/dashboard/project/oqnagwoqlhqtnhfiakom
-// 2. Settings > API > anon public key
-// 3. Remplacez la valeur ci-dessus ou créez un fichier .env.local avec VITE_SUPABASE_ANON_KEY
+// LOGS DE DÉBOGAGE (sans exposer les clés)
+if (import.meta.env.DEV) {
+  console.log('🔧 [DEBUG] Supabase configuré:', {
+    url: supabaseUrl,
+    hasKey: !!supabaseAnonKey,
+    keyPrefix: supabaseAnonKey ? `${supabaseAnonKey.substring(0, 10)}...` : 'undefined'
+  });
+}
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Configuration du client avec options de sécurité
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true,
+    // Stockage sécurisé des tokens
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+  },
+  // Options de sécurité supplémentaires
+  global: {
+    headers: {
+      'X-Client-Info': 'dimicall-desktop',
+    },
+  },
+});
 
 // Types pour l'utilisateur
 export interface AuthUser {
