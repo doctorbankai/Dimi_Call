@@ -16,7 +16,7 @@ interface StatusSelectProps {
   size?: 'sm' | 'default';
 }
 
-const StatusSelect: React.FC<StatusSelectProps> = ({
+const StatusSelect = React.memo<StatusSelectProps>(({
   value,
   onChange,
   placeholder = 'Statut',
@@ -89,6 +89,11 @@ const StatusSelect: React.FC<StatusSelectProps> = ({
       </SelectContent>
     </Select>
   );
-};
+}, (prevProps, nextProps) => {
+  // Only re-render if value changes
+  return prevProps.value === nextProps.value;
+});
+
+StatusSelect.displayName = 'StatusSelect';
 
 export default StatusSelect;

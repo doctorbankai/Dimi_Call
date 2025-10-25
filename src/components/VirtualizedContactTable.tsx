@@ -19,6 +19,7 @@ import { ReminderDialog } from './ReminderDialog';
 import StatusSelect from './StatusSelect';
 import { formatPhoneNumber } from '../services/dataService';
 import { useVirtualizer } from '@tanstack/react-virtual';
+import { useDebouncedUpdate } from '../hooks/useDebouncedUpdate';
 
 // Storage keys
 const COLUMN_ORDER_STORAGE_KEY = 'dimicall-column-order';
@@ -43,14 +44,14 @@ type SortDirection = 'asc' | 'desc' | null;
 
 const INPUT_BASE_CLASS = "h-8 px-2 text-xs border border-border/50 rounded-md bg-background/80 focus:bg-background focus:border-primary/50 transition-colors";
 
-// Comment Widget Component
+// Comment Widget Component - Memoized for performance
 interface CommentWidgetProps {
   value: string;
   onChange: (newComment: string) => void;
   theme: Theme;
 }
 
-const CommentWidget: React.FC<CommentWidgetProps> = ({ value, onChange, theme }) => {
+const CommentWidget = React.memo<CommentWidgetProps>(({ value, onChange, theme }) => {
   const [comment, setComment] = useState(value);
 
   useEffect(() => {
@@ -93,9 +94,12 @@ const CommentWidget: React.FC<CommentWidgetProps> = ({ value, onChange, theme })
       </Select>
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  // Only re-render if value or theme changes
+  return prevProps.value === nextProps.value && prevProps.theme === nextProps.theme;
+});
 
-// DateTime Cell Component
+// DateTime Cell Component - Memoized for performance
 interface DateTimeCellProps {
   value: string; 
   type: 'date' | 'time';
@@ -103,7 +107,7 @@ interface DateTimeCellProps {
   theme: Theme;
 }
 
-const DateTimeCell: React.FC<DateTimeCellProps> = ({ value, type, onChange, theme }) => {
+const DateTimeCell = React.memo<DateTimeCellProps>(({ value, type, onChange, theme }) => {
   const [currentValue, setCurrentValue] = useState(value);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
@@ -261,7 +265,14 @@ const DateTimeCell: React.FC<DateTimeCellProps> = ({ value, type, onChange, them
   }
 
   return null;
-};
+}, (prevProps, nextProps) => {
+  // Only re-render if value, type, or theme changes
+  return (
+    prevProps.value === nextProps.value &&
+    prevProps.type === nextProps.type &&
+    prevProps.theme === nextProps.theme
+  );
+});
 
 
 // Interface for exposed methods via ref
@@ -320,6 +331,16 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
   }>({
     isOpen: false,
     contact: null
+  });
+
+  // Debounced updates for better performance
+  const { debouncedCommentUpdate, debouncedDateUpdate, debouncedTextUpdate } = useDebouncedUpdate({
+    onUpdateContact,
+    delays: {
+      comment: 300,  // 300ms for comments
+      date: 500,     // 500ms for dates
+      text: 1000     // 1000ms for text fields
+    }
   });
 
   // Create dynamic columns based on props
@@ -693,10 +714,8 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
           <CommentWidget
             value={(value as string) || ''}
             onChange={(newComment) => {
-              onUpdateContact({
-                id: contact.id,
-                commentaire: newComment
-              });
+              // Use debounced update for comments (300ms)
+              debouncedCommentUpdate(contact.id, newComment);
             }}
             theme={theme}
           />
@@ -709,10 +728,8 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
               value={(value as string) || ''}
               type="date"
               onChange={(newDate) => {
-                onUpdateContact({
-                  id: contact.id,
-                  [columnKey]: newDate
-                });
+                // Use debounced update for dates (500ms)
+                debouncedDateUpdate(contact.id, columnKey, newDate);
               }}
               theme={theme}
             />
@@ -739,10 +756,8 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
             value={(value as string) || ''}
             type="date"
             onChange={(newDate) => {
-              onUpdateContact({
-                id: contact.id,
-                [columnKey]: newDate
-              });
+              // Use debounced update for dates (500ms)
+              debouncedDateUpdate(contact.id, columnKey, newDate);
             }}
             theme={theme}
           />
@@ -756,10 +771,8 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
             value={(value as string) || ''}
             type="time"
             onChange={(newTime) => {
-              onUpdateContact({
-                id: contact.id,
-                [columnKey]: newTime
-              });
+              // Use debounced update for time fields (500ms)
+              debouncedDateUpdate(contact.id, columnKey, newTime);
             }}
             theme={theme}
           />
