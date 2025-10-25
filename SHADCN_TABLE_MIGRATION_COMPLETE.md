@@ -276,9 +276,16 @@ Suite à l'analyse visuelle, des corrections ont été appliquées en 3 phases :
 6. ✅ **Alignement headers/cellules** : `minWidth: column.calculatedWidth` + `flexShrink: 0`
 7. ✅ **Scroll stability** : PopoverContent `align="center"` au lieu de `"start"`
 
+### Phase 3 : Auto-Resize Intelligent (20 min)
+8. ✅ **Analyse du contenu** : Hook `getColumnContentHints` qui échantillonne 20 lignes
+9. ✅ **Calcul data-driven** : Conversion chars → pixels (7-8 px/char)
+10. ✅ **Hints dynamiques** : `minDynamic` et `preferredDynamic` par colonne
+11. ✅ **Clamp intelligent** : `preferred * 1.8` au lieu de `1.5`
+
 **Voir détails** : 
 - `SHADCN_TABLE_OVERLAP_FIX.md` - Correctifs chevauchements
 - `SHADCN_TABLE_FINAL_FIXES.md` - Correctifs finaux alignement & scroll
+- `SHADCN_TABLE_CONTENT_AWARE_RESIZE.md` - Auto-resize intelligent basé sur le contenu
 
 ## 🎉 Conclusion
 
@@ -294,4 +301,5 @@ La migration vers Shadcn UI est **100% complète, testée et corrigée**. La tab
 **Chevauchements** : Corrigés ✅
 **Alignement** : Pixel-perfect ✅
 **Scroll** : 100% stable ✅
+**Auto-resize** : Data-driven intelligent ✅
 **État** : PRODUCTION READY ✅

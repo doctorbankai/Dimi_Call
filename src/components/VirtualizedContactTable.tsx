@@ -944,6 +944,98 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
     }
   };
 
+  // Calculate content-based width hints for flexible columns
+  const getColumnContentHints = useMemo(() => {
+    const hints: Record<string, { minDynamic: number; preferredDynamic: number }> = {};
+    
+    // Sample visible rows (max 20 for performance)
+    const sampleSize = Math.min(20, sortedContacts.length);
+    const samples = sortedContacts.slice(0, sampleSize);
+    
+    if (samples.length === 0) return hints;
+    
+    // Helper: estimate width from text length
+    const estimateWidth = (text: string, isMonospace = false): number => {
+      const charWidth = isMonospace ? 8 : 7; // px per char at text-xs
+      const padding = 16; // px-3 = 12px * 2 sides ≈ 16px total
+      return (text.length * charWidth) + padding;
+    };
+    
+    // Analyze each flexible column
+    const flexibleColumnLabels = Object.keys(COLUMN_RESIZE_CONFIG.flexible);
+    
+    flexibleColumnLabels.forEach(label => {
+      const config = COLUMN_RESIZE_CONFIG.flexible[label as keyof typeof COLUMN_RESIZE_CONFIG.flexible];
+      if (!config) return;
+      
+      let maxWidth = 0;
+      let avgWidth = 0;
+      
+      samples.forEach(contact => {
+        let contentWidth = 0;
+        
+        switch (label) {
+          case 'Prénom':
+            contentWidth = estimateWidth(contact.prenom || 'N/A');
+            break;
+          case 'Nom':
+            contentWidth = estimateWidth(contact.nom || 'N/A');
+            break;
+          case 'Téléphone':
+            contentWidth = estimateWidth(contact.telephone || 'N/A', true) + 8; // monospace + icon
+            break;
+          case 'Mail':
+            const email = contact.email || 'N/A';
+            // Limit to reasonable display length
+            contentWidth = estimateWidth(email.substring(0, 40));
+            break;
+          case 'Source':
+            contentWidth = estimateWidth(contact.source || 'N/A');
+            break;
+          case 'Commentaire':
+            const comment = contact.commentaire || 'Commentaire...';
+            // Limit to 60 chars for hint calculation
+            contentWidth = estimateWidth(comment.substring(0, 60)) + 32; // + Zap button
+            break;
+          case 'Lien':
+            const lien = contact.lien || 'N/A';
+            // Limit to 50 chars
+            contentWidth = estimateWidth(lien.substring(0, 50));
+            break;
+        }
+        
+        maxWidth = Math.max(maxWidth, contentWidth);
+        avgWidth += contentWidth;
+      });
+      
+      avgWidth = avgWidth / samples.length;
+      
+      // Calculate dynamic min and preferred
+      // minDynamic: between static min and 2x static min, based on average content
+      const minDynamic = Math.max(
+        config.min,
+        Math.min(avgWidth * 1.1, config.min * 2)
+      );
+      
+      // preferredDynamic: based on max content seen, with multiplier per column type
+      let preferredMultiplier = 1.4;
+      if (label === 'Commentaire') preferredMultiplier = 1.8;
+      else if (label === 'Mail' || label === 'Lien') preferredMultiplier = 1.6;
+      
+      const preferredDynamic = Math.max(
+        config.preferred,
+        Math.min(maxWidth * 1.2, config.preferred * preferredMultiplier)
+      );
+      
+      hints[label] = {
+        minDynamic: Math.floor(minDynamic),
+        preferredDynamic: Math.floor(preferredDynamic)
+      };
+    });
+    
+    return hints;
+  }, [sortedContacts, screenSize]);
+
   // Calculate responsive column widths
   const calculateResponsiveWidths = useMemo(() => {
     try {
@@ -985,7 +1077,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
         return sum + (config?.grow || 1);
       }, 0);
       
-      // Step 4: Distribute available width proportionally
+      // Step 4: Distribute available width proportionally with content hints
       return visibleCols.map(col => {
         // Fixed column
         const fixedSize = COLUMN_RESIZE_CONFIG.fixed[col.label as keyof typeof COLUMN_RESIZE_CONFIG.fixed];
@@ -993,14 +1085,23 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
           return { ...col, calculatedWidth: `${fixedSize}px` };
         }
         
-        // Flexible column
+        // Flexible column with dynamic hints
         const flexConfig = COLUMN_RESIZE_CONFIG.flexible[col.label as keyof typeof COLUMN_RESIZE_CONFIG.flexible];
         if (flexConfig && totalWeight > 0) {
+          // Merge static config with dynamic hints
+          const hints = getColumnContentHints[col.label];
+          const minWidth = hints?.minDynamic || flexConfig.min;
+          const preferredWidth = hints?.preferredDynamic || flexConfig.preferred;
+          
+          // Calculate proportional width
           const proportionalWidth = (availableWidth * flexConfig.grow) / totalWeight;
+          
+          // Clamp with dynamic bounds (use 1.8x for better expansion)
           const finalWidth = Math.max(
-            flexConfig.min,
-            Math.min(proportionalWidth, flexConfig.preferred * 1.5)
+            minWidth,
+            Math.min(proportionalWidth, preferredWidth * 1.8)
           );
+          
           return { ...col, calculatedWidth: `${Math.floor(finalWidth)}px` };
         }
         
@@ -1021,7 +1122,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
           calculatedWidth: '100px'
         }));
     }
-  }, [columnOrder, dynamicColumns, visibleColumns, scrollContainerRef.current?.clientWidth, screenSize]);
+  }, [columnOrder, dynamicColumns, visibleColumns, scrollContainerRef.current?.clientWidth, screenSize, getColumnContentHints]);
 
   // Visible ordered columns with calculated widths
   const visibleOrderedColumns = calculateResponsiveWidths;
