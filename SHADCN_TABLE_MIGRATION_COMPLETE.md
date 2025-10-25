@@ -263,16 +263,22 @@ La table a maintenant :
 
 ## 🔧 Correctifs Post-Migration
 
-Suite à l'analyse visuelle, des corrections ont été appliquées pour éliminer les chevauchements :
+Suite à l'analyse visuelle, des corrections ont été appliquées en 3 phases :
 
-### Corrections Appliquées
+### Phase 1 : Correctifs Chevauchements
 1. ✅ **Wrapper de cellule** : Suppression de `justify-center`, ajout de `min-w-0 overflow-hidden`
 2. ✅ **Headers** : `flex-1 min-w-0` sur label, `flex-shrink-0` sur icônes
 3. ✅ **Widgets** : Wrappers avec contraintes `w-full min-w-0 max-w-full`
 4. ✅ **Alignement** : `text-left` pour texte, `text-right` pour nombres
 5. ✅ **Largeurs** : Mail (180px), Commentaire (250px), Source (grow: 0.8), Lien (140px)
 
-**Voir détails** : `SHADCN_TABLE_OVERLAP_FIX.md`
+### Phase 2 : Correctifs Finaux (4 min)
+6. ✅ **Alignement headers/cellules** : `minWidth: column.calculatedWidth` + `flexShrink: 0`
+7. ✅ **Scroll stability** : PopoverContent `align="center"` au lieu de `"start"`
+
+**Voir détails** : 
+- `SHADCN_TABLE_OVERLAP_FIX.md` - Correctifs chevauchements
+- `SHADCN_TABLE_FINAL_FIXES.md` - Correctifs finaux alignement & scroll
 
 ## 🎉 Conclusion
 
@@ -286,4 +292,6 @@ La migration vers Shadcn UI est **100% complète, testée et corrigée**. La tab
 **Tests passés** : 34/34 (100%) ✅
 **Erreurs TypeScript** : 0 ✅
 **Chevauchements** : Corrigés ✅
-**Aucune régression** : ✅
+**Alignement** : Pixel-perfect ✅
+**Scroll** : 100% stable ✅
+**État** : PRODUCTION READY ✅

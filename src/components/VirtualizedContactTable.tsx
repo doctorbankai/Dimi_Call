@@ -278,7 +278,7 @@ const DateTimeCell = React.memo<DateTimeCellProps>(({ value, type, onChange, the
               {displayValue || "Sélectionner"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          <PopoverContent className="w-auto p-0" align="center">
             <Calendar
               mode="single"
               selected={selectedDate || (value ? new Date(value) : undefined)}
@@ -331,7 +331,7 @@ const DateTimeCell = React.memo<DateTimeCellProps>(({ value, type, onChange, the
               {currentValue || "Heure"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-4" align="start">
+          <PopoverContent className="w-auto p-4" align="center">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="text-sm font-medium mb-2">Heures</div>
@@ -1093,8 +1093,9 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
                         )}
                         style={{ 
                           width: column.calculatedWidth,
-                          minWidth: column.minWidth,
+                          minWidth: column.calculatedWidth,
                           maxWidth: column.calculatedWidth,
+                          flexShrink: 0
                         }}
                         onClick={() => {
                           if (column.canSort && column.key !== 'index') {
@@ -1161,8 +1162,9 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
                             className={cn(SHADCN_STYLES.bodyCell)}
                             style={{ 
                               width: column.calculatedWidth,
-                              minWidth: column.minWidth,
+                              minWidth: column.calculatedWidth,
                               maxWidth: column.calculatedWidth,
+                              flexShrink: 0
                             }}
                             onDoubleClick={() => {
                               if (column.key !== 'index') {
