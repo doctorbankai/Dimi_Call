@@ -105,10 +105,10 @@ const COLUMN_RESIZE_CONFIG = {
     'Prénom': { min: 100, preferred: 140, grow: 1 },
     'Nom': { min: 100, preferred: 140, grow: 1 },
     'Téléphone': { min: 120, preferred: 150, grow: 0.5 },
-    'Mail': { min: 150, preferred: 220, grow: 2 },
-    'Source': { min: 80, preferred: 120, grow: 0.5 },
-    'Commentaire': { min: 200, preferred: 300, grow: 3 },
-    'Lien': { min: 120, preferred: 180, grow: 1.5 }
+    'Mail': { min: 180, preferred: 250, grow: 2 },
+    'Source': { min: 100, preferred: 140, grow: 0.8 },
+    'Commentaire': { min: 250, preferred: 350, grow: 3 },
+    'Lien': { min: 140, preferred: 200, grow: 1.5 }
   }
 } as const;
 
@@ -773,7 +773,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
     if (column.id === 'index') {
       const index = contacts.findIndex(c => c.id === contact.id) + 1;
       return (
-        <span className="cursor-pointer hover:text-primary transition-colors font-medium text-center block">
+        <span className="cursor-pointer hover:text-primary transition-colors font-medium text-right w-full block">
           {index}
         </span>
       );
@@ -798,14 +798,14 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
       case 'prenom':
       case 'nom':
         return (
-          <span className="cursor-pointer hover:text-primary transition-colors font-medium">
+          <span className="cursor-pointer hover:text-primary transition-colors font-medium text-left truncate w-full block">
             {value || 'N/A'}
           </span>
         );
         
       case 'telephone':
         return (
-          <span className="cursor-pointer hover:text-primary transition-colors font-mono">
+          <span className="cursor-pointer hover:text-primary transition-colors font-mono text-left truncate w-full block">
             {value ? formatPhoneNumber(value as string) : 'N/A'}
           </span>
         );
@@ -813,7 +813,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
       case 'email':
         return (
           <span 
-            className="cursor-pointer hover:text-primary transition-colors truncate" 
+            className="cursor-pointer hover:text-primary transition-colors truncate text-left w-full block" 
             title={value as string}
           >
             {value || 'N/A'}
@@ -822,7 +822,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
 
       case 'source':
         return (
-          <span className="cursor-pointer hover:text-primary transition-colors">
+          <span className="cursor-pointer hover:text-primary transition-colors text-left truncate w-full block">
             {value || 'N/A'}
           </span>
         );
@@ -830,36 +830,40 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
       case 'statut': {
         const currentStatus = (value as ContactStatus) || ContactStatus.NonDefini;
         return (
-          <StatusSelect
-            value={currentStatus}
-            onChange={(newStatus) => {
-              onUpdateContact({
-                id: contact.id,
-                statut: newStatus,
-              });
-            }}
-            triggerClassName="border-none bg-transparent p-0 h-auto"
-            contentClassName="bg-popover border shadow-lg"
-            size="sm"
-          />
+          <div className="w-full min-w-[100px] max-w-full">
+            <StatusSelect
+              value={currentStatus}
+              onChange={(newStatus) => {
+                onUpdateContact({
+                  id: contact.id,
+                  statut: newStatus,
+                });
+              }}
+              triggerClassName="h-7 px-2 text-xs bg-transparent border-0 w-full"
+              contentClassName="bg-popover border shadow-lg"
+              size="sm"
+            />
+          </div>
         );
       }
 
       case 'commentaire':
         return (
-          <CommentWidget
-            value={(value as string) || ''}
-            onChange={(newComment) => {
-              // Use debounced update for comments (300ms)
-              debouncedCommentUpdate(contact.id, newComment);
-            }}
-            theme={theme}
-          />
+          <div className="w-full min-w-0 max-w-full">
+            <CommentWidget
+              value={(value as string) || ''}
+              onChange={(newComment) => {
+                // Use debounced update for comments (300ms)
+                debouncedCommentUpdate(contact.id, newComment);
+              }}
+              theme={theme}
+            />
+          </div>
         );
 
       case 'dateRappel':
         return (
-          <div className="flex items-center justify-center gap-1">
+          <div className="flex items-center gap-1 w-full min-w-0">
             <DateTimeCell
               value={(value as string) || ''}
               type="date"
@@ -873,7 +877,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
               type="button"
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-muted-foreground hover:text-primary"
+              className="h-7 w-7 flex-shrink-0 text-muted-foreground hover:text-primary"
               title="Programmer un rappel"
               onClick={(event) => {
                 event.stopPropagation();
@@ -916,7 +920,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
 
       case 'dureeAppel':
         return (
-          <span className="cursor-pointer hover:text-primary transition-colors text-center block">
+          <span className="cursor-pointer hover:text-primary transition-colors text-right font-mono w-full block">
             {value || 'N/A'}
           </span>
         );
@@ -924,7 +928,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
       case 'lien':
         return (
           <span 
-            className="cursor-pointer hover:text-primary transition-colors truncate block max-w-[180px]" 
+            className="cursor-pointer hover:text-primary transition-colors truncate text-left w-full block" 
             title={value as string}
           >
             {value || 'N/A'}
@@ -933,7 +937,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
 
       default:
         return (
-          <span className="cursor-pointer hover:text-primary transition-colors">
+          <span className="cursor-pointer hover:text-primary transition-colors text-left truncate w-full block">
             {value || 'N/A'}
           </span>
         );
@@ -1098,12 +1102,12 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
                           }
                         }}
                       >
-                        <div className="flex items-center justify-between w-full">
-                          <span className="text-xs font-medium text-muted-foreground truncate">
+                        <div className="flex items-center w-full min-w-0">
+                          <span className="text-xs font-medium text-muted-foreground truncate flex-1 min-w-0">
                             {column.label}
                           </span>
                           {column.canSort && (
-                            <div className={SHADCN_STYLES.sortIconContainer}>
+                            <div className="flex items-center ml-1 flex-shrink-0">
                               {sortConfig.key === column.key && sortConfig.direction === 'asc' && (
                                 <ArrowUp className={SHADCN_STYLES.sortIcon} />
                               )}
@@ -1166,7 +1170,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
                               }
                             }}
                           >
-                            <div className="flex items-center justify-center min-h-[32px] w-full">
+                            <div className="flex items-center w-full min-w-0 overflow-hidden">
                               {renderCellContent(contact, column)}
                             </div>
                           </div>

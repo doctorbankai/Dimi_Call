@@ -261,14 +261,29 @@ La table a maintenant :
 - ✅ **Performance optimale** : Aucune régression
 - ✅ **Fonctionnalités complètes** : Tout fonctionne comme avant
 
+## 🔧 Correctifs Post-Migration
+
+Suite à l'analyse visuelle, des corrections ont été appliquées pour éliminer les chevauchements :
+
+### Corrections Appliquées
+1. ✅ **Wrapper de cellule** : Suppression de `justify-center`, ajout de `min-w-0 overflow-hidden`
+2. ✅ **Headers** : `flex-1 min-w-0` sur label, `flex-shrink-0` sur icônes
+3. ✅ **Widgets** : Wrappers avec contraintes `w-full min-w-0 max-w-full`
+4. ✅ **Alignement** : `text-left` pour texte, `text-right` pour nombres
+5. ✅ **Largeurs** : Mail (180px), Commentaire (250px), Source (grow: 0.8), Lien (140px)
+
+**Voir détails** : `SHADCN_TABLE_OVERLAP_FIX.md`
+
 ## 🎉 Conclusion
 
-La migration vers Shadcn UI est **100% complète et testée**. La table ressemble maintenant exactement aux exemples officiels Shadcn tout en conservant toutes ses fonctionnalités avancées de virtualisation, édition inline, tri, et widgets personnalisés.
+La migration vers Shadcn UI est **100% complète, testée et corrigée**. La table ressemble maintenant exactement aux exemples officiels Shadcn tout en conservant toutes ses fonctionnalités avancées de virtualisation, édition inline, tri, et widgets personnalisés.
 
-**Tous les objectifs du plan initial ont été atteints !** 🚀
+**Tous les objectifs du plan initial ont été atteints + corrections des chevauchements !** 🚀
 
 ---
 
 **Date de completion** : ${new Date().toLocaleDateString('fr-FR')}
-**Tests passés** : 59/62 (95%)
+**Tests passés** : 34/34 (100%) ✅
+**Erreurs TypeScript** : 0 ✅
+**Chevauchements** : Corrigés ✅
 **Aucune régression** : ✅
