@@ -13,7 +13,7 @@ import { AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Phone, User, Mail, MessageCircle, Clock, Calendar as CalendarIcon, FileText, ArrowUpDown,
-  ArrowUp, ArrowDown, Zap, Hourglass, Users, Hash, FolderOpen, X, Bell
+  ArrowUp, ArrowDown, Zap, Hourglass, Users, Hash, FolderOpen, X, Bell, GripVertical
 } from 'lucide-react';
 import { ReminderDialog } from './ReminderDialog';
 import StatusSelect from './StatusSelect';
@@ -217,12 +217,28 @@ const CommentWidget = React.memo<CommentWidgetProps>(({ value, onChange, theme }
       <Input
         type="text"
         value={comment}
-        onChange={(e) => setComment(e.target.value)}
-        onBlur={handleBlur}
+        onChange={(e) => {
+          e.stopPropagation(); // ✅ Empêche sélection ligne
+          setComment(e.target.value);
+        }}
+        onFocus={(e) => e.stopPropagation()} // ✅ Empêche sélection ligne
+        onBlur={(e) => {
+          e.stopPropagation(); // ✅ Empêche sélection ligne
+          handleBlur();
+        }}
         placeholder="Commentaire..."
         className={`${INPUT_BASE_CLASS} flex-1 min-w-0`}
       />
-      <Select onValueChange={insertQuickComment}>
+      <Select 
+        onValueChange={insertQuickComment}
+        onOpenChange={(open) => {
+          if (open) {
+            // ✅ Empêche sélection ligne lors ouverture
+            const event = new Event('click', { bubbles: true, cancelable: true });
+            event.stopPropagation();
+          }
+        }}
+      >
         <SelectTrigger className="h-6 w-6 p-0 border-none bg-transparent hover:bg-muted/50 rounded-sm flex-shrink-0">
           <Zap className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
         </SelectTrigger>
@@ -283,7 +299,17 @@ const DateTimeCell = React.memo<DateTimeCellProps>(({ value, type, onChange, the
 
     return (
       <div className="flex items-center gap-1">
-        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+        <Popover 
+          open={isCalendarOpen} 
+          onOpenChange={(open) => {
+            setIsCalendarOpen(open);
+            if (open) {
+              // ✅ Empêche sélection ligne lors ouverture
+              const event = new Event('click', { bubbles: true, cancelable: true });
+              event.stopPropagation();
+            }
+          }}
+        >
           <PopoverTrigger asChild>
             <Button
               variant="ghost"
@@ -292,12 +318,19 @@ const DateTimeCell = React.memo<DateTimeCellProps>(({ value, type, onChange, the
                 !value && "text-muted-foreground",
                 INPUT_BASE_CLASS
               )}
+              onClick={(e) => e.stopPropagation()} // ✅ Empêche sélection ligne
             >
               <CalendarIcon className="mr-2 h-3 w-3" />
               {displayValue || "Sélectionner"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="center">
+          <PopoverContent 
+            className="w-auto p-0" 
+            align="center"
+            side="bottom"
+            sticky="always"
+            avoidCollisions={false}
+          >
             <Calendar
               mode="single"
               selected={selectedDate || (value ? new Date(value) : undefined)}
@@ -311,7 +344,10 @@ const DateTimeCell = React.memo<DateTimeCellProps>(({ value, type, onChange, the
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
-            onClick={handleClear}
+            onClick={(e) => {
+              e.stopPropagation(); // ✅ Empêche sélection ligne
+              handleClear();
+            }}
             title="Supprimer la date"
           >
             <X className="h-3 w-3" />
@@ -336,7 +372,17 @@ const DateTimeCell = React.memo<DateTimeCellProps>(({ value, type, onChange, the
 
     return (
       <div className="flex items-center gap-1">
-        <Popover open={isTimeOpen} onOpenChange={setIsTimeOpen}>
+        <Popover 
+          open={isTimeOpen} 
+          onOpenChange={(open) => {
+            setIsTimeOpen(open);
+            if (open) {
+              // ✅ Empêche sélection ligne lors ouverture
+              const event = new Event('click', { bubbles: true, cancelable: true });
+              event.stopPropagation();
+            }
+          }}
+        >
           <PopoverTrigger asChild>
             <Button
               variant="ghost"
@@ -345,12 +391,19 @@ const DateTimeCell = React.memo<DateTimeCellProps>(({ value, type, onChange, the
                 !value && "text-muted-foreground",
                 INPUT_BASE_CLASS
               )}
+              onClick={(e) => e.stopPropagation()} // ✅ Empêche sélection ligne
             >
               <Clock className="mr-2 h-3 w-3" />
               {currentValue || "Heure"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-4" align="center">
+          <PopoverContent 
+            className="w-auto p-4" 
+            align="center"
+            side="bottom"
+            sticky="always"
+            avoidCollisions={false}
+          >
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="text-sm font-medium mb-2">Heures</div>
@@ -362,7 +415,10 @@ const DateTimeCell = React.memo<DateTimeCellProps>(({ value, type, onChange, the
                         variant="ghost"
                         size="sm"
                         className="h-8 text-xs justify-start"
-                        onClick={() => handleTimeSelect('hour', hour)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // ✅ Empêche sélection ligne
+                          handleTimeSelect('hour', hour);
+                        }}
                       >
                         {hour.toString().padStart(2, '0')}
                       </Button>
@@ -380,7 +436,10 @@ const DateTimeCell = React.memo<DateTimeCellProps>(({ value, type, onChange, the
                         variant="ghost"
                         size="sm"
                         className="h-8 text-xs justify-start"
-                        onClick={() => handleTimeSelect('minute', minute)}
+                        onClick={(e) => {
+                          e.stopPropagation(); // ✅ Empêche sélection ligne
+                          handleTimeSelect('minute', minute);
+                        }}
                       >
                         {minute.toString().padStart(2, '0')}
                       </Button>
@@ -396,7 +455,10 @@ const DateTimeCell = React.memo<DateTimeCellProps>(({ value, type, onChange, the
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
-            onClick={handleClear}
+            onClick={(e) => {
+              e.stopPropagation(); // ✅ Empêche sélection ligne
+              handleClear();
+            }}
             title="Supprimer l'heure"
           >
             <X className="h-3 w-3" />
@@ -422,7 +484,6 @@ interface SortableHeaderProps {
   column: any;
   children: React.ReactNode;
   style: React.CSSProperties;
-  onClick?: () => void;
   onResizeHandleMouseDown?: (e: React.MouseEvent) => void;
   onResizeHandleTouchStart?: (e: React.TouchEvent) => void;
   onResizeHandleDoubleClick?: () => void;
@@ -433,7 +494,6 @@ const SortableHeader: React.FC<SortableHeaderProps> = ({
   column,
   children,
   style,
-  onClick,
   onResizeHandleMouseDown,
   onResizeHandleTouchStart,
   onResizeHandleDoubleClick,
@@ -460,33 +520,54 @@ const SortableHeader: React.FC<SortableHeaderProps> = ({
       className={cn(
         SHADCN_STYLES.headerCell,
         "header-cell-interactive relative",
-        column.canSort && SHADCN_STYLES.headerCellSortable,
         isDragging && "is-dragging",
         isResizing && "is-resizing"
       )}
       style={{ ...style, ...dragStyle }}
-      onClick={onClick}
     >
-      {/* Handle de drag - icône discrète */}
+      {/* ✅ Handle de drag - GripVertical visible */}
       <div
-        className="drag-handle flex items-center justify-center w-3 h-full mr-1"
+        className="drag-handle flex items-center justify-center w-5 h-full cursor-grab text-muted-foreground hover:text-primary transition-colors"
         {...attributes}
         {...listeners}
+        onMouseDown={(e) => {
+          e.stopPropagation(); // ✅ Évite le tri
+        }}
+        onClick={(e) => e.stopPropagation()}
+        aria-label="Réordonner la colonne"
+        title="Glisser pour réordonner"
       >
-        <div className="drag-handle-icon" />
+        <GripVertical className="h-4 w-4" />
       </div>
       
-      {children}
+      {/* ✅ Zone de tri isolée (bouton) */}
+      <div className="flex items-center flex-1 min-w-0">
+        {children}
+      </div>
       
-      {/* Resize handle */}
+      {/* ✅ Resize handle isolé */}
       <div
-        onDoubleClick={onResizeHandleDoubleClick}
-        onMouseDown={onResizeHandleMouseDown}
-        onTouchStart={onResizeHandleTouchStart}
+        onDoubleClick={(e) => {
+          e.stopPropagation(); // ✅ Évite le tri
+          onResizeHandleDoubleClick?.();
+        }}
+        onMouseDown={(e) => {
+          e.stopPropagation(); // ✅ Évite le tri
+          e.preventDefault();  // ✅ Évite sélection texte
+          onResizeHandleMouseDown?.(e);
+        }}
+        onTouchStart={(e) => {
+          e.stopPropagation(); // ✅ Évite le tri
+          onResizeHandleTouchStart?.(e);
+        }}
         className={cn(
           "column-resizer",
           isResizing && "is-resizing"
         )}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={`Redimensionner la colonne ${column.label}`}
+        title="Glisser pour redimensionner (double-clic pour auto-ajuster)"
       />
     </div>
   );
@@ -786,8 +867,8 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
     if (contactRow) {
       contactRow.scrollIntoView({
         behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest'
+        block: 'center'
+        // ✅ PAS de inline = préserve position horizontale
       });
     } else {
       const contactIndex = sortedContacts.findIndex(contact => contact.id === contactId);
@@ -955,7 +1036,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
       case 'statut': {
         const currentStatus = (value as ContactStatus) || ContactStatus.NonDefini;
         return (
-          <div className="w-full min-w-[100px] max-w-full">
+          <div className="w-full min-w-[100px] max-w-full widget-no-scroll">
             <StatusSelect
               value={currentStatus}
               onChange={(newStatus) => {
@@ -974,7 +1055,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
 
       case 'commentaire':
         return (
-          <div className="w-full min-w-0 max-w-full">
+          <div className="w-full min-w-0 max-w-full widget-no-scroll">
             <CommentWidget
               value={(value as string) || ''}
               onChange={(newComment) => {
@@ -988,7 +1069,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
 
       case 'dateRappel':
         return (
-          <div className="flex items-center gap-1 w-full min-w-0">
+          <div className="flex items-center gap-1 w-full min-w-0 widget-no-scroll">
             <DateTimeCell
               value={(value as string) || ''}
               type="date"
@@ -1017,30 +1098,34 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
       case 'dateRDV':
       case 'dateAppel':
         return (
-          <DateTimeCell
-            value={(value as string) || ''}
-            type="date"
-            onChange={(newDate) => {
-              // Use debounced update for dates (500ms)
-              debouncedDateUpdate(contact.id, columnKey, newDate);
-            }}
-            theme={theme}
-          />
+          <div className="widget-no-scroll">
+            <DateTimeCell
+              value={(value as string) || ''}
+              type="date"
+              onChange={(newDate) => {
+                // Use debounced update for dates (500ms)
+                debouncedDateUpdate(contact.id, columnKey, newDate);
+              }}
+              theme={theme}
+            />
+          </div>
         );
 
       case 'heureRappel':
       case 'heureRDV':
       case 'heureAppel':
         return (
-          <DateTimeCell
-            value={(value as string) || ''}
-            type="time"
-            onChange={(newTime) => {
-              // Use debounced update for time fields (500ms)
-              debouncedDateUpdate(contact.id, columnKey, newTime);
-            }}
-            theme={theme}
-          />
+          <div className="widget-no-scroll">
+            <DateTimeCell
+              value={(value as string) || ''}
+              type="time"
+              onChange={(newTime) => {
+                // Use debounced update for time fields (500ms)
+                debouncedDateUpdate(contact.id, columnKey, newTime);
+              }}
+              theme={theme}
+            />
+          </div>
         );
 
       case 'dureeAppel':
@@ -1281,11 +1366,6 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
                                 maxWidth: column.calculatedWidth,
                                 flexShrink: 0
                               }}
-                              onClick={() => {
-                                if (column.canSort && column.key !== 'index') {
-                                  handleSort(column.key as keyof Contact);
-                                }
-                              }}
                               onResizeHandleMouseDown={(e) => {
                                 const header = table.getHeaderGroups()[0]?.headers.find(h => h.column.id === column.id);
                                 const handler = header?.getResizeHandler();
@@ -1310,12 +1390,26 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
                               }}
                               isResizing={isResizing}
                             >
-                              <div className="flex items-center w-full min-w-0">
+                              {/* ✅ Zone de tri isolée dans un bouton */}
+                              <button
+                                type="button"
+                                className={cn(
+                                  "group inline-flex items-center gap-1 text-left w-full min-w-0 rounded-sm px-1 py-0.5 transition-colors",
+                                  column.canSort && "hover:bg-muted/40 cursor-pointer"
+                                )}
+                                onClick={(e) => {
+                                  e.stopPropagation(); // ✅ Limite l'aire de tri
+                                  if (column.canSort && column.key !== 'index') {
+                                    handleSort(column.key as keyof Contact);
+                                  }
+                                }}
+                                disabled={!column.canSort}
+                              >
                                 <span className="text-xs font-medium text-muted-foreground truncate flex-1 min-w-0">
                                   {column.label}
                                 </span>
                                 {column.canSort && (
-                                  <div className="flex items-center ml-1 flex-shrink-0">
+                                  <div className="flex items-center flex-shrink-0">
                                     {sortConfig.key === column.key && sortConfig.direction === 'asc' && (
                                       <ArrowUp className={SHADCN_STYLES.sortIcon} />
                                     )}
@@ -1327,7 +1421,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
                                     )}
                                   </div>
                                 )}
-                              </div>
+                              </button>
                             </SortableHeader>
                           );
                         })}
@@ -1359,8 +1453,17 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
                           height: `${virtualRow.size}px`,
                           transform: `translateY(${virtualRow.start}px)`,
                         }}
-                        onClick={() => {
-                          shouldAutoScrollRef.current = true;
+                        onClick={(e) => {
+                          // ✅ Détecter si c'est un clic sur widget
+                          const target = e.target as HTMLElement;
+                          const isWidgetClick = target.closest('button') ||
+                                                target.closest('input') ||
+                                                target.closest('[role="combobox"]') ||
+                                                target.closest('[data-radix-popper-content-wrapper]') ||
+                                                target.closest('.widget-no-scroll');
+                          
+                          // ✅ Seulement auto-scroll si clic sur la ligne (pas widget)
+                          shouldAutoScrollRef.current = !isWidgetClick;
                           onSelectContact(contact);
                         }}
                       >

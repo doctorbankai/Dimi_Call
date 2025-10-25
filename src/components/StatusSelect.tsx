@@ -72,8 +72,22 @@ const StatusSelect = React.memo<StatusSelectProps>(({
   const currentValue = internalValue || undefined;
 
   return (
-    <Select value={currentValue} onValueChange={handleChange}>
-      <SelectTrigger size={size} className={cn('w-fit text-xs flex items-center justify-center', triggerClassName)}>
+    <Select 
+      value={currentValue} 
+      onValueChange={handleChange}
+      onOpenChange={(open) => {
+        if (open) {
+          // ✅ Empêche sélection ligne lors ouverture
+          const event = new Event('click', { bubbles: true, cancelable: true });
+          event.stopPropagation();
+        }
+      }}
+    >
+      <SelectTrigger 
+        size={size} 
+        className={cn('w-fit text-xs flex items-center justify-center', triggerClassName)}
+        onClick={(e) => e.stopPropagation()} // ✅ Empêche sélection ligne
+      >
         {currentValue ? (
           renderStatusBadge(currentValue)
         ) : (
