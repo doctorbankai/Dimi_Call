@@ -10,29 +10,28 @@ Implémentation des optimisations de performance critiques pour la table "Appels
 
 ## ✅ Optimisations Appliquées
 
-### 1. Virtualisation Forcée par Défaut
+### 1. Virtualisation FORCÉE (Plus de Feature Flag)
 **Fichier:** `src/components/PaginatedContactTable.tsx` (ligne 47)
 
-**État:** ✅ Déjà implémenté
+**État:** ✅ Implémenté et FORCÉ
 
 **Impact:**
 - Réduit le nombre d'éléments DOM rendus de 1000+ à ~40 lignes visibles
 - Amélioration drastique du scroll et du temps de chargement initial
+- **CRITIQUE:** Garantit que la virtualisation ne peut JAMAIS être désactivée
 
 **Code:**
 ```typescript
-const [useVirtualizedTable] = useState(() => {
-  try {
-    const saved = localStorage.getItem('dimicall-use-virtualized-table')
-    if (saved === null || saved === undefined) {
-      return true // Activé par défaut
-    }
-    return saved === 'true'
-  } catch {
-    return true
-  }
-})
+// Virtualisation FORCÉE pour optimisation de performance
+// Plus de feature flag - toujours activé pour garantir les performances
+const useVirtualizedTable = true;
 ```
+
+**Pourquoi forcer ?**
+- ✅ Évite que les utilisateurs désactivent accidentellement la performance
+- ✅ Garantit les optimisations pour tous
+- ✅ Simplifie le code (pas de logique conditionnelle)
+- ✅ Cohérent avec les autres optimisations
 
 ---
 

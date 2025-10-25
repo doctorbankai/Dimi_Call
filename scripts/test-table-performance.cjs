@@ -11,15 +11,18 @@ console.log('🔍 Vérification des optimisations de performance...\n');
 let allChecks = true;
 
 // Check 1: Virtualisation forcée
-console.log('✓ Check 1: Virtualisation forcée par défaut');
+console.log('✓ Check 1: Virtualisation FORCÉE (pas de feature flag)');
 const paginatedTablePath = path.join(__dirname, '../src/components/PaginatedContactTable.tsx');
 const paginatedTableContent = fs.readFileSync(paginatedTablePath, 'utf-8');
 
-if (paginatedTableContent.includes('return true // Activé par défaut') || 
-    paginatedTableContent.includes('return true') && paginatedTableContent.includes('useVirtualizedTable')) {
-  console.log('  ✅ Virtualisation activée par défaut\n');
+if (paginatedTableContent.includes('const useVirtualizedTable = true;')) {
+  console.log('  ✅ Virtualisation FORCÉE (toujours activée)\n');
+} else if (paginatedTableContent.includes('useState') && paginatedTableContent.includes('useVirtualizedTable')) {
+  console.log('  ⚠️  Virtualisation avec feature flag (peut être désactivée par l\'utilisateur)\n');
+  console.log('  💡 Recommandation: Remplacer par "const useVirtualizedTable = true;"\n');
+  allChecks = false;
 } else {
-  console.log('  ❌ Virtualisation non activée par défaut\n');
+  console.log('  ❌ Virtualisation non trouvée\n');
   allChecks = false;
 }
 

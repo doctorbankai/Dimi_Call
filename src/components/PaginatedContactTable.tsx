@@ -75,19 +75,9 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
   pageSizeOptions = [25, 50, 100],
   className = '',
 }, ref) => {
-  // Feature flag pour utiliser VirtualizedContactTable (activé par défaut)
-  const [useVirtualizedTable] = useState(() => {
-    try {
-      const saved = localStorage.getItem('dimicall-use-virtualized-table')
-      // Si pas de valeur sauvegardée, activer par défaut
-      if (saved === null || saved === undefined) {
-        return true
-      }
-      return saved === 'true'
-    } catch {
-      return true // Activer par défaut en cas d'erreur
-    }
-  })
+  // Virtualisation FORCÉE pour optimisation de performance
+  // Plus de feature flag - toujours activé pour garantir les performances
+  const useVirtualizedTable = true;
 
   // États pour le drag & drop
   const [isDragOver, setIsDragOver] = useState(false);

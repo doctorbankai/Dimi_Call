@@ -10,14 +10,27 @@ Résoudre les lenteurs critiques de la table "Appels" avec de gros volumes de do
 
 ## ✅ Actions Implémentées
 
-### Action 1: Virtualisation Forcée ✅ (Déjà fait)
+### Action 1: Virtualisation FORCÉE ✅ (Implémenté)
 **Fichier:** `src/components/PaginatedContactTable.tsx`
 
-La virtualisation était déjà activée par défaut. Aucune modification nécessaire.
+**Modification critique:** Suppression du feature flag pour forcer la virtualisation.
+
+**Avant:**
+```typescript
+const [useVirtualizedTable] = useState(() => {
+  // Logique avec localStorage - pouvait être désactivé
+});
+```
+
+**Après:**
+```typescript
+const useVirtualizedTable = true; // FORCÉ - toujours activé
+```
 
 **Impact:**
 - Réduit les éléments DOM de 1000+ à ~40 lignes
 - Amélioration drastique du scroll et du chargement
+- **Garantit** que la virtualisation ne peut jamais être désactivée
 
 ---
 
