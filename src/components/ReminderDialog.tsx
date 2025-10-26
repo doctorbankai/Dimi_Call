@@ -213,11 +213,41 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
                 <SingleDayPicker
                   id="reminder-date-picker"
                   placeholder="Sélectionner une date"
-                  value={state.selectedDate ? (() => {
-                    // Parser manuellement pour éviter les problèmes de fuseau horaire
-                    const [year, month, day] = state.selectedDate.split('-').map(Number);
-                    return new Date(year, month - 1, day);
-                  })() : undefined}
+                  value={(() => {
+                    // Vérifier que la date est valide avant de la parser
+                    if (!state.selectedDate || state.selectedDate.trim() === '') {
+                      return undefined;
+                    }
+                    
+                    try {
+                      // Parser manuellement pour éviter les problèmes de fuseau horaire
+                      const parts = state.selectedDate.split('-');
+                      if (parts.length !== 3) {
+                        return undefined;
+                      }
+                      
+                      const year = parseInt(parts[0], 10);
+                      const month = parseInt(parts[1], 10);
+                      const day = parseInt(parts[2], 10);
+                      
+                      // Vérifier que les valeurs sont valides
+                      if (isNaN(year) || isNaN(month) || isNaN(day)) {
+                        return undefined;
+                      }
+                      
+                      const date = new Date(year, month - 1, day);
+                      
+                      // Vérifier que la date créée est valide
+                      if (isNaN(date.getTime())) {
+                        return undefined;
+                      }
+                      
+                      return date;
+                    } catch (error) {
+                      console.error('[ReminderDialog] Erreur de parsing de date:', error);
+                      return undefined;
+                    }
+                  })()}
                   onSelect={handleCalendarSelect}
                   className={cn("w-full")}
                   container={dialogContentRef.current}
