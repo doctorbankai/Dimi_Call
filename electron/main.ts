@@ -11,6 +11,7 @@ import log from 'electron-log'
 import { PlatformUpdateService } from '../src/services/PlatformUpdateService'
 import * as localDbJsonStatic from './services/localDbJson'
 import * as XLSX from 'xlsx'
+import { registerFileHandlers } from './handlers/fileHandlers'
 
 // Extraction de autoUpdater depuis le module CommonJS
 const { autoUpdater } = electronUpdater
@@ -1098,6 +1099,10 @@ app.whenReady().then(async () => {
   ensureLocalDbInitialized().catch(() => {})
 
   console.log('[LOCALDB] Handlers enregistrés')
+
+  // Register file handlers
+  registerFileHandlers()
+  console.log('[FILE] File handlers enregistrés')
 
   // Créer la fenêtre après l'enregistrement des handlers
   mainWindow = createWindow()

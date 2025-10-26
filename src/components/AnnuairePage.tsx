@@ -53,6 +53,7 @@ import { AnnuaireTable, AnnuaireEditableField } from './AnnuaireTable';
 import { AnnuaireCardsView } from './AnnuaireCardsView';
 import StatusSelect from './StatusSelect';
 import ImportMappingDialog from './ImportMappingDialog';
+import { ContactFiles } from './contacts/ContactFiles';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 
@@ -381,10 +382,13 @@ const buildDirectoryContact = (events: StatusEventRecord[]): DirectoryContact | 
       return bValue - aValue;
     });
   const latest = sorted[0];
-  const contactId = safeTrim(latest.contact_id) || `contact-${latest.id ?? Math.random().toString(36).slice(2)}`;
   const prenom = safeTrim(latest.prenom);
   const nom = safeTrim(latest.nom);
   const telephone = safeTrim(latest.telephone) || pickFirstNonEmpty(sorted, 'telephone');
+  
+  // Generate stable contact ID based on phone number (normalized)
+  const normalizedPhone = telephone.replace(/[\s\-\.]/g, '');
+  const contactId = normalizedPhone ? `contact-phone-${normalizedPhone}` : `contact-${latest.id ?? Math.random().toString(36).slice(2)}`;
   const email = pickFirstNonEmpty(sorted, 'email', 'mail') || undefined;
   const commentaire = pickFirstNonEmpty(sorted, 'commentaire', 'comment') || undefined;
   const reminderDate = pickFirstNonEmpty(sorted, 'dateRappel') || undefined;
@@ -443,14 +447,21 @@ const buildDirectoryContact = (events: StatusEventRecord[]): DirectoryContact | 
 };
 
 const transformEventsToContacts = (events: StatusEventRecord[]): DirectoryContact[] => {
+  // Group by phone number to avoid duplicates
   const grouped = new Map<string, StatusEventRecord[]>();
+  
   for (const event of events) {
-    const contactId = safeTrim(event.contact_id);
-    if (!contactId) continue;
-    if (!grouped.has(contactId)) {
-      grouped.set(contactId, []);
+    // Use phone number as the unique key instead of contact_id
+    const telephone = safeTrim(event.telephone);
+    if (!telephone) continue;
+    
+    // Normalize phone number (remove spaces, dashes, etc.)
+    const normalizedPhone = telephone.replace(/[\s\-\.]/g, '');
+    
+    if (!grouped.has(normalizedPhone)) {
+      grouped.set(normalizedPhone, []);
     }
-    grouped.get(contactId)!.push(event);
+    grouped.get(normalizedPhone)!.push(event);
   }
 
   return Array.from(grouped.values())
@@ -1023,6 +1034,30 @@ export function AnnuairePage({
         }
         return prev;
       });
+      
+      // Créer automatiquement les dossiers pour tous les contacts
+      // On le fait en arrière-plan sans bloquer l'interface
+      if (contactsFromEvents.length > 0) {
+        console.log(`[Annuaire] Début création automatique de ${contactsFromEvents.length} dossiers...`);
+        import('@/services/fileManagerService').then(({ ensureContactFolders }) => {
+          console.log('[Annuaire] Module fileManagerService chargé, appel ensureContactFolders...');
+          ensureContactFolders(contactsFromEvents).then((result) => {
+            console.log('[Annuaire] Résultat création dossiers:', result);
+            if (result.created > 0) {
+              console.log(`[Annuaire] ✅ ${result.created} dossiers créés automatiquement`);
+            }
+            if (result.errors > 0) {
+              console.warn(`[Annuaire] ⚠️ ${result.errors} erreurs lors de la création des dossiers`);
+            }
+          }).catch((error) => {
+            console.error('[Annuaire] ❌ Erreur lors de la création automatique des dossiers:', error);
+          });
+        }).catch((error) => {
+          console.error('[Annuaire] ❌ Erreur lors du chargement du module fileManagerService:', error);
+        });
+      } else {
+        console.log('[Annuaire] Aucun contact à traiter pour la création de dossiers');
+      }
     } catch (error) {
       console.error('[Annuaire] Impossible de charger les contacts', error);
       setContacts([]);
@@ -1981,9 +2016,10 @@ export function AnnuairePage({
               </DialogHeader>
 
               <Tabs defaultValue="info" className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
+                <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="info">Informations</TabsTrigger>
                   <TabsTrigger value="history">Historique</TabsTrigger>
+                  <TabsTrigger value="files">Fichiers</TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="info" className="space-y-6">
@@ -2192,6 +2228,19 @@ export function AnnuairePage({
                         <p>Aucun historique disponible pour ce contact.</p>
                       </div>
                     )}
+                  </ScrollArea>
+                </TabsContent>
+
+                <TabsContent value="files" className="space-y-4">
+                  <ScrollArea className="h-72 pr-4">
+                    <ContactFiles 
+                      contactId={selectedContact.id}
+                      contact={{
+                        prenom: selectedContact.prenom,
+                        nom: selectedContact.nom,
+                        telephone: selectedContact.telephone
+                      }}
+                    />
                   </ScrollArea>
                 </TabsContent>
               </Tabs>

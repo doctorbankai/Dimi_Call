@@ -73,7 +73,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Toaster, toast } from 'sonner'
 import { DropZoneOverlay } from './components/Common';
 import { CalendarModal } from './components/CalendarModal';
-import { AuthModal } from './components/AuthModal';
+import { LoginPage } from './pages/LoginPage';
 import { SupabaseDisconnectDialog } from '@/components/SupabaseDisconnectDialog';
 import { UserProfileCard } from './components/UserProfileCard';
 import { useSupabaseAuth } from './lib/auth-client';
@@ -89,6 +89,7 @@ import LocalDBViewer from './components/LocalDBViewer';
 import PaginatedEventTable from './components/PaginatedEventTable';
 import { FullPageCalendar } from './components/FullPageCalendar';
 import { AnnuairePage } from './components/AnnuairePage';
+import { FilesPage } from './pages/FilesPage';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -160,7 +161,7 @@ const contactsEqualById = (a: Contact[], b: Contact[]) => {
 };
 
 
-type ViewMode = 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar-2' | 'annuaire';
+type ViewMode = 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar-2' | 'annuaire' | 'files';
 
 const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const { mode } = useCallMode();
@@ -172,8 +173,7 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
 
 
 
-  // Authentication states
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  // Authentication states - removed isAuthModalOpen (now using full page)
 
   // State declarations
   const [theme, setTheme] = useState<Theme>(() => {
@@ -723,21 +723,8 @@ Dimitri MOREL - Arcanis Conseil`;
     return;
   }, []);
 
-  // Handler pour l'authentification russie
-  const handleAuthenticated = useCallback(() => {
-    setIsAuthModalOpen(false);
-    showNotification('success', `Bienvenue ${auth.user?.email}!`, 3000);
-  }, [auth.user, showNotification]);
-
-  // Effect pour vrifier l'authentification au dmarrage et fermer la modale aprs connexion
-  useEffect(() => {
-    if (!auth.isAuthenticated) {
-      setIsAuthModalOpen(true);
-    } else {
-      // Utilisateur authentifi : fermer la modale sans notification
-      setIsAuthModalOpen(false);
-    }
-  }, [auth.isAuthenticated]);
+  // Handler pour l'authentification russie - removed (no longer needed with full page)
+  // Effect pour vrifier l'authentification - removed (handled by conditional render)
 
   // Sauvegardes de prfrences utilisateur
   useEffect(() => {
@@ -2597,6 +2584,23 @@ Dimitri MOREL - Arcanis Conseil`;
 
   // Debug log pour l'tat du modal - Supabase supprim
 
+  // Afficher un écran de chargement pendant la vérification de l'authentification
+  if (auth.isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Si l'utilisateur n'est pas authentifié, afficher la page de connexion pleine écran
+  if (!auth.isAuthenticated) {
+    return <LoginPage />;
+  }
+
   return (
     <SidebarProvider>
       <div className={cn(
@@ -2723,8 +2727,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
             {/* Main content */}
             <main className={cn(
-              "flex-1 flex flex-col p-1 md:p-1.5 space-y-1 md:space-y-1.5 overflow-hidden w-full min-h-0",
-              isAuthModalOpen && "pointer-events-none opacity-50"
+              "flex-1 flex flex-col p-1 md:p-1.5 space-y-1 md:space-y-1.5 overflow-hidden w-full min-h-0"
             )}>
 
               {/* Search bar area */}
@@ -3401,6 +3404,8 @@ Dimitri MOREL - Arcanis Conseil`;
                     onGoogle={() => handleGoogleSearch()}
                     onDirectLink={() => handleDirectLink()}
                   />
+                ) : viewMode === 'files' ? (
+                  <FilesPage contacts={contacts} />
                 ) : (
                   <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
                     <div className="flex-1 overflow-hidden">
@@ -3726,12 +3731,6 @@ Dimitri MOREL - Arcanis Conseil`;
                 </DialogContent>
               </Dialog>
             )}
-
-            {/* Modal d'authentification */}
-            <AuthModal
-              isOpen={isAuthModalOpen}
-              onClose={() => setIsAuthModalOpen(false)}
-            />
 
             {/* Pop-up de dconnexion Supabase */}
             <SupabaseDisconnectDialog

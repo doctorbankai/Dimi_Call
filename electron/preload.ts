@@ -72,6 +72,24 @@ interface ElectronAPI {
     exportCsv: () => Promise<{ success: boolean; path?: string; error?: string }>
     importCsv: () => Promise<{ success: boolean; count?: number; error?: string }>
   }
+
+  // APIs File Manager
+  listDirectory: (path: string) => Promise<any>
+  createFolder: (path: string, name: string) => Promise<any>
+  deleteItem: (path: string) => Promise<any>
+  renameItem: (path: string, newName: string) => Promise<any>
+  copyItem: (source: string, destination: string) => Promise<any>
+  moveItem: (source: string, destination: string) => Promise<any>
+  uploadFiles: (files: Array<{ name: string; data: Buffer; path: string }>, destination: string) => Promise<any>
+  openLocation: (path: string) => Promise<{ success: boolean; error?: string }>
+  getFileInfo: (path: string) => Promise<any>
+  getFileById: (fileId: string) => Promise<{ success: boolean; file?: any; error?: any }>
+  
+  // File operations
+  files: {
+    openFile: (path: string) => Promise<{ success: boolean; error?: string }>
+    showInFolder: (path: string) => Promise<{ success: boolean; error?: string }>
+  }
 }
 
 // API personnalisée à exposer dans la sandbox du navigateur
@@ -186,7 +204,25 @@ const electronAPI: ElectronAPI = {
     delete: (id: number) => ipcRenderer.invoke('localdb:delete', id),
     update: (payload: any) => ipcRenderer.invoke('localdb:update', payload),
     updateLatestForContact: (contactId: string, fields: any) => ipcRenderer.invoke('localdb:update-latest-for-contact', contactId, fields),
-  }
+  },
+
+  // APIs File Manager
+  listDirectory: (path: string) => ipcRenderer.invoke('file:list-directory', path),
+  createFolder: (path: string, name: string) => ipcRenderer.invoke('file:create-folder', path, name),
+  deleteItem: (path: string) => ipcRenderer.invoke('file:delete-item', path),
+  renameItem: (path: string, newName: string) => ipcRenderer.invoke('file:rename-item', path, newName),
+  copyItem: (source: string, destination: string) => ipcRenderer.invoke('file:copy-item', source, destination),
+  moveItem: (source: string, destination: string) => ipcRenderer.invoke('file:move-item', source, destination),
+  uploadFiles: (files: Array<{ name: string; data: Buffer; path: string }>, destination: string) => ipcRenderer.invoke('file:upload-files', files, destination),
+  openLocation: (path: string) => ipcRenderer.invoke('file:open-location', path),
+  getFileInfo: (path: string) => ipcRenderer.invoke('file:get-file-info', path),
+  getFileById: (fileId: string) => ipcRenderer.invoke('file:get-file-by-id', fileId),
+  
+  // File operations
+  files: {
+    openFile: (path: string) => ipcRenderer.invoke('file:open-file', path),
+    showInFolder: (path: string) => ipcRenderer.invoke('file:show-in-folder', path),
+  },
 }
 
 // Utiliser `contextBridge` APIs pour exposer Electron APIs au

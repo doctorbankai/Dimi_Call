@@ -181,6 +181,17 @@ export interface ElectronAPI {
     exportCsv: () => Promise<{ success: boolean; path?: string; error?: string }>;
     importCsv: () => Promise<{ success: boolean; count?: number; error?: string }>;
   };
+
+  // APIs File Manager
+  files?: {
+    openFile: (path: string) => Promise<{ success: boolean; error?: string }>;
+    showInFolder: (path: string) => Promise<{ success: boolean; error?: string }>;
+  };
+  
+  // File operations
+  listDirectory?: (path: string) => Promise<any>;
+  createFolder?: (path: string, name: string) => Promise<any>;
+  getFileById?: (fileId: string) => Promise<{ success: boolean; file?: any; error?: any }>;
 }
 
 // Type pour le mode de recherche automatique

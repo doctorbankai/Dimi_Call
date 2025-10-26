@@ -9,6 +9,7 @@ import { ContactHeader } from './ContactHeader'
 import { ContactActions } from './ContactActions'
 import { ContactInfo } from './ContactInfo'
 import { ContactHistory } from './ContactHistory'
+import { ContactFiles } from './ContactFiles'
 
 interface DirectoryContact {
   id: string
@@ -115,9 +116,10 @@ export const ContactDetailSheet: React.FC<ContactDetailSheetProps> = ({
 
         <div className="flex-1 overflow-hidden flex flex-col min-h-[500px]">
           <Tabs defaultValue="info" className="flex-1 flex flex-col overflow-hidden">
-            <TabsList className="mx-6 mt-4 grid w-auto grid-cols-2 shrink-0">
+            <TabsList className="mx-6 mt-4 grid w-auto grid-cols-3 shrink-0">
               <TabsTrigger value="info">Informations</TabsTrigger>
               <TabsTrigger value="history">Historique</TabsTrigger>
+              <TabsTrigger value="files">Fichiers</TabsTrigger>
             </TabsList>
 
             <TabsContent value="info" className="flex-1 mt-4 overflow-y-auto data-[state=active]:flex data-[state=active]:flex-col min-h-0">
@@ -129,6 +131,19 @@ export const ContactDetailSheet: React.FC<ContactDetailSheetProps> = ({
             <TabsContent value="history" className="flex-1 mt-4 overflow-y-auto data-[state=active]:flex data-[state=active]:flex-col min-h-0">
               <div className="px-6 pb-6">
                 <ContactHistory history={contact.history} />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="files" className="flex-1 mt-4 overflow-y-auto data-[state=active]:flex data-[state=active]:flex-col min-h-0">
+              <div className="px-6 pb-6">
+                <ContactFiles 
+                  contactId={contact.id}
+                  contact={{
+                    prenom: contact.prenom,
+                    nom: contact.nom,
+                    telephone: contact.telephone
+                  }}
+                />
               </div>
             </TabsContent>
           </Tabs>
