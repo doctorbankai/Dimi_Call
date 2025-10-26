@@ -214,7 +214,7 @@ export function AppSidebar({
                   className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <Database className="w-4 h-4" />
-                  <span>Files</span>
+                  <span>Fichiers</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
