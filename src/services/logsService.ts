@@ -2,6 +2,8 @@
  * Service de gestion des logs pour l'interface utilisateur
  */
 
+import { logConfigService, type LogConfig } from './logConfig';
+
 export interface LogEntry {
   id: string;
   timestamp: number;
@@ -22,6 +24,7 @@ export interface LogsFilter {
 }
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
+export type LogCategory = keyof LogConfig['logLevels'];
 
 const STORAGE_KEY = 'dimicall-logs';
 const MAX_LOGS = 1000;
@@ -35,7 +38,8 @@ class LogsServiceClass {
 
   constructor() {
     this.loadFromStorage();
-    this.startCapturing();
+    // Ne pas capturer automatiquement les console.log pour éviter les logs excessifs
+    // this.startCapturing();
   }
 
   /**
@@ -50,6 +54,12 @@ class LogsServiceClass {
    */
   addLog(entry: Omit<LogEntry, 'id' | 'timestamp'>): void {
     try {
+      // Vérifier si le log doit être affiché selon la configuration
+      const category = this.getCategoryFromSource(entry.source);
+      if (!logConfigService.shouldLog(category, entry.level)) {
+        return; // Skip ce log
+      }
+
       const logEntry: LogEntry = {
         id: this.generateId(),
         timestamp: Date.now(),
@@ -73,6 +83,66 @@ class LogsServiceClass {
       // Fallback silencieux pour éviter les boucles infinies
       console.warn('Failed to add log entry:', error);
     }
+  }
+
+  /**
+   * Détermine la catégorie de log à partir de la source
+   */
+  private getCategoryFromSource(source: string): LogCategory {
+    const sourceLower = source.toLowerCase();
+    if (sourceLower.includes('adb')) return 'adb';
+    if (sourceLower.includes('contact')) return 'contacts';
+    if (sourceLower.includes('component')) return 'components';
+    if (sourceLower.includes('supabase')) return 'supabase';
+    if (sourceLower.includes('import')) return 'import';
+    return 'general';
+  }
+
+  /**
+   * Méthodes de logging spécialisées par catégorie
+   */
+  logADB(level: LogLevel, message: string, metadata?: any): void {
+    if (logConfigService.shouldLog('adb', level)) {
+      this.addLog({ level, message: `[ADB] ${message}`, source: 'adb', metadata });
+    }
+  }
+
+  logContacts(level: LogLevel, message: string, metadata?: any): void {
+    if (logConfigService.shouldLog('contacts', level)) {
+      this.addLog({ level, message: `[CONTACTS] ${message}`, source: 'contacts', metadata });
+    }
+  }
+
+  logComponents(level: LogLevel, message: string, metadata?: any): void {
+    if (logConfigService.shouldLog('components', level)) {
+      this.addLog({ level, message: `[COMPONENTS] ${message}`, source: 'components', metadata });
+    }
+  }
+
+  logSupabase(level: LogLevel, message: string, metadata?: any): void {
+    if (logConfigService.shouldLog('supabase', level)) {
+      this.addLog({ level, message: `[SUPABASE] ${message}`, source: 'supabase', metadata });
+    }
+  }
+
+  logImport(level: LogLevel, message: string, metadata?: any): void {
+    if (logConfigService.shouldLog('import', level)) {
+      this.addLog({ level, message: `[IMPORT] ${message}`, source: 'import', metadata });
+    }
+  }
+
+  /**
+   * Met à jour la configuration des logs
+   */
+  updateConfig(newConfig: Partial<LogConfig>): void {
+    logConfigService.updateConfig(newConfig);
+  }
+
+  /**
+   * Récupère la configuration actuelle
+   */
+  getConfig(): LogConfig {
+    return logConfigService.getConfig();
   }
 
   /**

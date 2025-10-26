@@ -4,7 +4,6 @@ import { DateCalculationService } from '../services/dateCalculationService';
 import { RelativeDateSelector } from './RelativeDateSelector';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { SingleDayPicker } from '@/components/ui/single-day-picker';
 import { TimePicker } from '@/components/ui/time-picker';
 import { X } from 'lucide-react';
@@ -51,8 +50,11 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
   // Réinitialiser l'état quand le dialog s'ouvre
   useEffect(() => {
     if (isOpen) {
+      // Si aucune date initiale, utiliser la date du jour
+      const defaultDate = initialDate || DateCalculationService.getCurrentDateISO();
+      
       setState({
-        selectedDate: initialDate,
+        selectedDate: defaultDate,
         selectedTime: initialTime,
         useRelativeSelector: false,
         hasUnsavedChanges: false
@@ -64,10 +66,20 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
   // Gérer la sélection via le calendrier shadcn
   const handleCalendarSelect = (date: Date | undefined) => {
     if (!date) return;
+    
+    // Utiliser les méthodes locales pour éviter les problèmes de fuseau horaire
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const iso = `${year}-${month}-${day}`;
+
+    console.log('[ReminderDialog] Date sélectionnée:', {
+      dateObject: date,
+      isoString: iso,
+      year,
+      month,
+      day
+    });
 
     setState(prev => ({
       ...prev,
@@ -77,55 +89,38 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
     }));
 
     const validation = DateCalculationService.validateDateRange(iso);
+    console.log('[ReminderDialog] Validation de la date:', validation);
+    
     setErrors(prev => ({
       ...prev,
       date: validation.isValid ? undefined : validation.errorMessage
     }));
   };
 
-  // Gérer le changement d'heure manuelle
-  const handleManualTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newTime = e.target.value;
-    setState(prev => ({
-      ...prev,
-      selectedTime: newTime,
-      hasUnsavedChanges: true
-    }));
-    
-    // Valider l'heure
-    if (newTime) {
-      const isValid = DateCalculationService.isValidTimeFormat(newTime);
-      setErrors(prev => ({
-        ...prev,
-        time: isValid ? undefined : 'Format d\'heure invalide (HH:mm)'
-      }));
-    } else {
-      setErrors(prev => ({ ...prev, time: undefined }));
-    }
-  };
-
-  // Gérer le changement de date via le sélecteur relatif
-  const handleRelativeDateChange = (newDate: string) => {
-    setState(prev => ({
-      ...prev,
-      selectedDate: newDate,
-      useRelativeSelector: true, // Activer le mode relatif
-      hasUnsavedChanges: true
-    }));
-    
-    // Effacer les erreurs de date puisque le sélecteur relatif valide automatiquement
-    setErrors(prev => ({ ...prev, date: undefined }));
-  };
-
   // Valider le formulaire
   const isFormValid = () => {
     const hasDate = state.selectedDate.trim() !== '';
-    const hasTime = state.selectedTime.trim() !== '';
     const hasNoErrors = !errors.date && !errors.time;
     
     // Validation supplémentaire des formats
     const isValidDateFormat = hasDate ? DateCalculationService.isValidDateFormat(state.selectedDate) : false;
-    const isValidTimeFormat = hasTime ? DateCalculationService.isValidTimeFormat(state.selectedTime) : true; // L'heure est optionnelle
+    
+    // Si l'heure est renseignée, elle doit être valide (accepte format 12h et 24h)
+    const hasTime = state.selectedTime.trim() !== '';
+    const isValidTimeFormat = DateCalculationService.isValidTimeFormat(state.selectedTime);
+    
+    // Debug
+    console.log('[ReminderDialog] Validation:', {
+      hasDate,
+      selectedDate: state.selectedDate,
+      hasNoErrors,
+      isValidDateFormat,
+      hasTime,
+      selectedTime: state.selectedTime,
+      isValidTimeFormat,
+      errors,
+      result: hasDate && hasNoErrors && isValidDateFormat && isValidTimeFormat
+    });
     
     // Seule la date est obligatoire, l'heure est optionnelle
     return hasDate && hasNoErrors && isValidDateFormat && isValidTimeFormat;
@@ -145,14 +140,23 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
       
       // L'heure est optionnelle, on ne valide que si elle est renseignée
       if (state.selectedTime.trim() && !DateCalculationService.isValidTimeFormat(state.selectedTime)) {
-        newErrors.time = 'Format d\'heure invalide (HH:mm)';
+        newErrors.time = 'Format d\'heure invalide (HH:mm ou h:mm AM/PM)';
       }
       
       setErrors(prev => ({ ...prev, ...newErrors }));
       return;
     }
     
-    onSave(state.selectedDate, state.selectedTime);
+    // Convertir l'heure au format 24h si nécessaire
+    const time24h = DateCalculationService.convertTo24Hour(state.selectedTime);
+    
+    console.log('[ReminderDialog] Sauvegarde:', {
+      originalTime: state.selectedTime,
+      convertedTime: time24h,
+      date: state.selectedDate
+    });
+    
+    onSave(state.selectedDate, time24h);
     onClose();
   };
 
@@ -197,19 +201,23 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
             Contact: <strong>{contact.prenom} {contact.nom}</strong>
           </p>
 
-          {/* Sélection manuelle de date et heure */}
-          <div className="space-y-3">
-            <div className="text-sm font-medium text-foreground">
-              Sélection manuelle
-            </div>
-            
+          {/* Sélection de date et heure */}
+          <div className="space-y-4">
+            {/* Date et heure */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Champ date */}
-              <div className="space-y-1">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  Date du rappel
+                </label>
                 <SingleDayPicker
                   id="reminder-date-picker"
-                  placeholder="YYYY-MM-DD"
-                  value={state.selectedDate ? new Date(state.selectedDate) : undefined}
+                  placeholder="Sélectionner une date"
+                  value={state.selectedDate ? (() => {
+                    // Parser manuellement pour éviter les problèmes de fuseau horaire
+                    const [year, month, day] = state.selectedDate.split('-').map(Number);
+                    return new Date(year, month - 1, day);
+                  })() : undefined}
                   onSelect={handleCalendarSelect}
                   className={cn("w-full")}
                   container={dialogContentRef.current}
@@ -231,25 +239,23 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
               </div>
 
               {/* Champ heure */}
-              <div className="space-y-1">
-                <div className="relative">
-                  <TimePicker
-                    value={state.selectedTime}
-                    onChange={(time) => setState(prev => ({ ...prev, selectedTime: time, hasUnsavedChanges: true }))}
-                    placeholder="HH:mm"
-                    className={cn(
-                      "transition-all duration-200",
-                      errors.time && "border-destructive focus:border-destructive"
-                    )}
-                    aria-label="Heure du rappel (optionnelle)"
-                    aria-describedby={errors.time ? "time-error" : "time-help"}
-                    container={dialogContentRef.current}
-                    zIndex={100002}
-                  />
-                  <span className="absolute -top-2 right-2 text-xs text-muted-foreground bg-background px-1">
-                    optionnelle
-                  </span>
-                </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  Heure <span className="text-xs text-muted-foreground font-normal">(optionnelle)</span>
+                </label>
+                <TimePicker
+                  value={state.selectedTime}
+                  onChange={(time) => setState(prev => ({ ...prev, selectedTime: time, hasUnsavedChanges: true }))}
+                  placeholder="HH:mm"
+                  className={cn(
+                    "transition-all duration-200",
+                    errors.time && "border-destructive focus:border-destructive"
+                  )}
+                  aria-label="Heure du rappel (optionnelle)"
+                  aria-describedby={errors.time ? "time-error" : "time-help"}
+                  container={dialogContentRef.current}
+                  zIndex={100002}
+                />
                 {errors.time && (
                   <p 
                     id="time-error"
@@ -270,26 +276,27 @@ export const ReminderDialog: React.FC<ReminderDialogProps> = ({
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Séparateur visuel */}
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">ou</span>
+            {/* Sélection rapide */}
+            <div className="space-y-3">
+              <div className="text-sm font-medium text-foreground">
+                Ou programmer rapidement
+              </div>
+              
+              <RelativeDateSelector
+                onDateChange={(newDate: string) => {
+                  setState(prev => ({ ...prev, selectedDate: newDate, hasUnsavedChanges: true }));
+                  setErrors(prev => ({ ...prev, date: undefined }));
+                }}
+                onTimeChange={(time: string) => setState(prev => ({ ...prev, selectedTime: time, hasUnsavedChanges: true }))}
+                currentDate={state.selectedDate}
+                currentTime={state.selectedTime}
+                disabled={false}
+                portalContainer={dialogContentRef.current}
+                zIndex={100002}
+              />
             </div>
           </div>
-
-          {/* Sélecteur de date relative */}
-          <RelativeDateSelector
-            onDateChange={handleRelativeDateChange}
-            currentDate={state.selectedDate}
-            disabled={false}
-            portalContainer={dialogContentRef.current}
-            zIndex={100002}
-          />
 
           {/* Actions */}
           <div className="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4">

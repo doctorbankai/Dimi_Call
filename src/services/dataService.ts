@@ -4,9 +4,17 @@ import Papa from 'papaparse'; // For CSV parsing
 import * as XLSX from 'xlsx'; // For Excel parsing and writing
 import { ExportColumnService } from './exportColumnService';
 import { normalizePhoneNumber as normalizePhone } from './phoneUtils';
+import { LogsService } from './logsService';
 
 // Re-export normalizePhoneNumber for backward compatibility
 export { normalizePhoneNumber } from './phoneUtils';
+
+// Helper pour les logs d'import (throttled)
+const logImport = (level: 'info' | 'warn' | 'error', message: string, metadata?: any) => {
+  if (import.meta.env.DEV) {
+    LogsService.logImport(level, message, metadata);
+  }
+};
 
 const LOCAL_STORAGE_KEY = 'dimiCallContacts';
 const CALL_STATES_KEY = 'dimiCallCallStates';

@@ -338,7 +338,6 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   useEffect(() => {
     if (!resolvedActiveTabId) {
       if (contacts.length > 0) {
-        console.log('[DEBUG] Pas d\'onglet actif, réinitialisation des contacts');
         setContacts([]);
       }
       if (selectedContact) {
@@ -349,7 +348,6 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
 
     const currentTab = tableTabs.find(tab => tab.id === resolvedActiveTabId);
     if (!currentTab) {
-      console.log('[DEBUG] Onglet actif non trouvé:', resolvedActiveTabId);
       return;
     }
 
@@ -358,7 +356,6 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
     // quand le contenu des contacts change (statut, dateRappel, etc.)
     // On utilise une comparaison par référence pour détecter les changements
     if (contacts !== currentTab.contacts) {
-      console.log('[DEBUG] Synchronisation des contacts de l\'onglet actif:', currentTab.contacts.length, 'contacts');
       setContacts(currentTab.contacts);
     }
 
@@ -436,14 +433,14 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
         const val = localStorage.getItem(k)
         if (val) { saved = val; break }
       }
-      console.log('🔎 [AUTO-SEARCH] Chargement mode depuis localStorage:', saved)
+      // console.log('🔎 [AUTO-SEARCH] Chargement mode depuis localStorage:', saved)
 
       if (saved && ['disabled', 'linkedin', 'linkedin-name', 'linkedin-name-type', 'google', 'link'].includes(saved)) {
-        console.log('✅ [AUTO-SEARCH] Mode valide trouvé:', saved)
+        // console.log('✅ [AUTO-SEARCH] Mode valide trouvé:', saved)
         return saved as 'disabled' | 'linkedin' | 'linkedin-name' | 'linkedin-name-type' | 'google' | 'link'
       }
 
-      console.log('ℹ️ [AUTO-SEARCH] Aucun mode valide, défaut linkedin')
+      // console.log('ℹ️ [AUTO-SEARCH] Aucun mode valide, défaut linkedin')
       return 'linkedin'
     } catch (error) {
       console.error('⚠️ [AUTO-SEARCH] Erreur lors du chargement:', error)
@@ -531,7 +528,7 @@ Dimitri MOREL - Arcanis Conseil`;
     try {
       const saved = localStorage.getItem(VISIBLE_COLUMNS_STORAGE_KEY);
       const parsed = saved ? JSON.parse(saved) : {};
-      console.log('🔍 Chargement initial visibleColumns depuis localStorage:', parsed);
+      // console.log('🔍 Chargement initial visibleColumns depuis localStorage:', parsed);
       return parsed;
     } catch (error) {
       console.error('❌ Erreur lors du chargement de visibleColumns:', error);
@@ -546,7 +543,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
   // Fonction pour dtecter les colonnes disponibles dans les donnes
   const detectAvailableColumns = useCallback((contactsData: Contact[]) => {
-    console.log('🔎 detectAvailableColumns appelé avec', contactsData?.length || 0, 'contacts');
+    // console.log('🔎 detectAvailableColumns appelé avec', contactsData?.length || 0, 'contacts');
 
     if (!contactsData || contactsData.length === 0) {
       // Colonnes par dfaut minimales si pas de donnes
@@ -561,7 +558,7 @@ Dimitri MOREL - Arcanis Conseil`;
       setVisibleColumns(prevVisible => {
         // Si on a déjà des préférences, les garder
         if (Object.keys(prevVisible).length > 0) {
-          console.log('✅ Préférences existantes conservées (pas de contacts):', prevVisible);
+          // console.log('✅ Préférences existantes conservées (pas de contacts):', prevVisible);
           return prevVisible;
         }
 
@@ -658,7 +655,7 @@ Dimitri MOREL - Arcanis Conseil`;
             merged[col] = newVisibleColumns[col];
           }
         });
-        console.log('✅ Préférences existantes conservées et fusionnées:', merged);
+        // console.log('✅ Préférences existantes conservées et fusionnées:', merged);
         return merged;
       }
 
@@ -676,7 +673,7 @@ Dimitri MOREL - Arcanis Conseil`;
   useEffect(() => {
     try {
       if (Object.keys(visibleColumns).length > 0) {
-        console.log('💾 Sauvegarde visibleColumns dans localStorage:', visibleColumns);
+        // console.log('💾 Sauvegarde visibleColumns dans localStorage:', visibleColumns);
         localStorage.setItem(VISIBLE_COLUMNS_STORAGE_KEY, JSON.stringify(visibleColumns));
       }
     } catch (error) {
@@ -787,7 +784,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
 
   const updateContact = useCallback(async (updatedFields: Partial<Contact> & { id: string }) => {
-    console.log('🔄 [UPDATE] updateContact appel avec:', updatedFields);
+    // console.log('🔄 [UPDATE] updateContact appel avec:', updatedFields);
     // Utiliser une fonction de mise à jour pour viter les stale closures
     let updatedContact: Contact | null = null;
     let contactFound = false;
@@ -806,8 +803,8 @@ Dimitri MOREL - Arcanis Conseil`;
       updatedContact = { ...existingContact, ...updatedFields };
       const updatedContacts = currentContacts.map(c => c.id === updatedFields.id ? updatedContact! : c);
 
-      console.log('🔄 [UPDATE] Contacts mis à jour:', updatedContacts.length, 'contacts');
-      console.log('🔄 [UPDATE] Contact modifi:', updatedContact);
+      // console.log('🔄 [UPDATE] Contacts mis à jour:', updatedContacts.length, 'contacts');
+      // console.log('🔄 [UPDATE] Contact modifi:', updatedContact);
 
       // Sauvegarder les contacts mis à jour
       saveContacts(updatedContacts);
@@ -855,17 +852,17 @@ Dimitri MOREL - Arcanis Conseil`;
     // ?? Mise  jour en temps rel du contact slectionn dans le panneau latral
     if (selectedContact?.id === updatedFields.id) {
       setSelectedContact(updatedContact);
-      console.log('?? [UPDATE] Contact slectionn mis  jour:', updatedContact);
+      // console.log('?? [UPDATE] Contact slectionn mis  jour:', updatedContact);
     }
 
     // ?? Forcer le re-render de la table
     setTableUpdateKey(prev => prev + 1);
-    console.log('?? [UPDATE] Table update key incrmente:', tableUpdateKey + 1);
+    // console.log('?? [UPDATE] Table update key incrmente:', tableUpdateKey + 1);
 
     // ?? Forcer le re-render de l'application entire aprs un dlai
     setTimeout(() => {
       setAppUpdateKey(prev => prev + 1);
-      console.log('?? [UPDATE] App update key incrmente:', appUpdateKey + 1);
+      // console.log('?? [UPDATE] App update key incrmente:', appUpdateKey + 1);
     }, 100);
 
     // Forcer un petit dlai pour que l'interface se mette à jour
@@ -1344,9 +1341,6 @@ Dimitri MOREL - Arcanis Conseil`;
       contact.statut === ContactStatus.R0 ||
       contact.statut === ContactStatus.A0
     );
-    console.log('[DEBUG] googleContactsCount:', filteredContacts.length, 'sur', contacts.length, 'contacts');
-    console.log('[DEBUG] Statuts des contacts:', contacts.map(c => c.statut).filter((v, i, a) => a.indexOf(v) === i));
-    console.log('[DEBUG] Contacts filtrés pour Google:', filteredContacts.map(c => ({ nom: c.nom, statut: c.statut })));
     return filteredContacts.length;
   }, [contacts]);
 
@@ -1355,8 +1349,6 @@ Dimitri MOREL - Arcanis Conseil`;
     const filteredContacts = contacts.filter(contact =>
       contact.dateRappel && contact.dateRappel.trim() !== ''
     );
-    console.log('[DEBUG] calendarRemindersCount:', filteredContacts.length, 'sur', contacts.length, 'contacts');
-    console.log('[DEBUG] Contacts avec rappel:', filteredContacts.map(c => ({ nom: c.nom, dateRappel: c.dateRappel })));
     return filteredContacts.length;
   }, [contacts]);
 
@@ -1386,7 +1378,6 @@ Dimitri MOREL - Arcanis Conseil`;
 
     // Fermer le menu seulement si les valeurs ont changé ET que le menu est ouvert
     if (hasChanged && exportMenuOpen && (prev.contactsLength > 0 || prev.googleCount > 0 || prev.calendarCount > 0)) {
-      console.log('[DEBUG MENU] Fermeture du menu car les compteurs ont changé');
       setExportMenuOpen(false);
     }
 
@@ -1678,7 +1669,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
   // Surveillance robuste des fins d'appel via vnements ADB
   useEffect(() => {
-    console.log('🔧 Configuration de la surveillance des fins d\'appels...');
+    // console.log('🔧 Configuration de la surveillance des fins d\'appels...');
 
     const unsubscribeCallEnd = onCallEnd((callEndEvent) => {
       console.log('📞 vnement de fin d\'appel reu:', callEndEvent);
@@ -1720,7 +1711,7 @@ Dimitri MOREL - Arcanis Conseil`;
     });
 
     return () => {
-      console.log('🔧 Nettoyage de la surveillance des fins d\'appels...');
+      // console.log('🔧 Nettoyage de la surveillance des fins d\'appels...');
       unsubscribeCallEnd();
     };
   }, [activeCallContactId, onCallEnd, updateContact, updateCallState, showNotification, resolvedActiveTabId]);
@@ -1815,11 +1806,11 @@ Dimitri MOREL - Arcanis Conseil`;
     }
 
     window.addEventListener('dimicall-imported-contacts', onImported as any)
-    console.log('?? [IMPORT] couteur d\'vnement dimicall-imported-contacts enregistr')
+    // console.log('?? [IMPORT] couteur d\'vnement dimicall-imported-contacts enregistr')
 
     return () => {
       window.removeEventListener('dimicall-imported-contacts', onImported as any)
-      console.log('?? [IMPORT] couteur d\'vnement dimicall-imported-contacts supprim')
+      // console.log('?? [IMPORT] couteur d\'vnement dimicall-imported-contacts supprim')
     }
   }, [tableTabs, activeTableTabId, showNotification]);
 
@@ -1939,7 +1930,7 @@ Dimitri MOREL - Arcanis Conseil`;
   // Mettre à jour les refs quand les valeurs changent
   useEffect(() => {
     selectedContactRef.current = selectedContact;
-    console.log(`?? [CONTACT_REF] Contact slectionn mis  jour:`, selectedContact ? `${selectedContact.prenom} ${selectedContact.nom}` : 'null');
+    // console.log(`?? [CONTACT_REF] Contact slectionn mis  jour:`, selectedContact ? `${selectedContact.prenom} ${selectedContact.nom}` : 'null');
   }, [selectedContact]);
 
   useEffect(() => {
@@ -1961,14 +1952,14 @@ Dimitri MOREL - Arcanis Conseil`;
   // Persistance du mode d'auto-recherche dans localStorage
   useEffect(() => {
     try {
-      console.log('💾 [AUTO-SEARCH] Sauvegarde du mode:', autoSearchMode);
+      // console.log('💾 [AUTO-SEARCH] Sauvegarde du mode:', autoSearchMode);
       localStorage.setItem('auto-search-mode', autoSearchMode);
-      console.log('✅ [AUTO-SEARCH] Mode sauvegard avec succs dans localStorage');
+      // console.log('✅ [AUTO-SEARCH] Mode sauvegard avec succs dans localStorage');
 
       // Vrification immdiate de la sauvegarde
       const verification = localStorage.getItem('auto-search-mode');
       if (verification === autoSearchMode) {
-        console.log('✅ [AUTO-SEARCH] Vrification russie - Mode persistent:', verification);
+        // console.log('✅ [AUTO-SEARCH] Vrification russie - Mode persistent:', verification);
       } else {
         console.error('❌ [AUTO-SEARCH] chec de la vrification:', { expected: autoSearchMode, actual: verification });
       }
@@ -1980,17 +1971,17 @@ Dimitri MOREL - Arcanis Conseil`;
   // Fonction de debug pour tester la persistence manuellement (accessible via window.testAutoSearchPersistence)
   useEffect(() => {
     (window as any).testAutoSearchPersistence = () => {
-      console.log('🧪 [AUTO-SEARCH] Test de persistence:');
-      console.log('📖 Mode actuel en mmoire:', autoSearchMode);
-      console.log('💾 Mode sauvegard en localStorage:', localStorage.getItem('auto-search-mode'));
-      console.log('🔄 Pour tester: changez le mode via l\'interface, puis rafrachissez la page');
+      // console.log('🧪 [AUTO-SEARCH] Test de persistence:');
+      // console.log('📖 Mode actuel en mmoire:', autoSearchMode);
+      // console.log('💾 Mode sauvegard en localStorage:', localStorage.getItem('auto-search-mode'));
+      // console.log('🔄 Pour tester: changez le mode via l\'interface, puis rafrachissez la page');
     };
   }, [autoSearchMode]);
 
   // Log initial du mode d'auto-recherche au dmarrage
   useEffect(() => {
-    console.log('🚀 [AUTO-SEARCH] Application dmarre avec le mode:', autoSearchMode);
-    console.log('💡 [AUTO-SEARCH] Ce mode sera utilis avec la touche F1 et le bouton Appeler');
+    // console.log('🚀 [AUTO-SEARCH] Application dmarre avec le mode:', autoSearchMode);
+    // console.log('💡 [AUTO-SEARCH] Ce mode sera utilis avec la touche F1 et le bouton Appeler');
   }, []); // Seulement au mount
 
   // Handler pour les raccourcis globaux Electron
@@ -3087,7 +3078,6 @@ Dimitri MOREL - Arcanis Conseil`;
                               />
 
                               <DropdownMenu open={exportMenuOpen} onOpenChange={(open) => {
-                                console.log('[DEBUG MENU] Menu ouverture:', open, 'googleContactsCount:', googleContactsCount, 'calendarRemindersCount:', calendarRemindersCount);
                                 setExportMenuOpen(open);
                               }}>
                                 <DropdownMenuTrigger asChild>
@@ -3143,7 +3133,6 @@ Dimitri MOREL - Arcanis Conseil`;
                                   <DropdownMenuCheckboxItem
                                     checked={exportOptions.contacts}
                                     onCheckedChange={(checked) => {
-                                      console.log('[DEBUG MENU] Contacts Google clicked, count:', googleContactsCount);
                                       setExportOptions(prev => ({ ...prev, contacts: checked }));
                                     }}
                                     onSelect={(e) => e.preventDefault()}

@@ -24,13 +24,26 @@ export const TimePickerWithClear: React.FC<TimePickerWithClearProps> = ({
   onChange,
   onClear,
 }) => {
+  // Normaliser la valeur : undefined, null ou chaîne vide deviennent undefined
+  const normalizedValue = value && value.trim() !== '' ? value : undefined;
+  
+  // Le bouton X ne doit apparaître que si une valeur valide existe
+  const hasValue = Boolean(normalizedValue);
+  
+  console.log('[TimePickerWithClear]', { label, value, normalizedValue, hasValue });
+  
   return (
     <div className="space-y-2">
       <Label className="text-sm font-medium text-foreground/80">{label}</Label>
       <div className="flex items-center gap-2">
-        <Select value={value || ""} onValueChange={onChange}>
+        <Select 
+          value={normalizedValue} 
+          onValueChange={onChange}
+        >
           <SelectTrigger className="flex-1">
-            <SelectValue placeholder="Sélectionner" />
+            <SelectValue placeholder="Sélectionner">
+              {normalizedValue || "Sélectionner"}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent className="max-h-60">
             {timeOptions.map((time) => (
@@ -40,7 +53,7 @@ export const TimePickerWithClear: React.FC<TimePickerWithClearProps> = ({
             ))}
           </SelectContent>
         </Select>
-        {value && (
+        {hasValue && (
           <Button
             variant="ghost"
             size="icon"

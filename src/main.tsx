@@ -7,6 +7,7 @@ import { useSupabaseAuth } from './lib/auth-client'
 import './index.css'
 import './styles/table-interactions.css'
 import { ModeProvider } from './context/ModeContext'
+import './utils/disableLogs' // Désactiver tous les logs
 
 // Fonction pour masquer l'écran de chargement HTML initial
 const hideInitialLoadingScreen = () => {

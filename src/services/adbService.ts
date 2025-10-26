@@ -49,6 +49,14 @@ class AdbService {
   private callStartTime: Date | null = null;
   private wasInCall: boolean = false;
 
+  // Throttling des logs répétitifs
+  private lastLogTime: Record<string, number> = {};
+  private readonly LOG_THROTTLE_MS = 30000; // 30 secondes entre les logs similaires
+  
+  // Cache pour la détection des appareils
+  private deviceCache: { devices: any[], lastCheck: number } = { devices: [], lastCheck: 0 };
+  private readonly DEVICE_CACHE_MS = 5000; // Cache 5 secondes
+
   constructor() {
     this.checkElectronEnvironment();
     this.setAutoDetection(true);
@@ -59,9 +67,29 @@ class AdbService {
     this.log(this.isElectron ? '🚀 Environnement Electron détecté - ADB natif disponible' : '⚠️ Environnement web - ADB natif non disponible');
   }
 
+  /**
+   * Méthode utilitaire pour throttler les logs répétitifs
+   */
+  private shouldLogMessage(key: string): boolean {
+    const now = Date.now();
+    const lastTime = this.lastLogTime[key] || 0;
+
+    if (now - lastTime > this.LOG_THROTTLE_MS) {
+      this.lastLogTime[key] = now;
+      return true;
+    }
+    return false;
+  }
+
   private log(message: string, level: 'info' | 'warn' | 'error' = 'info') {
     const timestamp = new Date().toLocaleTimeString('fr-FR');
     const logMessage = `[${timestamp}] ADB: ${message}`;
+    
+    // Throttler les logs répétitifs
+    const logKey = `adb-${level}-${message.substring(0, 50)}`;
+    if (!this.shouldLogMessage(logKey)) {
+      return; // Skip ce log
+    }
     
     console.log(logMessage);
     
@@ -98,17 +126,23 @@ class AdbService {
 
   private async checkForConnectedDevices() {
     if (!this.isElectron || !window.electronAPI) {
-      this.log('❌ APIs Electron non disponibles');
-      return;
+      return; // Skip silencieusement si pas d'Electron
     }
 
     try {
-      this.log('🔍 Recherche d\'appareils Android connectés...');
-      
+      // Utiliser le cache si disponible
+      const now = Date.now();
+      if (now - this.deviceCache.lastCheck < this.DEVICE_CACHE_MS) {
+        return; // Skip, cache encore valide
+      }
+
       const result = await window.electronAPI.adb.getDevices();
       
       if (!result.success) {
-        this.log(`❌ Erreur lors de la recherche d'appareils: ${result.error}`, 'error');
+        // Log seulement si changement d'état
+        if (this.connectionState.isConnected || !this.connectionState.error) {
+          this.log(`❌ Erreur lors de la recherche d'appareils: ${result.error}`, 'error');
+        }
         this.connectionState.error = `Erreur de détection: ${result.error}`;
         this.connectionState.isConnected = false;
         this.connectionState.device = null;
@@ -117,12 +151,15 @@ class AdbService {
       }
 
       const devices = result.devices || [];
-      this.log(`📱 ${devices.length} appareil(s) ADB trouvé(s)`);
       
-      // Log détaillé des appareils trouvés
-      devices.forEach((device, index) => {
-        this.log(`📱 Appareil ${index + 1}: ${device.serial} (${device.status})`);
-      });
+      // Mettre à jour le cache
+      const devicesChanged = JSON.stringify(this.deviceCache.devices) !== JSON.stringify(devices);
+      this.deviceCache = { devices, lastCheck: now };
+      
+      // Log seulement si changement
+      if (devicesChanged) {
+        this.log(`📱 ${devices.length} appareil(s) ADB trouvé(s)`);
+      }
 
       // Chercher un appareil connecté (status = "device")
       const connectedDevice = devices.find(d => d.status === 'device');
@@ -136,8 +173,8 @@ class AdbService {
         if (this.connectionState.isConnected) {
           this.log('📱 Appareil déconnecté');
           this.handleDeviceDisconnection();
-        } else {
-          this.log('⚠️ Aucun appareil Android autorisé trouvé');
+        } else if (devicesChanged) {
+          // Log seulement si changement
           this.connectionState.error = 'Aucun appareil Android connecté et autorisé';
           this.notifyListeners();
         }

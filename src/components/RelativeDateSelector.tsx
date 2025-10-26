@@ -6,7 +6,9 @@ import { cn } from '../lib/utils';
 
 interface RelativeDateSelectorProps {
   onDateChange: (date: string) => void;
+  onTimeChange?: (time: string) => void;
   currentDate: string;
+  currentTime?: string;
   disabled?: boolean;
   className?: string;
   // Optional: container element for portalled dropdowns (e.g., inside a Dialog)
@@ -30,7 +32,9 @@ const TIME_UNITS: { value: TimeUnit; label: string }[] = [
 
 export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
   onDateChange,
+  onTimeChange,
   currentDate,
+  currentTime = '',
   disabled = false,
   className,
   portalContainer,
@@ -63,35 +67,74 @@ export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
         return;
       }
 
-      const calculatedDate = DateCalculationService.calculateFutureDate(quantity, unit);
-      const validation = DateCalculationService.validateDateRange(calculatedDate);
+      // Pour les minutes et heures, calculer aussi l'heure exacte
+      const shouldCalculateTime = unit === 'minutes' || unit === 'hours';
       
-      if (!validation.isValid) {
-        setError(validation.errorMessage || 'Date invalide');
-        setPreviewText('');
-        return;
-      }
+      if (shouldCalculateTime) {
+        const result = DateCalculationService.calculateFutureDateWithTime(quantity, unit);
+        const validation = DateCalculationService.validateDateRange(result.date);
+        
+        if (!validation.isValid) {
+          setError(validation.errorMessage || 'Date invalide');
+          setPreviewText('');
+          return;
+        }
 
-      // Générer le texte de prévisualisation
-      const preview = DateCalculationService.getPreviewText(quantity, unit);
-      const displayDate = DateCalculationService.formatDateForDisplay(calculatedDate);
-      setPreviewText(`${preview} (${displayDate})`);
-      
-      // Marquer comme changement interne et notifier le parent
-      isInternalChange.current = true;
-      lastCalculatedDate.current = calculatedDate;
-      // Notifier le parent via une ref stable pour éviter de re-créer la callback
-      onDateChangeRef.current(calculatedDate);
+        // Générer le texte de prévisualisation
+        const preview = DateCalculationService.getPreviewText(quantity, unit);
+        const displayDate = DateCalculationService.formatDateForDisplay(result.date);
+        setPreviewText(`${preview} (${displayDate} à ${result.time})`);
+        
+        // Marquer comme changement interne et notifier le parent
+        isInternalChange.current = true;
+        lastCalculatedDate.current = result.date;
+        onDateChangeRef.current(result.date);
+        
+        // Notifier le changement d'heure si la callback existe
+        if (onTimeChange) {
+          onTimeChange(result.time);
+        }
 
-      // Afficher un avertissement si nécessaire
-      if (validation.warningMessage) {
-        setError(validation.warningMessage);
+        // Afficher un avertissement si nécessaire
+        if (validation.warningMessage) {
+          setError(validation.warningMessage);
+        }
+      } else {
+        // Pour les jours, semaines, mois, années : calculer seulement la date (pas d'heure)
+        const calculatedDate = DateCalculationService.calculateFutureDate(quantity, unit);
+        const validation = DateCalculationService.validateDateRange(calculatedDate);
+        
+        if (!validation.isValid) {
+          setError(validation.errorMessage || 'Date invalide');
+          setPreviewText('');
+          return;
+        }
+
+        // Générer le texte de prévisualisation
+        const preview = DateCalculationService.getPreviewText(quantity, unit);
+        const displayDate = DateCalculationService.formatDateForDisplay(calculatedDate);
+        setPreviewText(`${preview} (${displayDate})`);
+        
+        // Marquer comme changement interne et notifier le parent
+        isInternalChange.current = true;
+        lastCalculatedDate.current = calculatedDate;
+        onDateChangeRef.current(calculatedDate);
+        
+        // Effacer l'heure pour les rappels "toute la journée"
+        if (onTimeChange) {
+          onTimeChange('');
+        }
+
+        // Afficher un avertissement si nécessaire
+        if (validation.warningMessage) {
+          setError(validation.warningMessage);
+        }
       }
     } catch (err) {
       setError('Erreur lors du calcul de la date');
       setPreviewText('');
     }
-  }, []);
+  }, [onTimeChange]);
 
   // Gérer le changement de quantité
   const handleQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
