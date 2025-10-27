@@ -900,14 +900,14 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
 
   return (
     <div 
-      className="flex h-full w-full flex-col gap-4 overflow-hidden"
+      className="flex h-full w-full flex-col gap-4 overflow-hidden min-h-0"
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
       <DropZoneOverlay isVisible={isDragOver} isDragActive={isDragActive} />
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-2 border-b">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-1.5 border-b">
         <div className="flex items-center gap-4">
           <div className="flex flex-col gap-0.5">
             <h1 className="text-xl font-semibold text-foreground">Appels</h1>
@@ -1174,8 +1174,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
         </div>
       </div>
       {viewMode === 'cards' ? (
-      <div className="flex h-full w-full gap-4 overflow-hidden flex-col lg:flex-row">
-        <div className="flex w-full lg:w-[320px] xl:w-[360px] 2xl:w-[420px] flex-col border rounded-lg max-h-[300px] lg:max-h-none">
+      <div className="flex w-full flex-1 gap-4 overflow-hidden min-h-0 flex-col lg:flex-row">
+        <div className="flex w-full lg:w-[320px] xl:w-[360px] 2xl:w-[420px] flex-col min-h-0 max-h-[300px] lg:max-h-none">
           <div className="border-b px-4 py-2.5 space-y-2.5">
             <div className="flex items-center justify-between">
               <DropdownMenu>
@@ -1274,7 +1274,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
               />
             </div>
           </div>
-          <ScrollArea className="flex-1" ref={scrollRef}>
+          <ScrollArea className="flex-1 min-h-0 h-0" ref={scrollRef}>
             <div className="p-2">
               <div className="divide-y divide-border rounded-md border bg-card/50">
               {displayedContacts.map((contact) => {
@@ -1370,7 +1370,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
 
         <div className="flex-1 overflow-hidden">
           {selectedContact ? (
-            <div className="flex h-full flex-col border rounded-lg">
+            <div className="flex h-full flex-col">
               <div className="border-b px-6 py-3">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-center gap-3">
@@ -1458,7 +1458,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                 </div>
               </div>
 
-              <ScrollArea className="flex-1">
+              <ScrollArea className="flex-1 min-h-0 h-0">
                 <div className="grid gap-4 px-6 py-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                   <section className="space-y-4">
                     <div>
@@ -1830,7 +1830,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
           {/* Table Container */}
           <div className="flex-1 flex overflow-hidden min-h-0">
             <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
-              <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-hidden">
+              <div className="flex-1 bg-transparent rounded-none border-0 shadow-none overflow-hidden">
                 <div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="gap-2 flex h-full flex-col">
                   {/* Table Controls Bar - Fully Responsive */}
                   <div className="flex items-center gap-2 px-1.5 py-1.5 border-b bg-card flex-wrap">

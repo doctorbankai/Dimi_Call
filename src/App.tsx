@@ -116,10 +116,6 @@ const DonutChart: React.FC<{ progress: number; size?: number }> = ({ progress, s
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
-  if (auth.isLoading) {
-    return null;
-  }
-
   return (
     <div className="relative inline-flex items-center justify-center">
       <svg width={size} height={size} className="transform -rotate-90">
