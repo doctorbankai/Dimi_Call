@@ -68,7 +68,7 @@ export const FileManagerToolbar: React.FC<FileManagerToolbarProps> = ({
   };
 
   return (
-    <div className="flex flex-col gap-2 p-4 rounded-xl border bg-card/70 backdrop-blur-sm shadow-sm mx-4 mt-4 mb-4">
+    <div className="flex flex-col gap-2 p-4 mx-4 mt-4 mb-4 border-b">
       {/* Top Row: Breadcrumb + Actions */}
       <div className="flex items-center gap-2">
         <Breadcrumb className="flex-1">

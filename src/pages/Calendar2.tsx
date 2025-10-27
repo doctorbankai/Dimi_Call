@@ -46,7 +46,7 @@ export default function Calendar2() {
 
   if (loading) {
     return (
-      <div className="h-screen flex items-center justify-center">
+      <div className="flex-1 min-h-0 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Chargement du calendrier...</p>
@@ -56,8 +56,11 @@ export default function Calendar2() {
   }
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="flex-1 min-h-0 flex flex-col">
       <CalendarProvider events={events} users={USERS_MOCK}>
+        <div className="border-b px-4 py-3 flex items-center justify-between">
+          <h1 className="text-xl font-semibold">Calendrier</h1>
+        </div>
         <div className="flex gap-4 p-4 h-full overflow-hidden">
           {/* Sidebar gauche avec les cartes */}
           <div className="w-80 flex-shrink-0 space-y-4 overflow-y-auto">

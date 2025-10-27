@@ -1167,17 +1167,17 @@ export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
                           data-contact-id={contact.id}
                           className={cn(
                             // Ligne normale non sélectionnée
-                            !isSelected && "hover:bg-muted/50",
+                            !isSelected && "hover:bg-muted/40",
                             "cursor-pointer transition-colors duration-150",
                             // Style lorsque la ligne est sélectionnée
-                            isSelected && "bg-blue-500/20 dark:bg-blue-500/30 text-foreground",
+                            isSelected && "bg-primary/10 text-foreground",
                             // Style spécifique Ã  l'appel actif
                             isActiveCall && (!isSelected
                               ? (theme === Theme.Dark
                                   ? "bg-green-900/20 hover:bg-green-900/30"
-                                  : "bg-green-100 hover:bg-green-200")
+                                  : "bg-green-50 hover:bg-green-100")
                               : "")
-                          )}
+                          , "border-b border-border")}
                           onClick={() => {
                             shouldAutoScrollRef.current = true;
                             onSelectContact(contact);

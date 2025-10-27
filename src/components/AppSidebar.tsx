@@ -11,7 +11,7 @@ import {
   SidebarGroupLabel,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Settings, User, Calendar, Crown, Phone, BarChart3, Database, PanelLeft, MailQuestion, HelpCircle, BookOpen } from 'lucide-react';
+import { Settings, User, Calendar, Crown, Phone, BarChart3, Database, MailQuestion, HelpCircle, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserProfileDialog } from './UserProfileDialog';
 import { TicketForm } from './TicketForm';
@@ -111,7 +111,7 @@ export function AppSidebar({
   const avatarSrc = generateAvatarSVG(userInitials, realUserEmail);
   const appVersion = packageJson.version;
   const { mode, setMode } = useCallMode();
-  const { state, setOpen } = useSidebar();
+  const {} = useSidebar();
   
   // Écouter les changements de visibilité des pages
   React.useEffect(() => {
@@ -131,20 +131,18 @@ export function AppSidebar({
   }, []);
   return (
     <div
-      className="fixed left-0 top-8 h-[calc(100vh-2rem)] z-[10001] transition-[width] duration-200 ease-linear"
+      className="h-full transition-[width] duration-200 ease-linear"
       style={
         {
           "--sidebar-width": "16rem",
           "--sidebar-width-icon": "3rem",
-          width: state === "collapsed" ? "var(--sidebar-width-icon)" : "var(--sidebar-width)"
         } as React.CSSProperties
       }
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
     >
       <Sidebar
+        variant="inset"
         collapsible="icon"
-        className="h-full shadow-2xl"
+        className="h-full group-data-[variant=floating]:shadow-sm"
       >
 
       <SidebarContent className="flex-1 bg-sidebar backdrop-blur-sm">
@@ -158,6 +156,7 @@ export function AppSidebar({
                 <SidebarMenuButton
                   isActive={viewMode === 'appels-cards'}
                   onClick={() => onChangeViewMode('appels-cards')}
+                  tooltip="Appels"
                   className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <Phone className="w-4 h-4" />
@@ -168,6 +167,7 @@ export function AppSidebar({
                 <SidebarMenuButton
                   isActive={viewMode === 'calendar-2'}
                   onClick={() => onChangeViewMode('calendar-2')}
+                  tooltip="Calendrier"
                   className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <Calendar className="w-4 h-4" />
@@ -178,6 +178,7 @@ export function AppSidebar({
                 <SidebarMenuButton
                   isActive={viewMode === 'graph'}
                   onClick={() => onChangeViewMode('graph')}
+                  tooltip="Graphiques"
                   className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <BarChart3 className="w-4 h-4" />
@@ -189,6 +190,7 @@ export function AppSidebar({
                   <SidebarMenuButton
                     isActive={viewMode === 'db'}
                     onClick={() => onChangeViewMode('db')}
+                    tooltip="Données"
                     className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                   >
                     <Database className="w-4 h-4" />
@@ -200,6 +202,7 @@ export function AppSidebar({
                 <SidebarMenuButton
                   isActive={viewMode === 'annuaire'}
                   onClick={() => onChangeViewMode('annuaire')}
+                  tooltip="Annuaire"
                   className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <BookOpen className="w-4 h-4" />
@@ -211,6 +214,7 @@ export function AppSidebar({
                 <SidebarMenuButton
                   isActive={viewMode === 'files'}
                   onClick={() => onChangeViewMode('files')}
+                  tooltip="Fichiers"
                   className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <Database className="w-4 h-4" />
@@ -253,6 +257,7 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => setIsTicketFormOpen(true)}
+                  tooltip="Envoyer un ticket"
                   className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <MailQuestion className="w-4 h-4" />
@@ -262,6 +267,7 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={() => setIsHelpDialogOpen(true)}
+                  tooltip="Aide et tutoriel"
                   className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <HelpCircle className="w-4 h-4" />
@@ -271,6 +277,7 @@ export function AppSidebar({
               <SidebarMenuItem>
                 <SidebarMenuButton
                   onClick={onSettingsClick}
+                  tooltip="Réglages"
                   className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
                   <Settings className="w-4 h-4" />

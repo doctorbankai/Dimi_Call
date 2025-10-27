@@ -907,7 +907,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       onDrop={handleDrop}
     >
       <DropZoneOverlay isVisible={isDragOver} isDragActive={isDragActive} />
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/70 px-6 py-3 backdrop-blur-sm shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-2 border-b">
         <div className="flex items-center gap-4">
           <div className="flex flex-col gap-0.5">
             <h1 className="text-xl font-semibold text-foreground">Appels</h1>
@@ -977,12 +977,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         setIsAutocallActive(!isAutocallActive)
                         toast.info(isAutocallActive ? 'Autocall désactivé' : 'Autocall activé')
                       }}
-                      className={cn(
-                        "h-9",
-                        isAutocallActive 
-                          ? "bg-neutral-700 hover:bg-neutral-800 text-white border-neutral-700 dark:bg-neutral-600 dark:hover:bg-neutral-700" 
-                          : "bg-neutral-100 hover:bg-neutral-200 text-neutral-700 border-neutral-300 dark:bg-neutral-800 dark:hover:bg-neutral-700 dark:text-neutral-300 dark:border-neutral-700"
-                      )}
+                      variant={isAutocallActive ? 'default' : 'outline'}
+                      className="h-9"
                     >
                       <PhoneCall className="mr-2 h-4 w-4" />
                       Autocall
@@ -1036,7 +1032,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
               <ButtonGroup>
                 <Button 
                   size="sm"
-                  className="h-9 bg-neutral-900 hover:bg-black text-white border-neutral-900 dark:bg-neutral-800 dark:hover:bg-neutral-900"
+                  variant="outline"
+                  className="h-9"
                   onClick={() => {
                     const input = document.createElement('input')
                     input.type = 'file'
@@ -1059,7 +1056,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                     <Button 
                       size="sm" 
                       disabled={contacts.length === 0}
-                      className="h-9 bg-neutral-900 hover:bg-black text-white border-neutral-900 dark:bg-neutral-800 dark:hover:bg-neutral-900"
+                      variant="outline"
+                      className="h-9"
                       title="Exporter les données"
                     >
                       <Download className="h-4 w-4 mr-2" />
@@ -1133,7 +1131,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
 
                     <DropdownMenuItem
                       onClick={handleUnifiedExport}
-                      className="cursor-pointer bg-primary/10 hover:bg-primary/20"
+                      className="cursor-pointer"
                       disabled={Object.values(exportOptions).every(option => !option)}
                     >
                       <Download className="mr-2 h-4 w-4" />
@@ -1146,7 +1144,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                 <AlertDialogTrigger asChild>
                   <Button 
                     size="sm"
-                    className="h-9 bg-red-500 hover:bg-red-600 text-white border-red-500 dark:bg-red-600 dark:hover:bg-red-700"
+                    variant="destructive"
+                    className="h-9"
                   >
                     <Trash2 className="mr-2 h-4 w-4" /> Supprimer
                   </Button>
@@ -1176,7 +1175,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       </div>
       {viewMode === 'cards' ? (
       <div className="flex h-full w-full gap-4 overflow-hidden flex-col lg:flex-row">
-        <div className="flex w-full lg:w-[320px] xl:w-[360px] 2xl:w-[420px] flex-col rounded-xl border bg-card/70 backdrop-blur-sm shadow-sm max-h-[300px] lg:max-h-none">
+        <div className="flex w-full lg:w-[320px] xl:w-[360px] 2xl:w-[420px] flex-col border rounded-lg max-h-[300px] lg:max-h-none">
           <div className="border-b px-4 py-2.5 space-y-2.5">
             <div className="flex items-center justify-between">
               <DropdownMenu>
@@ -1276,45 +1275,58 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
             </div>
           </div>
           <ScrollArea className="flex-1" ref={scrollRef}>
-            <div className="space-y-1.5 p-3">
+            <div className="p-2">
+              <div className="divide-y divide-border rounded-md border bg-card/50">
               {displayedContacts.map((contact) => {
                 const isSelected = contact.id === selectedContactId
                 const statusConfig = STATUS_COLORS[contact.statut ?? ContactStatus.NonDefini]
                 const isCalling = !!callStates[contact.id]?.isCalling
                 return (
-                    <Card
-                      key={contact.id}
-                      data-contact-card={contact.id}
-                      className={cn(
-                        "overflow-hidden rounded-lg border bg-card/80 transition-all duration-200 cursor-pointer",
-                        isSelected ? "border-primary shadow-sm" : "hover:border-primary/40",
-                      )}
+                  <div
+                    key={contact.id}
+                    data-contact-card={contact.id}
+                    className={cn(
+                      "px-3 py-2 flex items-center gap-2 cursor-pointer transition-colors",
+                      isSelected ? "bg-primary/5" : "hover:bg-muted/50",
+                    )}
                     onClick={() => {
                       shouldAutoScrollRef.current = true;
                       onSelectContact(contact);
                     }}
                   >
-                    <CardHeader className="p-0 px-3 py-1.5 flex flex-row items-center gap-2 space-y-0">
-                      <div className="flex min-w-0 flex-1 items-center gap-2">
-                        <Avatar className="h-7 w-7 border">
-                          <AvatarFallback className="text-xs">
-                            {(contact.prenom?.[0] ?? "").toUpperCase()
-                              .concat(contact.nom?.[0] ?? "")
-                              .slice(0, 2) || "?"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex min-w-0 flex-1 flex-col">
-                          <CardTitle className="truncate text-xs font-semibold text-foreground leading-tight">
-                            {[contact.prenom, contact.nom].filter(Boolean).join(" ") || "Sans nom"}
-                          </CardTitle>
-                          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-                            <span className="flex items-center gap-0.5 truncate">
-                              <Phone className="h-2.5 w-2.5" />
-                              {contact.telephone || "-"}
-                            </span>
-                          </div>
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <Avatar className="h-7 w-7 border">
+                        <AvatarFallback className="text-xs">
+                          {(contact.prenom?.[0] ?? "").toUpperCase()
+                            .concat(contact.nom?.[0] ?? "")
+                            .slice(0, 2) || "?"}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <div className="truncate text-xs font-semibold text-foreground leading-tight">
+                          {[contact.prenom, contact.nom].filter(Boolean).join(" ") || "Sans nom"}
+                        </div>
+                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                          <span className="flex items-center gap-0.5 truncate">
+                            <Phone className="h-2.5 w-2.5" />
+                            {contact.telephone || "-"}
+                          </span>
                         </div>
                       </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {contact.dateRappel && (
+                        <div className="hidden md:flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <CalendarIcon className="h-2.5 w-2.5 text-orange-500" />
+                          <span className="text-foreground">{formatDisplayDate(contact.dateRappel)}</span>
+                        </div>
+                      )}
+                      {contact.dateRDV && (
+                        <div className="hidden md:flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <CalendarIcon className="h-2.5 w-2.5 text-blue-500" />
+                          <span className="text-foreground">{formatDisplayDate(contact.dateRDV)}</span>
+                        </div>
+                      )}
                       <Badge
                         variant="secondary"
                         className={cn(
@@ -1327,35 +1339,14 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       >
                         {contact.statut ?? ContactStatus.NonDefini}
                       </Badge>
-                    </CardHeader>
-                    <CardContent className="p-0 px-3 pb-1.5 pt-0 flex items-center justify-between text-[10px] text-muted-foreground">
-                      <div className="flex items-center gap-3">
-                        {contact.dateRappel && (
-                          <div className="flex items-center gap-1">
-                            <CalendarIcon className="h-2.5 w-2.5 text-orange-500" />
-                            <span className="text-foreground">{formatDisplayDate(contact.dateRappel)}</span>
-                          </div>
-                        )}
-                        {contact.dateRDV && (
-                          <div className="flex items-center gap-1">
-                            <CalendarIcon className="h-2.5 w-2.5 text-blue-500" />
-                            <span className="text-foreground">{formatDisplayDate(contact.dateRDV)}</span>
-                          </div>
-                        )}
-                      </div>
-                      {contact.source && (
-                        <span className="text-[9px] text-muted-foreground/60 truncate max-w-[100px]">
-                          {contact.source}
-                        </span>
-                      )}
                       {isCalling && (
-                        <div className="flex items-center gap-1 rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-[11px] text-primary ml-auto">
+                        <div className="flex items-center gap-1 rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-[11px] text-primary">
                           <PhoneCall className="h-3 w-3" />
-                          <span>Appel en cours"¦</span>
+                          <span>Appel en cours…</span>
                         </div>
                       )}
-                    </CardContent>
-                  </Card>
+                    </div>
+                  </div>
                 )
               })}
               {contacts.length > visibleCount && (
@@ -1372,13 +1363,14 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   Aucun contact trouvé.
                 </div>
               )}
+              </div>
             </div>
           </ScrollArea>
         </div>
 
         <div className="flex-1 overflow-hidden">
           {selectedContact ? (
-            <div className="flex h-full flex-col rounded-xl border bg-card/60 backdrop-blur-sm shadow-sm">
+            <div className="flex h-full flex-col border rounded-lg">
               <div className="border-b px-6 py-3">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-center gap-3">
@@ -1921,7 +1913,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         <TabsList className="h-9 hidden">
                           <TabsTrigger 
                             value="disabled" 
-                            className="text-xs data-[state=active]:bg-neutral-900 data-[state=active]:text-white dark:data-[state=active]:bg-neutral-100 dark:data-[state=active]:text-neutral-900"
+                            className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground dark:data-[state=active]:bg-primary/90 dark:data-[state=active]:text-primary-foreground"
                           >
                             Désactivé
                           </TabsTrigger>

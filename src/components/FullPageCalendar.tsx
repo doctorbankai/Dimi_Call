@@ -15,7 +15,7 @@ export function FullPageCalendar({ selectedDate, onDateChange }: FullPageCalenda
   return (
     <div className="flex h-full flex-col gap-4 w-full overflow-hidden">
       {/* Navbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/70 px-6 py-3 backdrop-blur-sm shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 border-b">
         <div className="flex flex-col gap-0.5">
           <h1 className="text-xl font-semibold text-foreground">Calendrier</h1>
         </div>

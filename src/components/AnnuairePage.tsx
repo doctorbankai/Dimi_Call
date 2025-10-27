@@ -1619,7 +1619,7 @@ export function AnnuairePage({
   return (
     <div className="flex h-full flex-col gap-4 w-full overflow-hidden">
       {/* Navbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/70 px-6 py-3 backdrop-blur-sm shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 border-b">
         <div className="flex items-center gap-4">
           <div className="flex flex-col gap-0.5">
             <h1 className="text-xl font-semibold text-foreground">Annuaire</h1>
@@ -1662,7 +1662,7 @@ export function AnnuairePage({
       </div>
 
       {/* Filters & actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/60 px-4 py-3 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b">
         <div className="flex flex-wrap items-center gap-2">
           <div className="inline-flex items-center gap-2">
             {quickFilters.map(({ key, label }) => (
@@ -1699,9 +1699,9 @@ export function AnnuairePage({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            variant="default"
+            variant="outline"
             size="sm"
-            className="h-9 bg-neutral-900 hover:bg-black text-white border-neutral-900 dark:bg-neutral-800 dark:hover:bg-neutral-900"
+            className="h-9"
             onClick={() => dispatchLocalDbEvent('dimicall-db-import')}
             title="Importer un fichier CSV/Excel"
           >
@@ -1711,10 +1711,10 @@ export function AnnuairePage({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
-                variant="default"
+                variant="outline"
                 size="sm" 
                 disabled={contacts.length === 0}
-                className="h-9 bg-neutral-900 hover:bg-black text-white border-neutral-900 dark:bg-neutral-800 dark:hover:bg-neutral-900"
+                className="h-9"
                 title="Exporter les données"
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -1888,12 +1888,10 @@ export function AnnuairePage({
             ))}
               </div>
             ) : filteredContacts.length === 0 ? (
-              <Card>
-                <CardContent className="flex flex-col items-center justify-center gap-3 py-12 text-center text-muted-foreground">
+              <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-muted-foreground border rounded-lg">
                   <History className="h-8 w-8" />
                   <p>Aucun contact trouvé dans la base locale.</p>
-                </CardContent>
-              </Card>
+              </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredContacts.map((contact) => {
@@ -1901,7 +1899,7 @@ export function AnnuairePage({
             return (
               <Card
                 key={contact.id}
-                className={`cursor-pointer transition-shadow hover:shadow-lg ${isSelected ? 'border-primary ring-1 ring-primary/40' : ''}`}
+                className={`cursor-pointer transition-colors hover:bg-muted/40 ${isSelected ? 'bg-primary/5 ring-1 ring-primary/20' : ''}`}
                 onClick={() => handleContactClick(contact)}
               >
                 <CardContent className="space-y-4 p-6">

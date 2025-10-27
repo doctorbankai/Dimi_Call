@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Minus, Square, X, Maximize, Smartphone, WifiOff, Loader2, Download, RefreshCw, Beaker } from 'lucide-react';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 import { Theme, CallMode } from '../types';
 import { useCallMode } from '../context/ModeContext';
@@ -237,11 +238,14 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
       ) : (
         // Layout pour Windows/Linux - Design original
         <>
-          {/* Logo et dropdown de navigation */}
+          {/* Logo, trigger sidebar et dropdown de navigation */}
           <div 
             className="flex items-center h-full pointer-events-auto"
             style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
+            {/* Icône de rétractation de la sidebar */}
+            <SidebarTrigger className="size-9 ml-2 mr-1" />
+
             {/* Logo et nom DimiCall */}
             <div className="flex items-center px-3 py-1 gap-2">
               <span className={cn("text-sm font-semibold", textColor)}>DimiCall</span>

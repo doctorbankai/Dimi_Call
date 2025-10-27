@@ -662,7 +662,7 @@ export const FilesPage: React.FC<FilesPageProps> = ({ contacts: propContacts = [
       />
 
       {/* Navbar / Bandeau */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-card/70 px-6 py-3 backdrop-blur-sm shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 border-b">
         <div className="flex items-center gap-4">
           <div className="flex flex-col gap-0.5">
             <h1 className="text-xl font-semibold text-foreground">Gestionnaire de Fichiers</h1>
@@ -673,12 +673,12 @@ export const FilesPage: React.FC<FilesPageProps> = ({ contacts: propContacts = [
         </div>
         
         <Button
-          variant="default"
+          variant="outline"
           size="sm"
           onClick={handleRegenerateContactFolders}
           disabled={isRegenerating || contactsFromDb.length === 0}
           title="Créer automatiquement les dossiers manquants pour tous les contacts"
-          className="h-9 bg-neutral-900 hover:bg-black text-white border-neutral-900 dark:bg-neutral-800 dark:hover:bg-neutral-900"
+          className="h-9"
         >
           {isRegenerating ? (
             <>
@@ -715,7 +715,7 @@ export const FilesPage: React.FC<FilesPageProps> = ({ contacts: propContacts = [
         onUploadFiles={handleUploadClick}
       />
 
-      <div className="flex-1 rounded-xl border bg-card/70 backdrop-blur-sm shadow-sm mx-4 mb-4 overflow-hidden">
+      <div className="flex-1 mx-4 mb-4 overflow-hidden">
         <ResizablePanelGroup direction="horizontal" className="h-full">
           {/* File Tree */}
           <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>

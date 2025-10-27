@@ -13,7 +13,7 @@ import Calendar2 from './pages/Calendar2';
 
 import { TitleBar } from './components/TitleBar';
 import { AppSidebar } from '@/components/AppSidebar';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { UpdateConfirmationDialog } from './components/UpdateConfirmationDialog';
 import {
   loadContacts,
@@ -225,6 +225,17 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const [isShortcutConfigOpen, setIsShortcutConfigOpen] = useState(false);
   const [isCalcomConfigOpen, setIsCalcomConfigOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  // Densité UI (compact/default)
+  const [uiDensity, setUiDensity] = useState<'default' | 'compact'>(() => {
+    try { return (localStorage.getItem('ui-density') as 'default' | 'compact') || 'default' } catch { return 'default' }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem('ui-density', uiDensity);
+    } catch {}
+    const cls = 'density-compact';
+    if (uiDensity === 'compact') document.body.classList.add(cls); else document.body.classList.remove(cls);
+  }, [uiDensity]);
   const [shortcutIndicator, setShortcutIndicator] = useState<{
     isVisible: boolean;
     key: string;
@@ -2602,17 +2613,19 @@ Dimitri MOREL - Arcanis Conseil`;
   }
 
   return (
-    <SidebarProvider>
-      <div className={cn(
-        "flex h-[calc(100vh-2rem)] overflow-hidden bg-background min-w-0",
+    <SidebarProvider
+      className={cn(
+        "flex h-svh min-h-svh overflow-hidden bg-sidebar",
         theme === Theme.Dark ? "dark" : ""
       )}
-        style={{
-          minHeight: 0,
-          "--sidebar-width": "16rem",
-          "--sidebar-width-icon": "3rem"
-        } as React.CSSProperties}
-      >
+      style={{
+        minHeight: 0,
+        paddingTop: "var(--header-height)",
+        "--sidebar-width": "16rem",
+        "--sidebar-width-icon": "3rem",
+        "--header-height": "2rem",
+      } as React.CSSProperties}
+    >
         <AppSidebar
           activeTab={activeMenuTab}
           onTabChange={(tab) => {
@@ -2623,15 +2636,7 @@ Dimitri MOREL - Arcanis Conseil`;
           onChangeViewMode={(mode) => setViewMode(mode)}
           theme={theme}
         />
-        <div
-          className="min-w-0 transition-all duration-200 ease-linear"
-          style={{
-            position: "fixed",
-            inset: "2rem 0 0 var(--sidebar-width-icon)",
-            "--sidebar-width": "16rem",
-            "--sidebar-width-icon": "3rem"
-          } as React.CSSProperties}
-        >
+        <SidebarInset className="flex-1 min-w-0 flex flex-col min-h-0 transition-all duration-200 ease-linear pt-0 mt-0">
           {/* Barre de titre personnalise pour Electron */}
           <TitleBar
             theme={theme}
@@ -2726,9 +2731,10 @@ Dimitri MOREL - Arcanis Conseil`;
 
 
             {/* Main content */}
-            <main className={cn(
-              "flex-1 flex flex-col p-1 md:p-1.5 space-y-1 md:space-y-1.5 overflow-hidden w-full min-h-0"
-            )}>
+            <div className="group-data-[variant=floating]:border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm bg-white border rounded-lg shadow-sm mx-2 my-0 flex-1 flex min-h-0 overflow-hidden">
+              <main className={cn(
+                "flex-1 flex flex-col pt-2 md:pt-3 pb-3 md:pb-5 px-3 md:px-5 space-y-3 overflow-hidden w-full min-h-0"
+              )}>
 
               {/* Search bar area */}
               <div className="flex items-stretch gap-3 w-full justify-between">
@@ -2765,8 +2771,8 @@ Dimitri MOREL - Arcanis Conseil`;
                   </>
                 )}
 
-                {/* Bandeau filtres uniformis pour Graph/BDD (remplace recherche/colonnes/progress) */}
-                {(viewMode === 'graph' || viewMode === 'db') && (
+                {/* Bandeau filtres uniformisé pour Graph/BDD */}
+                {viewMode === 'graph' || viewMode === 'db' ? (
                   <div className="flex-1 w-full bg-card rounded-lg p-3 shadow-sm border">
                     <div className="flex flex-wrap items-center justify-between gap-2 w-full">
                       <h1 className="text-xl font-semibold text-foreground">
@@ -2840,7 +2846,7 @@ Dimitri MOREL - Arcanis Conseil`;
                       </div>
                     </div>
                   </div>
-                )}
+                ) : null}
 
               </div>
 
@@ -2848,7 +2854,7 @@ Dimitri MOREL - Arcanis Conseil`;
               <div className="flex-1 flex overflow-hidden min-h-0">
                 {viewMode === 'table' ? (
                   <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
-                    <div className="flex-1 bg-card rounded-lg border shadow-sm overflow-hidden">
+                    <div className="flex-1 bg-transparent rounded-none border-0 shadow-none overflow-hidden">
                       {tableTabs.length === 0 ? (
                         <PaginatedContactTable
                           key={`table-${tableUpdateKey}-${filteredContacts.length}-${selectedContact?.id || 'none'}`}
@@ -3415,6 +3421,7 @@ Dimitri MOREL - Arcanis Conseil`;
                 )}
               </div>
             </main>
+            </div>
 
 
 
@@ -3787,8 +3794,7 @@ Dimitri MOREL - Arcanis Conseil`;
             />
 
           </main>
-        </div>
-      </div>
+        </SidebarInset>
     </SidebarProvider>
   );
 };
