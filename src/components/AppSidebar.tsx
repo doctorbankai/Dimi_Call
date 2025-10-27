@@ -146,6 +146,15 @@ export function AppSidebar({
       >
 
       <SidebarContent className="flex-1 bg-sidebar backdrop-blur-sm">
+        {/* Branding */}
+        <div className="flex items-center gap-2 px-4 py-3 overflow-hidden group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground flex-shrink-0" aria-label="DimiCall">
+            <span className="font-extrabold text-[16px] leading-none">D</span>
+          </div>
+          <div className="flex flex-col min-w-0 group-data-[collapsible=icon]:hidden">
+            <span className="text-sm font-semibold">DimiCall</span>
+          </div>
+        </div>
         <SidebarMenu>
 
           {/* Modes Section */}

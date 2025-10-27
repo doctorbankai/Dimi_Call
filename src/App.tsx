@@ -12,6 +12,7 @@ import Calendar2 from './pages/Calendar2';
 
 
 import { TitleBar } from './components/TitleBar';
+import { MainHeader } from './components/MainHeader';
 import { AppSidebar } from '@/components/AppSidebar';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { UpdateConfirmationDialog } from './components/UpdateConfirmationDialog';
@@ -2634,38 +2635,7 @@ Dimitri MOREL - Arcanis Conseil`;
         />
         <SidebarInset className="flex-1 min-w-0 flex flex-col min-h-0 transition-all duration-200 ease-linear pt-0 mt-0">
           {/* Barre de titre personnalise pour Electron */}
-          <TitleBar
-            theme={theme}
-            activeTab={activeMenuTab}
-            onTabChange={(tab) => {
-              if (tab === 'dimicall') {
-                setActiveMenuTab(tab);
-              }
-            }}
-            showDimiTable={false}
-            onSettingsClick={() => setIsSettingsOpen(true)}
-            adbConnectionState={adbConnectionState}
-            adbConnecting={adbConnecting}
-            activeCallContactId={activeCallContactId}
-            onAdbClick={async (e) => {
-              if (e.ctrlKey || e.metaKey) {
-                setIsAdbLogsDialogOpen(true);
-                return;
-              }
-
-              if (adbConnectionState.isConnected) {
-                await disconnectAdb();
-                showNotification('info', 'ADB dconnect');
-              } else if (!adbConnecting) {
-                const success = await connectAdb();
-                showNotification(success ? 'success' : 'error', success ? 'ADB connect' : 'chec de connexion ADB');
-              }
-            }}
-            updateState={updateState}
-            isUpdateEnabled={isUpdateEnabled}
-            onUpdateClick={installUpdate}
-            onUpdateConfirmationOpen={() => setIsUpdateConfirmationOpen(true)}
-          />
+          <TitleBar theme={theme} />
 
           {/* Contenu principal */}
           <main className="flex flex-col flex-1 w-full min-h-0 min-w-0 overflow-hidden h-full">
@@ -2726,8 +2696,21 @@ Dimitri MOREL - Arcanis Conseil`;
             <Toaster position="bottom-right" richColors theme={theme === 'dark' ? 'dark' : 'light'} closeButton />
 
 
-            {/* Main content */}
-            <div className="group-data-[variant=floating]:border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm bg-white border rounded-lg shadow-sm mx-2 my-0 flex-1 flex min-h-0 overflow-hidden">
+            {/* Main content card (includes header) */}
+            <div className="group-data-[variant=floating]:border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm bg-white border rounded-lg shadow-sm ml-2 mr-[4px] mt-[4px] mb-[4px] flex-1 flex flex-col min-h-0 overflow-hidden">
+              {/* Header inside the white container */}
+              <MainHeader
+                theme={theme}
+                onToggleTheme={() => setTheme(theme === Theme.Dark ? Theme.Light : Theme.Dark)}
+                onOpenSettings={() => setIsSettingsOpen(true)}
+                updateDownloaded={Boolean(updateState?.downloaded)}
+                adbConnected={adbConnectionState.isConnected}
+                contacts={contacts}
+                onPickContact={(c) => {
+                  setSelectedContact(c)
+                }}
+                onNavigate={(mode) => setViewMode(mode)}
+              />
               <main className={cn(
                 "flex-1 flex flex-col pt-2 md:pt-3 pb-3 md:pb-5 px-3 md:px-5 space-y-3 overflow-hidden w-full min-h-0"
               )}>

@@ -907,7 +907,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       onDrop={handleDrop}
     >
       <DropZoneOverlay isVisible={isDragOver} isDragActive={isDragActive} />
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-1.5 border-b">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 pt-2 pb-2">
         <div className="flex items-center gap-4">
           <div className="flex flex-col gap-0.5">
             <h1 className="text-xl font-semibold text-foreground">Appels</h1>
