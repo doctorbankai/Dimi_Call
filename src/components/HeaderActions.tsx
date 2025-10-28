@@ -2,9 +2,10 @@ import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Bell, Settings, Sun, Moon } from 'lucide-react'
+import { Settings, Sun, Moon } from 'lucide-react'
 import { useSupabaseAuth } from '@/lib/auth-client'
 import { Theme } from '@/types'
+import { NotificationCenterButton } from '@/components/notifications/NotificationCenter'
 
 type HeaderActionsProps = {
   theme: Theme
@@ -12,6 +13,7 @@ type HeaderActionsProps = {
   onOpenSettings: () => void
   updateDownloaded?: boolean
   adbConnected?: boolean
+  onNavigate?: (mode: 'appels-cards' | 'calendar-2' | 'graph' | 'db' | 'annuaire' | 'files') => void
 }
 
 export const HeaderActions: React.FC<HeaderActionsProps> = ({
@@ -20,6 +22,7 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
   onOpenSettings,
   updateDownloaded = false,
   adbConnected = false,
+  onNavigate,
 }) => {
   const auth = useSupabaseAuth()
   const email = auth.user?.email || 'user'
@@ -40,15 +43,11 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
 
   return (
     <div className="ml-auto flex items-center gap-2">
-      <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
-        <Bell className="h-4 w-4" />
-        {updateDownloaded && (
-          <span className="bg-destructive absolute end-0 top-0 block size-2 shrink-0 rounded-full" />
-        )}
-        {adbConnected && (
-          <span className="absolute -bottom-0.5 -right-0.5 block size-2 shrink-0 rounded-full bg-green-500" />
-        )}
-      </Button>
+      <NotificationCenterButton
+        onNavigateToCalendar={() => onNavigate?.('calendar-2')}
+        updateDownloaded={updateDownloaded}
+        adbConnected={adbConnected}
+      />
 
       <Button variant="ghost" size="icon" onClick={onToggleTheme} aria-label="Toggle theme">
         {theme === Theme.Dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}

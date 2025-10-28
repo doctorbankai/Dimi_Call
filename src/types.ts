@@ -1,3 +1,5 @@
+import type { DesktopNotificationPayload } from "@/notifications/types";
+
 export enum Theme {
   Light = 'light',
   Dark = 'dark',
@@ -121,7 +123,7 @@ export interface ElectronAPI {
   platform: string;
   
   // APIs de notification
-  showNotification: (title: string, body: string) => void;
+  showNotification: (payload: DesktopNotificationPayload) => Promise<boolean>;
   
   // APIs IPC pour les événements entrants
   ipcRenderer: {

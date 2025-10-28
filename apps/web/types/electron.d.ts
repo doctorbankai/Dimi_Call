@@ -1,5 +1,7 @@
 // Déclaration des types pour l'API Electron exposée via contextBridge
 
+import type { DesktopNotificationPayload } from "../../src/notifications/types";
+
 export interface ElectronAPI {
   // APIs de fenêtre
   closeApp: () => Promise<void>;
@@ -11,7 +13,7 @@ export interface ElectronAPI {
   platform: string;
   
   // APIs de notification
-  showNotification: (title: string, body: string) => void;
+  showNotification: (payload: DesktopNotificationPayload) => Promise<boolean>;
   
   // APIs IPC pour les événements entrants
   ipcRenderer: {

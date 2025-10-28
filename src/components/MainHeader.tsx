@@ -58,6 +58,7 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
           onOpenSettings={onOpenSettings}
           updateDownloaded={updateDownloaded}
           adbConnected={adbConnected}
+          onNavigate={onNavigate}
         />
       </div>
       <GlobalCommand

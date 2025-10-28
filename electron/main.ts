@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv'
 import * as path from 'path'
-import { app, shell, BrowserWindow, ipcMain, globalShortcut, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, globalShortcut, dialog, Notification } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { exec, execFile, spawn } from 'child_process'
@@ -12,6 +12,7 @@ import { PlatformUpdateService } from '../src/services/PlatformUpdateService'
 import * as localDbJsonStatic from './services/localDbJson'
 import * as XLSX from 'xlsx'
 import { registerFileHandlers } from './handlers/fileHandlers'
+import type { DesktopNotificationPayload } from '../src/notifications/types'
 
 // Extraction de autoUpdater depuis le module CommonJS
 const { autoUpdater } = electronUpdater
@@ -666,6 +667,39 @@ app.whenReady().then(async () => {
     })()
     await localDbInitPromise
   }
+
+  ipcMain.handle('notifications:show', async (_event, payload: DesktopNotificationPayload) => {
+    try {
+      const options: Electron.NotificationConstructorOptions = {
+        title: payload?.title ?? 'Notification',
+        body: payload?.body ?? '',
+        silent: payload?.silent ?? false,
+        urgency: payload?.urgency ?? 'normal',
+      }
+
+      if (payload?.subtitle) {
+        options.subtitle = payload.subtitle
+      }
+      if (payload?.timeoutType) {
+        options.timeoutType = payload.timeoutType as Electron.NotificationConstructorOptions['timeoutType']
+      }
+
+      const notification = new Notification(options)
+      if (payload?.data || payload?.tag) {
+        notification.data = {
+          ...(payload?.data ?? {}),
+          tag: payload?.tag,
+        }
+      }
+
+      notification.show()
+
+      return { success: true }
+    } catch (error) {
+      console.error('[notifications] Échec affichage notification', error)
+      return { success: false, error: error instanceof Error ? error.message : 'unknown-error' }
+    }
+  })
 
   // Enregistrer les handlers IPC immédiatement (grâce à l'init paresseuse)
   ipcMain.handle('localdb:insert-status', async (event, payload) => {

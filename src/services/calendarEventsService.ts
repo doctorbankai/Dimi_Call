@@ -1,5 +1,5 @@
 import type { StatusEventRecord } from '@/types/statusEvent';
-import type { IEvent } from '@/calendar/interfaces';
+import type { IEvent, IEventMetadata } from '@/calendar/interfaces';
 import { localDbService } from './localDbService';
 
 const EXCEL_EPOCH_MS = Date.UTC(1899, 11, 30);
@@ -219,6 +219,28 @@ const normalizeTime24hValue = (raw: unknown): string | null => {
   return null;
 };
 
+const buildEventMetadata = (
+  kind: 'rappel' | 'rdv',
+  dbEvent: StatusEventRecord,
+  normalizedDate: string | null,
+  normalizedTime: string | null
+): IEventMetadata => ({
+  kind,
+  recordId: dbEvent.id,
+  contact: {
+    id: dbEvent.contact_id ?? null,
+    prenom: dbEvent.prenom ?? null,
+    nom: dbEvent.nom ?? null,
+  },
+  phone: dbEvent.telephone ?? null,
+  email: dbEvent.email ?? dbEvent.mail ?? null,
+  comment: dbEvent.commentaire ?? dbEvent.comment ?? null,
+  status: dbEvent.new_status ?? dbEvent.newStatus ?? null,
+  normalizedDate,
+  normalizedTime,
+  source: dbEvent,
+});
+
 /**
  * Normalise une date au format ISO (YYYY-MM-DD)
  */
@@ -242,12 +264,7 @@ export const calendarEventsService = {
    */
   async getAllEvents(): Promise<IEvent[]> {
     const dbEvents = await localDbService.getAll();
-    console.log('[calendarEventsService] DB Events loaded:', dbEvents.length);
-    console.log('[calendarEventsService] First 3 events:', dbEvents.slice(0, 3));
-    const converted = this.convertToCalendarEvents(dbEvents);
-    console.log('[calendarEventsService] Converted events:', converted.length);
-    console.log('[calendarEventsService] Converted events sample:', converted.slice(0, 3));
-    return converted;
+    return this.convertToCalendarEvents(dbEvents);
   },
 
   /**
@@ -267,17 +284,6 @@ export const calendarEventsService = {
     let rdvCount = 0;
 
     for (const dbEvent of dbEvents) {
-      // Debug: afficher les champs de date/heure
-      if (dbEvent.dateRappel || dbEvent.heureRappel || dbEvent.dateRDV || dbEvent.heureRDV) {
-        console.log('[calendarEventsService] Event with dates:', {
-          id: dbEvent.id,
-          dateRappel: dbEvent.dateRappel,
-          heureRappel: dbEvent.heureRappel,
-          dateRDV: dbEvent.dateRDV,
-          heureRDV: dbEvent.heureRDV,
-        });
-      }
-
       // Traiter les rappels
       if (dbEvent.dateRappel && dbEvent.heureRappel) {
         rappelCount++;
@@ -297,7 +303,6 @@ export const calendarEventsService = {
       }
     }
 
-    console.log('[calendarEventsService] Found rappels:', rappelCount, 'RDV:', rdvCount);
     return calendarEvents;
   },
 
@@ -351,6 +356,8 @@ export const calendarEventsService = {
         commentaire ? `Commentaire: ${commentaire}` : null,
       ].filter(Boolean).join('\n');
 
+      const metadata = buildEventMetadata('rappel', dbEvent, validDate, validTime);
+
       return {
         id: dbEvent.id * 10 + 1, // ID unique pour les rappels (ex: 10, 20, 30...)
         startDate: startDate.toISOString(),
@@ -363,6 +370,7 @@ export const calendarEventsService = {
           name: contactName,
           picturePath: null,
         },
+        metadata,
       };
     } catch (error) {
       console.error('[calendarEventsService] Error creating rappel event:', error);
@@ -420,6 +428,8 @@ export const calendarEventsService = {
         commentaire ? `Commentaire: ${commentaire}` : null,
       ].filter(Boolean).join('\n');
 
+      const metadata = buildEventMetadata('rdv', dbEvent, validDate, validTime);
+
       return {
         id: dbEvent.id * 10 + 2, // ID unique pour les RDV (ex: 12, 22, 32...)
         startDate: startDate.toISOString(),
@@ -432,6 +442,7 @@ export const calendarEventsService = {
           name: contactName,
           picturePath: null,
         },
+        metadata,
       };
     } catch (error) {
       console.error('[calendarEventsService] Error creating RDV event:', error);

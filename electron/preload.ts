@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron'
+import type { DesktopNotificationPayload } from '../src/notifications/types'
 
 // Interface personnalisée pour l'API exposée au renderer
 interface ElectronAPI {
@@ -12,7 +13,7 @@ interface ElectronAPI {
   platform: string
   
   // APIs de notification
-  showNotification: (title: string, body: string) => void
+  showNotification: (payload: DesktopNotificationPayload) => Promise<boolean>
   
   // APIs IPC pour les événements entrants
   ipcRenderer: {
@@ -104,10 +105,41 @@ const electronAPI: ElectronAPI = {
   platform: process.platform,
   
   // APIs de notification
-  showNotification: (title: string, body: string) => {
-    if (Notification.permission === 'granted') {
-      new Notification(title, { body })
+  showNotification: async (payload: DesktopNotificationPayload) => {
+    try {
+      const result = await ipcRenderer.invoke('notifications:show', payload);
+      if (result && typeof result === 'object' && 'success' in result) {
+        return Boolean((result as { success?: boolean }).success);
+      }
+      if (typeof result === 'boolean') {
+        return result;
+      }
+    } catch (error) {
+      console.error('[preload] notifications:show failed', error);
     }
+
+    if (typeof Notification === 'undefined') {
+      return false;
+    }
+
+    if (Notification.permission === 'granted') {
+      new Notification(payload.title, { body: payload.body, tag: payload.tag });
+      return true;
+    }
+
+    if (Notification.permission !== 'denied' && Notification.requestPermission) {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          new Notification(payload.title, { body: payload.body, tag: payload.tag });
+          return true;
+        }
+      } catch (error) {
+        console.error('[preload] notification permission request failed', error);
+      }
+    }
+
+    return false;
   },
   
   // APIs IPC pour les événements entrants (exposer seulement les canaux sécurisés)
