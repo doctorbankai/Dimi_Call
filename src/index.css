@@ -1608,3 +1608,18 @@ table {
   overflow: hidden !important;
 }
 
+/* ---- Pragmatic UI helpers for Appels (cards view) ---- */
+.contact-card-hover {
+  transition: all 0.15s ease-out;
+}
+
+.contact-card-hover:hover {
+  background-color: hsl(var(--muted) / 0.3);
+  transform: translateX(4px);
+}
+
+.section-card {
+  background: hsl(var(--card) / 0.6);
+  border: 1px solid hsl(var(--border) / 0.3);
+  border-radius: var(--radius);
+}

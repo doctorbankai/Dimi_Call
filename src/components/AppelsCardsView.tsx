@@ -1286,7 +1286,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                     key={contact.id}
                     data-contact-card={contact.id}
                     className={cn(
-                      "px-3 py-2 flex items-center gap-2 cursor-pointer transition-colors",
+                      "px-3 py-4 flex items-center gap-3 cursor-pointer transition-colors contact-card-hover",
                       isSelected ? "bg-primary/5" : "hover:bg-muted/50",
                     )}
                     onClick={() => {
@@ -1295,7 +1295,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                     }}
                   >
                     <div className="flex min-w-0 flex-1 items-center gap-2">
-                      <Avatar className="h-7 w-7 border">
+                      <Avatar className="h-9 w-9 border">
                         <AvatarFallback className="text-xs">
                           {(contact.prenom?.[0] ?? "").toUpperCase()
                             .concat(contact.nom?.[0] ?? "")
@@ -1303,10 +1303,10 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex min-w-0 flex-1 flex-col">
-                        <div className="truncate text-xs font-semibold text-foreground leading-tight">
+                        <div className="truncate text-sm font-semibold text-foreground leading-tight">
                           {[contact.prenom, contact.nom].filter(Boolean).join(" ") || "Sans nom"}
                         </div>
-                        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                           <span className="flex items-center gap-0.5 truncate">
                             <Phone className="h-2.5 w-2.5" />
                             {contact.telephone || "-"}
@@ -1316,13 +1316,13 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                     </div>
                     <div className="flex items-center gap-2">
                       {contact.dateRappel && (
-                        <div className="hidden md:flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <div className="hidden md:flex items-center gap-1 text-[11px] text-muted-foreground">
                           <CalendarIcon className="h-2.5 w-2.5 text-orange-500" />
                           <span className="text-foreground">{formatDisplayDate(contact.dateRappel)}</span>
                         </div>
                       )}
                       {contact.dateRDV && (
-                        <div className="hidden md:flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <div className="hidden md:flex items-center gap-1 text-[11px] text-muted-foreground">
                           <CalendarIcon className="h-2.5 w-2.5 text-blue-500" />
                           <span className="text-foreground">{formatDisplayDate(contact.dateRDV)}</span>
                         </div>
@@ -1371,7 +1371,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
         <div className="flex-1 overflow-hidden">
           {selectedContact ? (
             <div className="flex h-full flex-col">
-              <div className="border-b px-6 py-3">
+              <div className="border-b bg-card/50 backdrop-blur-sm px-6 py-4">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-12 w-12 border">
@@ -1459,13 +1459,13 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
               </div>
 
               <ScrollArea className="flex-1 min-h-0 h-0">
-                <div className="grid gap-4 px-6 py-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                  <section className="space-y-4">
-                    <div>
+                <div className="grid gap-6 px-6 py-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                  <section className="space-y-6">
+                    <div className="section-card p-4 space-y-4">
                       <h3 className="text-sm font-medium text-muted-foreground">Informations principales</h3>
-                      <Separator className="my-2" />
-                      <div className="grid gap-4">
-                        <div className="grid grid-cols-2 gap-4">
+                      <Separator className="my-2 opacity-30" />
+                      <div className="grid gap-6">
+                        <div className="grid grid-cols-2 gap-6">
                           <div className="space-y-2">
                             <Label htmlFor="contact-firstname">Prénom</Label>
                             <Input
@@ -1483,7 +1483,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-6">
                           <div className="space-y-2">
                             <Label htmlFor="contact-phone">Téléphone</Label>
                             <Input
@@ -1501,7 +1501,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             />
                           </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-6">
                           <div className="space-y-2">
                             <Label htmlFor="contact-source">Source</Label>
                             <Input
@@ -1542,11 +1542,11 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       </div>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="section-card p-4 space-y-4">
                       <h3 className="text-sm font-medium text-muted-foreground">Rappels & Rendez-vous</h3>
-                      <Separator className="my-2" />
-                      <div className="grid gap-4">
-                        <div className="grid grid-cols-2 gap-4">
+                      <Separator className="my-2 opacity-30" />
+                      <div className="grid gap-6">
+                        <div className="grid grid-cols-2 gap-6">
                           <DatePickerWithClear
                             label="Date de rappel"
                             value={formState.dateRappel}
@@ -1560,7 +1560,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             onClear={() => handleFormChange("heureRappel", "")}
                           />
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-6">
                           <DatePickerWithClear
                             label="Date de RDV"
                             value={formState.dateRDV}
@@ -1601,10 +1601,10 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                     </div>
                   </section>
 
-                  <section className="space-y-4">
-                    <div>
+                  <section className="space-y-6">
+                    <div className="section-card p-4 space-y-4">
                       <h3 className="text-sm font-medium text-muted-foreground">Historique</h3>
-                      <Separator className="my-2" />
+                      <Separator className="my-2 opacity-30" />
                       {callHistory.length > 0 ? (
                         <div className="space-y-3">
                           {callHistory.map((call) => (
