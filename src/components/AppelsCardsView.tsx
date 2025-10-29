@@ -1181,7 +1181,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       </div>
       {viewMode === 'cards' ? (
       <ResizablePanelGroup direction="horizontal" className="h-full min-h-0">
-        <ResizablePanel defaultSize={32} minSize={24} className="min-h-0 flex flex-col lg:max-h-none">
+        <ResizablePanel defaultSize={32} minSize={24} className="relative z-10 min-h-0 flex flex-col lg:max-h-none">
           <div className="m-2 flex h-full flex-col rounded-lg border border-r-0 bg-card/40 overflow-hidden">
           <div className="px-4 py-2.5 space-y-2.5 border-b">
             <div className="flex items-center justify-between">
@@ -1409,11 +1409,12 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
           </div>
         </ResizablePanel>
 
-        <ResizablePanel defaultSize={68} minSize={48} className="flex-1 overflow-hidden">
+        <ResizablePanel defaultSize={68} minSize={48} className="relative z-10 min-h-0 flex flex-col lg:max-h-none">
           <div className="m-2 flex h-full flex-col rounded-lg border border-l-0 bg-card/30 overflow-hidden">
           {selectedContact ? (
             <div className="flex h-full flex-col">
-                  <div className="border-b bg-card/50 backdrop-blur-sm px-6 py-4" role="region" aria-label="En-tête du contact sélectionné">
+                  <div className="relative bg-card/50 backdrop-blur-sm px-6 py-4" role="region" aria-label="En-tête du contact sélectionné">
+                    <Separator className="absolute left-0 right-0 -mx-6 bottom-0" />
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-12 w-12 border">
@@ -1465,7 +1466,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   </div>
                 </div>
               </div>
-              <div className="border-b bg-card/60 px-6 py-2.5" role="toolbar" aria-label="Actions de recherche">
+              <div className="relative bg-card/60 px-6 py-2.5" role="toolbar" aria-label="Actions de recherche">
+                <Separator className="absolute left-0 right-0 -mx-6 bottom-0" />
                 <div className="flex flex-wrap items-center gap-2">
                   <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-3" onClick={() => onLinkedInSearch('name')}>
                     <Linkedin className="h-4 w-4 text-blue-600" /> <span>LinkedIn</span>
