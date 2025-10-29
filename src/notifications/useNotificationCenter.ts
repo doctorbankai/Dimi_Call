@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { addMinutes, format, formatDistanceToNow, formatDistanceToNowStrict, isToday, isTomorrow, parseISO } from "date-fns";
+import { format, formatDistanceToNow, formatDistanceToNowStrict, isToday, isTomorrow, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 
 import { calendarEventsService } from "@/services/calendarEventsService";
@@ -20,7 +20,8 @@ const STORAGE_SENT = `${STORAGE_PREFIX}.sent`;
 
 const DEFAULT_PREFERENCES: NotificationPreferences = {
   desktopEnabled: true,
-  rappelLeadMinutes: 5,
+  // Par défaut, notifier 15 minutes avant pour Rappel et RDV
+  rappelLeadMinutes: 15,
   rdvLeadMinutes: 15,
 };
 
@@ -187,6 +188,53 @@ const buildDesktopPayload = (
   };
 };
 
+const buildGroupDesktopPayload = (
+  entries: NotificationEntry[],
+  leadMinutes: number
+): DesktopNotificationPayload => {
+  const count = entries.length;
+  const rdvCount = entries.filter((e) => e.type === "rdv").length;
+  const rappelCount = count - rdvCount;
+
+  // Toutes les entrées d'un groupe partagent la même minute de déclenchement
+  // On s'appuie sur la première pour l'affichage de l'heure
+  const first = entries[0];
+  const start = parseISO(first.startIso);
+  const dayLabel = isToday(start)
+    ? "Aujourd'hui"
+    : isTomorrow(start)
+    ? "Demain"
+    : format(start, "EEEE d MMMM", { locale: fr });
+  const timeLabel = format(start, "HH:mm");
+
+  const title = `${count} échéances ${leadMinutes > 0 ? "à venir" : ""}`.trim();
+
+  const kinds: string[] = [];
+  if (rappelCount > 0) kinds.push(`${rappelCount} rappel${rappelCount > 1 ? "s" : ""}`);
+  if (rdvCount > 0) kinds.push(`${rdvCount} RDV`);
+
+  // Lignes de détails: jusqu'à 3 noms, puis ellipsis
+  const names = entries.map((e) => e.contactName).slice(0, 3);
+  const more = count - names.length;
+
+  const bodyLines: string[] = [];
+  bodyLines.push(`${dayLabel} • ${timeLabel}`);
+  if (leadMinutes > 0) {
+    bodyLines.push(`Déclenchement dans ${leadMinutes} min`);
+  } else {
+    bodyLines.push(`Échéance maintenant`);
+  }
+  bodyLines.push(kinds.join(" • "));
+  bodyLines.push(names.join(", ") + (more > 0 ? `, +${more}` : ""));
+
+  // Utiliser un tag commun pour laisser l'OS regrouper si supporté (navigateur)
+  return {
+    title,
+    body: bodyLines.join("\n"),
+    tag: `batch-${first.startIso}-${leadMinutes}`,
+  };
+};
+
 export function useNotificationCenter(): UseNotificationCenterState {
   const [status, setStatus] = useState<UseNotificationCenterState["status"]>("idle");
   const [error, setError] = useState<string | undefined>(undefined);
@@ -281,43 +329,66 @@ export function useNotificationCenter(): UseNotificationCenterState {
       const upcoming = [...nextBuckets.rappel, ...nextBuckets.rdv];
       const now = Date.now();
 
-      upcoming.forEach((entry) => {
-        const leadMinutes = entry.type === "rdv" ? prefs.rdvLeadMinutes : prefs.rappelLeadMinutes;
-        const triggerAt = addMinutes(parseISO(entry.startIso), -leadMinutes).getTime();
-        const key = `${entry.id}|${leadMinutes}`;
+      // Construire des groupes par minute de déclenchement et par type de délai (lead vs à l'heure)
+      type Group = { triggerAt: number; leadMinutes: number; entries: NotificationEntry[] };
+      const groups = new Map<string, Group>();
 
-        if (sentRef.current.has(key)) {
-          return;
+      for (const entry of upcoming) {
+        const leadForType = entry.type === "rdv" ? prefs.rdvLeadMinutes : prefs.rappelLeadMinutes;
+        const startMs = parseISO(entry.startIso).getTime();
+        const triggers: Array<{ lead: number; at: number }> = [
+          { lead: leadForType, at: startMs - leadForType * 60_000 },
+          { lead: 0, at: startMs },
+        ];
+
+        for (const t of triggers) {
+          // Clé de groupe: minute entière + type de délai
+          const minute = Math.floor(t.at / 60_000);
+          const groupKey = `${minute}|${t.lead}`;
+          const existing = groups.get(groupKey);
+          if (existing) {
+            existing.entries.push(entry);
+          } else {
+            groups.set(groupKey, { triggerAt: minute * 60_000, leadMinutes: t.lead, entries: [entry] });
+          }
+        }
+      }
+
+      // Planifier chaque groupe
+      for (const [groupKey, group] of groups.entries()) {
+        const sentKey = `batch|${groupKey}`;
+        if (sentRef.current.has(sentKey)) {
+          continue;
         }
 
-        if (triggerAt <= now) {
-          const payload = buildDesktopPayload(entry, leadMinutes);
-          systemNotificationService.show(payload).then((success) => {
-            if (success) {
-              sentRef.current.add(key);
-              persistSent();
-            }
-          });
-          return;
+        const fire = async () => {
+          const payload = group.entries.length === 1
+            ? buildDesktopPayload(group.entries[0], group.leadMinutes)
+            : buildGroupDesktopPayload(group.entries, group.leadMinutes);
+          const success = await systemNotificationService.show(payload);
+          if (success) {
+            sentRef.current.add(sentKey);
+            persistSent();
+          }
+        };
+
+        if (group.triggerAt <= now) {
+          // Déclenchement immédiat si on a dépassé l'heure
+          void fire();
+          continue;
         }
 
-        const delay = triggerAt - now;
+        const delay = group.triggerAt - now;
         if (delay > MAX_TIMEOUT_MS) {
-          return;
+          continue;
         }
 
         const timeout = setTimeout(async () => {
-          const payload = buildDesktopPayload(entry, leadMinutes);
-          const success = await systemNotificationService.show(payload);
-          if (success) {
-            sentRef.current.add(key);
-            persistSent();
-          }
-          timeoutsRef.current.delete(key);
+          await fire();
+          timeoutsRef.current.delete(sentKey);
         }, delay);
-
-        timeoutsRef.current.set(key, timeout);
-      });
+        timeoutsRef.current.set(sentKey, timeout);
+      }
     },
     [clearScheduledNotifications, persistSent]
   );

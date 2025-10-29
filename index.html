@@ -51,6 +51,14 @@
   }
 }
 </script>
+  <script>
+    try {
+      const saved = localStorage.getItem('dimicall-theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const isDark = saved ? saved === 'dark' : prefersDark;
+      if (isDark) document.documentElement.classList.add('dark');
+    } catch (e) { /* ignore */ }
+  </script>
 </head>
 <body>
   <div id="root"></div>

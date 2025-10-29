@@ -1,5 +1,5 @@
 import './index.css';
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
 import { Theme, Contact, CallState, CallStates, ContactStatus, Civility, EmailType, CallMode, SmsType } from './types';
 import { useCallMode } from './context/ModeContext';
 import { APP_NAME, COLUMN_HEADERS, CONTACT_DATA_KEYS, headerIcons } from './constants';
@@ -1725,15 +1725,11 @@ Dimitri MOREL - Arcanis Conseil`;
     }
   }, [adbConnectionState.isConnected, adbConnecting, connectAdb]);
 
-  // useEffects
-  useEffect(() => {
-    if (theme === Theme.Dark) {
-      document.documentElement.classList.add('dark');
-      document.documentElement.style.backgroundColor = 'hsl(220 9% 4%)';
-    } else {
-      document.documentElement.classList.remove('dark');
-      document.documentElement.style.backgroundColor = 'hsl(0 0% 100%)';
-    }
+  // Appliquer le thème de façon synchrone avant paint, sans styles inline
+  useLayoutEffect(() => {
+    const isDark = theme === Theme.Dark;
+    const root = document.documentElement;
+    root.classList.toggle('dark', isDark);
   }, [theme]);
 
   const [isInitialized, setIsInitialized] = useState(false);
@@ -2612,8 +2608,7 @@ Dimitri MOREL - Arcanis Conseil`;
   return (
     <SidebarProvider
       className={cn(
-        "flex h-svh min-h-svh overflow-hidden bg-sidebar",
-        theme === Theme.Dark ? "dark" : ""
+        "flex h-svh min-h-svh overflow-hidden bg-background"
       )}
       style={{
         minHeight: 0,

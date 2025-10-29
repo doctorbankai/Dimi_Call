@@ -84,13 +84,14 @@ import {
   ResizablePanel,
 } from "@/components/ui/resizable"
 import { Command, CommandInput, CommandList, CommandGroup, CommandItem, CommandEmpty } from "@/components/ui/command"
+import { Progress } from "@/components/ui/progress"
 import { shortcutService } from '../services/shortcutService'
 import { exportContactsToFile, exportGoogleContactsCSV, exportGoogleCalendarCSV, importContactsFromFile } from '../services/dataService'
 import { ViewSwitcher, ViewMode } from '@/components/ViewSwitcher'
 import { PaginatedContactTable } from '@/components/PaginatedContactTable'
 import type { ContactTableRef } from '@/components/ContactTable'
 import { StatusCompletionChart } from '@/components/StatusCompletionChart'
-import { ChartRadialProgress } from '@/components/ChartRadialProgress'
+// Retire le radial chart dans la barre de recherche
 
 export type TableTab = {
   id: string
@@ -1295,18 +1296,22 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
             {/* Search moved below inside Command with list */}
           </div>
           <div className="flex-1 min-h-0 h-0 p-2">
-            <Command className="rounded-md border h-full">
+              <Command className="rounded-md border h-full">
               <CommandInput
                 placeholder="Rechercher..."
                 value={searchQuery}
                 onValueChange={onSearch}
-                endAdornment={<ChartRadialProgress value={completionPercent} size={28} title={`${completionPercent}% définis`} />}
+              />
+              {/* Barre de progression sobre (shadcn Progress) */}
+              <Progress
+                value={Math.max(0, Math.min(100, Math.round(completionPercent)))}
+                className="h-1"
               />
               <CommandList
                 ref={(el) => {
                   (scrollRef as unknown as { current: HTMLDivElement | null }).current = el as HTMLDivElement | null
                 }}
-                className="max-h-none h-[calc(100%-36px)] overflow-auto"
+                className="max-h-none h-[calc(100%-40px)] overflow-auto"
               >
                 <CommandEmpty>Aucun contact trouvé.</CommandEmpty>
                 <CommandGroup heading="Contacts">
@@ -1688,7 +1693,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
             </div>
           ) : (
             <div 
-              className="flex h-full flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/30 text-muted-foreground"
+              className="flex h-full flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/15 text-muted-foreground"
               style={{ pointerEvents: 'none' }}
             >
               <div className="rounded-full border bg-background p-3 shadow-sm">
