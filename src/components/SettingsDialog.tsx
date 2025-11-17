@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Mail, X, Save, Undo, ChevronDown, Palette, Calendar, MessageSquare, Sun, Moon, Monitor, Keyboard, RotateCcw, DownloadCloud, Info, CheckCircle, ExternalLink, Columns, FileText, Eye } from 'lucide-react';
+import { Settings, Mail, X, Save, Undo, ChevronDown, Palette, Calendar, MessageSquare, Sun, Moon, Monitor, Keyboard, RotateCcw, DownloadCloud, Info, CheckCircle, ExternalLink, Columns, FileText, Eye, PhoneCall } from 'lucide-react';
 import { BetaOptInSettings } from './BetaOptInSettings';
 import { LogsViewer } from './LogsViewer';
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
@@ -1063,6 +1063,15 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-md border border-border/70 bg-muted/40">
+              <Settings className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" aria-hidden="true" />
+              <div className="min-w-0">
+                <div className="text-xs sm:text-sm font-medium truncate">Partage des données</div>
+                <div className="text-[10px] sm:text-xs truncate hidden sm:block text-primary-foreground/80">
+                  Configuration du partage Supabase
+                </div>
+              </div>
+            </div>
             <section className="rounded-md border bg-muted/40 px-3 py-3 flex items-start gap-3">
               <Server className={`w-5 h-5 mt-0.5 ${connectionOk ? 'text-emerald-600' : 'text-amber-600 animate-pulse'}`} />
               <div className="grid gap-1 text-sm">
@@ -1145,6 +1154,43 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                   >
                     <RotateCcw className="w-3 h-3 mr-1" /> Relancer la synchro
                   </Button>
+                </div>
+              </div>
+
+              <div className="rounded-md border px-4 py-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="font-medium flex items-center gap-2">
+                      Collecter les données d'appels
+                      {renderStatusBadge(supabaseState.calls.status)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                      <PhoneCall className="w-3.5 h-3.5 text-muted-foreground" />
+                      Capture en temps réel les événements complets (table
+                      <code className="px-1 py-0.5 bg-muted rounded text-[10px] border border-border">call_data_events</code>
+                      ) avec UID Supabase et email utilisateur.
+                    </p>
+                    {renderStats(supabaseState.calls.stats)}
+                    {renderError(supabaseState.calls.lastError)}
+                  </div>
+                  <Switch
+                    checked={supabaseState.calls.enabled}
+                    onCheckedChange={(checked) => setSupabaseEnabled('calls', !!checked)}
+                  />
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!supabaseState.calls.enabled || supabaseState.calls.status === 'syncing'}
+                    onClick={() => triggerSupabaseSync('calls', 'manual')}
+                    className="h-7"
+                  >
+                    <RotateCcw className="w-3 h-3 mr-1" /> Relancer la synchro
+                  </Button>
+                  <Badge variant="outline" className="text-[10px] uppercase tracking-wide">
+                    Activé par défaut
+                  </Badge>
                 </div>
               </div>
             </div>

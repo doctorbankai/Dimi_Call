@@ -1,7 +1,11 @@
 import { supabaseService } from '@/services/supabaseService'
 import { supabaseLogger } from '@/lib/supabase-logger'
+import { loadContacts } from '@/services/dataService'
+import type { Contact } from '@/types'
+import { supabase } from '@/lib/supabase'
 
-type SyncTarget = 'phone' | 'blacklist'
+type SyncTarget = 'phone' | 'blacklist' | 'calls'
+const SYNC_TARGETS: SyncTarget[] = ['phone', 'blacklist', 'calls']
 
 export type ShareStatus = 'idle' | 'syncing' | 'success' | 'error'
 
@@ -17,11 +21,17 @@ export interface ShareTargetState {
   }
 }
 
+interface AuthIdentity {
+  id: string | null
+  email: string | null
+}
+
 export interface SupabaseShareState {
   supabaseReady: boolean
   globalError?: string
   phone: ShareTargetState
   blacklist: ShareTargetState
+  calls: ShareTargetState
 }
 
 type Listener = (state: SupabaseShareState) => void
@@ -43,11 +53,13 @@ const state: SupabaseShareState = {
   supabaseReady: safeCheckSupabaseReady(),
   phone: { ...defaultTargetState },
   blacklist: { ...defaultTargetState },
+  calls: { ...defaultTargetState },
 }
 
 const runtimeState: Record<SyncTarget, RuntimeTargetState> = {
   phone: { inFlight: false, pendingResync: false },
   blacklist: { inFlight: false, pendingResync: false },
+  calls: { inFlight: false, pendingResync: false },
 }
 
 const listeners = new Set<Listener>()
@@ -77,6 +89,7 @@ function loadPreferences() {
     const parsed = JSON.parse(raw) as Partial<Record<SyncTarget, boolean>>
     if (typeof parsed.phone === 'boolean') state.phone.enabled = parsed.phone
     if (typeof parsed.blacklist === 'boolean') state.blacklist.enabled = parsed.blacklist
+    if (typeof parsed.calls === 'boolean') state.calls.enabled = parsed.calls
   } catch (error) {
     supabaseLogger.warn('[share] Lecture préférences Supabase échouée', error)
   }
@@ -88,6 +101,7 @@ function savePreferences() {
     const payload = {
       phone: state.phone.enabled,
       blacklist: state.blacklist.enabled,
+      calls: state.calls.enabled,
     }
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
   } catch (error) {
@@ -96,14 +110,11 @@ function savePreferences() {
 }
 
 function autoResumeEnabledTargets() {
-  if (state.phone.enabled) {
-    ensureListener('phone')
-    scheduleSync('phone', 'resume')
-  }
-
-  if (state.blacklist.enabled) {
-    ensureListener('blacklist')
-    scheduleSync('blacklist', 'resume')
+  for (const target of SYNC_TARGETS) {
+    if (state[target].enabled) {
+      ensureListener(target)
+      scheduleSync(target, 'resume')
+    }
   }
 }
 
@@ -113,6 +124,7 @@ function getSnapshot(): SupabaseShareState {
     globalError: state.globalError,
     phone: { ...state.phone, stats: state.phone.stats ? { ...state.phone.stats } : undefined },
     blacklist: { ...state.blacklist, stats: state.blacklist.stats ? { ...state.blacklist.stats } : undefined },
+    calls: { ...state.calls, stats: state.calls.stats ? { ...state.calls.stats } : undefined },
   }
 }
 
@@ -238,7 +250,10 @@ async function performSync(target: SyncTarget): Promise<{ processed: number; sha
   if (target === 'phone') {
     return syncSharedPhoneNumbers(events)
   }
-  return syncSharedBlacklistNumbers(events)
+  if (target === 'blacklist') {
+    return syncSharedBlacklistNumbers(events)
+  }
+  return syncCallEvents(events)
 }
 
 async function fetchLocalEvents(): Promise<any[]> {
@@ -421,6 +436,174 @@ async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: n
     filtered,
     withMetadata,
   }
+}
+
+async function syncCallEvents(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number }> {
+  const client = supabaseService.getClient()
+  const nowIso = new Date().toISOString()
+  const contacts = loadContactsSnapshot()
+  const contactsMap = new Map<string, Contact>()
+  contacts.forEach((contact) => {
+    if (contact?.id) {
+      contactsMap.set(contact.id, contact)
+    }
+  })
+
+  const authIdentity = await getCurrentAuthIdentity()
+  const payload: Array<Record<string, any>> = []
+  let filtered = 0
+  let enriched = 0
+
+  for (const row of events) {
+    const record = buildCallRecord(row, contactsMap, authIdentity, nowIso)
+    if (!record) {
+      filtered += 1
+      continue
+    }
+    if (record.metadata) {
+      enriched += 1
+    }
+    payload.push(record)
+  }
+
+  if (payload.length === 0) {
+    return {
+      processed: events.length,
+      shared: 0,
+      filtered: events.length,
+      withMetadata: 0,
+    }
+  }
+
+  await chunkedUpsert(client, 'call_data_events', payload, 'user_uid,local_event_id')
+
+  return {
+    processed: events.length,
+    shared: payload.length,
+    filtered,
+    withMetadata: enriched,
+  }
+}
+
+function buildCallRecord(
+  row: any,
+  contacts: Map<string, Contact>,
+  auth: AuthIdentity,
+  timestamp: string
+): Record<string, any> | null {
+  const contactId = extractString(row, ['contact_id', 'contactId'])
+  const contact = contactId ? contacts.get(contactId) : undefined
+  const firstName = extractString(row, ['prenom', 'firstName']) ?? contact?.prenom
+  const lastName = extractString(row, ['nom', 'lastName']) ?? contact?.nom
+  const comment = row.commentaire ?? row.comment ?? contact?.commentaire ?? null
+  const phone = extractPhone(row) ?? contact?.telephone ?? null
+  const normalizedPhone = phone ? normalizePhoneNumber(phone) : null
+  const numeroLigne =
+    typeof row.numeroLigne === 'number'
+      ? row.numeroLigne
+      : typeof row.numero_ligne === 'number'
+      ? row.numero_ligne
+      : contact?.numeroLigne ?? null
+
+  if (!contact && !phone && !firstName && !lastName) {
+    return null
+  }
+
+  const localEventId = normalizeNumericId(row.id) ?? normalizeNumericId(row.local_event_id)
+  const createdAt = row.applied_at ?? row.appliedAt ?? timestamp
+  const metadata = sanitizeMetadataRecord({
+    applied_at: row.applied_at ?? row.appliedAt,
+    old_status: extractString(row, ['old_status', 'oldStatus']),
+    new_status: extractStatus(row),
+    local_comment: row.commentaire ?? row.comment,
+    local_event_id: localEventId ?? undefined,
+  })
+
+  return {
+    local_event_id: localEventId,
+    contact_id: contactId || contact?.id || null,
+    numero_ligne: numeroLigne,
+    prenom: firstName ?? null,
+    nom: lastName ?? null,
+    telephone: phone ?? null,
+    normalized_phone: normalizedPhone,
+    email: extractString(row, ['email', 'mail']) ?? contact?.email ?? null,
+    source: contact?.source ?? extractString(row, ['source', 'origine', 'provenance']) ?? null,
+    statut: contact?.statut ?? extractStatus(row) ?? null,
+    commentaire: comment,
+    date_rappel: row.dateRappel ?? contact?.dateRappel ?? null,
+    heure_rappel: row.heureRappel ?? contact?.heureRappel ?? null,
+    date_rdv: row.dateRDV ?? contact?.dateRDV ?? null,
+    heure_rdv: row.heureRDV ?? contact?.heureRDV ?? null,
+    date_appel: row.dateAppel ?? contact?.dateAppel ?? null,
+    heure_appel: row.heureAppel ?? contact?.heureAppel ?? null,
+    duree_appel: row.dureeAppel ?? contact?.dureeAppel ?? null,
+    lien: contact?.lien ?? null,
+    sexe: contact?.sexe ?? null,
+    don: contact?.don ?? null,
+    qualite: contact?.qualite ?? null,
+    type_contact: contact?.type ?? null,
+    date_contact: contact?.date ?? null,
+    uid: contact?.uid ?? null,
+    uid_supabase: contact?.uid_supabase ?? null,
+    utilisateur: contact?.utilisateur ?? null,
+    actions: contact?.actions ?? null,
+    statut_appel: contact?.statutAppel ?? null,
+    statut_rdv: contact?.statutRDV ?? null,
+    commentaire_rdv: contact?.commentaireRDV ?? null,
+    user_uid: auth.id,
+    user_email: auth.email,
+    synced_at: timestamp,
+    updated_at: timestamp,
+    created_at: createdAt,
+    metadata,
+  }
+}
+
+function loadContactsSnapshot(): Contact[] {
+  if (!hasWindow) return []
+  try {
+    return loadContacts()
+  } catch (error) {
+    supabaseLogger.warn('[share] Chargement des contacts impossible', error)
+    return []
+  }
+}
+
+async function getCurrentAuthIdentity(): Promise<AuthIdentity> {
+  try {
+    const { data, error } = await supabase.auth.getSession()
+    if (error) throw error
+    const user = data.session?.user
+    return {
+      id: user?.id ?? null,
+      email: user?.email ?? null,
+    }
+  } catch (error) {
+    supabaseLogger.warn('[share] Impossible de récupérer l’utilisateur Supabase', error)
+    return { id: null, email: null }
+  }
+}
+
+function sanitizeMetadataRecord(record: Record<string, unknown>): Record<string, unknown> | null {
+  const entries = Object.entries(record).filter(([, value]) => value !== undefined && value !== null && value !== '')
+  if (entries.length === 0) {
+    return null
+  }
+  return Object.fromEntries(entries)
+}
+
+function normalizeNumericId(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+  return null
 }
 
 async function chunkedUpsert(client: any, table: string, records: any[], conflictTarget: string) {

@@ -163,6 +163,7 @@ class SupabaseService {
         { name: 'DimiTable', fallbackColumns: ['id', 'contact_id', 'new_status', 'applied_at'] },
         { name: 'shared_phone_numbers', fallbackColumns: ['id', 'phone_number', 'normalized_phone', 'metadata'] },
         { name: 'shared_blacklist_numbers', fallbackColumns: ['id', 'phone_number', 'normalized_phone', 'reason', 'metadata'] },
+        { name: 'call_data_events', fallbackColumns: ['id', 'contact_id', 'telephone', 'user_uid', 'synced_at'] },
       ];
 
       let lastError: any = null;

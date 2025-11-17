@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
-import { AlertTriangle, CheckCircle2, Loader2, RefreshCw, Server, ShieldAlert } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Loader2, PhoneCall, RefreshCw, Server, ShieldAlert } from 'lucide-react'
 import { useSupabaseShare } from '@/hooks/useSupabaseShare'
 
 interface SupabaseShareDialogProps {
@@ -171,6 +171,39 @@ export const SupabaseShareDialog: React.FC<SupabaseShareDialogProps> = ({ open, 
                 size="sm"
                 disabled={!state.blacklist.enabled || state.blacklist.status === 'syncing'}
                 onClick={() => triggerSync('blacklist', 'manual')}
+                className="h-7"
+              >
+                <RefreshCw className="w-3 h-3 mr-1" /> Relancer la synchro
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-md border px-4 py-3">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="font-medium flex items-center gap-2">
+                  Collecter les données d'appels
+                  {renderStatusBadge(state.calls.status)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  <PhoneCall className="w-3.5 h-3.5 text-muted-foreground" />
+                  Publie les événements complets (UID Supabase, email, commentaires) dans
+                  <code className="px-1 py-0.5 bg-muted rounded text-[10px] border border-border">call_data_events</code>.
+                </p>
+                {renderStats(state.calls.stats)}
+                {renderError(state.calls.lastError)}
+              </div>
+              <Switch
+                checked={state.calls.enabled}
+                onCheckedChange={(checked) => setEnabled('calls', !!checked)}
+              />
+            </div>
+            <div className="flex gap-2 mt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!state.calls.enabled || state.calls.status === 'syncing'}
+                onClick={() => triggerSync('calls', 'manual')}
                 className="h-7"
               >
                 <RefreshCw className="w-3 h-3 mr-1" /> Relancer la synchro
