@@ -22,6 +22,22 @@ type StatusEvent = {
   // Nouvelles colonnes: date/heure d'entrée dans la table
   dateEntree?: string | null
   heureEntree?: string | null
+  numeroLigne?: number | null
+  source?: string | null
+  statut?: string | null
+  lien?: string | null
+  sexe?: string | null
+  don?: string | null
+  qualite?: string | null
+  type?: string | null
+  date?: string | null
+  uid?: string | null
+  uid_supabase?: string | null
+  utilisateur?: string | null
+  actions?: string | null
+  statutAppel?: string | null
+  statutRDV?: string | null
+  commentaireRDV?: string | null
 }
 
 type NewStatusEvent = Omit<StatusEvent, 'id' | 'applied_at'> & { applied_at?: string }
@@ -58,6 +74,22 @@ const CSV_HEADERS: (keyof StatusEvent)[] = [
   'dureeAppel',
   'dateEntree',
   'heureEntree',
+  'numeroLigne',
+  'source',
+  'statut',
+  'lien',
+  'sexe',
+  'don',
+  'qualite',
+  'type',
+  'date',
+  'uid',
+  'uid_supabase',
+  'utilisateur',
+  'actions',
+  'statutAppel',
+  'statutRDV',
+  'commentaireRDV',
 ]
 
 function toCsv(events: StatusEvent[]): string {
@@ -107,6 +139,22 @@ function parseCsv(content: string): StatusEvent[] {
       dureeAppel: get('dureeAppel'),
       dateEntree: get('dateEntree'),
       heureEntree: get('heureEntree'),
+    numeroLigne: get('numeroLigne') ? Number(get('numeroLigne')) : null,
+    source: get('source'),
+    statut: get('statut'),
+    lien: get('lien'),
+    sexe: get('sexe'),
+    don: get('don'),
+    qualite: get('qualite'),
+    type: get('type'),
+    date: get('date'),
+    uid: get('uid'),
+    uid_supabase: get('uid_supabase'),
+    utilisateur: get('utilisateur'),
+    actions: get('actions'),
+    statutAppel: get('statutAppel'),
+    statutRDV: get('statutRDV'),
+    commentaireRDV: get('commentaireRDV'),
     }
     rows.push(ev)
   }
@@ -238,6 +286,22 @@ export function insertStatusEvent(event: NewStatusEvent): StatusEvent {
     dureeAppel: (event as any).dureeAppel ?? null,
     dateEntree,
     heureEntree,
+    numeroLigne: (event as any).numeroLigne ?? null,
+    source: (event as any).source ?? null,
+    statut: (event as any).statut ?? ((event as any).new_status ?? (event as any).newStatus ?? null),
+    lien: (event as any).lien ?? null,
+    sexe: (event as any).sexe ?? null,
+    don: (event as any).don ?? null,
+    qualite: (event as any).qualite ?? null,
+    type: (event as any).type ?? null,
+    date: (event as any).date ?? null,
+    uid: (event as any).uid ?? null,
+    uid_supabase: (event as any).uid_supabase ?? null,
+    utilisateur: (event as any).utilisateur ?? null,
+    actions: (event as any).actions ?? null,
+    statutAppel: (event as any).statutAppel ?? null,
+    statutRDV: (event as any).statutRDV ?? null,
+    commentaireRDV: (event as any).commentaireRDV ?? null,
   }
   // insérer en tête (ordre DESC par date/id)
   data.events.unshift(record)
@@ -288,6 +352,27 @@ export function updateStatusEvent(payload: { id: number } & Partial<StatusEvent>
     dureeAppel: 'dureeAppel',
     new_status: 'new_status',
     newStatus: 'new_status',
+    numeroLigne: 'numeroLigne',
+    numero_ligne: 'numeroLigne',
+    source: 'source',
+    statut: 'statut',
+    lien: 'lien',
+    sexe: 'sexe',
+    don: 'don',
+    qualite: 'qualite',
+    type: 'type',
+    date: 'date',
+    uid: 'uid',
+    uid_supabase: 'uid_supabase',
+    uidSupabase: 'uid_supabase',
+    utilisateur: 'utilisateur',
+    actions: 'actions',
+    statutAppel: 'statutAppel',
+    statut_appel: 'statutAppel',
+    statutRDV: 'statutRDV',
+    statut_rdv: 'statutRDV',
+    commentaireRDV: 'commentaireRDV',
+    commentaire_rdv: 'commentaireRDV',
   } as any
   const current = { ...data.events[idx] }
   for (const [k, v] of Object.entries(rest)) {

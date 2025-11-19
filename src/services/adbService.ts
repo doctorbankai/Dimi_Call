@@ -46,6 +46,7 @@ class AdbService {
   private isElectron: boolean = false;
   
   // Nouvelles propriétés pour le suivi des appels
+  private ringStartTime: Date | null = null;
   private callStartTime: Date | null = null;
   private wasInCall: boolean = false;
 
@@ -339,7 +340,8 @@ class AdbService {
         this.log(`✅ Appel initié avec succès vers ${phoneNumber}`);
         this.connectionState.lastCallNumber = phoneNumber;
         this.connectionState.currentCallState = 'ringing';
-        this.callStartTime = new Date(); // Enregistrer l'heure de début d'appel
+        this.ringStartTime = new Date();
+        this.callStartTime = null;
         this.wasInCall = false; // Reset du flag
         this.notifyListeners();
         
@@ -402,8 +404,8 @@ class AdbService {
         this.stopCallMonitoring();
         
         // Calculer la durée si un appel était en cours
-        if (this.callStartTime) {
-          const callDuration = new Date().getTime() - this.callStartTime.getTime();
+        const callDuration = this.computeCurrentCallDuration();
+        if (callDuration > 0) {
           
           // Créer l'événement de fin d'appel forcé
           const callEndEvent: CallEndEvent = {
@@ -417,6 +419,8 @@ class AdbService {
           
           this.log(`📞 Appel terminé - Durée: ${Math.round(callDuration / 1000)}s`);
         }
+        this.callStartTime = null;
+        this.ringStartTime = null;
         
         this.notifyListeners();
         
@@ -497,6 +501,9 @@ class AdbService {
             // Suivre si nous étions en communication
             if (newState === 'offhook') {
               this.wasInCall = true;
+              if (!this.callStartTime) {
+                this.callStartTime = new Date();
+              }
             }
             
             this.notifyListeners();
@@ -506,8 +513,7 @@ class AdbService {
               // 🔧 AMÉLIORATION: Ajouter un délai de sécurité pour éviter les terminaisons prématurées
               const minCallDuration = 2000; // 2 secondes minimum
               const currentTime = new Date().getTime();
-              const callDuration = this.callStartTime ? 
-                currentTime - this.callStartTime.getTime() : 0;
+              const callDuration = this.computeCurrentCallDuration();
               
               if (callDuration < minCallDuration) {
                 this.log(`📞 ⚠️ Appel terminé trop rapidement (${Math.round(callDuration)}ms < ${minCallDuration}ms). Ignoré.`);
@@ -534,6 +540,7 @@ class AdbService {
               
               // Reset des variables de suivi
               this.callStartTime = null;
+              this.ringStartTime = null;
               this.wasInCall = false;
               
               // Notifier les listeners
@@ -643,6 +650,14 @@ class AdbService {
       this.log(`❌ Erreur lors du redémarrage ADB: ${error instanceof Error ? error.message : String(error)}`, 'error');
       return false;
     }
+  }
+
+  private computeCurrentCallDuration(): number {
+    const reference = this.callStartTime ?? this.ringStartTime;
+    if (!reference) {
+      return 0;
+    }
+    return Math.max(0, new Date().getTime() - reference.getTime());
   }
 
   getConnectionState(): AdbConnectionState {

@@ -60,7 +60,7 @@ export function EventsSummary({ selectedDate, className }: EventsSummaryProps) {
   // Filtrer les événements pour la date sélectionnée
   const eventsForDate = useMemo(() => {
     if (!selectedDate) return { rdv: [], rappel: [] };
-    
+
     const dateKey = format(selectedDate, 'yyyy-MM-dd');
     const rdv: Event[] = [];
     const rappel: Event[] = [];

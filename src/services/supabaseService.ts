@@ -1,5 +1,6 @@
 import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { Contact, ContactStatus } from '../types';
+import { normalizeDurationMmSs, normalizeIsoDate, normalizeTime24hValue } from '@/utils/datetimeNormalization';
 
 // Configuration Supabase - DOIT être configuré via variables d'environnement
 const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL;
@@ -26,7 +27,7 @@ export interface RealtimeContactUpdate {
 
 class SupabaseService {
   private client!: SupabaseClient;
-  
+
   // Getter pour accéder au client Supabase depuis d'autres services
   getClient(): SupabaseClient {
     if (!this.isReady()) {
@@ -89,7 +90,7 @@ class SupabaseService {
     return new Promise((resolve) => {
       try {
         this.configure(url, anonKey);
-        
+
         // Tester la connexion
         this.testConnection().then((result) => {
           if (result.success) {
@@ -102,7 +103,7 @@ class SupabaseService {
         }).catch((error) => {
           resolve({ success: false, error: error.message });
         });
-        
+
       } catch (error: any) {
         resolve({ success: false, error: error.message });
       }
@@ -151,7 +152,7 @@ class SupabaseService {
 
   async testConnection(): Promise<{ success: boolean; error?: string; details?: any }> {
     console.log('📡 Test de connexion Supabase...');
-    
+
     if (!this.ensureConfigured()) {
       const error = 'Client Supabase non configuré';
       console.log('❌', error);
@@ -233,11 +234,11 @@ class SupabaseService {
 
       const errorDetails = lastError
         ? {
-            code: lastError.code,
-            message: lastError.message,
-            details: lastError.details,
-            hint: lastError.hint,
-          }
+          code: lastError.code,
+          message: lastError.message,
+          details: lastError.details,
+          hint: lastError.hint,
+        }
         : undefined;
 
       return {
@@ -248,8 +249,8 @@ class SupabaseService {
 
     } catch (error: any) {
       console.log('❌ Exception lors du test:', error);
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: `Erreur de connexion: ${error.message}`,
         details: error
       };
@@ -278,7 +279,7 @@ class SupabaseService {
           },
           (payload) => {
             console.log('📡 Changement temps réel reçu:', payload);
-            
+
             try {
               const update: RealtimeContactUpdate = {
                 type: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE',
@@ -348,8 +349,8 @@ class SupabaseService {
         throw new Error(`Erreur Supabase: ${error.message}`);
       }
 
-      console.log('✅ Contacts récupérés:', { 
-        count: data?.length || 0, 
+      console.log('✅ Contacts récupérés:', {
+        count: data?.length || 0,
         totalCount: count,
         page: page + 1
       });
@@ -376,15 +377,15 @@ class SupabaseService {
     hasMore: boolean;
   }> {
     this.checkConfiguration();
-    
+
     try {
       console.log(`🔍 getRawSupabaseData: Début de la requête - page=${page}, pageSize=${pageSize}, tableName=${tableName}`);
-      
+
       const startRange = page * pageSize;
       const endRange = startRange + pageSize - 1;
-      
+
       console.log(`📊 getRawSupabaseData: Range demandé - startRange=${startRange}, endRange=${endRange}`);
-      
+
       // Test simple d'abord sans range pour voir si on peut récupérer des données
       if (page === 0) {
         console.log('🧪 Test simple sans range pour vérifier la connectivité...');
@@ -392,22 +393,22 @@ class SupabaseService {
           .from(tableName)
           .select('*')
           .limit(5);
-          
+
         console.log('🧪 Résultat test simple:', {
           data: testQuery.data ? `${testQuery.data.length} éléments` : 'null',
           error: testQuery.error ? testQuery.error.message : 'null'
         });
-        
+
         if (testQuery.error) {
           console.error('❌ Erreur dans le test simple:', testQuery.error);
           throw testQuery.error;
         }
-        
+
         if (testQuery.data && testQuery.data.length > 0) {
           console.log('🧪 Premier enregistrement du test:', testQuery.data[0]);
         }
       }
-      
+
       // Requête principale avec range
       console.log('📡 Exécution de la requête principale avec range...');
       const { data, error, count } = await this.client
@@ -445,16 +446,16 @@ class SupabaseService {
       }
 
       console.log(`✅ getRawSupabaseData: ${data.length} enregistrements récupérés`);
-      
+
       if (data.length > 0) {
         console.log(`🔍 getRawSupabaseData: Premier enregistrement:`, data[0]);
         console.log(`🔍 getRawSupabaseData: Clés du premier enregistrement:`, Object.keys(data[0]));
-        
+
         // Découvrir les colonnes depuis le premier enregistrement
         if (this.discoveredColumns.length === 0) {
           this.discoveredColumns = Object.keys(data[0]);
           console.log(`📋 getRawSupabaseData: Colonnes découvertes:`, this.discoveredColumns);
-          
+
           // Détecter la colonne d'identité
           this.detectIdColumn();
         }
@@ -463,7 +464,7 @@ class SupabaseService {
       }
 
       const hasMore = count ? (startRange + data.length) < count : false;
-      
+
       console.log(`📊 getRawSupabaseData: Résultat final:`, {
         dataLength: data.length,
         totalCount: count,
@@ -493,13 +494,13 @@ class SupabaseService {
 
     try {
       console.log('🔄 Création d\'un nouveau contact');
-      
+
       const supabaseContact = this.mapContactToSupabase({
         ...contact,
         id: '', // Sera généré par Supabase
         numeroLigne: 0 // Sera calculé
       } as Contact);
-      
+
       const { data, error } = await this.client
         .from(tableName)
         .insert([supabaseContact])
@@ -513,7 +514,7 @@ class SupabaseService {
 
       const newContact = this.mapSupabaseToContact(data);
       console.log('✅ Contact créé avec succès:', newContact.id);
-      
+
       return newContact;
     } catch (error) {
       console.error('❌ Erreur lors de la création du contact:', error);
@@ -529,7 +530,7 @@ class SupabaseService {
     try {
       console.log('🔄 Mise à jour du contact:', { id, updates });
       console.log('📊 Colonnes découvertes:', this.discoveredColumns);
-      
+
       // S'assurer que les colonnes sont découvertes
       if (this.discoveredColumns.length === 0) {
         console.log('⚠️ Colonnes non découvertes, tentative de récupération...');
@@ -543,7 +544,7 @@ class SupabaseService {
       } else {
         console.log('✅ Colonnes déjà découvertes:', this.discoveredColumns.length, 'colonnes');
       }
-      
+
       // Mapper les updates vers le format Supabase
       const supabaseUpdates = this.mapContactToSupabase({
         id,
@@ -560,13 +561,13 @@ class SupabaseService {
           // Garder les valeurs false et 0, mais exclure undefined, null et chaînes vides
           if (value === undefined || value === null) return false;
           if (typeof value === 'string' && value.trim() === '') return false;
-          
+
           // Valider que la colonne existe (seulement si on a découvert des colonnes)
           if (this.discoveredColumns.length > 0 && !this.validateColumn(key)) {
             console.warn(`⚠️ Colonne '${key}' non trouvée dans la table, ignorée`);
             return false;
           }
-          
+
           return true;
         })
       );
@@ -577,10 +578,10 @@ class SupabaseService {
       // Vérifier qu'il y a des données à mettre à jour
       if (Object.keys(cleanUpdates).length === 0) {
         console.warn('⚠️ Le nettoyage des données a résulté en un objet de mise à jour vide. Aucune requête UPDATE ne sera envoyée.', {
-            originalUpdates: updates,
-            mappedSupabase: supabaseUpdates
+          originalUpdates: updates,
+          mappedSupabase: supabaseUpdates
         });
-        
+
         // Puisque rien n'a été mis à jour, nous pouvons considérer l'opération comme "réussie" mais sans effet.
         // On relit le contact pour s'assurer qu'il est toujours là et on le retourne.
         const { data: existingData, error: fetchError } = await this.client
@@ -590,8 +591,8 @@ class SupabaseService {
           .single();
 
         if (fetchError) {
-            console.error(`❌ Erreur en tentant de relire le contact ${id} après une mise à jour vide.`, fetchError);
-            throw fetchError;
+          console.error(`❌ Erreur en tentant de relire le contact ${id} après une mise à jour vide.`, fetchError);
+          throw fetchError;
         }
         if (!existingData) throw new Error(`Contact avec l'ID ${id} non trouvé après une tentative de mise à jour vide.`);
 
@@ -619,13 +620,13 @@ class SupabaseService {
         console.log(`   - Table: ${tableName}`);
         console.log(`   - Colonne d'identité: ${this.idColumnName}`);
         console.log(`   - ID recherché: ${id}`);
-        
+
         const testResult = await this.client
           .from(tableName)
           .select(this.idColumnName)
           .eq(this.idColumnName, id)
           .maybeSingle();
-        
+
         if (testResult.error) {
           console.error('❌ Erreur lors du test de connectivité:', testResult.error);
           throw new Error(`Problème de connectivité avec la table ${tableName}: ${testResult.error.message}`);
@@ -638,21 +639,21 @@ class SupabaseService {
             table: tableName,
             url: `${this.currentUrl}/rest/v1/${tableName}?${this.idColumnName}=eq.${id}`
           });
-          
+
           // Essayer de lister quelques enregistrements pour débugger
           console.log('🔍 Listage des premiers enregistrements pour débugger...');
           const debugResult = await this.client
             .from(tableName)
             .select(`${this.idColumnName}`)
             .limit(5);
-          
+
           if (debugResult.data) {
             console.log('📋 Échantillon d\'IDs existants:', debugResult.data.map((r: any) => r[this.idColumnName]));
           }
-          
+
           throw new Error(`Aucun enregistrement trouvé avec l'ID ${id} dans la colonne ${this.idColumnName}`);
         }
-        
+
         console.log('✅ Enregistrement trouvé, poursuite de la mise à jour');
       } catch (testError) {
         console.error('❌ Test de pré-vérification échoué:', testError);
@@ -673,7 +674,7 @@ class SupabaseService {
         .from(tableName)
         .update(cleanUpdates)
         .eq(this.idColumnName, id);
-      
+
       console.log('📊 Résultat de l\'Étape 1 (UPDATE):', { updateError, updateCount });
 
       if (updateError) {
@@ -682,7 +683,7 @@ class SupabaseService {
           details: updateError.details,
           code: updateError.code,
         });
-        
+
         if (updateError.message.includes('406')) {
           console.error("🚨 L'erreur 406 s'est produite pendant l'UPDATE. C'est inhabituel. Vérifiez les RLS et les headers.");
         }
@@ -697,7 +698,7 @@ class SupabaseService {
           updateId: id,
           updateObject: updates
         });
-        
+
         // Si pas d'erreur SQL ET updateCount null (comportement normal Supabase)
         if (!updateError && updateCount === null) {
           console.log('✅ Pas d\'erreur SQL - updateCount null est acceptable avec Supabase');
@@ -710,7 +711,7 @@ class SupabaseService {
       } else {
         console.log(`✅ ${updateCount} ligne(s) modifiée(s) avec succès`);
       }
-      
+
       // Étape 2: Récupérer l'enregistrement mis à jour avec un SELECT séparé pour isoler l'opération de lecture.
       console.log(`ACTION: SELECT après UPDATE pour ${this.idColumnName}=${id}`);
       const { data, error: selectError } = await this.client
@@ -731,9 +732,9 @@ class SupabaseService {
       if (!data) {
         // Ce cas est maintenant le plus informatif avec maybeSingle()
         console.error("❌ Échec de l'Étape 2: La relecture n'a retourné aucune donnée (data is null).", {
-            cause: "L'enregistrement est inaccessible via RLS juste après la mise à jour, ou a été supprimé simultanément.",
-            id,
-            idColumn: this.idColumnName
+          cause: "L'enregistrement est inaccessible via RLS juste après la mise à jour, ou a été supprimé simultanément.",
+          id,
+          idColumn: this.idColumnName
         });
         throw new Error(`Contact avec l'ID ${id} est devenu inaccessible après la mise à jour.`);
       }
@@ -797,7 +798,7 @@ class SupabaseService {
    * Utilise le Full Text Search de PostgreSQL pour des performances maximales
    */
   async searchInFullDatabase(
-    query: string, 
+    query: string,
     searchColumn: string = 'all',
     page: number = 0,
     pageSize: number = 250,
@@ -825,7 +826,7 @@ class SupabaseService {
 
     try {
       console.log(`🔍 Recherche globale: "${query}" dans colonne: ${searchColumn}`);
-      
+
       const startRange = page * pageSize;
       const endRange = startRange + pageSize - 1;
       const sanitizedQuery = query.trim();
@@ -836,7 +837,7 @@ class SupabaseService {
         // Colonnes de texte recherchables (exclut les UUIDs et autres types non-textuels)
         const searchableTextColumns = [
           'prenom',
-          'nom', 
+          'nom',
           'telephone',
           'numero',
           'email',
@@ -930,18 +931,18 @@ class SupabaseService {
     if (this.discoveredColumns.length > 0) {
       return this.discoveredColumns.filter(col => {
         const colLower = col.toLowerCase();
-        
+
         // Exclure les colonnes UUID/ID
         if (colLower.includes('id') || colLower === 'uid') return false;
-        
+
         // Exclure les colonnes de date/timestamp
-        if (colLower.includes('date') || colLower.includes('time') || 
-            colLower.includes('created') || colLower.includes('updated')) return false;
-        
+        if (colLower.includes('date') || colLower.includes('time') ||
+          colLower.includes('created') || colLower.includes('updated')) return false;
+
         // Exclure les colonnes numériques pures
-        if (colLower.includes('count') || colLower.includes('number') || 
-            colLower === 'age' || colLower.includes('price')) return false;
-        
+        if (colLower.includes('count') || colLower.includes('number') ||
+          colLower === 'age' || colLower.includes('price')) return false;
+
         // Inclure les colonnes qui semblent être du texte
         return true;
       });
@@ -955,7 +956,7 @@ class SupabaseService {
    * Recherche avec gestion intelligente des types de colonnes
    */
   async searchInFullDatabaseSmart(
-    query: string, 
+    query: string,
     searchColumn: string = 'all',
     page: number = 0,
     pageSize: number = 250,
@@ -982,7 +983,7 @@ class SupabaseService {
 
     try {
       console.log(`🔍 Recherche intelligente: "${query}" dans colonne: ${searchColumn}`);
-      
+
       const startRange = page * pageSize;
       const endRange = startRange + pageSize - 1;
       const sanitizedQuery = query.trim();
@@ -1071,7 +1072,7 @@ class SupabaseService {
     try {
       const startRange = page * pageSize;
       const endRange = startRange + pageSize - 1;
-      
+
       // Utilise to_tsvector et to_tsquery pour une recherche Full Text optimisée
       // Cette approche nécessiterait une colonne search_vector dans la table
       const { data, error, count } = await this.client
@@ -1104,14 +1105,14 @@ class SupabaseService {
     }
 
     try {
-      const supabaseContacts = contacts.map((contact, index) => 
+      const supabaseContacts = contacts.map((contact, index) =>
         this.mapContactToSupabase({
           ...contact,
           id: '', // Sera généré par Supabase
           numeroLigne: index + 1
         } as Contact)
       );
-      
+
       const { data, error } = await this.client
         .from(tableName)
         .insert(supabaseContacts)
@@ -1149,6 +1150,14 @@ class SupabaseService {
 
   private mapSupabaseToContact(supabaseContact: SupabaseContact, numeroLigne: number = 0): Contact {
     // Mapping intelligent basé sur les colonnes découvertes
+    const rawDateRappel = this.getFieldValue(supabaseContact, ['date_rappel', 'dateRappel'])
+    const rawDateRdv = this.getFieldValue(supabaseContact, ['date_rdv', 'dateRDV'])
+    const rawDateAppel = this.getFieldValue(supabaseContact, ['date_appel_1', 'date_appel', 'dateAppel'])
+    const rawHeureRappel = this.getFieldValue(supabaseContact, ['heure_rappel', 'heureRappel'])
+    const rawHeureRdv = this.getFieldValue(supabaseContact, ['heure_rdv', 'heureRDV'])
+    const rawHeureAppel = this.getFieldValue(supabaseContact, ['heure_appel', 'heureAppel'])
+    const rawDureeAppel = this.getFieldValue(supabaseContact, ['duree_appel', 'dureeAppel'])
+
     const contact: Contact = {
       id: supabaseContact[this.idColumnName] || supabaseContact.UID || supabaseContact.id || `supabase_${numeroLigne}`,
       numeroLigne,
@@ -1159,13 +1168,13 @@ class SupabaseService {
       source: this.getFieldValue(supabaseContact, ['source', 'ecole', 'Source', 'ECOLE']) || '',
       statut: this.mapStatutFromSupabase(supabaseContact),
       commentaire: this.getFieldValue(supabaseContact, ['commentaires_appel_1', 'commentaire', 'Commentaire']) || '',
-      dateRappel: this.getFieldValue(supabaseContact, ['date_rappel', 'dateRappel']) || '',
-      heureRappel: this.getFieldValue(supabaseContact, ['heure_rappel', 'heureRappel']) || '',
-      dateRDV: this.getFieldValue(supabaseContact, ['date_rdv', 'dateRDV']) || '',
-      heureRDV: this.getFieldValue(supabaseContact, ['heure_rdv', 'heureRDV']) || '',
-      dateAppel: this.getFieldValue(supabaseContact, ['date_appel_1', 'date_appel', 'dateAppel']) || '',
-      heureAppel: this.getFieldValue(supabaseContact, ['heure_appel', 'heureAppel']) || '',
-      dureeAppel: this.getFieldValue(supabaseContact, ['duree_appel', 'dureeAppel']) || '',
+      dateRappel: normalizeIsoDate(rawDateRappel) || '',
+      heureRappel: normalizeTime24hValue(rawHeureRappel) || '',
+      dateRDV: normalizeIsoDate(rawDateRdv) || '',
+      heureRDV: normalizeTime24hValue(rawHeureRdv) || '',
+      dateAppel: normalizeIsoDate(rawDateAppel) || '',
+      heureAppel: normalizeTime24hValue(rawHeureAppel) || '',
+      dureeAppel: normalizeDurationMmSs(rawDureeAppel) || '',
       uid_supabase: supabaseContact.UID || supabaseContact.id || undefined
     };
 
@@ -1175,10 +1184,10 @@ class SupabaseService {
   private mapStatutFromSupabase(supabaseContact: SupabaseContact): ContactStatus {
     const statutFinal = this.getFieldValue(supabaseContact, ['statut_final', 'statut', 'Statut']);
     const statutAppel = this.getFieldValue(supabaseContact, ['statut_appel_1', 'statut_appel']);
-    
+
     // Utiliser le statut final en priorité, sinon le statut d'appel
     const statut = statutFinal || statutAppel || 'Non défini';
-    
+
     // Mapper les statuts Supabase vers les statuts de l'application
     const statutMapping: Record<string, ContactStatus> = {
       'Non défini': ContactStatus.NonDefini,
@@ -1192,7 +1201,7 @@ class SupabaseService {
       'Liste noire': ContactStatus.ListeNoire,
       'Prématuré': ContactStatus.Premature,
     };
-    
+
     return statutMapping[statut] || ContactStatus.NonDefini;
   }
 
@@ -1211,7 +1220,7 @@ class SupabaseService {
       console.warn(`⚠️ Validation de colonne '${columnName}' sans découverte préalable`);
       return true;
     }
-    
+
     // Vérifier si la colonne existe dans la table
     const isValid = this.discoveredColumns.includes(columnName);
     if (!isValid) {
@@ -1235,7 +1244,7 @@ class SupabaseService {
   private detectIdColumn(): void {
     // Ordre de priorité pour détecter la colonne d'identité
     const idCandidates = ['UID', 'id', 'ID', 'uid', 'uuid', 'UUID'];
-    
+
     for (const candidate of idCandidates) {
       if (this.discoveredColumns.includes(candidate)) {
         this.idColumnName = candidate;
@@ -1243,12 +1252,12 @@ class SupabaseService {
         return;
       }
     }
-    
+
     // Fallback : chercher une colonne contenant 'id'
-    const idColumn = this.discoveredColumns.find(col => 
+    const idColumn = this.discoveredColumns.find(col =>
       col.toLowerCase().includes('id') || col.toLowerCase().includes('uid')
     );
-    
+
     if (idColumn) {
       this.idColumnName = idColumn;
       console.log(`🔑 Colonne d'identité détectée (fallback): ${this.idColumnName}`);
@@ -1262,7 +1271,7 @@ class SupabaseService {
     // Mapping inverse - utilise les noms de colonnes Supabase découverts
     const supabaseContact: Partial<SupabaseContact> = {};
 
-    console.log('🔄 Mapping contact vers Supabase:', { 
+    console.log('🔄 Mapping contact vers Supabase:', {
       contactId: contact.id,
       discoveredColumns: this.discoveredColumns.length,
       discoveredColumnsNames: this.discoveredColumns,
@@ -1290,7 +1299,7 @@ class SupabaseService {
     if (contact.source !== undefined && contact.source !== null && this.validateColumn('source')) {
       supabaseContact.source = contact.source;
     }
-    
+
     // Pour le statut, mapper vers la colonne appropriée selon ce qui existe
     if (contact.statut !== undefined && contact.statut !== null) {
       // Essayer différentes colonnes de statut selon ce qui existe
@@ -1302,7 +1311,7 @@ class SupabaseService {
         console.warn('⚠️ Aucune colonne de statut valide trouvée');
       }
     }
-    
+
     if (contact.commentaire !== undefined && contact.commentaire !== null) {
       // Essayer différentes colonnes de commentaire selon ce qui existe
       if (this.validateColumn('commentaires_appel_1')) {
@@ -1381,7 +1390,7 @@ class SupabaseService {
 
     try {
       console.log('🔄 Mise à jour champ brut:', { id, fieldName, value, tableName });
-      
+
       // Valider que la colonne existe
       if (this.discoveredColumns.length > 0 && !this.validateColumn(fieldName)) {
         throw new Error(`Colonne '${fieldName}' non trouvée dans la table ${tableName}`);
@@ -1404,7 +1413,7 @@ class SupabaseService {
       }
 
       console.log(`✅ Champ ${fieldName} mis à jour avec succès (${updateCount} ligne(s) affectée(s))`);
-      
+
     } catch (error) {
       console.error('❌ Erreur updateRawField:', error);
       throw error;
@@ -1424,7 +1433,7 @@ class SupabaseService {
    * Logique: si date_appel_1 et statut_appel_1 sont remplis, passer à appel_2, etc.
    */
   async updateContactWithNewCall(
-    uid: string, 
+    uid: string,
     newCallData: {
       date_appel?: string;
       statut_appel?: string;
@@ -1454,18 +1463,18 @@ class SupabaseService {
 
       // 2. Trouver le prochain slot disponible (1, 2, 3, 4)
       let availableSlot = 0;
-      
+
       for (let i = 1; i <= 4; i++) {
         const dateField = `date_appel_${i}`;
         const statutField = `statut_appel_${i}`;
-        
+
         // Un slot est considéré comme libre si date_appel ET statut_appel sont vides
         const dateValue = existingData[dateField];
         const statutValue = existingData[statutField];
-        
-        if (!dateValue || !statutValue || 
-            String(dateValue).trim() === '' || 
-            String(statutValue).trim() === '') {
+
+        if (!dateValue || !statutValue ||
+          String(dateValue).trim() === '' ||
+          String(statutValue).trim() === '') {
           availableSlot = i;
           break;
         }
@@ -1481,15 +1490,15 @@ class SupabaseService {
 
       // 3. Préparer les données de mise à jour
       const updateData: any = {};
-      
+
       if (newCallData.date_appel) {
         updateData[`date_appel_${availableSlot}`] = newCallData.date_appel;
       }
-      
+
       if (newCallData.statut_appel) {
         updateData[`statut_appel_${availableSlot}`] = newCallData.statut_appel;
       }
-      
+
       if (newCallData.commentaires_appel) {
         updateData[`commentaires_appel_${availableSlot}`] = newCallData.commentaires_appel;
       }

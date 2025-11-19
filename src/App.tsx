@@ -151,6 +151,70 @@ const DonutChart: React.FC<{ progress: number; size?: number }> = ({ progress, s
   );
 };
 
+type LocalStatusEventOverrides = Partial<Contact>;
+
+interface BuildLocalStatusEventOptions {
+  oldStatus?: string | null;
+  newStatus?: string | null;
+  overrides?: LocalStatusEventOverrides;
+}
+
+const buildLocalStatusEventPayload = (contact: Contact, options: BuildLocalStatusEventOptions = {}) => {
+  const overrides = options.overrides ?? {};
+  const hasOverride = (key: keyof Contact) => Object.prototype.hasOwnProperty.call(overrides, key);
+  const resolveField = <K extends keyof Contact>(key: K): Contact[K] | null => {
+    if (hasOverride(key)) {
+      const value = overrides[key];
+      return (value ?? null) as Contact[K] | null;
+    }
+    const original = contact[key];
+    return (original ?? null) as Contact[K] | null;
+  };
+  const numeroLigneValue = resolveField('numeroLigne');
+  const snapshotStatut = options.newStatus ?? (resolveField('statut') as string | null) ?? null;
+
+  return {
+    contactId: contact.id,
+    oldStatus: options.oldStatus ?? null,
+    newStatus: snapshotStatut,
+    prenom: resolveField('prenom') ?? null,
+    nom: resolveField('nom') ?? null,
+    telephone: resolveField('telephone') ?? null,
+    email: resolveField('email') ?? null,
+    commentaire: resolveField('commentaire') ?? null,
+    dateRappel: resolveField('dateRappel') ?? null,
+    heureRappel: resolveField('heureRappel') ?? null,
+    dateRDV: resolveField('dateRDV') ?? null,
+    heureRDV: resolveField('heureRDV') ?? null,
+    dateAppel: resolveField('dateAppel') ?? null,
+    heureAppel: resolveField('heureAppel') ?? null,
+    dureeAppel: resolveField('dureeAppel') ?? null,
+    numeroLigne: typeof numeroLigneValue === 'number' && Number.isFinite(numeroLigneValue) ? numeroLigneValue : null,
+    source: resolveField('source') ?? null,
+    statut: snapshotStatut,
+    lien: resolveField('lien') ?? null,
+    sexe: resolveField('sexe') ?? null,
+    don: resolveField('don') ?? null,
+    qualite: resolveField('qualite') ?? null,
+    type: resolveField('type') ?? null,
+    date: resolveField('date') ?? null,
+    uid: resolveField('uid') ?? null,
+    uid_supabase: resolveField('uid_supabase') ?? null,
+    utilisateur: resolveField('utilisateur') ?? null,
+    actions: resolveField('actions') ?? null,
+    statutAppel: resolveField('statutAppel') ?? null,
+    statutRDV: resolveField('statutRDV') ?? null,
+    commentaireRDV: resolveField('commentaireRDV') ?? null,
+  };
+};
+
+const formatDurationLabel = (durationMs: number): string => {
+  const totalSeconds = Math.max(0, Math.round(durationMs / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+};
+
 const contactsEqualById = (a: Contact[], b: Contact[]) => {
   if (a.length !== b.length) return false;
   const ids = new Set(a.map(contact => contact.id));
@@ -863,29 +927,17 @@ Dimitri MOREL - Arcanis Conseil`;
     // Forcer un petit dlai pour que l'interface se mette à jour
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    // Enregistrer un vnement de statut en local si le statut a chang
+    // Enregistrer un événement de statut en local si le statut a changé
     try {
       const newStatus = updatedFields.statut;
       if (typeof window !== 'undefined' && window.electronAPI?.localdb && typeof newStatus !== 'undefined' && updatedContact) {
         // Insrer uniquement si le statut change rellement
         if (previousStatusBeforeUpdate !== newStatus) {
-          await window.electronAPI.localdb.insertStatus({
-            contactId: updatedContact.id,
-            oldStatus: previousStatusBeforeUpdate,
-            newStatus,
-            prenom: updatedContact.prenom,
-            nom: updatedContact.nom,
-            telephone: updatedContact.telephone,
-            email: updatedContact.email,
-            commentaire: updatedContact.commentaire,
-            dateRappel: updatedContact.dateRappel,
-            heureRappel: updatedContact.heureRappel,
-            dateRDV: updatedContact.dateRDV,
-            heureRDV: updatedContact.heureRDV,
-            dateAppel: updatedContact.dateAppel,
-            heureAppel: updatedContact.heureAppel,
-            dureeAppel: updatedContact.dureeAppel,
+          const statusSnapshot = buildLocalStatusEventPayload(updatedContact, {
+            oldStatus: previousStatusBeforeUpdate ?? null,
+            newStatus: newStatus ?? updatedContact.statut ?? null,
           });
+          await window.electronAPI.localdb.insertStatus(statusSnapshot);
           try { window.dispatchEvent(new CustomEvent('localdb-updated')); } catch { }
         }
       }
@@ -893,7 +945,7 @@ Dimitri MOREL - Arcanis Conseil`;
       console.warn('chec d\'enregistrement local du statut:', e);
     }
 
-    // Journaliser aussi les modifications de champs (commentaire, dates, etc.) comme evenements
+    // Journaliser aussi les modifications de champs (commentaire, dates, etc.) comme événements
     try {
       if (typeof window !== 'undefined' && window.electronAPI?.localdb && updatedContact) {
         const syncKeys = [
@@ -910,6 +962,22 @@ Dimitri MOREL - Arcanis Conseil`;
           'telephone',
           'prenom',
           'nom',
+          'numeroLigne',
+          'source',
+          'statut',
+          'lien',
+          'sexe',
+          'don',
+          'qualite',
+          'type',
+          'date',
+          'uid',
+          'uid_supabase',
+          'utilisateur',
+          'actions',
+          'statutAppel',
+          'statutRDV',
+          'commentaireRDV',
         ] as const;
 
         const hasRelevantUpdate = syncKeys.some((key) => key in updatedFields);
@@ -920,29 +988,32 @@ Dimitri MOREL - Arcanis Conseil`;
             updatedContact.commentaire ??
             null;
 
-          const eventFields = {
-            prenom: updatedFields.prenom ?? updatedContact.prenom ?? null,
-            nom: updatedFields.nom ?? updatedContact.nom ?? null,
-            telephone: updatedFields.telephone ?? updatedContact.telephone ?? null,
-            email: updatedFields.email ?? updatedContact.email ?? null,
-            commentaire: resolvedComment,
-            dateRappel: updatedFields.dateRappel ?? updatedContact.dateRappel ?? null,
-            heureRappel: updatedFields.heureRappel ?? updatedContact.heureRappel ?? null,
-            dateRDV: updatedFields.dateRDV ?? updatedContact.dateRDV ?? null,
-            heureRDV: updatedFields.heureRDV ?? updatedContact.heureRDV ?? null,
-            dateAppel: updatedFields.dateAppel ?? updatedContact.dateAppel ?? null,
-            heureAppel: updatedFields.heureAppel ?? updatedContact.heureAppel ?? null,
-            dureeAppel: updatedFields.dureeAppel ?? updatedContact.dureeAppel ?? null,
-            newStatus: updatedContact.statut ?? null,
-          };
-
           let updatedEventSuccessfully = false;
+          const overrides: Partial<Contact> = {};
+          Object.entries(updatedFields).forEach(([key, value]) => {
+            if (key === 'id') return;
+            if (value !== undefined) {
+              (overrides as any)[key] = value as any;
+            }
+          });
+          if (resolvedComment !== null) {
+            overrides.commentaire = resolvedComment;
+          } else if ('commentaire' in updatedFields) {
+            overrides.commentaire = (updatedFields as Partial<Contact>).commentaire ?? '';
+          }
+
+          const snapshot = buildLocalStatusEventPayload(updatedContact, {
+            oldStatus: previousStatusBeforeUpdate ?? null,
+            newStatus: updatedContact.statut ?? null,
+            overrides,
+          });
 
           if (window.electronAPI.localdb.updateLatestForContact) {
             try {
+              const { contactId: _snapshotContactId, oldStatus: _snapshotOldStatus, ...fieldsToPersist } = snapshot;
               const updateResult = await window.electronAPI.localdb.updateLatestForContact(
                 updatedContact.id,
-                eventFields
+                fieldsToPersist
               );
               if (updateResult?.success && updateResult.data) {
                 updatedEventSuccessfully = true;
@@ -953,23 +1024,7 @@ Dimitri MOREL - Arcanis Conseil`;
           }
 
           if (!updatedEventSuccessfully) {
-            await window.electronAPI.localdb.insertStatus({
-              contactId: updatedContact.id,
-              oldStatus: previousStatusBeforeUpdate,
-              newStatus: updatedContact.statut,
-              prenom: eventFields.prenom,
-              nom: eventFields.nom,
-              telephone: eventFields.telephone,
-              email: eventFields.email,
-              commentaire: eventFields.commentaire,
-              dateRappel: eventFields.dateRappel,
-              heureRappel: eventFields.heureRappel,
-              dateRDV: eventFields.dateRDV,
-              heureRDV: eventFields.heureRDV,
-              dateAppel: eventFields.dateAppel,
-              heureAppel: eventFields.heureAppel,
-              dureeAppel: eventFields.dureeAppel,
-            });
+            await window.electronAPI.localdb.insertStatus(snapshot);
           }
 
           try { window.dispatchEvent(new CustomEvent('localdb-updated')); } catch { }
@@ -1064,9 +1119,7 @@ Dimitri MOREL - Arcanis Conseil`;
       updateCallState(idToProcess, { isCalling: false, hasBeenCalled: !markAsError });
       if (callStartTime && !markAsError) {
         const durationMs = new Date().getTime() - callStartTime.getTime();
-        const seconds = Math.floor((durationMs / 1000) % 60);
-        const minutes = Math.floor((durationMs / (1000 * 60)) % 60);
-        const durationStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        const durationStr = formatDurationLabel(durationMs);
         updateContact({ id: idToProcess, dureeAppel: durationStr });
       } else if (markAsError) {
         updateContact({ id: idToProcess, dureeAppel: "Erreur" });
@@ -1671,9 +1724,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
       if (activeCallContactId) {
         // Calculer la dure d'appel formate
-        const seconds = Math.floor((callEndEvent.durationMs / 1000) % 60);
-        const minutes = Math.floor((callEndEvent.durationMs / (1000 * 60)) % 60);
-        const durationStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        const durationStr = formatDurationLabel(callEndEvent.durationMs);
 
         console.log(`📞 Mise à jour du contact ${activeCallContactId} avec dure: ${durationStr}`);
 

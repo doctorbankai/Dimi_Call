@@ -16,7 +16,7 @@ export const useSupabaseAuth = () => {
   const [authHoldReason, setAuthHoldReason] = useState<null | 'offline' | 'in_call'>(null);
   const [disconnectInfo, setDisconnectInfo] = useState<
     { reason: 'offline' | 'in_call' | 'remote_signout' | 'user_deleted' | 'token_refresh_failed' | 'unknown'; details?: string }
-  | null>(null);
+    | null>(null);
 
   // Conserver la dernière session non nulle pour reprise après maintien
   const lastGoodSessionRef = useRef<Session | null>(null);
@@ -34,11 +34,11 @@ export const useSupabaseAuth = () => {
   // Fonction pour vérifier si l'utilisateur existe encore dans Supabase
   const verifyUserStillExists = async (currentUser: AuthUser): Promise<boolean> => {
     if (!currentUser) return false;
-    
+
     try {
       // Tenter de récupérer les informations utilisateur depuis Supabase
       const { data, error } = await supabase.auth.getUser();
-      
+
       if (error) {
         // Tolérer les erreurs réseau/temporaires
         const status = (error as any)?.status ?? (error as any)?.cause?.status;
@@ -57,13 +57,13 @@ export const useSupabaseAuth = () => {
         supabaseLogger.error('auth.getUser non-transient error', { name: (error as any)?.name, status: (error as any)?.status, message: (error as any)?.message });
         return false;
       }
-      
+
       // Si pas d'utilisateur retourné, l'utilisateur a été supprimé
       if (!data.user) {
         console.log('[Auth] ⚠️ Utilisateur supprimé détecté - session invalide');
         return false;
       }
-      
+
       return true;
     } catch (error: any) {
       const status = error?.status ?? error?.cause?.status;
@@ -164,7 +164,7 @@ export const useSupabaseAuth = () => {
 
       const currentSession = await supabase.auth.getSession();
       const currentUser = currentSession.data.session?.user ?? null;
-      
+
       if (currentUser) {
         // Vérifier si l'utilisateur existe toujours
         const userStillExists = await verifyUserStillExists(currentUser);
@@ -197,7 +197,7 @@ export const useSupabaseAuth = () => {
             // Plus d'une session active détectée
             const currentSessionId = (currentSession.data.session as any)?.access_token?.substring(0, 20);
             const isCurrentSessionNewest = sessions[0]?.session_id === currentSessionId;
-            
+
             if (!isCurrentSessionNewest) {
               console.warn('[Auth] 🚨 Session plus récente détectée - déconnexion');
               supabaseLogger.warn('Newer session detected, signing out');
@@ -263,7 +263,7 @@ export const useSupabaseAuth = () => {
   const registerActiveSession = async (userId: string, sessionId: string) => {
     try {
       console.log('[Auth] Enregistrement de la session active...');
-      
+
       // Enregistrer cette session dans la table active_sessions
       const { error: insertError } = await supabase
         .from('active_sessions')
@@ -284,7 +284,7 @@ export const useSupabaseAuth = () => {
         console.log('[Auth] ✅ Session enregistrée avec succès');
         supabaseLogger.log('Active session registered', { userId, sessionId: sessionId.substring(0, 10) + '...' });
       }
-      
+
     } catch (error) {
       console.error('[Auth] Erreur lors de l\'enregistrement de la session:', error);
       supabaseLogger.error('registerActiveSession threw', error);
@@ -294,7 +294,7 @@ export const useSupabaseAuth = () => {
   // Fonction pour surveiller les sessions concurrentes en temps réel
   const monitorConcurrentSessions = (userId: string, currentSessionId: string) => {
     console.log('[Auth] Démarrage de la surveillance des sessions concurrentes...');
-    
+
     // Écouter les changements dans la table active_sessions
     const channel = supabase
       .channel('session-monitor')
@@ -308,7 +308,7 @@ export const useSupabaseAuth = () => {
         },
         async (payload) => {
           console.log('[Auth] Nouvelle session détectée:', payload);
-          
+
           // Si une nouvelle session est créée et ce n'est pas la nôtre
           if (payload.new && payload.new.session_id !== currentSessionId) {
             console.warn('[Auth] 🚨 Connexion depuis un autre appareil détectée!');
@@ -316,10 +316,10 @@ export const useSupabaseAuth = () => {
               newSessionId: payload.new.session_id?.substring(0, 10) + '...',
               currentSessionId: currentSessionId.substring(0, 10) + '...'
             });
-            
+
             // Déconnecter cette session
             await supabase.auth.signOut();
-            
+
             // Afficher une notification à l'utilisateur
             if (typeof window !== 'undefined') {
               alert('Votre compte a été connecté depuis un autre appareil. Vous avez été déconnecté.');
@@ -339,12 +339,12 @@ export const useSupabaseAuth = () => {
   const signInWithPassword = async (email: string, password: string) => {
     console.log('[auth-client] Appel de signInWithPassword');
     setIsLoading(true);
-    
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    
+
     // Sanitize: ne pas loguer tokens
     console.log('[auth-client] Réponse de Supabase (sanitized):', {
       session: data?.session ? {
@@ -353,21 +353,21 @@ export const useSupabaseAuth = () => {
       } : null,
       error: error ? { name: (error as any)?.name, message: (error as any)?.message, status: (error as any)?.status } : null
     });
-    
+
     // Si la connexion réussit, enregistrer la session et surveiller les concurrentes
     if (!error && data.session && data.user) {
       console.log('[auth-client] Connexion réussie, enregistrement de la session.');
       setSession(data.session);
       setUser(data.user);
       supabaseLogger.log('signInWithPassword success', { userId: data.user?.id });
-      
+
       // Enregistrer cette session comme active (déclenche le trigger SQL qui supprime les autres)
       const sessionId = (data.session as any).access_token?.substring(0, 20) || crypto.randomUUID();
       await registerActiveSession(data.user.id, sessionId);
-      
+
       // Démarrer la surveillance des sessions concurrentes
       const unsubscribe = monitorConcurrentSessions(data.user.id, sessionId);
-      
+
       // Nettoyer la surveillance lors de la déconnexion
       return () => unsubscribe();
     }

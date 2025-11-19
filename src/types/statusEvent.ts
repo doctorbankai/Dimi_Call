@@ -21,4 +21,20 @@
   dureeAppel?: string | null;
   dateEntree?: string | null;
   heureEntree?: string | null;
+  numeroLigne?: number | null;
+  source?: string | null;
+  statut?: string | null;
+  lien?: string | null;
+  sexe?: string | null;
+  don?: string | null;
+  qualite?: string | null;
+  type?: string | null;
+  date?: string | null;
+  uid?: string | null;
+  uid_supabase?: string | null;
+  utilisateur?: string | null;
+  actions?: string | null;
+  statutAppel?: string | null;
+  statutRDV?: string | null;
+  commentaireRDV?: string | null;
 }

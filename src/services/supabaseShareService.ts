@@ -1,8 +1,10 @@
+import { z } from 'zod'
 import { supabaseService } from '@/services/supabaseService'
 import { supabaseLogger } from '@/lib/supabase-logger'
 import { loadContacts } from '@/services/dataService'
 import type { Contact } from '@/types'
 import { supabase } from '@/lib/supabase'
+import { normalizeDurationMmSs, normalizeIsoDate, normalizeIsoDateTime, normalizeTime24hValue } from '@/utils/datetimeNormalization'
 
 type SyncTarget = 'phone' | 'blacklist' | 'calls'
 const SYNC_TARGETS: SyncTarget[] = ['phone', 'blacklist', 'calls']
@@ -61,6 +63,20 @@ const runtimeState: Record<SyncTarget, RuntimeTargetState> = {
   blacklist: { inFlight: false, pendingResync: false },
   calls: { inFlight: false, pendingResync: false },
 }
+
+const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+const timeSchema = z.string().regex(/^\d{2}:\d{2}$/)
+const durationSchema = z.string().regex(/^\d{2,}:\d{2}$/)
+const callRecordValidator = z.object({
+  date_rappel: isoDateSchema.nullable(),
+  date_rdv: isoDateSchema.nullable(),
+  date_appel: isoDateSchema.nullable(),
+  date_contact: isoDateSchema.nullable(),
+  heure_rappel: timeSchema.nullable(),
+  heure_rdv: timeSchema.nullable(),
+  heure_appel: timeSchema.nullable(),
+  duree_appel: durationSchema.nullable(),
+})
 
 const listeners = new Set<Listener>()
 const eventHandlers = new Map<SyncTarget, () => void>()
@@ -271,7 +287,6 @@ async function fetchLocalEvents(): Promise<any[]> {
 
 async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number }> {
   const client = supabaseService.getClient()
-  const nowIso = new Date().toISOString()
   const aggregate = new Map<string, {
     phoneNumber: string
     normalized: string
@@ -295,7 +310,7 @@ async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: numbe
       continue
     }
     const normalized = normalizePhoneNumber(raw)
-    if (!normalized) {
+    if (!isValidE164(normalized)) {
       filtered += 1
       continue
     }
@@ -332,7 +347,6 @@ async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: numbe
     prenom: entry.sample.prenom || null,
     nom: entry.sample.nom || null,
     source: entry.sample.source || 'Données',
-    updated_at: nowIso,
   }))
 
   await chunkedUpsert(client, 'shared_phone_numbers', payload, 'normalized_phone')
@@ -349,7 +363,6 @@ async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: numbe
 
 async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number }> {
   const client = supabaseService.getClient()
-  const nowIso = new Date().toISOString()
 
   const aggregate = new Map<string, {
     phoneNumber: string
@@ -383,7 +396,7 @@ async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: n
       continue
     }
     const normalized = normalizePhoneNumber(raw)
-    if (!normalized) {
+    if (!isValidE164(normalized)) {
       filtered += 1
       continue
     }
@@ -423,7 +436,6 @@ async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: n
     prenom: entry.sample.prenom || null,
     nom: entry.sample.nom || null,
     source: entry.sample.source || 'Données',
-    updated_at: nowIso,
   }))
 
   await chunkedUpsert(client, 'shared_blacklist_numbers', payload, 'normalized_phone')
@@ -440,7 +452,6 @@ async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: n
 
 async function syncCallEvents(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number }> {
   const client = supabaseService.getClient()
-  const nowIso = new Date().toISOString()
   const contacts = loadContactsSnapshot()
   const contactsMap = new Map<string, Contact>()
   contacts.forEach((contact) => {
@@ -450,12 +461,15 @@ async function syncCallEvents(events: any[]): Promise<{ processed: number; share
   })
 
   const authIdentity = await getCurrentAuthIdentity()
+  if (!authIdentity.id || !authIdentity.email) {
+    throw new Error('Session Supabase requise pour synchroniser les événements d’appel.')
+  }
   const payload: Array<Record<string, any>> = []
   let filtered = 0
   let enriched = 0
 
   for (const row of events) {
-    const record = buildCallRecord(row, contactsMap, authIdentity, nowIso)
+    const record = buildCallRecord(row, contactsMap, authIdentity)
     if (!record) {
       filtered += 1
       continue
@@ -488,16 +502,16 @@ async function syncCallEvents(events: any[]): Promise<{ processed: number; share
 function buildCallRecord(
   row: any,
   contacts: Map<string, Contact>,
-  auth: AuthIdentity,
-  timestamp: string
+  auth: AuthIdentity
 ): Record<string, any> | null {
   const contactId = extractString(row, ['contact_id', 'contactId'])
   const contact = contactId ? contacts.get(contactId) : undefined
-  const firstName = extractString(row, ['prenom', 'firstName']) ?? contact?.prenom
-  const lastName = extractString(row, ['nom', 'lastName']) ?? contact?.nom
+  const firstName = extractString(row, ['prenom', 'firstName']) ?? contact?.prenom ?? null
+  const lastName = extractString(row, ['nom', 'lastName']) ?? contact?.nom ?? null
   const comment = row.commentaire ?? row.comment ?? contact?.commentaire ?? null
   const phone = extractPhone(row) ?? contact?.telephone ?? null
-  const normalizedPhone = phone ? normalizePhoneNumber(phone) : null
+  const normalizedPhoneRaw = phone ? normalizePhoneNumber(phone) : null
+  const normalizedPhone = normalizedPhoneRaw && isValidE164(normalizedPhoneRaw) ? normalizedPhoneRaw : null
   const numeroLigne =
     typeof row.numeroLigne === 'number'
       ? row.numeroLigne
@@ -510,9 +524,67 @@ function buildCallRecord(
   }
 
   const localEventId = normalizeNumericId(row.id) ?? normalizeNumericId(row.local_event_id)
-  const createdAt = row.applied_at ?? row.appliedAt ?? timestamp
+  const resolvedContactId = contactId || contact?.id || null
+  if (!resolvedContactId) {
+    supabaseLogger.warn('[share] Enregistrement call_data_events rejeté (contact_id manquant)', {
+      localEventId,
+    })
+    return null
+  }
+  const normalizedDateRappel = normalizeIsoDate(row.dateRappel ?? row.date_rappel ?? contact?.dateRappel)
+  const normalizedHeureRappel = normalizeTime24hValue(row.heureRappel ?? row.heure_rappel ?? contact?.heureRappel)
+  const normalizedDateRdv = normalizeIsoDate(row.dateRDV ?? row.date_rdv ?? contact?.dateRDV)
+  const normalizedHeureRdv = normalizeTime24hValue(row.heureRDV ?? row.heure_rdv ?? contact?.heureRDV)
+  const normalizedDateAppel = normalizeIsoDate(row.dateAppel ?? row.date_appel ?? contact?.dateAppel)
+  const normalizedHeureAppel = normalizeTime24hValue(row.heureAppel ?? row.heure_appel ?? contact?.heureAppel)
+  const normalizedDateContact = normalizeIsoDate(row.date_contact ?? row.dateContact ?? row.date ?? contact?.date ?? null)
+  const normalizedDuration = normalizeDurationMmSs(row.dureeAppel ?? row.duree_appel ?? contact?.dureeAppel)
+  const normalizedAppliedAt = normalizeIsoDateTime(row.applied_at ?? row.appliedAt)
+  const resolvedEmail = extractString(row, ['email', 'mail']) ?? contact?.email ?? null
+  const resolvedSource = extractString(row, ['source', 'origine', 'provenance']) ?? contact?.source ?? null
+  const resolvedStatus = extractStatus(row) ?? contact?.statut ?? null
+  const resolvedLien = extractString(row, ['lien', 'link', 'url']) ?? contact?.lien ?? null
+  const resolvedSexe = extractString(row, ['sexe', 'genre', 'civilite']) ?? contact?.sexe ?? null
+  const resolvedDon = extractString(row, ['don', 'donation', 'montant']) ?? contact?.don ?? null
+  const resolvedQualite = extractString(row, ['qualite', 'quality']) ?? contact?.qualite ?? null
+  const resolvedTypeContact = extractString(row, ['type_contact', 'type', 'typeContact']) ?? contact?.type ?? null
+  const resolvedUid = extractString(row, ['uid']) ?? contact?.uid ?? null
+  const resolvedUidSupabase = extractString(row, ['uid_supabase', 'uidSupabase']) ?? contact?.uid_supabase ?? null
+  const resolvedUtilisateur = extractString(row, ['utilisateur', 'user', 'owner']) ?? contact?.utilisateur ?? null
+  const resolvedActions = extractString(row, ['actions', 'action']) ?? contact?.actions ?? null
+  const resolvedStatutAppel = extractString(row, ['statut_appel', 'statutAppel']) ?? contact?.statutAppel ?? null
+  const resolvedStatutRdv = extractString(row, ['statut_rdv', 'statutRDV']) ?? contact?.statutRDV ?? null
+  const resolvedCommentaireRdv = row.commentaire_rdv ?? row.commentaireRDV ?? contact?.commentaireRDV ?? null
+
+  if (!normalizedPhone) {
+    supabaseLogger.warn('[share] Enregistrement call_data_events rejeté (téléphone invalide)', {
+      contactId: resolvedContactId,
+      rawPhone: phone,
+    })
+    return null
+  }
+
+  const validation = callRecordValidator.safeParse({
+    date_rappel: normalizedDateRappel,
+    heure_rappel: normalizedHeureRappel,
+    date_rdv: normalizedDateRdv,
+    heure_rdv: normalizedHeureRdv,
+    date_appel: normalizedDateAppel,
+    heure_appel: normalizedHeureAppel,
+    date_contact: normalizedDateContact,
+    duree_appel: normalizedDuration,
+  })
+
+  if (!validation.success) {
+    supabaseLogger.warn('[share] Enregistrement call_data_events rejeté (formats date/heure invalides)', {
+      contactId: contactId || contact?.id || null,
+      issues: validation.error.issues,
+    })
+    return null
+  }
+
   const metadata = sanitizeMetadataRecord({
-    applied_at: row.applied_at ?? row.appliedAt,
+    applied_at: normalizedAppliedAt ?? undefined,
     old_status: extractString(row, ['old_status', 'oldStatus']),
     new_status: extractStatus(row),
     local_comment: row.commentaire ?? row.comment,
@@ -521,42 +593,40 @@ function buildCallRecord(
 
   return {
     local_event_id: localEventId,
-    contact_id: contactId || contact?.id || null,
+    contact_id: resolvedContactId,
     numero_ligne: numeroLigne,
     prenom: firstName ?? null,
     nom: lastName ?? null,
     telephone: phone ?? null,
     normalized_phone: normalizedPhone,
-    email: extractString(row, ['email', 'mail']) ?? contact?.email ?? null,
-    source: contact?.source ?? extractString(row, ['source', 'origine', 'provenance']) ?? null,
-    statut: contact?.statut ?? extractStatus(row) ?? null,
+    email: resolvedEmail,
+    source: resolvedSource,
+    statut: resolvedStatus,
     commentaire: comment,
-    date_rappel: row.dateRappel ?? contact?.dateRappel ?? null,
-    heure_rappel: row.heureRappel ?? contact?.heureRappel ?? null,
-    date_rdv: row.dateRDV ?? contact?.dateRDV ?? null,
-    heure_rdv: row.heureRDV ?? contact?.heureRDV ?? null,
-    date_appel: row.dateAppel ?? contact?.dateAppel ?? null,
-    heure_appel: row.heureAppel ?? contact?.heureAppel ?? null,
-    duree_appel: row.dureeAppel ?? contact?.dureeAppel ?? null,
-    lien: contact?.lien ?? null,
-    sexe: contact?.sexe ?? null,
-    don: contact?.don ?? null,
-    qualite: contact?.qualite ?? null,
-    type_contact: contact?.type ?? null,
-    date_contact: contact?.date ?? null,
-    uid: contact?.uid ?? null,
-    uid_supabase: contact?.uid_supabase ?? null,
-    utilisateur: contact?.utilisateur ?? null,
-    actions: contact?.actions ?? null,
-    statut_appel: contact?.statutAppel ?? null,
-    statut_rdv: contact?.statutRDV ?? null,
-    commentaire_rdv: contact?.commentaireRDV ?? null,
+    date_rappel: normalizedDateRappel,
+    heure_rappel: normalizedHeureRappel,
+    date_rdv: normalizedDateRdv,
+    heure_rdv: normalizedHeureRdv,
+    date_appel: normalizedDateAppel,
+    heure_appel: normalizedHeureAppel,
+    duree_appel: normalizedDuration,
+    lien: resolvedLien,
+    sexe: resolvedSexe,
+    don: resolvedDon,
+    qualite: resolvedQualite,
+    type_contact: resolvedTypeContact,
+    date_contact: normalizedDateContact,
+    uid: resolvedUid,
+    uid_supabase: resolvedUidSupabase,
+    utilisateur: resolvedUtilisateur,
+    actions: resolvedActions,
+    statut_appel: resolvedStatutAppel,
+    statut_rdv: resolvedStatutRdv,
+    commentaire_rdv: resolvedCommentaireRdv,
     user_uid: auth.id,
     user_email: auth.email,
-    synced_at: timestamp,
-    updated_at: timestamp,
-    created_at: createdAt,
     metadata,
+    applied_at: normalizedAppliedAt ?? undefined,
   }
 }
 
@@ -658,6 +728,10 @@ function normalizePhoneNumber(phone: string): string | null {
     }
   }
   return cleaned
+}
+
+function isValidE164(phone?: string | null): phone is string {
+  return !!phone && /^\+[0-9]{8,15}$/.test(phone)
 }
 
 function isBlacklistStatus(status?: string): boolean {

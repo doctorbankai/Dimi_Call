@@ -5,6 +5,7 @@ import * as XLSX from 'xlsx'; // For Excel parsing and writing
 import { ExportColumnService } from './exportColumnService';
 import { normalizePhoneNumber as normalizePhone } from './phoneUtils';
 import { LogsService } from './logsService';
+import { normalizeIsoDate, normalizeTime24hValue } from '@/utils/datetimeNormalization';
 
 // Re-export normalizePhoneNumber for backward compatibility
 export { normalizePhoneNumber } from './phoneUtils';
@@ -208,69 +209,12 @@ export const saveCallStates = (states: Record<string, { isCalling?: boolean; has
   }
 };
 
-// Fonction pour convertir un numéro de série Excel en date JavaScript
-const excelSerialToDate = (serial: number): Date => {
-  // Excel compte les jours depuis le 1er janvier 1900
-  // Mais il y a un bug historique : Excel considère 1900 comme une année bissextile
-  const excelEpoch = new Date(1899, 11, 30); // 30 décembre 1899
-  const days = Math.floor(serial);
-  const milliseconds = Math.round((serial - days) * 86400000);
-  return new Date(excelEpoch.getTime() + days * 86400000 + milliseconds);
-};
-
-// Fonction pour formater une date au format MM/DD/YYYY
 const formatExcelDate = (serial: number | string): string => {
-  if (typeof serial === 'string') {
-    // Si c'est déjà une chaîne, vérifier si c'est un format de date valide
-    if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(serial)) {
-      return serial; // Déjà au bon format
-    }
-    // Essayer de parser comme nombre
-    const num = parseFloat(serial);
-    if (isNaN(num)) return serial;
-    serial = num;
-  }
-
-  if (typeof serial === 'number' && serial > 1 && serial < 100000) {
-    // C'est probablement un numéro de série Excel
-    const date = excelSerialToDate(serial);
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${month}/${day}/${year}`;
-  }
-
-  return String(serial);
+  return normalizeIsoDate(serial) ?? '';
 };
 
-// Fonction pour formater une heure au format HH:MM AM/PM
 const formatExcelTime = (serial: number | string): string => {
-  if (typeof serial === 'string') {
-    // Si c'est déjà une chaîne, vérifier si c'est un format d'heure valide
-    if (/^\d{1,2}:\d{2}\s*(AM|PM)?$/i.test(serial)) {
-      return serial; // Déjà au bon format
-    }
-    // Essayer de parser comme nombre
-    const num = parseFloat(serial);
-    if (isNaN(num)) return serial;
-    serial = num;
-  }
-
-  if (typeof serial === 'number' && serial >= 0 && serial < 1) {
-    // C'est une fraction de jour (heure Excel)
-    const totalMinutes = Math.round(serial * 1440); // 1440 minutes dans un jour
-    let hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-
-    // Convertir en format 12 heures avec AM/PM
-    const period = hours >= 12 ? 'PM' : 'AM';
-    if (hours > 12) hours -= 12;
-    if (hours === 0) hours = 12;
-
-    return `${hours}:${String(minutes).padStart(2, '0')} ${period}`;
-  }
-
-  return String(serial);
+  return normalizeTime24hValue(serial) ?? '';
 };
 
 // Normalize header names for CSV/Excel import

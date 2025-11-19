@@ -27,6 +27,22 @@ export const statusEvents = sqliteTable('status_events', {
   // Nouvelles colonnes: date et heure d'entrée dans la table (au moment de l'insertion)
   dateEntree: text('dateEntree'),
   heureEntree: text('heureEntree'),
+  numeroLigne: integer('numeroLigne'),
+  source: text('source'),
+  statut: text('statut'),
+  lien: text('lien'),
+  sexe: text('sexe'),
+  don: text('don'),
+  qualite: text('qualite'),
+  type: text('type'),
+  date: text('date'),
+  uid: text('uid'),
+  uidSupabase: text('uid_supabase'),
+  utilisateur: text('utilisateur'),
+  actions: text('actions'),
+  statutAppel: text('statutAppel'),
+  statutRDV: text('statutRDV'),
+  commentaireRDV: text('commentaireRDV'),
 })
 
 export type StatusEvent = typeof statusEvents.$inferSelect
@@ -91,6 +107,22 @@ export function initDb(dbFilePath: string) {
   maybeAdd('dureeAppel', 'TEXT')
   maybeAdd('dateEntree', 'TEXT')
   maybeAdd('heureEntree', 'TEXT')
+  maybeAdd('numeroLigne', 'INTEGER')
+  maybeAdd('source', 'TEXT')
+  maybeAdd('statut', 'TEXT')
+  maybeAdd('lien', 'TEXT')
+  maybeAdd('sexe', 'TEXT')
+  maybeAdd('don', 'TEXT')
+  maybeAdd('qualite', 'TEXT')
+  maybeAdd('type', 'TEXT')
+  maybeAdd('date', 'TEXT')
+  maybeAdd('uid', 'TEXT')
+  maybeAdd('uid_supabase', 'TEXT')
+  maybeAdd('utilisateur', 'TEXT')
+  maybeAdd('actions', 'TEXT')
+  maybeAdd('statutAppel', 'TEXT')
+  maybeAdd('statutRDV', 'TEXT')
+  maybeAdd('commentaireRDV', 'TEXT')
 
   db = drizzle(sqlite)
 }
@@ -114,11 +146,13 @@ export function insertStatusEvent(event: NewStatusEvent): StatusEvent {
   const stmt = sqlite.prepare(`
     INSERT INTO status_events (
       contact_id, old_status, new_status, applied_at, prenom, nom, telephone,
-      email, commentaire, dateRappel, heureRappel, dateRDV, heureRDV, dateAppel, heureAppel, dureeAppel, dateEntree, heureEntree
+      email, commentaire, dateRappel, heureRappel, dateRDV, heureRDV, dateAppel, heureAppel, dureeAppel, dateEntree, heureEntree,
+      numeroLigne, source, statut, lien, sexe, don, qualite, type, date, uid, uid_supabase, utilisateur, actions, statutAppel, statutRDV, commentaireRDV
     )
     VALUES (
       @contactId, @oldStatus, @newStatus, @appliedAt, @prenom, @nom, @telephone,
-      @email, @commentaire, @dateRappel, @heureRappel, @dateRDV, @heureRDV, @dateAppel, @heureAppel, @dureeAppel, @dateEntree, @heureEntree
+      @email, @commentaire, @dateRappel, @heureRappel, @dateRDV, @heureRDV, @dateAppel, @heureAppel, @dureeAppel, @dateEntree, @heureEntree,
+      @numeroLigne, @source, @statut, @lien, @sexe, @don, @qualite, @type, @date, @uid, @uid_supabase, @utilisateur, @actions, @statutAppel, @statutRDV, @commentaireRDV
     )
   `)
   const info = stmt.run({
@@ -140,6 +174,22 @@ export function insertStatusEvent(event: NewStatusEvent): StatusEvent {
     dureeAppel: (event as any).dureeAppel ?? null,
     dateEntree,
     heureEntree,
+    numeroLigne: (event as any).numeroLigne ?? null,
+    source: (event as any).source ?? null,
+    statut: (event as any).statut ?? ((event as any).newStatus ?? (event as any).new_status ?? null),
+    lien: (event as any).lien ?? null,
+    sexe: (event as any).sexe ?? null,
+    don: (event as any).don ?? null,
+    qualite: (event as any).qualite ?? null,
+    type: (event as any).type ?? null,
+    date: (event as any).date ?? null,
+    uid: (event as any).uid ?? null,
+    uid_supabase: (event as any).uid_supabase ?? null,
+    utilisateur: (event as any).utilisateur ?? null,
+    actions: (event as any).actions ?? null,
+    statutAppel: (event as any).statutAppel ?? null,
+    statutRDV: (event as any).statutRDV ?? null,
+    commentaireRDV: (event as any).commentaireRDV ?? null,
   })
   const row = sqlite.prepare(`SELECT * FROM status_events WHERE id = ?`).get(info.lastInsertRowid) as StatusEvent
   return row
@@ -196,14 +246,42 @@ export function updateStatusEvent(payload: { id: number } & Record<string, any>)
     commentaire: 'commentaire',
     comment: 'commentaire',
     dateRappel: 'dateRappel',
+    date_rappel: 'dateRappel',
     heureRappel: 'heureRappel',
+    heure_rappel: 'heureRappel',
     dateRDV: 'dateRDV',
+    date_rdv: 'dateRDV',
     heureRDV: 'heureRDV',
+    heure_rdv: 'heureRDV',
     dateAppel: 'dateAppel',
+    date_appel: 'dateAppel',
     heureAppel: 'heureAppel',
+    heure_appel: 'heureAppel',
     dureeAppel: 'dureeAppel',
+    duree_appel: 'dureeAppel',
     new_status: 'new_status',
     newStatus: 'new_status',
+    numeroLigne: 'numeroLigne',
+    numero_ligne: 'numeroLigne',
+    source: 'source',
+    statut: 'statut',
+    lien: 'lien',
+    sexe: 'sexe',
+    don: 'don',
+    qualite: 'qualite',
+    type: 'type',
+    date: 'date',
+    uid: 'uid',
+    uid_supabase: 'uid_supabase',
+    uidSupabase: 'uid_supabase',
+    utilisateur: 'utilisateur',
+    actions: 'actions',
+    statutAppel: 'statutAppel',
+    statut_appel: 'statutAppel',
+    statutRDV: 'statutRDV',
+    statut_rdv: 'statutRDV',
+    commentaireRDV: 'commentaireRDV',
+    commentaire_rdv: 'commentaireRDV',
   }
 
   const entries = Object.entries(rest)
@@ -240,10 +318,12 @@ export function replaceAllStatusEvents(events: StatusEvent[]): { success: boolea
     const insert = sqlite!.prepare(`
       INSERT INTO status_events (
         id, contact_id, old_status, new_status, applied_at, prenom, nom, telephone,
-        email, commentaire, dateRappel, heureRappel, dateRDV, heureRDV, dateAppel, heureAppel, dureeAppel, dateEntree, heureEntree
+        email, commentaire, dateRappel, heureRappel, dateRDV, heureRDV, dateAppel, heureAppel, dureeAppel, dateEntree, heureEntree,
+        numeroLigne, source, statut, lien, sexe, don, qualite, type, date, uid, uid_supabase, utilisateur, actions, statutAppel, statutRDV, commentaireRDV
       ) VALUES (
         @id, @contact_id, @old_status, @new_status, @applied_at, @prenom, @nom, @telephone,
-        @email, @commentaire, @dateRappel, @heureRappel, @dateRDV, @heureRDV, @dateAppel, @heureAppel, @dureeAppel, @dateEntree, @heureEntree
+        @email, @commentaire, @dateRappel, @heureRappel, @dateRDV, @heureRDV, @dateAppel, @heureAppel, @dureeAppel, @dateEntree, @heureEntree,
+        @numeroLigne, @source, @statut, @lien, @sexe, @don, @qualite, @type, @date, @uid, @uid_supabase, @utilisateur, @actions, @statutAppel, @statutRDV, @commentaireRDV
       )
     `)
     for (const r of rows) {
@@ -267,6 +347,22 @@ export function replaceAllStatusEvents(events: StatusEvent[]): { success: boolea
         dureeAppel: (r as any).dureeAppel ?? null,
         dateEntree: (r as any).dateEntree ?? null,
         heureEntree: (r as any).heureEntree ?? null,
+        numeroLigne: (r as any).numeroLigne ?? null,
+        source: (r as any).source ?? null,
+        statut: (r as any).statut ?? (r as any).new_status ?? (r as any).newStatus ?? null,
+        lien: (r as any).lien ?? null,
+        sexe: (r as any).sexe ?? null,
+        don: (r as any).don ?? null,
+        qualite: (r as any).qualite ?? null,
+        type: (r as any).type ?? null,
+        date: (r as any).date ?? null,
+        uid: (r as any).uid ?? null,
+        uid_supabase: (r as any).uid_supabase ?? (r as any).uidSupabase ?? null,
+        utilisateur: (r as any).utilisateur ?? null,
+        actions: (r as any).actions ?? null,
+        statutAppel: (r as any).statutAppel ?? null,
+        statutRDV: (r as any).statutRDV ?? null,
+        commentaireRDV: (r as any).commentaireRDV ?? null,
       }
       insert.run(rec)
     }

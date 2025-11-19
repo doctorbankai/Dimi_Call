@@ -834,11 +834,12 @@ app.whenReady().then(async () => {
       if (canceled || !filePath) return { success: false, error: 'Annulé' }
 
       // Utiliser le fallback CSV writer pour garantir un CSV correct
-      const { replaceAllStatusEvents: _unused, ...jsonModule } = localDbJsonStatic as any
       const headers = [
         'id','contact_id','old_status','new_status','applied_at','prenom','nom','telephone',
-        'email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree'
+        'email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree',
+        'numeroLigne','source','statut','lien','sexe','don','qualite','type','date','uid','uid_supabase','utilisateur','actions','statutAppel','statutRDV','commentaireRDV'
       ]
+      const { replaceAllStatusEvents: _unused, ...jsonModule } = localDbJsonStatic as any
       const csvEscape = (v: any) => {
         if (v === null || v === undefined) return ''
         const s = String(v)
@@ -896,7 +897,7 @@ app.whenReady().then(async () => {
         const headers = splitLine(lines[0])
         const idx = (name: string) => headers.findIndex(h => h === name)
         const mapIdx: any = {}
-        const wanted = ['id','contact_id','old_status','new_status','applied_at','prenom','nom','telephone','email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree']
+        const wanted = ['id','contact_id','old_status','new_status','applied_at','prenom','nom','telephone','email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree','numeroLigne','source','statut','lien','sexe','don','qualite','type','date','uid','uid_supabase','utilisateur','actions','statutAppel','statutRDV','commentaireRDV']
         wanted.forEach(h => { mapIdx[h] = idx(h) })
         const rows: any[] = []
         for (let i = 1; i < lines.length; i++) {
@@ -965,7 +966,8 @@ app.whenReady().then(async () => {
 
       const headers = [
         'id','contact_id','old_status','new_status','applied_at','prenom','nom','telephone',
-        'email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree'
+        'email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree',
+        'numeroLigne','source','statut','lien','sexe','don','qualite','type','date','uid','uid_supabase','utilisateur','actions','statutAppel','statutRDV','commentaireRDV'
       ]
       // Normaliser l'ordre des colonnes
       const data = rows.map(r => {
@@ -1004,7 +1006,7 @@ app.whenReady().then(async () => {
 
       const filePath = filePaths[0]
       const ext = (filePath.split('.').pop() || '').toLowerCase()
-      const wanted = ['id','contact_id','old_status','new_status','applied_at','prenom','nom','telephone','email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree']
+      const wanted = ['id','contact_id','old_status','new_status','applied_at','prenom','nom','telephone','email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree','numeroLigne','source','statut','lien','sexe','don','qualite','type','date','uid','uid_supabase','utilisateur','actions','statutAppel','statutRDV','commentaireRDV']
 
       let rows: any[] = []
       if (ext === 'csv') {
