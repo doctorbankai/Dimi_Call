@@ -17,6 +17,7 @@ const STORAGE_PREFIX = "dimicall.notifications.v1";
 const STORAGE_PREFERENCES = `${STORAGE_PREFIX}.preferences`;
 const STORAGE_ACKS = `${STORAGE_PREFIX}.acks`;
 const STORAGE_SENT = `${STORAGE_PREFIX}.sent`;
+const STORAGE_DISMISSED = `${STORAGE_PREFIX}.dismissed`;
 
 const DEFAULT_PREFERENCES: NotificationPreferences = {
   desktopEnabled: true,
@@ -253,6 +254,7 @@ export function useNotificationCenter(): UseNotificationCenterState {
   const isInitialLoadRef = useRef(true);
   const isFetchingRef = useRef(false);
   const queuedRefreshRef = useRef(false);
+  const dismissedRef = useRef<Set<string>>(readSet(STORAGE_DISMISSED));
 
   const persistAcks = useCallback(() => {
     writeSet(STORAGE_ACKS, acksRef.current);
@@ -262,12 +264,26 @@ export function useNotificationCenter(): UseNotificationCenterState {
     writeSet(STORAGE_SENT, sentRef.current);
   }, []);
 
+  const persistDismissed = useCallback(() => {
+    writeSet(STORAGE_DISMISSED, dismissedRef.current);
+  }, []);
+
   const computeUnread = useCallback(
     (nextBuckets: NotificationBuckets) => {
       const upcoming = [...nextBuckets.rappel, ...nextBuckets.rdv];
       return upcoming.filter((entry) => !acksRef.current.has(entry.id)).length;
     },
     [acksRef]
+  );
+
+  const applyEntries = useCallback(
+    (nextEntries: NotificationEntry[]) => {
+      const grouped = groupEntries(nextEntries);
+      setEntries(nextEntries);
+      setBuckets(grouped);
+      setUnreadCount(computeUnread(grouped));
+    },
+    [computeUnread]
   );
 
   const refresh = useCallback(async () => {
@@ -283,14 +299,12 @@ export function useNotificationCenter(): UseNotificationCenterState {
     let succeeded = false;
     try {
       const events = await calendarEventsService.getAllEvents();
-      const entries = events
+      const parsedEntries = events
         .map(toNotificationEntry)
         .filter((entry): entry is NotificationEntry => Boolean(entry));
 
-      const grouped = groupEntries(entries);
-      setEntries(entries);
-      setBuckets(grouped);
-      setUnreadCount(computeUnread(grouped));
+      const filteredEntries = parsedEntries.filter((entry) => !dismissedRef.current.has(entry.id));
+      applyEntries(filteredEntries);
       const updatedAt = Date.now();
       setLastUpdated(updatedAt);
       setLastUpdatedLabel(formatLastUpdatedLabel(updatedAt));
@@ -310,7 +324,7 @@ export function useNotificationCenter(): UseNotificationCenterState {
         refresh();
       }
     }
-  }, [computeUnread]);
+  }, [applyEntries]);
 
   const clearScheduledNotifications = useCallback(() => {
     for (const timeout of timeoutsRef.current.values()) {
@@ -464,6 +478,25 @@ export function useNotificationCenter(): UseNotificationCenterState {
     markAsRead(allIds);
   }, [buckets, markAsRead]);
 
+  const dismissEntries = useCallback(
+    (ids: string[]) => {
+      let dirty = false;
+      ids.forEach((id) => {
+        if (!dismissedRef.current.has(id)) {
+          dismissedRef.current.add(id);
+          dirty = true;
+        }
+      });
+      if (!dirty) {
+        return;
+      }
+      persistDismissed();
+      const remaining = entries.filter((entry) => !dismissedRef.current.has(entry.id));
+      applyEntries(remaining);
+    },
+    [applyEntries, entries, persistDismissed]
+  );
+
   const toggleDesktopEnabled = useCallback(
     async (enabled: boolean) => {
       if (enabled) {
@@ -491,9 +524,10 @@ export function useNotificationCenter(): UseNotificationCenterState {
       refresh,
       markAllAsRead,
       markAsRead,
+      dismissEntries,
       toggleDesktopEnabled,
     }),
-    [status, error, buckets, lastUpdated, unreadCount, lastUpdatedLabel, preferences, entries, refresh, markAllAsRead, markAsRead, toggleDesktopEnabled]
+    [status, error, buckets, lastUpdated, unreadCount, lastUpdatedLabel, preferences, entries, refresh, markAllAsRead, markAsRead, dismissEntries, toggleDesktopEnabled]
   );
 
   return state;

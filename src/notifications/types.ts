@@ -70,5 +70,9 @@ export interface UseNotificationCenterState {
   refresh: () => Promise<void>;
   markAllAsRead: () => void;
   markAsRead: (ids: string[]) => void;
+  /**
+   * Masquer définitivement une ou plusieurs notifications (ex: tâches terminées)
+   */
+  dismissEntries: (ids: string[]) => void;
   toggleDesktopEnabled: (enabled: boolean) => Promise<void>;
 }

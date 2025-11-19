@@ -123,6 +123,8 @@ interface AnnuairePageProps {
   onGoogle?: () => void;
   onDirectLink?: () => void;
   onContactSelect?: (contact: DirectoryContact | null) => void;
+  focusContact?: { id?: string; name?: string } | null;
+  onContactFocusConsumed?: () => void;
 }
 
 const TYPE_BADGE_LABELS: Record<HistoryType, string> = {
@@ -515,7 +517,9 @@ export function AnnuairePage({
   onLinkedIn,
   onGoogle,
   onDirectLink,
-  onContactSelect
+  onContactSelect,
+  focusContact,
+  onContactFocusConsumed,
 }: AnnuairePageProps) {
   const [contacts, setContacts] = useState<DirectoryContact[]>([]);
   const [filteredContacts, setFilteredContacts] = useState<DirectoryContact[]>([]);
@@ -1591,6 +1595,21 @@ export function AnnuairePage({
     setSelectedContact(contact);
     setIsContactDialogOpen(true);
   };
+
+  useEffect(() => {
+    if (!focusContact || loading) return;
+    const normalizedName = focusContact.name?.trim().toLowerCase();
+    const target =
+      contacts.find((c) => focusContact.id && c.id === focusContact.id) ||
+      (normalizedName ? contacts.find((c) => c.fullName.toLowerCase().includes(normalizedName)) : undefined);
+    if (target) {
+      setSelectedContact(target);
+      setIsContactDialogOpen(true);
+      setSearchTerm((prev) => (normalizedName ? focusContact.name ?? prev : prev));
+      onContactSelect?.(target);
+    }
+    onContactFocusConsumed?.();
+  }, [focusContact, loading, contacts, onContactSelect, onContactFocusConsumed]);
 
   const getInitials = (contact: DirectoryContact) => {
     const tokens = contact.fullName.split(/\s+/).filter(Boolean);

@@ -14,6 +14,7 @@ type HeaderActionsProps = {
   updateDownloaded?: boolean
   adbConnected?: boolean
   onNavigate?: (mode: 'appels-cards' | 'calendar-2' | 'graph' | 'db' | 'annuaire' | 'files') => void
+  onOpenAnnuaireContact?: (id?: string, name?: string) => void
 }
 
 export const HeaderActions: React.FC<HeaderActionsProps> = ({
@@ -23,6 +24,7 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
   updateDownloaded = false,
   adbConnected = false,
   onNavigate,
+  onOpenAnnuaireContact,
 }) => {
   const auth = useSupabaseAuth()
   const email = auth.user?.email || 'user'
@@ -45,6 +47,13 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
     <div className="ml-auto flex items-center gap-2">
       <NotificationCenterButton
         onNavigateToCalendar={() => onNavigate?.('calendar-2')}
+        onNavigateToAnnuaire={(id, name) => {
+          if (onOpenAnnuaireContact) {
+            onOpenAnnuaireContact(id, name)
+          } else {
+            onNavigate?.('annuaire')
+          }
+        }}
         updateDownloaded={updateDownloaded}
         adbConnected={adbConnected}
       />

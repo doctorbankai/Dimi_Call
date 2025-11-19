@@ -15,6 +15,7 @@ type MainHeaderProps = {
   contacts?: Contact[]
   onPickContact?: (c: Contact) => void
   onNavigate?: (mode: 'appels-cards' | 'calendar-2' | 'graph' | 'db' | 'annuaire' | 'files') => void
+  onOpenAnnuaireContact?: (id?: string, name?: string) => void
 }
 
 export const MainHeader: React.FC<MainHeaderProps> = ({
@@ -26,6 +27,7 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
   contacts = [],
   onPickContact,
   onNavigate,
+  onOpenAnnuaireContact,
 }) => {
   const [open, setOpen] = React.useState(false)
 
@@ -59,6 +61,7 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
           updateDownloaded={updateDownloaded}
           adbConnected={adbConnected}
           onNavigate={onNavigate}
+          onOpenAnnuaireContact={onOpenAnnuaireContact}
         />
       </div>
       <GlobalCommand

@@ -329,6 +329,7 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
     }
     return 'appels-cards'
   });
+  const [annuaireFocusContact, setAnnuaireFocusContact] = useState<{ id?: string; name?: string } | null>(null);
   // Filtres globaux par vue pour uniformit
   const [graphRange, setGraphRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
   const [dbRange, setDbRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
@@ -799,6 +800,11 @@ Dimitri MOREL - Arcanis Conseil`;
   const showNotification = useCallback((type: 'success' | 'error' | 'info', message: string, duration: number = 3000) => {
     // Notifications dsactives - fonction no-op
     return;
+  }, []);
+
+  const handleOpenAnnuaireContact = useCallback((id?: string, name?: string) => {
+    setAnnuaireFocusContact({ id, name });
+    setViewMode('annuaire');
   }, []);
 
   const handleTitleBarAdbClick = useCallback(
@@ -2796,6 +2802,7 @@ Dimitri MOREL - Arcanis Conseil`;
                   setSelectedContact(c)
                 }}
                 onNavigate={(mode) => setViewMode(mode)}
+                onOpenAnnuaireContact={handleOpenAnnuaireContact}
               />
               <main className={cn(
                 "flex-1 flex flex-col pt-2 md:pt-3 pb-3 md:pb-5 px-3 md:px-5 space-y-3 overflow-hidden w-full min-h-0"
@@ -3474,6 +3481,8 @@ Dimitri MOREL - Arcanis Conseil`;
                     onLinkedIn={() => handleLinkedInSearch()}
                     onGoogle={() => handleGoogleSearch()}
                     onDirectLink={() => handleDirectLink()}
+                    focusContact={annuaireFocusContact}
+                    onContactFocusConsumed={() => setAnnuaireFocusContact(null)}
                   />
                 ) : viewMode === 'files' ? (
                   <FilesPage contacts={contacts} />
