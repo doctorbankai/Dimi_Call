@@ -228,9 +228,15 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const { mode } = useCallMode();
   // Authentication hook
   const auth = useSupabaseAuth();
+  const userDisplayName = useMemo(() => {
+    const metadata = auth.user?.user_metadata as Record<string, unknown> | undefined;
+    const fullName = typeof metadata?.full_name === 'string' ? metadata.full_name : undefined;
+    const shortName = typeof metadata?.name === 'string' ? metadata.name : undefined;
+    return (fullName && fullName.trim()) || (shortName && shortName.trim()) || auth.user?.email || 'Utilisateur DimiCall';
+  }, [auth.user]);
 
   // Auto-update hook
-  const { updateState, installUpdate, isUpdateEnabled } = useAutoUpdate();
+  const { updateState, installUpdate, isUpdateEnabled, betaPreferences } = useAutoUpdate();
 
 
 
@@ -794,6 +800,29 @@ Dimitri MOREL - Arcanis Conseil`;
     // Notifications dsactives - fonction no-op
     return;
   }, []);
+
+  const handleTitleBarAdbClick = useCallback(
+    async (event: React.MouseEvent<HTMLButtonElement>) => {
+      if (event.ctrlKey || event.metaKey) {
+        setIsAdbLogsDialogOpen(true);
+        return;
+      }
+
+      if (adbConnectionState.isConnected) {
+        await disconnectAdb();
+        showNotification('info', 'ADB déconnecté');
+        return;
+      }
+
+      if (adbConnecting) {
+        return;
+      }
+
+      const success = await connectAdb();
+      showNotification(success ? 'success' : 'error', success ? 'ADB connecté' : 'Échec de connexion ADB');
+    },
+    [adbConnectionState.isConnected, adbConnecting, connectAdb, disconnectAdb, setIsAdbLogsDialogOpen, showNotification]
+  );
 
   // Handler pour l'authentification russie - removed (no longer needed with full page)
   // Effect pour vrifier l'authentification - removed (handled by conditional render)
@@ -2680,8 +2709,19 @@ Dimitri MOREL - Arcanis Conseil`;
           theme={theme}
         />
         <SidebarInset className="flex-1 min-w-0 flex flex-col min-h-0 transition-all duration-200 ease-linear pt-0 mt-0">
-          {/* Barre de titre personnalise pour Electron */}
-          <TitleBar theme={theme} />
+          {/* Barre de titre personnalisée pour Electron */}
+          <TitleBar
+            theme={theme}
+            userName={userDisplayName}
+            adbConnectionState={adbConnectionState}
+            adbConnecting={adbConnecting}
+            onAdbClick={handleTitleBarAdbClick}
+            updateState={updateState}
+            onUpdateClick={installUpdate}
+            onUpdateConfirmationOpen={() => setIsUpdateConfirmationOpen(true)}
+            betaPreferences={betaPreferences}
+            isUpdateEnabled={isUpdateEnabled}
+          />
 
           {/* Contenu principal */}
           <main className="flex flex-col flex-1 w-full min-h-0 min-w-0 overflow-hidden h-full">
