@@ -7,16 +7,13 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Theme } from '../types';
-import packageJson from '../../package.json';
 
 interface CustomMenuBarProps {
   theme: Theme;
-  userName?: string;
 }
 
 export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
   theme,
-  userName = 'DimiCall',
 }) => {
   const [isMaximized, setIsMaximized] = useState(false);
   const [isElectron, setIsElectron] = useState(false);
@@ -67,14 +64,11 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
     }
   };
 
-  const appVersion = packageJson?.version ?? '';
   const noDragRegion = { WebkitAppRegion: 'no-drag' } as React.CSSProperties;
 
   const menuBarBg = 'bg-[hsl(var(--background))] border-b border-[hsl(var(--border))]';
   const buttonHoverBg = 'hover:bg-[hsl(var(--muted))]';
   const textColor = 'text-[hsl(var(--foreground))]';
-  const displayName = userName || 'DimiCall';
-  const versionTone = theme === Theme.Dark ? 'text-muted-foreground/70' : 'text-muted-foreground/80';
 
   if (!isElectron) {
     return null;
@@ -91,8 +85,7 @@ export const CustomMenuBar: React.FC<CustomMenuBarProps> = ({
       >
         <div className="flex items-center flex-1 h-full px-3 overflow-hidden justify-between">
           <div className="flex items-center gap-2 text-[12px] font-semibold tracking-tight text-foreground/90 pointer-events-none select-none">
-            <span className="text-sm font-bold leading-none">{displayName}</span>
-            <span className={cn('text-xs leading-none', versionTone)}>v{appVersion}</span>
+            <span className="text-sm font-bold leading-none">DimiCall</span>
           </div>
         </div>
 

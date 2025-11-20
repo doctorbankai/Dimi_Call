@@ -2708,7 +2708,6 @@ Dimitri MOREL - Arcanis Conseil`;
           {/* Barre de titre personnalisée pour Electron */}
           <TitleBar
             theme={theme}
-            userName={userDisplayName}
           />
 
           {/* Contenu principal */}
