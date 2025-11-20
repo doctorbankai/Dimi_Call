@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useState, useCallback } from "react"
 import type { ReactNode } from "react"
 import { AlertTriangle, Bell, BellOff, CalendarDays, Clock, ExternalLink, Phone, RefreshCcw, Smartphone, X } from "lucide-react"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
@@ -103,7 +103,7 @@ const NotificationItem = ({
   onOpenAnnuaire,
 }: {
   entry: NotificationEntry
-  onDismiss?: (id: string) => void
+  onDismiss?: (entry: NotificationEntry) => void
   onOpenAnnuaire?: (entry: NotificationEntry) => void
 }) => {
   const isRdv = entry.type === "rdv"
@@ -156,7 +156,7 @@ const NotificationItem = ({
                 variant="ghost"
                 size="icon"
                 className="size-8 text-muted-foreground hover:text-destructive"
-                onClick={() => onDismiss(entry.id)}
+                onClick={() => onDismiss(entry)}
               >
                 <X className="size-4" />
               </Button>
@@ -196,7 +196,7 @@ const OverdueItem = ({
   onOpenAnnuaire,
 }: {
   entry: NotificationEntry
-  onDismiss?: (id: string) => void
+  onDismiss?: (entry: NotificationEntry) => void
   onOpenAnnuaire?: (entry: NotificationEntry) => void
 }) => {
   const meta = entry.event.metadata
@@ -236,7 +236,7 @@ const OverdueItem = ({
                 variant="ghost"
                 size="icon"
                 className="size-8 text-muted-foreground hover:text-destructive"
-                onClick={() => onDismiss(entry.id)}
+                onClick={() => onDismiss(entry)}
               >
                 <X className="size-4" />
               </Button>
@@ -302,6 +302,26 @@ export const NotificationCenterButton = ({
   updateDownloaded = false,
   adbConnected = false,
 }: NotificationCenterButtonProps) => {
+  const updateEventInDb = useCallback(async (entry: NotificationEntry) => {
+    const updater = (window as any)?.electronAPI?.localdb?.update;
+    const recordId = entry.event.metadata?.source?.id ?? entry.event.metadata?.recordId ?? null;
+    if (!updater || !recordId) return;
+    const payload: Record<string, unknown> = { id: recordId };
+    if (entry.type === "rappel") {
+      payload.dateRappel = null;
+      payload.heureRappel = null;
+    } else if (entry.type === "rdv") {
+      payload.dateRDV = null;
+      payload.heureRDV = null;
+    }
+    try {
+      await updater(payload);
+      window.dispatchEvent(new Event("localdb-updated"));
+    } catch (error) {
+      console.error("[NotificationCenter] update event failed", error);
+    }
+  }, []);
+
   const [open, setOpen] = useState(false)
   const center = useNotificationCenter()
   const { markAllAsRead, markAsRead, dismissEntries, toggleDesktopEnabled, refresh } = center
@@ -344,9 +364,18 @@ export const NotificationCenterButton = ({
     [center.entries]
   )
 
-  const handleDismissEntry = (id: string) => {
-    dismissEntries([id])
-    markAsRead([id])
+  const handleDismissEntry = async (entry: NotificationEntry) => {
+    dismissEntries([entry.id])
+    markAsRead([entry.id])
+    await updateEventInDb(entry)
+    window.dispatchEvent(
+      new CustomEvent("notifications-dimicall-dismiss", {
+        detail: {
+          recordId: entry.event.metadata?.recordId ?? entry.event.metadata?.source?.id,
+          eventId: entry.event.id,
+        },
+      })
+    )
   }
 
   const handleOpenAnnuaire = (entry: NotificationEntry) => {

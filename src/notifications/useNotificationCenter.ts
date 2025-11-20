@@ -18,6 +18,7 @@ const STORAGE_PREFERENCES = `${STORAGE_PREFIX}.preferences`;
 const STORAGE_ACKS = `${STORAGE_PREFIX}.acks`;
 const STORAGE_SENT = `${STORAGE_PREFIX}.sent`;
 const STORAGE_DISMISSED = `${STORAGE_PREFIX}.dismissed`;
+const EVENT_DISMISS = "notifications-dimicall-dismiss";
 
 const DEFAULT_PREFERENCES: NotificationPreferences = {
   desktopEnabled: true,
@@ -303,6 +304,41 @@ export function useNotificationCenter(): UseNotificationCenterState {
         .map(toNotificationEntry)
         .filter((entry): entry is NotificationEntry => Boolean(entry));
 
+      const validIds = new Set(parsedEntries.map((entry) => entry.id));
+
+      // Nettoyage des anciens flags (acks/dismissed) qui ne correspondent plus à des événements existants
+      const cleanedDismissed = Array.from(dismissedRef.current).filter((id) => validIds.has(id));
+      const cleanedAcks = Array.from(acksRef.current).filter((id) => validIds.has(id));
+      dismissedRef.current = new Set(cleanedDismissed);
+      acksRef.current = new Set(cleanedAcks);
+      persistDismissed();
+      persistAcks();
+
+      // Réconciliation : auto-fermeture en base des événements marqués comme dismiss côté notifications
+      if (typeof window !== "undefined") {
+        const updater = (window as any)?.electronAPI?.localdb?.update;
+        if (typeof updater === "function") {
+          const dismissedEvents = parsedEntries.filter((entry) => dismissedRef.current.has(entry.id));
+          for (const entry of dismissedEvents) {
+            const recordId = entry.event.metadata?.source?.id ?? entry.event.metadata?.recordId;
+            if (!recordId) continue;
+            const payload: Record<string, unknown> = { id: recordId };
+            if (entry.type === "rappel") {
+              payload.dateRappel = null;
+              payload.heureRappel = null;
+            } else if (entry.type === "rdv") {
+              payload.dateRDV = null;
+              payload.heureRDV = null;
+            }
+            try {
+              await updater(payload);
+            } catch (error) {
+              console.error("[useNotificationCenter] Impossible de synchroniser l'événement rejeté", error);
+            }
+          }
+        }
+      }
+
       const filteredEntries = parsedEntries.filter((entry) => !dismissedRef.current.has(entry.id));
       applyEntries(filteredEntries);
       const updatedAt = Date.now();
@@ -324,7 +360,7 @@ export function useNotificationCenter(): UseNotificationCenterState {
         refresh();
       }
     }
-  }, [applyEntries]);
+  }, [applyEntries, persistAcks, persistDismissed]);
 
   const clearScheduledNotifications = useCallback(() => {
     for (const timeout of timeoutsRef.current.values()) {
@@ -444,6 +480,32 @@ export function useNotificationCenter(): UseNotificationCenterState {
       }
     };
   }, [refresh]);
+
+  // Synchronisation descendante : quand le calendrier valide un événement, retirer la notification correspondante
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const custom = event as CustomEvent<{ recordId?: string | number; eventId?: number }>;
+      const recordId = custom.detail?.recordId;
+      const eventId = custom.detail?.eventId;
+      if (!recordId && !eventId) return;
+      const remaining = entries.filter((entry) => {
+        const sourceId = entry.event.metadata?.recordId ?? entry.event.metadata?.source?.id ?? entry.event.id;
+        if (recordId && String(sourceId) === String(recordId)) return false;
+        if (eventId && entry.event.id === eventId) return false;
+        return true;
+      });
+      applyEntries(remaining);
+    };
+
+    if (hasWindow) {
+      window.addEventListener(EVENT_DISMISS, handler as EventListener);
+    }
+    return () => {
+      if (hasWindow) {
+        window.removeEventListener(EVENT_DISMISS, handler as EventListener);
+      }
+    };
+  }, [applyEntries, entries]);
 
   useEffect(() => {
     writeJsonToStorage(STORAGE_PREFERENCES, preferences);

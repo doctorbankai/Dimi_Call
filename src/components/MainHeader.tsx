@@ -5,6 +5,9 @@ import SearchInput from '@/components/SearchInput'
 import HeaderActions from '@/components/HeaderActions'
 import { Theme, Contact } from '@/types'
 import GlobalCommand from '@/components/GlobalCommand'
+import { BetaPreferences } from '@/types/update'
+import type { UpdateState } from '@/types/update'
+import { AdbConnectionState } from '@/services/adbService'
 
 type MainHeaderProps = {
   theme: Theme
@@ -16,6 +19,14 @@ type MainHeaderProps = {
   onPickContact?: (c: Contact) => void
   onNavigate?: (mode: 'appels-cards' | 'calendar-2' | 'graph' | 'db' | 'annuaire' | 'files') => void
   onOpenAnnuaireContact?: (id?: string, name?: string) => void
+  updateState?: UpdateState
+  onUpdateClick?: () => void
+  onUpdateConfirmationOpen?: () => void
+  betaPreferences?: BetaPreferences | null
+  isUpdateEnabled?: boolean
+  adbConnectionState?: AdbConnectionState
+  adbConnecting?: boolean
+  onAdbClick?: (event: React.MouseEvent<HTMLButtonElement>) => void
 }
 
 export const MainHeader: React.FC<MainHeaderProps> = ({
@@ -28,6 +39,14 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
   onPickContact,
   onNavigate,
   onOpenAnnuaireContact,
+  updateState,
+  onUpdateClick,
+  onUpdateConfirmationOpen,
+  betaPreferences,
+  isUpdateEnabled,
+  adbConnectionState,
+  adbConnecting,
+  onAdbClick,
 }) => {
   const [open, setOpen] = React.useState(false)
 
@@ -62,6 +81,14 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
           adbConnected={adbConnected}
           onNavigate={onNavigate}
           onOpenAnnuaireContact={onOpenAnnuaireContact}
+          updateState={updateState}
+          onUpdateClick={onUpdateClick}
+          onUpdateConfirmationOpen={onUpdateConfirmationOpen}
+          betaPreferences={betaPreferences}
+          isUpdateEnabled={isUpdateEnabled}
+          adbConnectionState={adbConnectionState}
+          adbConnecting={adbConnecting}
+          onAdbClick={onAdbClick}
         />
       </div>
       <GlobalCommand

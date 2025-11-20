@@ -22,6 +22,8 @@ interface ICalendarContext {
   setLocalEvents: Dispatch<SetStateAction<IEvent[]>>;
   view: TCalendarView;
   setView: (view: TCalendarView) => void;
+  openAnnuaireContact?: (contactId?: string, contactName?: string) => void;
+  completeEvent?: (event: IEvent) => Promise<void> | void;
 }
 
 const CalendarContext = createContext({} as ICalendarContext);
@@ -38,7 +40,19 @@ const WORKING_HOURS = {
 
 const VISIBLE_HOURS = { from: 7, to: 18 };
 
-export function CalendarProvider({ children, users, events }: { children: React.ReactNode; users: IUser[]; events: IEvent[] }) {
+export function CalendarProvider({
+  children,
+  users,
+  events,
+  onOpenAnnuaireContact,
+  onCompleteEvent,
+}: {
+  children: React.ReactNode;
+  users: IUser[];
+  events: IEvent[];
+  onOpenAnnuaireContact?: (contactId?: string, contactName?: string) => void;
+  onCompleteEvent?: (event: IEvent) => Promise<void> | void;
+}) {
   const [badgeVariant, setBadgeVariant] = useState<TBadgeVariant>("colored");
   const [visibleHours, setVisibleHours] = useState<TVisibleHours>(VISIBLE_HOURS);
   const [workingHours, setWorkingHours] = useState<TWorkingHours>(WORKING_HOURS);
@@ -77,6 +91,8 @@ export function CalendarProvider({ children, users, events }: { children: React.
         setLocalEvents,
         view,
         setView,
+        openAnnuaireContact: onOpenAnnuaireContact,
+        completeEvent: onCompleteEvent,
       }}
     >
       {children}

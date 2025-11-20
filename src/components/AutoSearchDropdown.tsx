@@ -27,6 +27,9 @@ export const loadAutoSearchMode = (): 'disabled' | 'linkedin' | 'linkedin-name' 
   try {
     const saved = localStorage.getItem(AUTO_SEARCH_MODE_KEY)
     if (saved && ['disabled', 'linkedin', 'linkedin-name', 'linkedin-name-type', 'google', 'link'].includes(saved)) {
+      if (saved === 'linkedin-name') {
+        return 'linkedin-name-type'
+      }
       return saved as 'disabled' | 'linkedin' | 'linkedin-name' | 'linkedin-name-type' | 'google' | 'link'
     }
   } catch (error) {
@@ -68,24 +71,10 @@ export const AutoSearchDropdown: React.FC<AutoSearchDropdownProps> = ({
       try {
         switch (autoSearchMode) {
           case 'linkedin':
-            // Mode complet: Prénom + Nom + Type + Source
+          case 'linkedin-name':
+          case 'linkedin-name-type':
             if (selectedContact.prenom || selectedContact.nom) {
               onLinkedInSearch()
-            }
-            break
-          case 'linkedin-name':
-            // Mode simple: Prénom + Nom uniquement
-            if (selectedContact.prenom || selectedContact.nom) {
-              const { searchLinkedIn } = require('../lib/utils')
-              searchLinkedIn(selectedContact.prenom || '', selectedContact.nom || '')
-            }
-            break
-          case 'linkedin-name-type':
-            // Mode intermédiaire: Prénom + Nom + Type (ou Source si Type n'existe pas)
-            if (selectedContact.prenom || selectedContact.nom) {
-              const { searchLinkedIn } = require('../lib/utils')
-              const typeOrSource = selectedContact.type || selectedContact.source || ''
-              searchLinkedIn(selectedContact.prenom || '', selectedContact.nom || '', typeOrSource)
             }
             break
           case 'google':
@@ -137,13 +126,9 @@ export const AutoSearchDropdown: React.FC<AutoSearchDropdownProps> = ({
             <span>Désactivé</span>
           </DropdownMenuRadioItem>
           <DropdownMenuSeparator />
-          <DropdownMenuRadioItem value="linkedin-name">
-            <Linkedin className="mr-2 h-4 w-4 text-blue-500" />
-            <span>LinkedIn (Prénom + Nom)</span>
-          </DropdownMenuRadioItem>
           <DropdownMenuRadioItem value="linkedin-name-type">
             <Linkedin className="mr-2 h-4 w-4 text-blue-500" />
-            <span>LinkedIn (Prénom + Nom + Type)</span>
+            <span>LinkedIn</span>
           </DropdownMenuRadioItem>
           <DropdownMenuSeparator />
           <DropdownMenuRadioItem value="google">

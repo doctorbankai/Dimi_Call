@@ -519,11 +519,11 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
         return saved as 'disabled' | 'linkedin' | 'linkedin-name' | 'linkedin-name-type' | 'google' | 'link'
       }
 
-      // console.log('ℹ️ [AUTO-SEARCH] Aucun mode valide, défaut linkedin')
-      return 'linkedin'
+      // console.log('ℹ️ [AUTO-SEARCH] Aucun mode valide, défaut linkedin enrichi')
+      return 'linkedin-name-type'
     } catch (error) {
       console.error('⚠️ [AUTO-SEARCH] Erreur lors du chargement:', error)
-      return 'linkedin'
+      return 'linkedin-name-type'
     }
   });
 
@@ -1588,16 +1588,13 @@ Dimitri MOREL - Arcanis Conseil`;
 
   // Handlers pour les recherches LinkedIn et Google
   const handleLinkedInSearch = useCallback((modeOrContact?: 'name' | 'name-type' | Contact, contact?: Contact) => {
-    // Déterminer si le premier paramètre est un mode ou un contact
     let mode: 'name' | 'name-type' | undefined;
     let targetContact: Contact | null;
 
     if (typeof modeOrContact === 'object' && modeOrContact !== null) {
-      // Premier paramètre est un contact (ancien comportement)
       targetContact = modeOrContact;
       mode = undefined;
     } else {
-      // Premier paramètre est un mode (nouveau comportement)
       mode = modeOrContact as 'name' | 'name-type' | undefined;
       targetContact = contact || selectedContact;
     }
@@ -1610,20 +1607,23 @@ Dimitri MOREL - Arcanis Conseil`;
     const prenom = targetContact.prenom || '';
     const nom = targetContact.nom || '';
     const type = (targetContact as any).type || '';
+    const ecole = (targetContact as any).ecole || '';
     const source = targetContact.source || '';
 
-    // Si mode est spécifié, utiliser ce mode, sinon utiliser le mode complet par défaut
+    const primaryContext = type || ecole || source || '';
+    const secondaryContext =
+      source && source !== primaryContext
+        ? source
+        : ecole && ecole !== primaryContext
+        ? ecole
+        : '';
+
     if (mode === 'name') {
-      // Mode simple: Prénom + Nom uniquement
       searchLinkedIn(prenom, nom);
-    } else if (mode === 'name-type') {
-      // Mode intermédiaire: Prénom + Nom + Type (ou Source si Type vide)
-      const typeOrSource = type || source;
-      searchLinkedIn(prenom, nom, typeOrSource);
-    } else {
-      // Mode complet par défaut: Prénom + Nom + Type + Source
-      searchLinkedIn(prenom, nom, type, source);
+      return;
     }
+    // Mode étendu (LinkedIn+) inclut Type/École/Source
+    searchLinkedIn(prenom, nom, primaryContext, secondaryContext);
   }, [selectedContact, showNotification]);
 
   const handleGoogleSearch = useCallback((contact?: Contact) => {
@@ -1716,22 +1716,12 @@ Dimitri MOREL - Arcanis Conseil`;
         showNotification('success', `Appel initi vers ${targetContact.prenom} ${targetContact.nom}`);
 
         // Recherche automatique selon le mode configur
-        if (autoSearchMode === 'linkedin') {
-          handleLinkedInSearch(targetContact);
-          showNotification('info', 'Ouverture automatique LinkedIn (Complet)', 2000);
-        } else if (autoSearchMode === 'linkedin-name') {
-          // Mode simple: Prénom + Nom uniquement
-          const prenom = targetContact.prenom || '';
-          const nom = targetContact.nom || '';
-          searchLinkedIn(prenom, nom);
-          showNotification('info', 'Ouverture automatique LinkedIn (Prénom + Nom)', 2000);
+        if (autoSearchMode === 'linkedin' || autoSearchMode === 'linkedin-name') {
+          handleLinkedInSearch('name', targetContact);
+          showNotification('info', 'Ouverture automatique LinkedIn', 2000);
         } else if (autoSearchMode === 'linkedin-name-type') {
-          // Mode intermédiaire: Prénom + Nom + Type (ou Source si Type n'existe pas)
-          const prenom = targetContact.prenom || '';
-          const nom = targetContact.nom || '';
-          const typeOrSource = (targetContact as any).type || targetContact.source || '';
-          searchLinkedIn(prenom, nom, typeOrSource);
-          showNotification('info', 'Ouverture automatique LinkedIn (Prénom + Nom + Type)', 2000);
+          handleLinkedInSearch('name-type', targetContact);
+          showNotification('info', 'Ouverture automatique LinkedIn+', 2000);
         } else if (autoSearchMode === 'google') {
           handleGoogleSearch(targetContact);
           showNotification('info', 'Ouverture automatique Google', 2000);
@@ -2719,14 +2709,6 @@ Dimitri MOREL - Arcanis Conseil`;
           <TitleBar
             theme={theme}
             userName={userDisplayName}
-            adbConnectionState={adbConnectionState}
-            adbConnecting={adbConnecting}
-            onAdbClick={handleTitleBarAdbClick}
-            updateState={updateState}
-            onUpdateClick={installUpdate}
-            onUpdateConfirmationOpen={() => setIsUpdateConfirmationOpen(true)}
-            betaPreferences={betaPreferences}
-            isUpdateEnabled={isUpdateEnabled}
           />
 
           {/* Contenu principal */}
@@ -2803,20 +2785,28 @@ Dimitri MOREL - Arcanis Conseil`;
                 }}
                 onNavigate={(mode) => setViewMode(mode)}
                 onOpenAnnuaireContact={handleOpenAnnuaireContact}
+                updateState={updateState}
+                onUpdateClick={installUpdate}
+                onUpdateConfirmationOpen={() => setIsUpdateConfirmationOpen(true)}
+                betaPreferences={betaPreferences}
+                isUpdateEnabled={isUpdateEnabled}
+                adbConnectionState={adbConnectionState}
+                adbConnecting={adbConnecting}
+                onAdbClick={handleTitleBarAdbClick}
               />
               <main className={cn(
                 "flex-1 flex flex-col pt-2 md:pt-3 pb-3 md:pb-5 px-3 md:px-5 space-y-3 overflow-hidden w-full min-h-0"
               )}>
 
               {/* Search bar area */}
-              <div className="flex items-stretch gap-3 w-full justify-between">
+              <div className="flex items-center gap-3 w-full justify-between">
                 {/* 0me encadr: Bascule Vue retire (dsormais dans la Sidebar) */}
                 {/* Call Control inline (à droite du slecteur de mode) */}
                 {viewMode === 'table' && (
                   <>
 
                     {/* Call Control - maintenant aprs la recherche */}
-                    <div className="flex-grow">
+                    <div className="flex-grow -mt-1">
                       <CallControl
                         contact={selectedContact}
                         isCalling={Boolean(activeCallContactId && selectedContact && activeCallContactId === selectedContact.id)}
@@ -3466,7 +3456,7 @@ Dimitri MOREL - Arcanis Conseil`;
                     </div>
                   </div>
                 ) : viewMode === 'calendar-2' ? (
-                  <Calendar2 />
+                  <Calendar2 onOpenAnnuaireContact={handleOpenAnnuaireContact} />
                 ) : viewMode === 'annuaire' ? (
                   <AnnuairePage
                     theme={theme === Theme.Dark ? 'dark' : 'light'}

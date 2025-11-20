@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -43,7 +44,6 @@ import {
   Trash2,
   FileSpreadsheet,
   ArrowUpNarrowWide,
-  Funnel,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { StatusEventRecord } from '@/types/statusEvent';
@@ -96,6 +96,8 @@ interface DirectoryContact {
   lastUpdatedLabel?: string;
   totalEvents: number;
   numeroLigne: number;
+  firstCallAt?: number | null;
+  firstD0R0At?: number | null;
 }
 
 interface ContactDetailDraft {
@@ -294,6 +296,29 @@ const resolveEventTimestamp = (event: StatusEventRecord): string | null => {
   );
 };
 
+const getEventTimestampMs = (event: StatusEventRecord): number | null => {
+  const iso = resolveEventTimestamp(event);
+  if (!iso) return null;
+  const value = new Date(iso).getTime();
+  return Number.isNaN(value) ? null : value;
+};
+
+const findEarliestEvent = (
+  events: StatusEventRecord[],
+  predicate: (event: StatusEventRecord) => boolean
+): number | null => {
+  let earliest: number | null = null;
+  for (const event of events) {
+    if (!predicate(event)) continue;
+    const ts = getEventTimestampMs(event);
+    if (ts === null) continue;
+    if (earliest === null || ts < earliest) {
+      earliest = ts;
+    }
+  }
+  return earliest;
+};
+
 const pickFirstNonEmpty = (events: StatusEventRecord[], ...keys: (keyof StatusEventRecord)[]): string => {
   for (const key of keys) {
     for (const event of events) {
@@ -405,6 +430,14 @@ const buildDirectoryContact = (events: StatusEventRecord[]): DirectoryContact | 
   const fullName = buildFullName(prenom, nom) || telephone || 'Contact';
   const status = normalizeStatusLabel(latest.new_status);
   const previous = latest.old_status ? normalizeStatusLabel(latest.old_status) : undefined;
+  const firstCallAt = findEarliestEvent(sorted, (event) =>
+    Boolean(safeTrim(event.dateAppel) || safeTrim(event.heureAppel) || safeTrim(event.dureeAppel))
+  );
+  const firstD0R0At = findEarliestEvent(sorted, (event) => {
+    const normalized = normalizeStatusLabel(event.new_status);
+    const key = statusKey(normalized);
+    return key === 'do' || key === 'r0';
+  });
 
   const reminder =
     reminderDate || reminderTime
@@ -445,6 +478,8 @@ const buildDirectoryContact = (events: StatusEventRecord[]): DirectoryContact | 
     lastUpdatedLabel: formatIsoDateTime(lastUpdatedIso),
     totalEvents: sorted.length,
     numeroLigne: 0,
+    firstCallAt,
+    firstD0R0At,
   };
 };
 
@@ -528,8 +563,11 @@ export function AnnuairePage({
   const [detailDraft, setDetailDraft] = useState<ContactDetailDraft | null>(null);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<'name' | 'phone' | 'lastCall'>('name');
+  const [sortBy, setSortBy] = useState<'nom' | 'prenom' | 'statut' | 'firstCall' | 'firstD0R0' | 'lastCall' | 'phone'>('nom');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [filterHasCall, setFilterHasCall] = useState(false);
+  const [filterHasD0R0, setFilterHasD0R0] = useState(false);
 
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     try {
@@ -1124,12 +1162,26 @@ export function AnnuairePage({
     { key: 'thisMonth', label: 'Ce mois' as const },
   ], []);
 
+  const statusOptions = useMemo(() => {
+    const base = Object.values(ContactStatus);
+    const dynamic = contacts.map((c) => normalizeStatusLabel(c.status)).filter(Boolean);
+    return Array.from(new Set(['all', ...base, ...dynamic]));
+  }, [contacts]);
+
   const sortFieldLabel = useMemo(() => {
     switch (sortBy) {
       case 'phone':
         return 'Téléphone';
       case 'lastCall':
         return 'Dernier appel';
+      case 'prenom':
+        return 'Prénom';
+      case 'statut':
+        return 'Statut';
+      case 'firstCall':
+        return '1er appel';
+      case 'firstD0R0':
+        return '1er D0/R0';
       default:
         return 'Nom';
     }
@@ -1137,18 +1189,6 @@ export function AnnuairePage({
 
   const handleSortOrderToggle = useCallback(() => {
     setSortOrder((previous) => (previous === 'asc' ? 'desc' : 'asc'));
-  }, []);
-
-  const handleSortFieldToggle = useCallback(() => {
-    setSortBy((previous) => {
-      if (previous === 'name') {
-        return 'phone';
-      }
-      if (previous === 'phone') {
-        return 'lastCall';
-      }
-      return 'name';
-    });
   }, []);
 
   const rangeLabel = useMemo(() => {
@@ -1561,34 +1601,76 @@ export function AnnuairePage({
     const lowerTerm = searchTerm.trim().toLowerCase();
 
     const filtered = contacts.filter((contact) => {
-      if (!lowerTerm) return true;
-      const haystacks = [
-        contact.fullName.toLowerCase(),
-        contact.telephone.toLowerCase(),
-        contact.telephone.replace(/\D/g, ''),
-        contact.email?.toLowerCase() ?? '',
-        contact.status.toLowerCase(),
-        contact.commentaire?.toLowerCase() ?? '',
-      ];
-      return haystacks.some((value) => value.includes(lowerTerm));
+      if (lowerTerm) {
+        const haystacks = [
+          contact.fullName.toLowerCase(),
+          contact.telephone.toLowerCase(),
+          contact.telephone.replace(/\D/g, ''),
+          contact.email?.toLowerCase() ?? '',
+          contact.status.toLowerCase(),
+          contact.commentaire?.toLowerCase() ?? '',
+        ];
+        if (!haystacks.some((value) => value.includes(lowerTerm))) {
+          return false;
+        }
+      }
+
+      if (statusFilter !== 'all' && normalizeStatusLabel(contact.status) !== statusFilter) {
+        return false;
+      }
+
+      if (filterHasCall && !contact.firstCallAt) {
+        return false;
+      }
+
+      if (filterHasD0R0 && !contact.firstD0R0At) {
+        return false;
+      }
+
+      return true;
     });
 
     const sorted = [...filtered].sort((a, b) => {
-      if (sortBy === 'phone') {
-        const compare = a.telephone.localeCompare(b.telephone);
-        return sortOrder === 'asc' ? compare : -compare;
+      const direction = sortOrder === 'asc' ? 1 : -1;
+
+      const compareStrings = (left: string, right: string) =>
+        direction * left.localeCompare(right, 'fr', { sensitivity: 'base' });
+
+      const compareNumbers = (left?: number | null, right?: number | null) => {
+        const fallback = direction === 1 ? Number.MAX_SAFE_INTEGER : Number.MIN_SAFE_INTEGER;
+        const aVal = typeof left === 'number' ? left : fallback;
+        const bVal = typeof right === 'number' ? right : fallback;
+        return direction * (aVal - bVal);
+      };
+
+      switch (sortBy) {
+        case 'phone':
+          return compareStrings(a.telephone, b.telephone);
+        case 'prenom':
+          return compareStrings(a.prenom || '', b.prenom || '');
+        case 'statut':
+          return compareStrings(a.status || '', b.status || '');
+        case 'firstCall':
+          return compareNumbers(a.firstCallAt, b.firstCallAt);
+        case 'firstD0R0':
+          return compareNumbers(a.firstD0R0At, b.firstD0R0At);
+        case 'lastCall': {
+          const aDate = a.history[0]?.appliedAt ? new Date(a.history[0].appliedAt).getTime() : null;
+          const bDate = b.history[0]?.appliedAt ? new Date(b.history[0].appliedAt).getTime() : null;
+          return compareNumbers(aDate, bDate);
+        }
+        default:
+          return compareStrings(a.nom || '', b.nom || '');
       }
-      if (sortBy === 'lastCall') {
-        const aDate = a.history[0]?.appliedAt ? new Date(a.history[0].appliedAt).getTime() : 0;
-        const bDate = b.history[0]?.appliedAt ? new Date(b.history[0].appliedAt).getTime() : 0;
-        return sortOrder === 'asc' ? aDate - bDate : bDate - aDate;
-      }
-      const compare = a.fullName.localeCompare(b.fullName, 'fr', { sensitivity: 'base' });
-      return sortOrder === 'asc' ? compare : -compare;
     });
 
-    setFilteredContacts(sorted);
-  }, [contacts, searchTerm, sortBy, sortOrder]);
+    const numbered = sorted.map((contact, index) => ({
+      ...contact,
+      numeroLigne: index + 1,
+    }));
+
+    setFilteredContacts(numbered);
+  }, [contacts, searchTerm, sortBy, sortOrder, statusFilter, filterHasCall, filterHasD0R0]);
 
 
   const handleContactClick = (contact: DirectoryContact) => {
@@ -1673,10 +1755,20 @@ export function AnnuairePage({
           >
             <ArrowUpNarrowWide className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" className="h-9" onClick={handleSortFieldToggle}>
-            <Funnel className="mr-2 h-4 w-4" />
-            {sortFieldLabel}
-          </Button>
+          <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
+            <SelectTrigger className="h-9 w-[200px]">
+              <SelectValue placeholder="Trier par" aria-label={`Trier par ${sortFieldLabel}`} />
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectItem value="nom">Nom</SelectItem>
+              <SelectItem value="prenom">Prénom</SelectItem>
+              <SelectItem value="statut">Statut</SelectItem>
+              <SelectItem value="firstCall">Date du premier appel</SelectItem>
+              <SelectItem value="firstD0R0">Date du premier D0/R0</SelectItem>
+              <SelectItem value="lastCall">Dernier appel</SelectItem>
+              <SelectItem value="phone">Téléphone</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -1715,6 +1807,36 @@ export function AnnuairePage({
               />
             </PopoverContent>
           </Popover>
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value)}>
+            <SelectTrigger className="h-8 w-[180px]">
+              <SelectValue placeholder="Filtrer par statut" />
+            </SelectTrigger>
+            <SelectContent align="start">
+              {statusOptions.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {option === 'all' ? 'Tous les statuts' : option}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Checkbox
+                checked={filterHasCall}
+                onCheckedChange={(value) => setFilterHasCall(Boolean(value))}
+                aria-label="Filtrer les contacts qui ont au moins un appel"
+              />
+              <span>Avec 1er appel</span>
+            </label>
+            <label className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Checkbox
+                checked={filterHasD0R0}
+                onCheckedChange={(value) => setFilterHasD0R0(Boolean(value))}
+                aria-label="Filtrer les contacts avec D0/R0"
+              />
+              <span>D0/R0 atteint</span>
+            </label>
+          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button

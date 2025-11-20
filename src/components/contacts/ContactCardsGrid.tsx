@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { ContactCard } from './ContactCard'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Button } from '@/components/ui/button'
 
 interface DirectoryContact {
   id: string
@@ -36,7 +35,9 @@ export const ContactCardsGrid: React.FC<ContactCardsGridProps> = ({
   onSelectContact,
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const loaderRef = useRef<HTMLDivElement>(null)
   const [visibleCount, setVisibleCount] = useState(40)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   const displayedContacts = useMemo(
     () => contacts.slice(0, Math.min(visibleCount, contacts.length)),
@@ -96,30 +97,51 @@ export const ContactCardsGrid: React.FC<ContactCardsGridProps> = ({
     return () => container.removeEventListener('scroll', handleScroll)
   }, [visibleCount, contacts.length])
 
+  useEffect(() => {
+    const sentinel = loaderRef.current
+    const container = scrollRef.current
+    if (!sentinel || !container) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && visibleCount < contacts.length) {
+            setIsLoadingMore(true)
+            setTimeout(() => {
+              setVisibleCount((prev) => Math.min(prev + 40, contacts.length))
+              setIsLoadingMore(false)
+            }, 120)
+          }
+        })
+      },
+      { root: container, rootMargin: '200px' }
+    )
+
+    observer.observe(sentinel)
+    return () => observer.disconnect()
+  }, [visibleCount, contacts.length])
+
   return (
     <ScrollArea className="h-full w-full" ref={scrollRef}>
       <div className="grid gap-4 p-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {displayedContacts.map((contact) => (
-          <div key={contact.id} data-contact-id={contact.id}>
-            <ContactCard
-              contact={contact}
-              isSelected={contact.id === selectedId}
-              onClick={() => onSelectContact(contact.id)}
-            />
-          </div>
-        ))}
-      </div>
-
-      {contacts.length > visibleCount && (
-        <div className="flex justify-center p-4">
-          <Button
-            variant="outline"
-            onClick={() => setVisibleCount((prev) => Math.min(prev + 40, contacts.length))}
-          >
-            Afficher plus de contacts ({contacts.length - visibleCount} restants)
-          </Button>
+      {displayedContacts.map((contact) => (
+        <div key={contact.id} data-contact-id={contact.id}>
+          <ContactCard
+            contact={contact}
+            isSelected={contact.id === selectedId}
+            onClick={() => onSelectContact(contact.id)}
+          />
         </div>
-      )}
+      ))}
+    </div>
+
+      <div ref={loaderRef} className="flex justify-center p-4">
+        {contacts.length > visibleCount && (
+          <div className="text-xs text-muted-foreground">
+            {isLoadingMore ? 'Chargement...' : 'Défilez pour charger davantage'}
+          </div>
+        )}
+      </div>
 
       {contacts.length === 0 && (
         <div className="flex items-center justify-center h-full text-center text-muted-foreground p-8">

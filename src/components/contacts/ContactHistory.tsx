@@ -2,6 +2,7 @@ import React from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { History } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface ContactHistoryItem {
   id: number
@@ -16,6 +17,31 @@ interface ContactHistoryItem {
 
 interface ContactHistoryProps {
   history: ContactHistoryItem[]
+}
+
+const statusKey = (value?: string | null): string => {
+  if (!value) return ''
+  return String(value)
+    .trim()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toLowerCase()
+}
+
+const getStatusBadgeClasses = (status: string): string => {
+  const key = statusKey(status)
+  if (key.startsWith('nondefin')) return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900 dark:text-gray-300 dark:border-gray-700'
+  if (key.includes('mauvais')) return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200 dark:border-red-800'
+  if (key.includes('repondeur')) return 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900 dark:text-orange-200 dark:border-orange-800'
+  if (key.includes('rappeler')) return 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-800'
+  if (key.includes('pasinter')) return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200 dark:border-red-800'
+  if (key.includes('argument')) return 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900 dark:text-blue-200 dark:border-blue-800'
+  if (key === 'do' || key === 'r0') return 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900 dark:text-green-200 dark:border-green-800'
+  if (key.includes('listenoi')) return 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900 dark:text-red-200 dark:border-red-800'
+  if (key.includes('prematur')) return 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900 dark:text-purple-200 dark:border-purple-800'
+  if (key === 'a0') return 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900 dark:text-indigo-200 dark:border-indigo-800'
+  return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900 dark:text-gray-300 dark:border-gray-700'
 }
 
 export const ContactHistory: React.FC<ContactHistoryProps> = ({ history }) => {
@@ -40,7 +66,10 @@ export const ContactHistory: React.FC<ContactHistoryProps> = ({ history }) => {
                 <History className="h-4 w-4 text-muted-foreground shrink-0" />
                 <span className="text-sm font-medium">{item.displayDate}</span>
               </div>
-              <Badge variant="outline" className="text-xs shrink-0">
+              <Badge
+                variant="outline"
+                className={cn('text-xs shrink-0 px-2.5 py-1 border', getStatusBadgeClasses(item.status))}
+              >
                 {item.status}
               </Badge>
             </div>

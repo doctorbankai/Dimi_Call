@@ -1709,12 +1709,12 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
         </ResizablePanel>
       </ResizablePanelGroup>
       ) : (
-        <div className="flex-1 flex flex-col p-1 md:p-1.5 space-y-1 md:space-y-1.5 overflow-hidden w-full min-h-0">
+        <div className="flex-1 flex flex-col p-1 md:p-1 space-y-0.5 md:space-y-1 overflow-hidden w-full min-h-0">
           {/* Action Bar */}
-          <div className="flex items-stretch gap-3 w-full justify-between">
+          <div className="flex items-center gap-3 w-full justify-between px-2 md:px-4">
             <div className="flex-grow">
-              <div className="w-full overflow-x-auto flex justify-center">
-                <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3 shadow-sm min-w-[280px] w-fit">
+              <div className="w-full overflow-x-auto flex justify-center md:justify-start">
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3 shadow-sm min-w-[280px] w-fit ml-auto md:ml-0">
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <span data-slot="avatar" className="relative flex size-8 shrink-0 overflow-hidden rounded-full h-8 w-8 flex-shrink-0">
                       <span data-slot="avatar-fallback" className="bg-muted flex size-full items-center justify-center rounded-full">
@@ -2003,7 +2003,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1">
                             Mode automatique
                           </DropdownMenuLabel>
-                          <DropdownMenuRadioGroup value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)}>
+                            <DropdownMenuRadioGroup value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)}>
                             <DropdownMenuRadioItem value="disabled" className="cursor-pointer">
                               <X className="mr-2 h-4 w-4" />
                               <span>Désactivé</span>
@@ -2015,7 +2015,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             </DropdownMenuRadioItem>
                             <DropdownMenuRadioItem value="linkedin-name-type" className="cursor-pointer">
                               <Linkedin className="mr-2 h-4 w-4 text-blue-600" />
-                              <span>LinkedIn (Prénom + Nom + Type)</span>
+                              <span>LinkedIn+</span>
                             </DropdownMenuRadioItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuRadioItem value="google" className="cursor-pointer">
@@ -2060,7 +2060,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         onClick={() => onLinkedInSearch('name-type')}
                         disabled={!selectedContactId}
                         className="h-8 gap-1.5 px-2 sm:px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2] shrink-0"
-                        title="Rechercher sur LinkedIn (Prénom + Nom + Type)"
+                        title="Rechercher sur LinkedIn (Prénom + Nom + Contexte)"
                       >
                         <Linkedin className="h-4 w-4" />
                         <span className="hidden sm:inline">LinkedIn+</span>

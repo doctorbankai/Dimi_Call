@@ -26,6 +26,8 @@ interface DirectoryContact {
   lastUpdatedLabel?: string;
   totalEvents: number;
   numeroLigne: number;
+  firstCallAt?: number | null;
+  firstD0R0At?: number | null;
 }
 
 export type AnnuaireEditableField =

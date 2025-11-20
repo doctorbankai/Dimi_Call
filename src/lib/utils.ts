@@ -95,16 +95,19 @@ export const openGoogleWindow = (url: string): void => {
  * Génère une URL de recherche LinkedIn et l'ouvre dans la fenêtre dédiée
  * @param prenom - Prénom de la personne à rechercher (peut contenir des accents)
  * @param nom - Nom de la personne à rechercher (peut contenir des accents)
- * @param type - Type du contact (optionnel, ignoré)
- * @param source - Source du contact (optionnel, ignoré)
+ * @param type - Type du contact (optionnel, inclus dans la requête)
+ * @param source - Source du contact (optionnel, incluse dans la requête)
  */
 export const searchLinkedIn = (prenom: string, nom: string, type?: string, source?: string): void => {
   // Normaliser les accents avant de créer la requête
   const normalizedPrenom = removeAccents(prenom);
   const normalizedNom = removeAccents(nom);
-  
-  // Ne prendre en compte que le prénom et le nom
-  const query = filterAndJoin(normalizedPrenom, normalizedNom);
+
+  // Inclure le contexte (type/école/source) s'il est fourni
+  const normalizedType = removeAccents(type ?? '');
+  const normalizedSource = removeAccents(source ?? '');
+
+  const query = filterAndJoin(normalizedPrenom, normalizedNom, normalizedType, normalizedSource);
   if (!query) {
     console.warn('Aucune valeur valide pour la recherche LinkedIn');
     return;

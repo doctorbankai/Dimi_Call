@@ -1,6 +1,7 @@
 "use client";
 
 import { parseISO } from "date-fns";
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -35,6 +36,10 @@ export function EditEventDialog({ children, event }: IProps) {
   const { users } = useCalendar();
 
   const { updateEvent } = useUpdateEvent();
+  const selectableUsers = useMemo(() => {
+    const exists = users.some((user) => user.id === event.user.id);
+    return exists ? users : [...users, event.user];
+  }, [users, event.user]);
 
   const form = useForm<TEventFormData>({
     resolver: zodResolver(eventSchema),
@@ -76,15 +81,15 @@ export function EditEventDialog({ children, event }: IProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onToggle}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+        <DialogTrigger asChild>{children}</DialogTrigger>
 
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edit Event</DialogTitle>
-          <DialogDescription>
-            This is just and example of how to use the form. In a real application, you would call the API to update the event
-          </DialogDescription>
-        </DialogHeader>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifier l'événement</DialogTitle>
+            <DialogDescription>
+              Mettez à jour les informations de ce rappel ou rendez-vous.
+            </DialogDescription>
+          </DialogHeader>
 
         <Form {...form}>
           <form id="event-form" onSubmit={form.handleSubmit(onSubmit)} className="grid gap-4 py-4">
@@ -93,15 +98,15 @@ export function EditEventDialog({ children, event }: IProps) {
               name="user"
               render={({ field, fieldState }) => (
                 <FormItem>
-                  <FormLabel>Responsible</FormLabel>
+                  <FormLabel>Contact</FormLabel>
                   <FormControl>
                     <Select value={field.value} onValueChange={field.onChange}>
                       <SelectTrigger data-invalid={fieldState.invalid}>
-                        <SelectValue placeholder="Select an option" />
+                        <SelectValue placeholder="Choisir un contact" />
                       </SelectTrigger>
 
                       <SelectContent>
-                        {users.map(user => (
+                        {selectableUsers.map(user => (
                           <SelectItem key={user.id} value={user.id} className="flex-1">
                             <div className="flex items-center gap-2">
                               <Avatar key={user.id} className="size-6">
@@ -126,10 +131,10 @@ export function EditEventDialog({ children, event }: IProps) {
               name="title"
               render={({ field, fieldState }) => (
                 <FormItem>
-                  <FormLabel htmlFor="title">Title</FormLabel>
+                  <FormLabel htmlFor="title">Titre</FormLabel>
 
                   <FormControl>
-                    <Input id="title" placeholder="Enter a title" data-invalid={fieldState.invalid} {...field} />
+                    <Input id="title" placeholder="Saisir un titre" data-invalid={fieldState.invalid} {...field} />
                   </FormControl>
 
                   <FormMessage />
@@ -141,16 +146,16 @@ export function EditEventDialog({ children, event }: IProps) {
               <FormField
                 control={form.control}
                 name="startDate"
-                render={({ field, fieldState }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel htmlFor="startDate">Start Date</FormLabel>
+              render={({ field, fieldState }) => (
+                <FormItem className="flex-1">
+                    <FormLabel htmlFor="startDate">Date de début</FormLabel>
 
-                    <FormControl>
-                      <SingleDayPicker
-                        id="startDate"
-                        value={field.value}
-                        onSelect={date => field.onChange(date as Date)}
-                        placeholder="Select a date"
+                  <FormControl>
+                    <SingleDayPicker
+                      id="startDate"
+                      value={field.value}
+                      onSelect={date => field.onChange(date as Date)}
+                        placeholder="Sélectionnez une date"
                         data-invalid={fieldState.invalid}
                       />
                     </FormControl>
@@ -165,7 +170,7 @@ export function EditEventDialog({ children, event }: IProps) {
                 name="startTime"
                 render={({ field, fieldState }) => (
                   <FormItem className="flex-1">
-                    <FormLabel>Start Time</FormLabel>
+                    <FormLabel>Heure de début</FormLabel>
 
                     <FormControl>
                       <TimeInput value={field.value as TimeValue} onChange={field.onChange} hourCycle={12} data-invalid={fieldState.invalid} />
@@ -183,12 +188,12 @@ export function EditEventDialog({ children, event }: IProps) {
                 name="endDate"
                 render={({ field, fieldState }) => (
                   <FormItem className="flex-1">
-                    <FormLabel>End Date</FormLabel>
+                    <FormLabel>Date de fin</FormLabel>
                     <FormControl>
                       <SingleDayPicker
                         value={field.value}
                         onSelect={date => field.onChange(date as Date)}
-                        placeholder="Select a date"
+                        placeholder="Sélectionnez une date"
                         data-invalid={fieldState.invalid}
                       />
                     </FormControl>
@@ -202,7 +207,7 @@ export function EditEventDialog({ children, event }: IProps) {
                 name="endTime"
                 render={({ field, fieldState }) => (
                   <FormItem className="flex-1">
-                    <FormLabel>End Time</FormLabel>
+                    <FormLabel>Heure de fin</FormLabel>
                     <FormControl>
                       <TimeInput value={field.value as TimeValue} onChange={field.onChange} hourCycle={12} data-invalid={fieldState.invalid} />
                     </FormControl>
@@ -220,8 +225,8 @@ export function EditEventDialog({ children, event }: IProps) {
                   <FormLabel>Color</FormLabel>
                   <FormControl>
                     <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger data-invalid={fieldState.invalid}>
-                        <SelectValue placeholder="Select an option" />
+                        <SelectTrigger data-invalid={fieldState.invalid}>
+                        <SelectValue placeholder="Choisir un contact" />
                       </SelectTrigger>
 
                       <SelectContent>
@@ -307,7 +312,7 @@ export function EditEventDialog({ children, event }: IProps) {
           </DialogClose>
 
           <Button form="event-form" type="submit">
-            Save changes
+            Enregistrer
           </Button>
         </DialogFooter>
       </DialogContent>
