@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from "react"
+import React, { useState, useCallback, useMemo, useEffect } from "react"
 import type { StatusEventRecord } from '@/types/statusEvent'
 import { ContactCardsGrid } from './contacts/ContactCardsGrid'
 import { ContactDetailSheet } from './contacts/ContactDetailSheet'
@@ -39,8 +39,6 @@ interface AnnuaireCardsViewProps {
   contacts: DirectoryContact[]
   selectedContactId: string | null
   onSelectContact: (contact: DirectoryContact | null) => void
-  searchTerm: string
-  onSearchChange: (value: string) => void
   onCall?: () => void
   onSms?: () => void
   onEmail?: () => void
@@ -74,6 +72,15 @@ export const AnnuaireCardsView: React.FC<AnnuaireCardsViewProps> = ({
     () => contacts.find(contact => contact.id === selectedContactId) ?? null,
     [contacts, selectedContactId]
   )
+
+  useEffect(() => {
+    if (selectedContactId && selectedContact) {
+      setIsSheetOpen(true)
+    }
+    if (!selectedContactId) {
+      setIsSheetOpen(false)
+    }
+  }, [selectedContactId, selectedContact])
 
   const handleSelectContact = useCallback((id: string) => {
     const contact = contacts.find(c => c.id === id)

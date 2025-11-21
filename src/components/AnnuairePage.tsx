@@ -1,14 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -38,22 +34,20 @@ import {
   Clock,
   History,
   Bell,
-  MessageSquare,
   Download,
   Upload,
   Trash2,
   FileSpreadsheet,
   ArrowUpNarrowWide,
+  X,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import type { StatusEventRecord } from '@/types/statusEvent';
 import { formatPhoneNumber, importContactsFromFile } from '../services/dataService';
 import { ViewSwitcher, type ViewMode } from './ViewSwitcher';
 import { AnnuaireTable, AnnuaireEditableField } from './AnnuaireTable';
 import { AnnuaireCardsView } from './AnnuaireCardsView';
-import StatusSelect from './StatusSelect';
 import ImportMappingDialog from './ImportMappingDialog';
-import { ContactFiles } from './contacts/ContactFiles';
+import { ContactDetailSheet } from './contacts/ContactDetailSheet';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 
@@ -100,18 +94,6 @@ interface DirectoryContact {
   firstD0R0At?: number | null;
 }
 
-interface ContactDetailDraft {
-  status: ContactStatus;
-  reminderDate: string;
-  reminderTime: string;
-  rdvDate: string;
-  rdvTime: string;
-  callDate: string;
-  callTime: string;
-  callDuration: string;
-  commentaire: string;
-}
-
 interface AnnuairePageProps {
   theme?: 'dark' | 'light';
   onCall?: () => void;
@@ -129,30 +111,6 @@ interface AnnuairePageProps {
   onContactFocusConsumed?: () => void;
 }
 
-const TYPE_BADGE_LABELS: Record<HistoryType, string> = {
-  appel: 'Appel',
-  rappel: 'Rappel',
-  rdv: 'RDV',
-  statut: 'Statut',
-};
-
-const TYPE_BADGE_STYLES: Record<HistoryType, string> = {
-  appel:
-    'border border-green-200 bg-green-50 text-xs font-medium text-green-700 dark:border-green-900/40 dark:bg-green-900/40 dark:text-green-300',
-  rappel:
-    'border border-yellow-200 bg-yellow-50 text-xs font-medium text-yellow-700 dark:border-yellow-900/40 dark:bg-yellow-900/40 dark:text-yellow-300',
-  rdv:
-    'border border-blue-200 bg-blue-50 text-xs font-medium text-blue-700 dark:border-blue-900/40 dark:bg-blue-900/40 dark:text-blue-300',
-  statut:
-    'border border-slate-200 bg-slate-50 text-xs font-medium text-slate-700 dark:border-slate-900/40 dark:bg-slate-900/40 dark:text-slate-300',
-};
-
-const TYPE_BULLET_CLASSES: Record<HistoryType, string> = {
-  appel: 'bg-green-500',
-  rappel: 'bg-yellow-500',
-  rdv: 'bg-blue-500',
-  statut: 'bg-slate-400',
-};
 const safeTrim = (value: unknown): string => {
   if (value === undefined || value === null) {
     return '';
@@ -225,17 +183,45 @@ const getStatusColor = (status: string): string => {
     return 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300';
   }
   return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300';
-};const resolveContactStatusValue = (value?: string | null): ContactStatus => {
-  const trimmed = safeTrim(value);
-  if (!trimmed) {
-    return ContactStatus.NonDefini;
-  }
-  const normalized = trimmed.toLowerCase();
-  const match = Object.values(ContactStatus).find((candidate) => candidate.toLowerCase() === normalized);
-  return match ?? ContactStatus.NonDefini;
 };
 
+type StatusCategory = 'all' | 'non-appeles' | 'ne-pas-appeler' | 'premature' | 'prospects' | 'process';
 
+const STATUS_CATEGORY_LABELS: Record<Exclude<StatusCategory, 'all'>, string> = {
+  'non-appeles': 'Non appelés',
+  'ne-pas-appeler': 'Ne pas appeler',
+  premature: 'Prématuré',
+  prospects: 'Prospects',
+  process: 'Process en cours',
+};
+
+const STATUS_CATEGORY_ORDER: Exclude<StatusCategory, 'all'>[] = [
+  'non-appeles',
+  'ne-pas-appeler',
+  'premature',
+  'prospects',
+  'process',
+];
+
+const getStatusCategory = (status?: string | null): Exclude<StatusCategory, 'all'> => {
+  const key = statusKey(status);
+  if (!key || key.startsWith('nondefin')) {
+    return 'non-appeles';
+  }
+  if (key.includes('listenoi') || key.includes('pasinter') || key.includes('mauvais')) {
+    return 'ne-pas-appeler';
+  }
+  if (key.includes('prematur')) {
+    return 'premature';
+  }
+  if (key === 'do' || key === 'ro' || key.includes('d0') || key.includes('r0')) {
+    return 'process';
+  }
+  if (key.includes('repondeur') || key.includes('rappeler') || key.includes('argument') || key === 'a0') {
+    return 'prospects';
+  }
+  return 'non-appeles';
+};
 
 const buildFullName = (prenom?: string, nom?: string): string => {
   return [safeTrim(prenom), safeTrim(nom)].filter(Boolean).join(' ').trim();
@@ -560,14 +546,11 @@ export function AnnuairePage({
   const [filteredContacts, setFilteredContacts] = useState<DirectoryContact[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedContact, setSelectedContact] = useState<DirectoryContact | null>(null);
-  const [detailDraft, setDetailDraft] = useState<ContactDetailDraft | null>(null);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'nom' | 'prenom' | 'statut' | 'firstCall' | 'firstD0R0' | 'lastCall' | 'phone'>('nom');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [filterHasCall, setFilterHasCall] = useState(false);
-  const [filterHasD0R0, setFilterHasD0R0] = useState(false);
+  const [statusCategory, setStatusCategory] = useState<StatusCategory>('all');
 
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     try {
@@ -761,66 +744,6 @@ export function AnnuairePage({
       setSelectedContact((prev) => (prev && prev.id === contactId ? applyUpdate(prev) : prev));
     },
     [contacts]
-  );
-
-  const handleStatusChange = useCallback(
-    (nextStatus: ContactStatus) => {
-      setDetailDraft((previous) => (previous ? { ...previous, status: nextStatus } : previous));
-      if (selectedContact) {
-        void updateContactField(selectedContact.id, 'status', nextStatus);
-      }
-    },
-    [selectedContact, updateContactField]
-  );
-
-  const updateDetailDraft = useCallback((patch: Partial<ContactDetailDraft>) => {
-    setDetailDraft((previous) => (previous ? { ...previous, ...patch } : previous));
-  }, []);
-
-  const persistDetailField = useCallback(
-    (field: AnnuaireEditableField, value: string) => {
-      if (!selectedContact) {
-        return;
-      }
-
-      const currentValue = (() => {
-        switch (field) {
-          case 'prenom':
-            return selectedContact.prenom;
-          case 'nom':
-            return selectedContact.nom;
-          case 'email':
-            return selectedContact.email ?? '';
-          case 'commentaire':
-            return selectedContact.commentaire ?? '';
-          case 'status':
-            return selectedContact.status;
-          case 'dateRappel':
-            return selectedContact.reminder?.date ?? '';
-          case 'heureRappel':
-            return selectedContact.reminder?.time ?? '';
-          case 'dateRDV':
-            return selectedContact.rdv?.date ?? '';
-          case 'heureRDV':
-            return selectedContact.rdv?.time ?? '';
-          case 'dateAppel':
-            return selectedContact.lastCall?.date ?? '';
-          case 'heureAppel':
-            return selectedContact.lastCall?.time ?? '';
-          case 'dureeAppel':
-            return selectedContact.lastCall?.duration ?? '';
-          default:
-            return '';
-        }
-      })();
-
-      if (currentValue === value) {
-        return;
-      }
-
-      void updateContactField(selectedContact.id, field, value);
-    },
-    [selectedContact, updateContactField]
   );
 
   // Fonction pour analyser un fichier et extraire headers/preview
@@ -1034,25 +957,6 @@ export function AnnuairePage({
     };
   }, [analyzeAndOpenMappingDialog, contacts, selectedContacts, hasSelection]);
 
-  useEffect(() => {
-    if (!selectedContact) {
-      setDetailDraft(null);
-      return;
-    }
-
-    setDetailDraft({
-      status: resolveContactStatusValue(selectedContact.status),
-      reminderDate: selectedContact.reminder?.date ?? '',
-      reminderTime: selectedContact.reminder?.time ?? '',
-      rdvDate: selectedContact.rdv?.date ?? '',
-      rdvTime: selectedContact.rdv?.time ?? '',
-      callDate: selectedContact.lastCall?.date ?? '',
-      callTime: selectedContact.lastCall?.time ?? '',
-      callDuration: selectedContact.lastCall?.duration ?? '',
-      commentaire: selectedContact.commentaire ?? '',
-    });
-  }, [selectedContact]);
-
   const fetchContacts = useCallback(async (range: { start: string; end: string }) => {
     setLoading(true);
     try {
@@ -1162,11 +1066,16 @@ export function AnnuairePage({
     { key: 'thisMonth', label: 'Ce mois' as const },
   ], []);
 
-  const statusOptions = useMemo(() => {
-    const base = Object.values(ContactStatus);
-    const dynamic = contacts.map((c) => normalizeStatusLabel(c.status)).filter(Boolean);
-    return Array.from(new Set(['all', ...base, ...dynamic]));
-  }, [contacts]);
+  const statusCategoryOptions = useMemo(
+    () => [
+      { value: 'all' as StatusCategory, label: 'Toutes les catégories' },
+      ...STATUS_CATEGORY_ORDER.map((value) => ({
+        value,
+        label: STATUS_CATEGORY_LABELS[value],
+      })),
+    ],
+    []
+  );
 
   const sortFieldLabel = useMemo(() => {
     switch (sortBy) {
@@ -1615,15 +1524,8 @@ export function AnnuairePage({
         }
       }
 
-      if (statusFilter !== 'all' && normalizeStatusLabel(contact.status) !== statusFilter) {
-        return false;
-      }
-
-      if (filterHasCall && !contact.firstCallAt) {
-        return false;
-      }
-
-      if (filterHasD0R0 && !contact.firstD0R0At) {
+      const category = getStatusCategory(contact.status);
+      if (statusCategory !== 'all' && category !== statusCategory) {
         return false;
       }
 
@@ -1670,12 +1572,13 @@ export function AnnuairePage({
     }));
 
     setFilteredContacts(numbered);
-  }, [contacts, searchTerm, sortBy, sortOrder, statusFilter, filterHasCall, filterHasD0R0]);
+  }, [contacts, searchTerm, sortBy, sortOrder, statusCategory]);
 
 
   const handleContactClick = (contact: DirectoryContact) => {
     setSelectedContact(contact);
     setIsContactDialogOpen(true);
+    onContactSelect?.(contact);
   };
 
   useEffect(() => {
@@ -1700,23 +1603,6 @@ export function AnnuairePage({
     return `${tokens[0][0]}${tokens[tokens.length - 1][0]}`.toUpperCase();
   };
 
-  const InfoField = ({
-    icon: Icon,
-    label,
-    value,
-  }: {
-    icon: LucideIcon;
-    label: string;
-    value: React.ReactNode;
-  }) => (
-    <div className="space-y-2">
-      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</span>
-      <div className="flex items-center gap-2 text-sm text-foreground">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-        <span className="truncate">{value || '—'}</span>
-      </div>
-    </div>
-  );
   return (
     <div className="flex h-full flex-col gap-4 w-full overflow-hidden">
       {/* Navbar */}
@@ -1743,8 +1629,18 @@ export function AnnuairePage({
               placeholder="Rechercher un contact..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-9"
+              className="pl-10 pr-9 h-9"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                aria-label="Effacer la recherche"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setSearchTerm('')}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <Button
             variant="outline"
@@ -1807,36 +1703,21 @@ export function AnnuairePage({
               />
             </PopoverContent>
           </Popover>
-          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value)}>
-            <SelectTrigger className="h-8 w-[180px]">
-              <SelectValue placeholder="Filtrer par statut" />
+          <Select
+            value={statusCategory}
+            onValueChange={(value) => setStatusCategory(value as StatusCategory)}
+          >
+            <SelectTrigger className="h-8 w-[220px]">
+              <SelectValue placeholder="Filtrer par catégorie" />
             </SelectTrigger>
             <SelectContent align="start">
-              {statusOptions.map((option) => (
-                <SelectItem key={option} value={option}>
-                  {option === 'all' ? 'Tous les statuts' : option}
+              {statusCategoryOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Checkbox
-                checked={filterHasCall}
-                onCheckedChange={(value) => setFilterHasCall(Boolean(value))}
-                aria-label="Filtrer les contacts qui ont au moins un appel"
-              />
-              <span>Avec 1er appel</span>
-            </label>
-            <label className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Checkbox
-                checked={filterHasD0R0}
-                onCheckedChange={(value) => setFilterHasD0R0(Boolean(value))}
-                aria-label="Filtrer les contacts avec D0/R0"
-              />
-              <span>D0/R0 atteint</span>
-            </label>
-          </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -1993,8 +1874,6 @@ export function AnnuairePage({
                 setSelectedContact(contact)
                 onContactSelect?.(contact)
               }}
-              searchTerm={searchTerm}
-              onSearchChange={setSearchTerm}
               onCall={selectedContact && onCall ? onCall : undefined}
               onSms={selectedContact && onSms ? onSms : undefined}
               onEmail={selectedContact && onEmail ? onEmail : undefined}
@@ -2123,270 +2002,29 @@ export function AnnuairePage({
           </div>
         )}
 
-        <Dialog
-        open={isContactDialogOpen}
-        onOpenChange={(open) => {
-          setIsContactDialogOpen(open);
-          if (!open) {
-            setSelectedContact(null);
-          }
-        }}
-      >
-        <DialogContent className="max-h-[80vh] max-w-2xl overflow-hidden">
-          {selectedContact && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10">
-                    <AvatarImage src="" alt={selectedContact.fullName} />
-                    <AvatarFallback className="bg-primary text-primary-foreground">
-                      {getInitials(selectedContact)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h2 className="text-xl font-semibold">{selectedContact.fullName}</h2>
-                    {selectedContact.telephone && (
-                      <p className="text-sm text-muted-foreground">
-                        {formatPhoneNumber(selectedContact.telephone)}
-                      </p>
-                    )}
-                  </div>
-                </DialogTitle>
-              </DialogHeader>
-
-              <Tabs defaultValue="info" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="info">Informations</TabsTrigger>
-                  <TabsTrigger value="history">Historique</TabsTrigger>
-                  <TabsTrigger value="files">Fichiers</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="info" className="space-y-6">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <InfoField
-                      icon={Phone}
-                      label="T?l?phone"
-                      value={
-                        selectedContact.telephone
-                          ? formatPhoneNumber(selectedContact.telephone)
-                          : 'Non renseigné'
-                      }
-                    />
-                    <InfoField icon={Mail} label="Email" value={selectedContact.email || 'Non renseigné'} />
-                    <div className="space-y-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Statut actuel
-                      </span>
-                      <StatusSelect
-                        value={detailDraft?.status ?? resolveContactStatusValue(selectedContact.status)}
-                        onChange={handleStatusChange}
-                        size="sm"
-                        triggerClassName="w-full md:w-[200px]"
-                      />
-                    </div>
-                    {selectedContact.previousStatus && (
-                      <div className="space-y-2">
-                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                          Statut pr?c?dent
-                        </span>
-                        <Badge variant="outline" className="text-xs text-muted-foreground">
-                          {selectedContact.previousStatus}
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <InfoField
-                      icon={Clock}
-                      label="Dernière mise à jour"
-                      value={selectedContact.lastUpdatedLabel || 'Non renseigné'}
-                    />
-                    <InfoField
-                      icon={History}
-                      label="?v?nements enregistr?s"
-                      value={selectedContact.totalEvents}
-                    />
-                  </div>
-
-                  <Separator />
-
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Prochain rappel
-                      </span>
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <Input
-                          type="date"
-                          value={detailDraft?.reminderDate ?? ''}
-                          onChange={(event) => updateDetailDraft({ reminderDate: event.target.value })}
-                          onBlur={(event) => detailDraft && persistDetailField('dateRappel', event.currentTarget.value)}
-                          disabled={!detailDraft}
-                        />
-                        <Input
-                          type="time"
-                          value={detailDraft?.reminderTime ?? ''}
-                          onChange={(event) => updateDetailDraft({ reminderTime: event.target.value })}
-                          onBlur={(event) => detailDraft && persistDetailField('heureRappel', event.currentTarget.value)}
-                          disabled={!detailDraft}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        RDV
-                      </span>
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <Input
-                          type="date"
-                          value={detailDraft?.rdvDate ?? ''}
-                          onChange={(event) => updateDetailDraft({ rdvDate: event.target.value })}
-                          onBlur={(event) => detailDraft && persistDetailField('dateRDV', event.currentTarget.value)}
-                          disabled={!detailDraft}
-                        />
-                        <Input
-                          type="time"
-                          value={detailDraft?.rdvTime ?? ''}
-                          onChange={(event) => updateDetailDraft({ rdvTime: event.target.value })}
-                          onBlur={(event) => detailDraft && persistDetailField('heureRDV', event.currentTarget.value)}
-                          disabled={!detailDraft}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                        Dernier appel
-                      </span>
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:flex-1">
-                          <Input
-                            type="date"
-                            value={detailDraft?.callDate ?? ''}
-                            onChange={(event) => updateDetailDraft({ callDate: event.target.value })}
-                            onBlur={(event) => detailDraft && persistDetailField('dateAppel', event.currentTarget.value)}
-                            disabled={!detailDraft}
-                          />
-                          <Input
-                            type="time"
-                            value={detailDraft?.callTime ?? ''}
-                            onChange={(event) => updateDetailDraft({ callTime: event.target.value })}
-                            onBlur={(event) => detailDraft && persistDetailField('heureAppel', event.currentTarget.value)}
-                            disabled={!detailDraft}
-                          />
-                        </div>
-                        <Input
-                          value={detailDraft?.callDuration ?? ''}
-                          onChange={(event) => updateDetailDraft({ callDuration: event.target.value })}
-                          onBlur={(event) => detailDraft && persistDetailField('dureeAppel', event.currentTarget.value)}
-                          placeholder="Dur?e (mm:ss)"
-                          disabled={!detailDraft}
-                          className="w-full sm:w-[180px]"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  <div className="space-y-2">
-                    <h3 className="flex items-center gap-2 text-sm font-semibold">
-                      <MessageSquare className="h-4 w-4" />
-                      Notes
-                    </h3>
-                    <Textarea
-                      value={detailDraft?.commentaire ?? ''}
-                      onChange={(event) => updateDetailDraft({ commentaire: event.target.value })}
-                      onBlur={(event) => detailDraft && persistDetailField('commentaire', event.currentTarget.value)}
-                      placeholder="Ajouter une note?"
-                      rows={4}
-                      disabled={!detailDraft}
-                    />
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="history" className="space-y-4">
-                </TabsContent>
-
-                <TabsContent value="history" className="space-y-4">
-                  <ScrollArea className="h-72 pr-4">
-                    {selectedContact.history.length > 0 ? (
-                      <div className="space-y-6">
-                        {selectedContact.history.map((entry, index) => (
-                          <div key={`${entry.id}-${index}`} className="relative pl-6">
-                            <div className="absolute left-0 top-6 flex flex-col items-center">
-                              <span
-                                className={`h-2.5 w-2.5 rounded-full border border-background ${TYPE_BULLET_CLASSES[entry.type]}`}
-                              />
-                              {index < selectedContact.history.length - 1 && (
-                                <span className="mt-1 w-px flex-1 bg-border" />
-                              )}
-                            </div>
-                            <div className="space-y-3 rounded-lg border bg-card/40 p-4 shadow-sm">
-                              <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                  <Badge variant="outline" className={TYPE_BADGE_STYLES[entry.type]}>
-                                    {TYPE_BADGE_LABELS[entry.type]}
-                                  </Badge>
-                                  <span className="text-sm font-medium text-foreground">{entry.displayDate}</span>
-                                </div>
-                                <div className="flex flex-wrap items-center gap-2">
-                                  {entry.previousStatus && (
-                                    <Badge variant="outline" className="text-xs text-muted-foreground">
-                                      {entry.previousStatus}
-                                    </Badge>
-                                  )}
-                                  <Badge className={getStatusColor(entry.status)}>{entry.status}</Badge>
-                                </div>
-                              </div>
-
-                              {entry.meta.length > 0 && (
-                                <div className="grid gap-1 text-xs text-muted-foreground">
-                                  {entry.meta.map((metaItem, metaIndex) => (
-                                    <div key={metaIndex} className="flex flex-wrap items-baseline gap-2">
-                                      <span className="font-medium text-foreground">{metaItem.label}</span>
-                                      <span className="flex-1">{metaItem.value}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              {entry.notes && (
-                                <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                                  <MessageSquare className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                                  <span className="flex-1 whitespace-pre-wrap">{entry.notes}</span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex h-60 flex-col items-center justify-center text-muted-foreground">
-                        <History className="mb-2 h-8 w-8" />
-                        <p>Aucun historique disponible pour ce contact.</p>
-                      </div>
-                    )}
-                  </ScrollArea>
-                </TabsContent>
-
-                <TabsContent value="files" className="space-y-4">
-                  <ScrollArea className="h-72 pr-4">
-                    <ContactFiles 
-                      contactId={selectedContact.id}
-                      contact={{
-                        prenom: selectedContact.prenom,
-                        nom: selectedContact.nom,
-                        telephone: selectedContact.telephone
-                      }}
-                    />
-                  </ScrollArea>
-                </TabsContent>
-              </Tabs>
-            </>
-          )}
-        </DialogContent>
-        </Dialog>
+        {viewMode === 'table' && (
+          <ContactDetailSheet
+            contact={selectedContact}
+            open={Boolean(isContactDialogOpen && selectedContact)}
+            onOpenChange={(open) => {
+              setIsContactDialogOpen(open)
+              if (!open) {
+                setSelectedContact(null)
+                onContactSelect?.(null)
+              }
+            }}
+            onCall={onCall}
+            onSms={onSms}
+            onEmail={onEmail}
+            onQualification={onQualification}
+            onReminder={onReminder}
+            onRDV={onRDV}
+            onCalCom={onCalCom}
+            onLinkedIn={onLinkedIn}
+            onGoogle={onGoogle}
+            onDirectLink={onDirectLink}
+          />
+        )}
 
         {/* Dialogue de mapping des colonnes */}
         <ImportMappingDialog
@@ -2427,5 +2065,3 @@ export function AnnuairePage({
     </div>
   );
 }
-
-
