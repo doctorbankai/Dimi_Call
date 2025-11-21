@@ -337,7 +337,11 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
         </CardHeader>
         <CardContent className="flex-1 pb-0 w-full" style={{ width: '100%' }}>
           <ChartContainer config={radialConfig as any} className="w-full h-[500px]" style={{ width: '100%' }}>
-            <BarChart accessibilityLayer data={radialData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+            <BarChart
+              accessibilityLayer
+              data={radialData}
+              margin={{ top: 32, right: 12, left: 12, bottom: 12 }}
+            >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="label" tickLine={false} tickMargin={10} axisLine={false} />
               <YAxis allowDecimals={false} />
@@ -349,10 +353,11 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
                 {radialData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.fill} />
                 ))}
-                <LabelList 
-                  dataKey="value" 
-                  position="top" 
-                  fill="hsl(var(--foreground))" 
+                <LabelList
+                  dataKey="value"
+                  position="top"
+                  offset={8}
+                  fill="hsl(var(--foreground))"
                   fontSize={12}
                 />
               </Bar>

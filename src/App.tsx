@@ -56,7 +56,11 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuPortal,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
   DropdownMenuRadioGroup,
@@ -66,7 +70,7 @@ import {
   Phone, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck, Linkedin, Globe, ExternalLink,
   Download, Keyboard, RefreshCw, Sun, Moon, Columns, X, Filter, Infinity, Search, Zap, EyeOff,
   Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2, Users, Timer, BarChart3, Database,
-  ChevronLeft, ChevronRight, ChevronDown, Plus, Edit, RotateCcw, Pencil, Palette
+  ChevronLeft, ChevronRight, ChevronDown, Plus, Edit, RotateCcw, Pencil, Palette, Check
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -109,6 +113,15 @@ export type TableTab = {
   color?: string
   contacts: Contact[]
 }
+
+type QuickRangeKey =
+  | 'all'
+  | 'today'
+  | 'last7'
+  | 'last30'
+  | 'thisWeek'
+  | 'thisMonth'
+  | 'custom'
 
 
 // Composant DonutChart moderne
@@ -334,9 +347,83 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const [graphRange, setGraphRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
   const [dbRange, setDbRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
   const [calendarDate, setCalendarDate] = useState<Date | undefined>(new Date())
-  const [filterPopoverOpen, setFilterPopoverOpen] = useState(false)
-  const [filterQuick, setFilterQuick] = useState<'all' | 'today' | 'thisWeek' | 'thisMonth' | 'custom'>('all')
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false)
+  const [filterQuick, setFilterQuick] = useState<QuickRangeKey>('all')
   const [dbSelectedCount, setDbSelectedCount] = useState<number>(0)
+
+  const formatYmd = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+  const updateRangeAndBroadcast = (range: { start: string; end: string }, key: QuickRangeKey) => {
+    setFilterQuick(key)
+    if (viewMode === 'graph') {
+      setGraphRange(range)
+    } else {
+      setDbRange(range)
+    }
+    const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode === 'graph' ? 'graph' : 'db', start: range.start, end: range.end } })
+    window.dispatchEvent(evt)
+  }
+
+  const applyQuickRange = (key: QuickRangeKey) => {
+    const now = new Date()
+
+    if (key === 'all') {
+      updateRangeAndBroadcast({ start: '', end: '' }, 'all')
+      return
+    }
+
+    if (key === 'today') {
+      const ymd = formatYmd(now)
+      updateRangeAndBroadcast({ start: ymd, end: ymd }, 'today')
+      return
+    }
+
+    if (key === 'last7') {
+      const end = formatYmd(now)
+      const startDate = new Date(now)
+      startDate.setDate(startDate.getDate() - 6)
+      updateRangeAndBroadcast({ start: formatYmd(startDate), end }, 'last7')
+      return
+    }
+
+    if (key === 'last30') {
+      const end = formatYmd(now)
+      const startDate = new Date(now)
+      startDate.setDate(startDate.getDate() - 29)
+      updateRangeAndBroadcast({ start: formatYmd(startDate), end }, 'last30')
+      return
+    }
+
+    if (key === 'thisWeek') {
+      const today = new Date(now)
+      const diffToMonday = (today.getDay() + 6) % 7
+      const start = new Date(today)
+      start.setDate(today.getDate() - diffToMonday)
+      const end = new Date(start)
+      end.setDate(start.getDate() + 6)
+      updateRangeAndBroadcast({ start: formatYmd(start), end: formatYmd(end) }, 'thisWeek')
+      return
+    }
+
+    if (key === 'thisMonth') {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1)
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      updateRangeAndBroadcast({ start: formatYmd(start), end: formatYmd(end) }, 'thisMonth')
+      return
+    }
+
+    if (key === 'custom') {
+      setFilterQuick('custom')
+    }
+  }
+
+  const handleCustomRangeSelect = (range?: { from?: Date; to?: Date }) => {
+    if (!range) return
+    const start = range.from ? formatYmd(range.from) : ''
+    const end = range.to ? formatYmd(range.to) : start
+    if (!start && !end) return
+    updateRangeAndBroadcast({ start, end }, 'custom')
+  }
   // Onglets Table
   const [tableTabs, setTableTabs] = useState<TableTab[]>(() => {
     try {
@@ -2483,6 +2570,18 @@ Dimitri MOREL - Arcanis Conseil`;
   const processedContacts = contacts.filter(c => c.statut !== ContactStatus.NonDefini).length;
   const progressPercentage = totalContacts > 0 ? Math.round((processedContacts / totalContacts) * 100) : 0;
 
+  const activeRange = viewMode === 'graph' ? graphRange : dbRange;
+  const dateRangeLabel = (() => {
+    if (filterQuick === 'all') return 'Tout';
+    if (filterQuick === 'today') return "Aujourd'hui";
+    if (filterQuick === 'last7') return '7 derniers jours';
+    if (filterQuick === 'last30') return '30 derniers jours';
+    if (filterQuick === 'thisWeek') return 'Cette semaine';
+    if (filterQuick === 'thisMonth') return 'Ce mois';
+    if (activeRange.start && activeRange.end) return `${activeRange.start} → ${activeRange.end}`;
+    return 'Plage personnalisée';
+  })();
+
   // RibbonButton component homognis
   const RibbonButton: React.FC<{
     onClick?: () => void;
@@ -2840,70 +2939,101 @@ Dimitri MOREL - Arcanis Conseil`;
                         {viewMode === 'graph' ? 'Graphiques' : 'Données'}
                       </h1>
                       <div className="flex flex-wrap items-center justify-center gap-2">
-                        <div className="inline-flex items-center gap-2">
-                          <Button size="sm" variant={filterQuick === 'all' ? 'default' : 'outline'} onClick={() => {
-                            setFilterQuick('all')
-                            if (viewMode === 'graph') { setGraphRange({ start: '', end: '' }) }
-                            if (viewMode === 'db') { setDbRange({ start: '', end: '' }) }
-                            const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode === 'graph' ? 'graph' : 'db', start: '', end: '' } })
-                            window.dispatchEvent(evt)
-                          }}>Tout</Button>
-                          <Button size="sm" variant={filterQuick === 'today' ? 'default' : 'outline'} onClick={() => {
-                            const today = new Date(); const y = today.getFullYear(); const m = String(today.getMonth() + 1).padStart(2, '0'); const d = String(today.getDate()).padStart(2, '0'); const ymd = `${y}-${m}-${d}`
-                            setFilterQuick('today')
-                            const range = { start: ymd, end: ymd }
-                            if (viewMode === 'graph') setGraphRange(range); else setDbRange(range)
-                            const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode === 'graph' ? 'graph' : 'db', start: ymd, end: ymd } })
-                            window.dispatchEvent(evt)
-                          }}>Aujourd'hui</Button>
-                          <Button size="sm" variant={filterQuick === 'thisWeek' ? 'default' : 'outline'} onClick={() => {
-                            const today = new Date(); const day = today.getDay(); const diffToMonday = (day + 6) % 7
-                            const start = new Date(today); start.setDate(today.getDate() - diffToMonday)
-                            const end = new Date(start); end.setDate(start.getDate() + 6)
-                            const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-                            const s = fmt(start), e = fmt(end)
-                            setFilterQuick('thisWeek')
-                            const range = { start: s, end: e }
-                            if (viewMode === 'graph') setGraphRange(range); else setDbRange(range)
-                            const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode === 'graph' ? 'graph' : 'db', start: s, end: e } })
-                            window.dispatchEvent(evt)
-                          }}>Cette semaine</Button>
-                          <Button size="sm" variant={filterQuick === 'thisMonth' ? 'default' : 'outline'} onClick={() => {
-                            const today = new Date(); const start = new Date(today.getFullYear(), today.getMonth(), 1); const end = new Date(today.getFullYear(), today.getMonth() + 1, 0)
-                            const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-                            const s = fmt(start), e = fmt(end)
-                            setFilterQuick('thisMonth')
-                            const range = { start: s, end: e }
-                            if (viewMode === 'graph') setGraphRange(range); else setDbRange(range)
-                            const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode === 'graph' ? 'graph' : 'db', start: s, end: e } })
-                            window.dispatchEvent(evt)
-                          }}>Ce mois</Button>
-                        </div>
-                        <Popover open={filterPopoverOpen} onOpenChange={setFilterPopoverOpen}>
-                          <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-8">
-                              <Calendar className="h-4 w-4 mr-2" />
-                              {(viewMode === 'graph' ? graphRange.start : dbRange.start) && (viewMode === 'graph' ? graphRange.end : dbRange.end) ? `${viewMode === 'graph' ? graphRange.start : dbRange.start} → ${viewMode === 'graph' ? graphRange.end : dbRange.end}` : 'Plage'}
+                        <DropdownMenu modal={false} open={filterMenuOpen} onOpenChange={setFilterMenuOpen}>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-9 gap-2 px-3">
+                              <Calendar className="h-4 w-4" />
+                              <span className="text-sm">{dateRangeLabel}</span>
+                              <ChevronDown className="h-3.5 w-3.5 opacity-70" />
                             </Button>
-                          </PopoverTrigger>
-                          <PopoverContent className="p-2 w-auto" align="end" side="bottom" sideOffset={4}>
-                            <UiCalendar
-                              mode="range"
-                              selected={{ from: (viewMode === 'graph' ? graphRange.start : dbRange.start) ? new Date(viewMode === 'graph' ? graphRange.start : dbRange.start) : undefined, to: (viewMode === 'graph' ? graphRange.end : dbRange.end) ? new Date(viewMode === 'graph' ? graphRange.end : dbRange.end) : undefined } as any}
-                              onSelect={(r: any) => {
-                                const f: Date | undefined = r?.from ?? undefined
-                                const t: Date | undefined = r?.to ?? r?.from ?? undefined
-                                const fmt = (d?: Date) => d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : ''
-                                const s = fmt(f), e = fmt(t)
-                                setFilterQuick('custom')
-                                if (viewMode === 'graph') setGraphRange({ start: s, end: e }); else setDbRange({ start: s, end: e })
-                                const evt = new CustomEvent('dimicall-date-filter', { detail: { scope: viewMode === 'graph' ? 'graph' : 'db', start: s, end: e } })
-                                window.dispatchEvent(evt)
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-64 p-1">
+                            <DropdownMenuLabel>Plage de dates</DropdownMenuLabel>
+                            <DropdownMenuItem
+                              onSelect={(e) => {
+                                e.preventDefault()
+                                applyQuickRange('today')
+                                setFilterMenuOpen(false)
                               }}
-                              numberOfMonths={2}
-                            />
-                          </PopoverContent>
-                        </Popover>
+                            >
+                              Aujourd'hui
+                              {filterQuick === 'today' && <Check className="ml-auto h-4 w-4 opacity-70" />}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={(e) => {
+                                e.preventDefault()
+                                applyQuickRange('last7')
+                                setFilterMenuOpen(false)
+                              }}
+                            >
+                              7 derniers jours
+                              {filterQuick === 'last7' && <Check className="ml-auto h-4 w-4 opacity-70" />}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={(e) => {
+                                e.preventDefault()
+                                applyQuickRange('last30')
+                                setFilterMenuOpen(false)
+                              }}
+                            >
+                              30 derniers jours
+                              {filterQuick === 'last30' && <Check className="ml-auto h-4 w-4 opacity-70" />}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={(e) => {
+                                e.preventDefault()
+                                applyQuickRange('thisWeek')
+                                setFilterMenuOpen(false)
+                              }}
+                            >
+                              Cette semaine
+                              {filterQuick === 'thisWeek' && <Check className="ml-auto h-4 w-4 opacity-70" />}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={(e) => {
+                                e.preventDefault()
+                                applyQuickRange('thisMonth')
+                                setFilterMenuOpen(false)
+                              }}
+                            >
+                              Ce mois
+                              {filterQuick === 'thisMonth' && <Check className="ml-auto h-4 w-4 opacity-70" />}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={(e) => {
+                                e.preventDefault()
+                                applyQuickRange('all')
+                                setFilterMenuOpen(false)
+                              }}
+                            >
+                              Tout
+                              {filterQuick === 'all' && <Check className="ml-auto h-4 w-4 opacity-70" />}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger className="flex items-center gap-2">
+                                <CalendarSearch className="h-4 w-4" />
+                                <span>Plage personnalisée</span>
+                                {filterQuick === 'custom' && <Check className="ml-auto h-4 w-4 opacity-70" />}
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuPortal>
+                                <DropdownMenuSubContent className="p-3" sideOffset={8} alignOffset={-4}>
+                                  <UiCalendar
+                                    mode="range"
+                                    numberOfMonths={2}
+                                    selected={{ from: activeRange.start ? new Date(activeRange.start) : undefined, to: activeRange.end ? new Date(activeRange.end) : undefined } as any}
+                                    onSelect={(range: any) => {
+                                      handleCustomRangeSelect(range || undefined)
+                                      if (range?.from && range?.to) {
+                                        setFilterMenuOpen(false)
+                                      }
+                                    }}
+                                  />
+                                </DropdownMenuSubContent>
+                              </DropdownMenuPortal>
+                            </DropdownMenuSub>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </div>
