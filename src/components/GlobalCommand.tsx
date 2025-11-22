@@ -9,7 +9,7 @@ import {
   CommandSeparator,
   CommandShortcut,
 } from '@/components/ui/command'
-import { Calendar, Phone, BarChart3, BookOpen, Database, Settings, Sun, Moon, Search } from 'lucide-react'
+import { Calendar, Phone, BarChart3, BookOpen, Database, Settings, Sun, Moon, Search, Sparkles } from 'lucide-react'
 import { Contact } from '@/types'
 import { Theme } from '@/types'
 
@@ -19,7 +19,7 @@ type GlobalCommandProps = {
   theme: Theme
   contacts?: Contact[]
   onPickContact?: (c: Contact) => void
-  onNavigate?: (mode: 'appels-cards' | 'calendar-2' | 'graph' | 'db' | 'annuaire' | 'files') => void
+  onNavigate?: (mode: 'appels-cards' | 'calendar-2' | 'graph' | 'db' | 'annuaire' | 'files' | 'prequalification') => void
   onOpenSettings?: () => void
   onToggleTheme?: () => void
 }
@@ -48,6 +48,10 @@ export const GlobalCommand: React.FC<GlobalCommandProps> = ({
             <Phone className="mr-2 h-4 w-4" />
             <span>Appels</span>
             <CommandShortcut>G A</CommandShortcut>
+          </CommandItem>
+          <CommandItem onSelect={() => onNavigate?.('prequalification')}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            <span>Pré-qualification</span>
           </CommandItem>
           <CommandItem onSelect={() => onNavigate?.('calendar-2')}>
             <Calendar className="mr-2 h-4 w-4" />

@@ -17,7 +17,7 @@ type MainHeaderProps = {
   adbConnected?: boolean
   contacts?: Contact[]
   onPickContact?: (c: Contact) => void
-  onNavigate?: (mode: 'appels-cards' | 'calendar-2' | 'graph' | 'db' | 'annuaire' | 'files') => void
+  onNavigate?: (mode: 'appels-cards' | 'calendar-2' | 'graph' | 'db' | 'annuaire' | 'files' | 'prequalification') => void
   onOpenAnnuaireContact?: (id?: string, name?: string) => void
   updateState?: UpdateState
   onUpdateClick?: () => void

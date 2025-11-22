@@ -95,6 +95,7 @@ import PaginatedEventTable from './components/PaginatedEventTable';
 import { FullPageCalendar } from './components/FullPageCalendar';
 import { AnnuairePage } from './components/AnnuairePage';
 import { FilesPage } from './pages/FilesPage';
+import { PreQualificationPage } from './features/prequalification/PreQualificationPage';
 import {
   ContextMenu,
   ContextMenuContent,
@@ -235,7 +236,7 @@ const contactsEqualById = (a: Contact[], b: Contact[]) => {
 };
 
 
-type ViewMode = 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar-2' | 'annuaire' | 'files';
+type ViewMode = 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar-2' | 'annuaire' | 'files' | 'prequalification';
 
 const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const { mode } = useCallMode();
@@ -334,7 +335,15 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
         localStorage.setItem('dimicall-view-mode', 'appels-cards')
         return 'appels-cards'
       }
-      if (saved === 'appels-cards' || saved === 'graph' || saved === 'db' || saved === 'calendar-2' || saved === 'annuaire') {
+      if (
+        saved === 'appels-cards' ||
+        saved === 'graph' ||
+        saved === 'db' ||
+        saved === 'calendar-2' ||
+        saved === 'annuaire' ||
+        saved === 'files' ||
+        saved === 'prequalification'
+      ) {
         return saved
       }
     } catch (error) {
@@ -3605,6 +3614,10 @@ Dimitri MOREL - Arcanis Conseil`;
                   />
                 ) : viewMode === 'files' ? (
                   <FilesPage contacts={contacts} />
+                ) : viewMode === 'prequalification' ? (
+                  <div className="flex-1 flex flex-col overflow-hidden min-h-0">
+                    <PreQualificationPage />
+                  </div>
                 ) : (
                   <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
                     <div className="flex-1 overflow-hidden">

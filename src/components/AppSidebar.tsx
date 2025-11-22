@@ -11,7 +11,7 @@ import {
   SidebarGroupLabel,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Settings, User, Calendar, Crown, Phone, BarChart3, Database, MailQuestion, HelpCircle, BookOpen } from 'lucide-react';
+import { Settings, Calendar, Phone, BarChart3, Database, MailQuestion, HelpCircle, BookOpen, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserProfileDialog } from './UserProfileDialog';
 import { TicketForm } from './TicketForm';
@@ -31,8 +31,8 @@ interface AppSidebarProps {
   userEmail?: string;
   hasSpecialAccess?: boolean;
   onLogout?: () => void;
-  viewMode: 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar-2' | 'annuaire' | 'files';
-  onChangeViewMode: (mode: 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar-2' | 'annuaire' | 'files') => void;
+  viewMode: 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar-2' | 'annuaire' | 'files' | 'prequalification';
+  onChangeViewMode: (mode: 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar-2' | 'annuaire' | 'files' | 'prequalification') => void;
   onTicketClick?: () => void;
   onHelpClick?: () => void;
   theme?: Theme;
@@ -181,6 +181,17 @@ export function AppSidebar({
                 >
                   <Calendar className="w-4 h-4" />
                   <span>Calendrier</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  isActive={viewMode === 'prequalification'}
+                  onClick={() => onChangeViewMode('prequalification')}
+                  tooltip="Pré-qualification"
+                  className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Pré-qualification</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
