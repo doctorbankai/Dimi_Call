@@ -1,6 +1,6 @@
 import React, { useCallback, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { UploadCloud, FileSpreadsheet, ShieldCheck, Info } from 'lucide-react';
+import { UploadCloud, FileSpreadsheet, ShieldCheck, Info, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -93,84 +93,71 @@ export const PreQualificationUpload: React.FC<PreQualificationUploadProps> = ({ 
   };
 
   return (
-    <Card className="border-dashed border-2 border-muted-foreground/30 shadow-none">
-      <CardHeader className="flex flex-col gap-2">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 text-primary shadow-inner shadow-primary/20">
-            <FileSpreadsheet className="h-5 w-5" />
-          </div>
-          <div className="flex flex-col">
-            <CardTitle className="text-xl">Importer une liste de prospects</CardTitle>
-            <CardDescription>Colonne A : prénom, colonne B : nom. Formats acceptés : .xlsx, .xls.</CardDescription>
-          </div>
-          <Badge variant="outline" className="ml-auto text-xs">
-            Étape 1/3
-          </Badge>
+    <div className="flex h-full flex-col items-center justify-center max-w-2xl mx-auto w-full px-2 sm:px-4 animate-in fade-in zoom-in duration-300">
+      <div className="text-center space-y-2 mb-8">
+        <div className="inline-flex items-center justify-center p-3 rounded-full bg-primary/10 mb-4">
+          <UploadCloud className="h-8 w-8 text-primary" />
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <Alert variant="default" className="border border-amber-300/50 bg-amber-100/40 text-amber-900 dark:border-amber-400/40 dark:bg-amber-900/20 dark:text-amber-50">
-          <ShieldCheck className="h-4 w-4" />
-          <div className="flex flex-col">
-            <AlertTitle>Astuce LinkedIn</AlertTitle>
-            <AlertDescription className="text-sm">
-              Connectez-vous à LinkedIn dans un autre onglet avant d&apos;importer pour que l&apos;ouverture automatique des profils fonctionne sans interruption.
-            </AlertDescription>
+        <h2 className="text-2xl font-semibold tracking-tight">Importez vos prospects</h2>
+        <p className="text-muted-foreground max-w-md mx-auto">
+          Glissez votre fichier Excel ici. Assurez-vous d'avoir les colonnes "Prénom" et "Nom".
+        </p>
+      </div>
+
+      <div
+        className={cn(
+          'relative flex flex-col items-center justify-center w-full gap-4 rounded-xl border-2 border-dashed p-8 sm:p-12 transition-all duration-200 cursor-pointer hover:bg-muted/50',
+          isDragging ? 'border-primary bg-primary/5 scale-[1.02]' : 'border-muted-foreground/25',
+          error ? 'border-destructive/50 bg-destructive/5' : ''
+        )}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={(e) => {
+          e.preventDefault();
+          setIsDragging(false);
+        }}
+        onDrop={onDrop}
+        onClick={() => fileInputRef.current?.click()}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          className="hidden"
+          onChange={onSelectFile}
+        />
+
+        <div className="flex flex-col items-center gap-2 text-center">
+          <p className="text-sm font-medium">
+            {isDragging ? "Déposez le fichier maintenant" : "Cliquez ou glissez le fichier ici"}
+          </p>
+          <div className="flex gap-2">
+            <Badge variant="secondary" className="text-xs font-normal">.xlsx</Badge>
+            <Badge variant="secondary" className="text-xs font-normal">.xls</Badge>
           </div>
+        </div>
+      </div>
+
+      {error && (
+        <Alert variant="destructive" className="mt-6 animate-in slide-in-from-top-2">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Erreur</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
+      )}
 
-        <div
-          className={cn(
-            'relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed p-8 transition-colors',
-            isDragging ? 'border-primary/70 bg-primary/5' : 'border-muted'
-          )}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragging(true);
-          }}
-          onDragLeave={(e) => {
-            e.preventDefault();
-            setIsDragging(false);
-          }}
-          onDrop={onDrop}
-        >
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-            onChange={onSelectFile}
-          />
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-            <UploadCloud className="h-6 w-6 text-muted-foreground" />
-          </div>
-          <div className="text-center space-y-1">
-            <p className="text-base font-medium">Glissez-déposez votre fichier Excel</p>
-            <p className="text-sm text-muted-foreground">ou cliquez pour le sélectionner</p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">
-            <Badge variant="outline">Excel .xlsx</Badge>
-            <Badge variant="outline">Excel .xls</Badge>
-          </div>
-          <div className="flex items-center gap-2 rounded-full bg-background px-3 py-1 text-xs text-muted-foreground shadow-sm ring-1 ring-muted">
-            <Info className="h-4 w-4" />
-            <span>Les lignes vides sont ignorées automatiquement</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button type="button" variant="secondary" onClick={() => fileInputRef.current?.click()}>
-              Sélectionner un fichier
-            </Button>
-          </div>
-        </div>
-
-        {error ? (
-          <Alert variant="destructive">
-            <AlertTitle>Import impossible</AlertTitle>
-            <AlertDescription className="text-sm">{error}</AlertDescription>
-          </Alert>
-        ) : null}
-      </CardContent>
-    </Card>
+      <div className="mt-8 w-full">
+        <Alert className="bg-muted/50 border-none">
+          <Info className="h-4 w-4 text-primary" />
+          <AlertTitle className="text-primary font-medium">Conseil Pro</AlertTitle>
+          <AlertDescription className="text-muted-foreground">
+            Connectez-vous à LinkedIn dans un autre onglet pour une expérience fluide.
+          </AlertDescription>
+        </Alert>
+      </div>
+    </div>
   );
 };
 

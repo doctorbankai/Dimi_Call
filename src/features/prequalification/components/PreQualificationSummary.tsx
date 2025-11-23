@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { CATEGORY_DETAILS, CATEGORY_ORDER } from '../constants';
 import type { ClassificationMap, ProspectProfile } from '../types';
 import { ProspectCategory } from '../types';
@@ -38,64 +39,61 @@ export const PreQualificationSummary: React.FC<PreQualificationSummaryProps> = (
   }, [classifications, profiles]);
 
   return (
-    <div className="flex h-full flex-col gap-4">
-      <Card className="shadow-sm">
-        <CardHeader className="flex flex-row items-start justify-between space-y-0">
-          <div className="space-y-1">
-            <CardTitle className="flex items-center gap-2 text-2xl">
-              <Trophy className="h-6 w-6 text-primary" />
-              Pré-qualification terminée
-            </CardTitle>
-            <CardDescription>Résumé en direct de cette session.</CardDescription>
-          </div>
-          <Badge variant="outline" className="mt-1 text-xs">
-            Étape 3/3
-          </Badge>
-        </CardHeader>
-        <CardContent className="flex flex-wrap items-center gap-2">
-          <Badge variant="secondary" className="text-xs">
-            {profiles.length} profils traités
-          </Badge>
-          <Badge variant="outline" className="text-xs">
-            {Object.keys(classifications).length} décisions prises
-          </Badge>
-          <Button variant="secondary" size="sm" className="ml-auto" onClick={onRestart}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Recommencer
-          </Button>
-        </CardContent>
-      </Card>
+    <div className="flex h-full flex-col gap-5 sm:gap-6 animate-in fade-in duration-500">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="space-y-1">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
+            <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
+            Pré-qualification terminée
+          </h2>
+          <p className="text-sm sm:text-base text-muted-foreground">
+            Voici le résumé de votre session. Vous pouvez exporter ces résultats.
+          </p>
+        </div>
+        <Button variant="outline" onClick={onRestart} className="w-full sm:w-auto justify-center">
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Nouvelle session
+        </Button>
+      </div>
 
-      <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 xl:grid-cols-4">
         {CATEGORY_ORDER.map((category) => {
           const entries = grouped[category] ?? [];
           const details = CATEGORY_DETAILS[category];
           return (
-            <Card key={category} className="flex flex-col border shadow-sm">
-              <CardHeader className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-muted">{details.icon}</span>
-                  <div className="flex flex-col">
-                    <CardTitle className="text-lg">{details.label}</CardTitle>
-                    <CardDescription>{details.description}</CardDescription>
+            <Card key={category} className="flex flex-col overflow-hidden border-2 hover:border-primary/20 transition-colors h-full">
+              <CardHeader className="bg-muted/30 pb-4">
+                <div className="flex items-center justify-between">
+                  <div className="p-2 rounded-md bg-background shadow-sm">
+                    {details.icon}
                   </div>
-                  <Badge variant="secondary" className="ml-auto text-sm">
+                  <Badge variant="secondary" className="text-sm font-mono">
                     {entries.length}
                   </Badge>
                 </div>
+                <CardTitle className="mt-4 text-lg">{details.label}</CardTitle>
+                <CardDescription className="line-clamp-2 min-h-[2.5em]">{details.description}</CardDescription>
               </CardHeader>
-              <CardContent className="flex-1">
-                <ScrollArea className="h-52">
-                  <div className="space-y-2 pr-2">
+
+              <Separator />
+
+              <CardContent className="flex-1 p-0 min-h-[200px]">
+                <ScrollArea className="h-[240px] sm:h-[300px] w-full">
+                  <div className="p-4 space-y-2">
                     {entries.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Aucun profil ici.</p>
+                      <div className="flex flex-col items-center justify-center h-full py-12 text-muted-foreground text-sm text-center">
+                        <p>Aucun profil</p>
+                      </div>
                     ) : (
                       entries.map((profile) => (
                         <div
                           key={profile.id}
-                          className="rounded-lg border bg-muted/30 px-3 py-2 text-sm shadow-sm"
+                          className="flex items-center gap-3 rounded-md border px-3 py-2 text-sm hover:bg-accent/50 transition-colors"
                         >
-                          {profile.prenom} {profile.nom}
+                          <div className="h-2 w-2 shrink-0 rounded-full bg-primary/50" />
+                          <span className="font-medium truncate">
+                            {profile.prenom} {profile.nom}
+                          </span>
                         </div>
                       ))
                     )}

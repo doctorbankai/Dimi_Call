@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo } from 'react';
-import { Linkedin, ArrowLeft, Clock3, Anchor } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useEffect, useMemo, useCallback } from 'react';
+import { Linkedin, ArrowLeft, Clock } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { CATEGORY_DETAILS, CATEGORY_ORDER } from '../constants';
 import { useProspectProfiler } from '../hooks/useProspectProfiler';
 import type { ClassificationMap, ProspectProfile } from '../types';
+import { ProspectCategory } from '../types';
 
 type PreQualificationClassifierProps = {
   initialProfiles: ProspectProfile[];
@@ -23,7 +24,6 @@ export const PreQualificationClassifier: React.FC<PreQualificationClassifierProp
 }) => {
   const {
     currentProfile,
-    nextProfile,
     classifications,
     classifyAndNext,
     goBack,
@@ -31,7 +31,6 @@ export const PreQualificationClassifier: React.FC<PreQualificationClassifierProp
     isFinished,
     totalProfiles,
     currentIndex,
-    completedCount,
     progress,
   } = useProspectProfiler(initialProfiles, onProfileUpdate);
 
@@ -49,153 +48,161 @@ export const PreQualificationClassifier: React.FC<PreQualificationClassifierProp
 
   const remainingQueue = useMemo(() => initialProfiles.slice(currentIndex + 1), [initialProfiles, currentIndex]);
 
-  const openLinkedInWindow = (url: string) => {
+  const openLinkedInWindow = useCallback((url: string) => {
     if (!url) return;
     window.open(url, 'linkedinWindow', 'width=1200,height=800,resizable,scrollbars');
-  };
+  }, []);
 
   useEffect(() => {
     if (currentProfile) {
       openLinkedInWindow(linkedInSearchUrl);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentProfile]);
+  }, [currentProfile, linkedInSearchUrl, openLinkedInWindow]);
 
-  if (!initialProfiles.length) {
-    return (
-      <Card className="h-full">
-        <CardHeader>
-          <CardTitle>Aucun profil</CardTitle>
-          <CardDescription>Importez un fichier pour démarrer la pré-qualification.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
-            Déposez un fichier Excel depuis l&apos;étape précédente.
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!currentProfile) return;
 
-  const currentFullName = currentProfile ? `${currentProfile.prenom} ${currentProfile.nom}` : 'Profils terminés';
+      switch (event.key) {
+        case '1':
+          classifyAndNext(ProspectCategory.Baleine);
+          break;
+        case '2':
+          classifyAndNext(ProspectCategory.Poisson);
+          break;
+        case '3':
+          classifyAndNext(ProspectCategory.Premature);
+          break;
+        case '4':
+          classifyAndNext(ProspectCategory.Inexploitable);
+          break;
+        case 'Backspace':
+          if (canGoBack) goBack();
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentProfile, classifyAndNext, goBack, canGoBack]);
+
+  if (!initialProfiles.length) return null;
 
   return (
-    <Card className="flex h-full flex-col">
-      <CardHeader className="space-y-3">
-        <div className="flex flex-wrap items-start gap-3">
-          <div className="flex flex-col">
-            <CardTitle className="text-2xl leading-tight">{currentFullName}</CardTitle>
-            <CardDescription>
-              Recherches LinkedIn lancées automatiquement sur le profil en cours. Ajustez le statut en un clic.
-            </CardDescription>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => openLinkedInWindow(linkedInSearchUrl)} disabled={!currentProfile}>
-              <Linkedin className="mr-2 h-4 w-4" />
-              Ouvrir LinkedIn
-            </Button>
-            <Button variant="outline" size="sm" onClick={goBack} disabled={!canGoBack}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Retour
-            </Button>
-          </div>
-        </div>
-        <div className="space-y-1">
-          <Progress value={progress} className="h-2" />
-          <p className="text-xs text-muted-foreground">
-            Progression {Math.min(totalProfiles, currentIndex + 1)}/{totalProfiles} — {progress}%
-          </p>
-        </div>
-      </CardHeader>
+    <div className="flex h-full w-full max-w-7xl mx-auto flex-col lg:flex-row gap-4 lg:gap-6 overflow-hidden">
+      {/* Main Classification Area */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex flex-col h-full max-w-3xl mx-auto w-full gap-4 py-2 px-1 sm:px-2">
 
-      <CardContent className="flex flex-1 flex-col gap-4 min-h-0">
-        <div className="flex min-h-0 flex-1 flex-col gap-4">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {CATEGORY_ORDER.map((category) => {
+          {/* Header / Progress */}
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 shrink-0">
+            <Button variant="ghost" size="icon" onClick={goBack} disabled={!canGoBack} className="h-8 w-8">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <Progress value={progress} className="h-2 min-w-[120px] flex-1" />
+            <span className="text-xs font-medium text-muted-foreground whitespace-nowrap px-1">
+              {currentIndex + 1} / {totalProfiles}
+            </span>
+          </div>
+
+          {/* Profile Card - Compact */}
+          <Card className="border shadow-sm shrink-0">
+            <CardContent className="p-4 sm:p-6 text-center space-y-3 sm:space-y-4">
+              <div className="space-y-1">
+                <h2 className="text-xl sm:text-2xl font-bold tracking-tight truncate px-2">
+                  {currentProfile ? `${currentProfile.prenom} ${currentProfile.nom}` : 'Terminé'}
+                </h2>
+                <p className="text-xs sm:text-sm text-muted-foreground flex items-center justify-center gap-2 flex-wrap">
+                  <span className="relative flex h-2 w-2 shrink-0">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+                  </span>
+                  Recherche LinkedIn active
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="gap-2 h-8 w-full sm:w-auto"
+                onClick={() => openLinkedInWindow(linkedInSearchUrl)}
+              >
+                <Linkedin className="h-3.5 w-3.5 text-[#0077b5]" />
+                Rouvrir LinkedIn
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Actions Grid - Compact */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 flex-1 min-h-0 overflow-y-auto pb-2">
+            {CATEGORY_ORDER.map((category, index) => {
               const details = CATEGORY_DETAILS[category];
               return (
                 <Button
                   key={category}
-                  type="button"
+                  variant="outline"
                   className={cn(
-                    'h-auto items-center justify-start gap-3 rounded-xl px-4 py-3 text-left text-base font-semibold shadow-md transition-all duration-150',
+                    "h-full min-h-[80px] sm:min-h-[100px] flex flex-col items-start p-3 sm:p-4 gap-2 hover:bg-accent/50 transition-all border-2 relative overflow-hidden group whitespace-normal text-left",
+                    "hover:border-primary/50",
                     details.buttonClass
                   )}
                   onClick={() => classifyAndNext(category)}
                 >
-                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/15 shadow-inner">
-                    {details.icon}
-                  </span>
-                  <span className="flex-1">
-                    {details.label}
-                    <span className="block text-xs font-normal opacity-80">{details.description}</span>
-                  </span>
+                  <div className="flex items-center justify-between w-full gap-2">
+                    <div className="p-1.5 rounded-md bg-background/80 backdrop-blur-sm shadow-sm group-hover:scale-110 transition-transform shrink-0 [&_svg]:h-4 [&_svg]:w-4 sm:[&_svg]:h-5 sm:[&_svg]:w-5">
+                      {details.icon}
+                    </div>
+                    <Badge variant="secondary" className="font-mono text-[10px] h-5 w-5 flex items-center justify-center p-0 opacity-50 group-hover:opacity-100 transition-opacity shrink-0">
+                      {index + 1}
+                    </Badge>
+                  </div>
+                  <div className="space-y-0.5 mt-auto w-full">
+                    <div className="font-semibold text-sm truncate">{details.label}</div>
+                    <div className="text-xs text-muted-foreground font-normal leading-snug line-clamp-2 hidden sm:block">
+                      {details.description}
+                    </div>
+                  </div>
                 </Button>
               );
             })}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={goBack} disabled={!canGoBack}>
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Revenir au précédent
-            </Button>
-            {nextProfile ? (
-              <Badge variant="outline" className="text-xs">
-                Profil suivant : {nextProfile.prenom} {nextProfile.nom}
-              </Badge>
-            ) : (
-              <Badge variant="secondary" className="text-xs">
-                Dernier profil en cours
-              </Badge>
-            )}
-          </div>
-
-          <div className="w-full">
-            <div className="rounded-xl border bg-card p-4 shadow-sm">
-              <div className="flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-2">
-                  <Clock3 className="h-4 w-4 text-primary" />
-                  <p className="font-semibold">File d&apos;attente</p>
-                </div>
-                <Badge variant="outline" className="ml-auto text-xs">
-                  Restants : {remainingQueue.length}
-                </Badge>
-              </div>
-              <ScrollArea className="mt-3 h-72 sm:h-96 w-full">
-                <div className="space-y-2 pr-1">
-                  {remainingQueue.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Aucun autre profil à venir.</p>
-                  ) : (
-                    remainingQueue.map((profile) => (
-                      <div
-                        key={profile.id}
-                        className="flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-2 text-sm"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-background/70 shadow-sm">
-                            <Anchor className="h-4 w-4 text-muted-foreground" />
-                          </span>
-                          <div className="flex flex-col">
-                            <span className="font-medium">
-                              {profile.prenom} {profile.nom}
-                            </span>
-                            <span className="text-xs text-muted-foreground">Recherche LinkedIn prête</span>
-                          </div>
-                        </div>
-                        <Badge variant="secondary" className="text-[11px] uppercase tracking-wide">
-                          À venir
-                        </Badge>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
-            </div>
+          <div className="text-center text-[10px] text-muted-foreground shrink-0 hidden sm:block">
+            Raccourcis clavier : <kbd className="px-1 bg-muted rounded border">1</kbd> - <kbd className="px-1 bg-muted rounded border">4</kbd>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      {/* Side Panel - Queue (Hidden on small screens) */}
+      <div className="w-full max-w-xs hidden lg:flex flex-col border-t lg:border-t-0 lg:border-l lg:pl-4 lg:py-2 pt-4 lg:pt-0 shrink-0">
+        <div className="font-semibold mb-3 flex items-center gap-2 text-sm">
+          <Clock className="h-4 w-4 text-muted-foreground" />
+          À venir
+          <Badge variant="secondary" className="ml-auto text-xs h-5 px-1.5">{remainingQueue.length}</Badge>
+        </div>
+
+        <ScrollArea className="flex-1 -mr-4 pr-4">
+          <div className="space-y-2">
+            {remainingQueue.length === 0 ? (
+              <div className="text-xs text-muted-foreground text-center py-8">
+                Aucun profil en attente
+              </div>
+            ) : (
+              remainingQueue.map((profile, idx) => (
+                <div key={profile.id} className="flex items-center gap-3 p-2.5 rounded-md border bg-card/50 text-sm hover:bg-accent/50 transition-colors">
+                  <span className="text-xs font-mono text-muted-foreground w-5 text-center shrink-0">
+                    {currentIndex + idx + 2}
+                  </span>
+                  <span className="font-medium truncate text-xs">
+                    {profile.prenom} {profile.nom}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+    </div>
   );
 };
 
