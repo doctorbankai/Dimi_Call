@@ -3,7 +3,7 @@ import { Contact, ContactStatus } from '../types';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Phone, PhoneOff, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck } from 'lucide-react';
+import { Phone, PhoneOff, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck, MoreHorizontal } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { formatPhoneNumber } from '../services/dataService';
 import StatusSelect from './StatusSelect';
@@ -115,7 +115,7 @@ const CallControl: React.FC<CallControlProps> = ({
   const canHangUp = isCalling;
   const isDetailed = displayMode === 'full' && variant === 'detailed';
 
-  const renderActionButtons = () => (
+  const renderPrimaryButtons = () => (
     <>
       <TooltipProvider>
         <Tooltip>
@@ -129,7 +129,7 @@ const CallControl: React.FC<CallControlProps> = ({
                 onClick={() => onHangUp()}
                 disabled={!canHangUp}
                 className={cn(
-                  "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                  "size-10 rounded-full transition-all duration-200 hover:scale-105 shrink-0",
                   "bg-red-500 hover:bg-red-600 text-white shadow-lg",
                   "focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-2",
                   "disabled:opacity-50 disabled:cursor-not-allowed",
@@ -146,7 +146,7 @@ const CallControl: React.FC<CallControlProps> = ({
                 onClick={() => onCall()}
                 disabled={!canCall}
                 className={cn(
-                  "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                  "size-10 rounded-full transition-all duration-200 hover:scale-105 shrink-0",
                   "bg-green-500 hover:bg-green-600 text-white shadow-lg",
                   "focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2",
                   "disabled:opacity-50 disabled:cursor-not-allowed",
@@ -181,7 +181,7 @@ const CallControl: React.FC<CallControlProps> = ({
               onClick={() => onSms && onSms()}
               disabled={!contact}
               className={cn(
-                "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                "size-10 rounded-full transition-all duration-200 hover:scale-105 shrink-0",
                 "border-2 hover:bg-accent hover:text-accent-foreground",
                 "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
                 "disabled:opacity-50 disabled:cursor-not-allowed",
@@ -207,7 +207,7 @@ const CallControl: React.FC<CallControlProps> = ({
               onClick={() => onEmail && onEmail()}
               disabled={!contact || !contact.email}
               className={cn(
-                "size-10 rounded-full transition-all duration-200 hover:scale-105",
+                "size-10 rounded-full transition-all duration-200 hover:scale-105 shrink-0",
                 "border-2 hover:bg-accent hover:text-accent-foreground",
                 "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
                 "disabled:opacity-50 disabled:cursor-not-allowed",
@@ -221,122 +221,198 @@ const CallControl: React.FC<CallControlProps> = ({
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Qualification"
-              title="Qualifier le contact"
-              onClick={() => onQualification && onQualification()}
-              disabled={!contact}
-              className={cn(
-                "size-10 rounded-full transition-all duration-200 hover:scale-105",
-                "border-2 hover:bg-accent hover:text-accent-foreground",
-                "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-              )}
-            >
-              <FileCheck className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Qualifier le contact</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Rappel"
-              title="Programmer un rappel"
-              onClick={() => onRappel && onRappel()}
-              disabled={!contact}
-              className={cn(
-                "size-10 rounded-full transition-all duration-200 hover:scale-105",
-                "border-2 hover:bg-accent hover:text-accent-foreground",
-                "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-              )}
-            >
-              <Bell className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Programmer un rappel</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Rendez-vous"
-              title="Programmer un rendez-vous"
-              onClick={() => onRendezVous && onRendezVous()}
-              disabled={!contact}
-              className={cn(
-                "size-10 rounded-full transition-all duration-200 hover:scale-105",
-                "border-2 hover:bg-accent hover:text-accent-foreground",
-                "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-              )}
-            >
-              <Calendar className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Programmer un rendez-vous</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="icon"
-              aria-label="Cal.com"
-              title="Ouvrir Cal.com"
-              onClick={() => onCalCom && onCalCom()}
-              disabled={!contact}
-              className={cn(
-                "size-10 rounded-full transition-all duration-200 hover:scale-105",
-                "border-2 hover:bg-accent hover:text-accent-foreground",
-                "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
-              )}
-            >
-              <CalendarSearch className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Ouvrir Cal.com</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
     </>
+  );
+
+  const renderOverflowMenu = () => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          className={cn(
+            "size-10 rounded-full transition-all duration-200 hover:scale-105 shrink-0",
+            "border-2 hover:bg-accent hover:text-accent-foreground",
+            "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+          )}
+          aria-label="Plus d'actions"
+        >
+          <MoreHorizontal className="h-4 w-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <DropdownMenuLabel>Actions supplémentaires</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {onQualification && (
+          <DropdownMenuItem
+            onClick={() => onQualification()}
+            disabled={!contact}
+            className="flex items-center gap-2"
+          >
+            <FileCheck className="h-4 w-4" />
+            <span>Qualifier le contact</span>
+          </DropdownMenuItem>
+        )}
+        {onRappel && (
+          <DropdownMenuItem
+            onClick={() => onRappel()}
+            disabled={!contact}
+            className="flex items-center gap-2"
+          >
+            <Bell className="h-4 w-4" />
+            <span>Programmer un rappel</span>
+          </DropdownMenuItem>
+        )}
+        {onRendezVous && (
+          <DropdownMenuItem
+            onClick={() => onRendezVous()}
+            disabled={!contact}
+            className="flex items-center gap-2"
+          >
+            <Calendar className="h-4 w-4" />
+            <span>Programmer un rendez-vous</span>
+          </DropdownMenuItem>
+        )}
+        {onCalCom && (
+          <DropdownMenuItem
+            onClick={() => onCalCom()}
+            disabled={!contact}
+            className="flex items-center gap-2"
+          >
+            <CalendarSearch className="h-4 w-4" />
+            <span>Ouvrir Cal.com</span>
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 
   if (displayMode === 'actions-only') {
     return (
-      <div className={cn('flex flex-wrap items-center justify-end gap-2', className)}>
+      <div className={cn('flex items-center justify-end gap-2 flex-nowrap', className)}>
         {isCalling && (
-          <span className="text-xs text-muted-foreground select-none whitespace-nowrap" aria-live="polite">
+          <span className="text-xs text-muted-foreground select-none whitespace-nowrap shrink-0" aria-live="polite">
             {duration}
           </span>
         )}
-        {renderActionButtons()}
+        <div className="flex items-center gap-2 flex-nowrap shrink-0">
+          {renderPrimaryButtons()}
+          {/* Menu overflow visible uniquement sur petits écrans */}
+          <div className="lg:hidden">
+            {renderOverflowMenu()}
+          </div>
+          {/* Boutons secondaires visibles uniquement sur grands écrans */}
+          <div className="hidden lg:flex items-center gap-2">
+            {onQualification && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label="Qualification"
+                      title="Qualifier le contact"
+                      onClick={() => onQualification()}
+                      disabled={!contact}
+                      className={cn(
+                        "size-10 rounded-full transition-all duration-200 hover:scale-105 shrink-0",
+                        "border-2 hover:bg-accent hover:text-accent-foreground",
+                        "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                        "disabled:opacity-50 disabled:cursor-not-allowed",
+                      )}
+                    >
+                      <FileCheck className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Qualifier le contact</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {onRappel && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label="Rappel"
+                      title="Programmer un rappel"
+                      onClick={() => onRappel()}
+                      disabled={!contact}
+                      className={cn(
+                        "size-10 rounded-full transition-all duration-200 hover:scale-105 shrink-0",
+                        "border-2 hover:bg-accent hover:text-accent-foreground",
+                        "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                        "disabled:opacity-50 disabled:cursor-not-allowed",
+                      )}
+                    >
+                      <Bell className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Programmer un rappel</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {onRendezVous && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label="Rendez-vous"
+                      title="Programmer un rendez-vous"
+                      onClick={() => onRendezVous()}
+                      disabled={!contact}
+                      className={cn(
+                        "size-10 rounded-full transition-all duration-200 hover:scale-105 shrink-0",
+                        "border-2 hover:bg-accent hover:text-accent-foreground",
+                        "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                        "disabled:opacity-50 disabled:cursor-not-allowed",
+                      )}
+                    >
+                      <Calendar className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Programmer un rendez-vous</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {onCalCom && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      aria-label="Cal.com"
+                      title="Ouvrir Cal.com"
+                      onClick={() => onCalCom()}
+                      disabled={!contact}
+                      className={cn(
+                        "size-10 rounded-full transition-all duration-200 hover:scale-105 shrink-0",
+                        "border-2 hover:bg-accent hover:text-accent-foreground",
+                        "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                        "disabled:opacity-50 disabled:cursor-not-allowed",
+                      )}
+                    >
+                      <CalendarSearch className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Ouvrir Cal.com</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
@@ -345,9 +421,9 @@ const CallControl: React.FC<CallControlProps> = ({
     <div className={cn('w-full overflow-x-auto', isDetailed && 'flex justify-center', className)}>
       <div
         className={cn(
-          'flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3 shadow-sm min-w-[280px]',
-          isDetailed && 'w-fit',
-          !isDetailed && 'min-w-0 w-full border-none bg-transparent p-0 shadow-none gap-2'
+          'flex items-center gap-3 rounded-lg border bg-card p-3 shadow-sm min-w-[280px]',
+          isDetailed && 'w-fit flex-nowrap',
+          !isDetailed && 'min-w-0 w-full border-none bg-transparent p-0 shadow-none gap-2 flex-nowrap'
         )}
       >
         {isDetailed && (
@@ -404,13 +480,128 @@ const CallControl: React.FC<CallControlProps> = ({
           )}
 
           {isCalling && (
-            <span className="text-xs text-muted-foreground select-none whitespace-nowrap" aria-live="polite">
+            <span className="text-xs text-muted-foreground select-none whitespace-nowrap shrink-0" aria-live="polite">
               {duration}
             </span>
           )}
 
-          <div className="flex items-center gap-2">
-            {renderActionButtons()}
+        <div className="flex items-center gap-2 flex-nowrap">
+          {renderPrimaryButtons()}
+          {/* Menu overflow visible uniquement sur petits écrans */}
+          <div className="lg:hidden">
+            {renderOverflowMenu()}
+          </div>
+          {/* Boutons secondaires visibles uniquement sur grands écrans */}
+          <div className="hidden lg:flex items-center gap-2">
+              {onQualification && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        aria-label="Qualification"
+                        title="Qualifier le contact"
+                        onClick={() => onQualification()}
+                        disabled={!contact}
+                        className={cn(
+                          "size-10 rounded-full transition-all duration-200 hover:scale-105 shrink-0",
+                          "border-2 hover:bg-accent hover:text-accent-foreground",
+                          "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                          "disabled:opacity-50 disabled:cursor-not-allowed",
+                        )}
+                      >
+                        <FileCheck className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Qualifier le contact</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {onRappel && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        aria-label="Rappel"
+                        title="Programmer un rappel"
+                        onClick={() => onRappel()}
+                        disabled={!contact}
+                        className={cn(
+                          "size-10 rounded-full transition-all duration-200 hover:scale-105 shrink-0",
+                          "border-2 hover:bg-accent hover:text-accent-foreground",
+                          "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                          "disabled:opacity-50 disabled:cursor-not-allowed",
+                        )}
+                      >
+                        <Bell className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Programmer un rappel</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {onRendezVous && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        aria-label="Rendez-vous"
+                        title="Programmer un rendez-vous"
+                        onClick={() => onRendezVous()}
+                        disabled={!contact}
+                        className={cn(
+                          "size-10 rounded-full transition-all duration-200 hover:scale-105 shrink-0",
+                          "border-2 hover:bg-accent hover:text-accent-foreground",
+                          "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                          "disabled:opacity-50 disabled:cursor-not-allowed",
+                        )}
+                      >
+                        <Calendar className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Programmer un rendez-vous</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {onCalCom && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        aria-label="Cal.com"
+                        title="Ouvrir Cal.com"
+                        onClick={() => onCalCom()}
+                        disabled={!contact}
+                        className={cn(
+                          "size-10 rounded-full transition-all duration-200 hover:scale-105 shrink-0",
+                          "border-2 hover:bg-accent hover:text-accent-foreground",
+                          "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2",
+                          "disabled:opacity-50 disabled:cursor-not-allowed",
+                        )}
+                      >
+                        <CalendarSearch className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Ouvrir Cal.com</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           </div>
         </div>
       </div>

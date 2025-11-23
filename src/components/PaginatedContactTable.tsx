@@ -344,7 +344,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
   };
 
   const paginationNode = (
-    <div className="px-3 py-1.5 min-h-[48px] border-t bg-card">
+    <div className="px-3 py-1.5 min-h-[48px] bg-card">
       <TablePagination
         className="w-full"
         currentPage={currentPage}
@@ -371,7 +371,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
       <DropZoneOverlay isVisible={isDragOver} isDragActive={isDragActive} />
       
       {/* Table avec données paginées */}
-      <div className="flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
+      <div className="flex-1 flex items-center justify-center w-full max-w-[95%] mx-auto" style={{ minHeight: 0, overflow: 'hidden' }}>
         {useVirtualizedTable ? (
           <VirtualizedContactTable
             ref={ref as React.Ref<VirtualizedContactTableRef>}

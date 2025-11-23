@@ -85,7 +85,18 @@ const StatusSelect = React.memo<StatusSelectProps>(({
     >
       <SelectTrigger 
         size={size} 
-        className={cn('w-fit text-xs flex items-center justify-center', triggerClassName)}
+        className={cn(
+          'w-fit text-xs flex items-center justify-center',
+          '!border-0 !bg-transparent !shadow-none !p-0 !h-auto !min-h-0',
+          '!rounded-none !gap-0',
+          'hover:!bg-transparent dark:hover:!bg-transparent',
+          'focus-visible:!ring-0 focus-visible:!border-0',
+          'dark:!bg-transparent dark:hover:!bg-transparent',
+          'data-[size=sm]:!h-auto data-[size=default]:!h-auto',
+          '[&_svg]:!hidden', // Masque l'icône de chevron
+          'min-w-[160px]',
+          triggerClassName
+        )}
         onClick={(e) => e.stopPropagation()} // ✅ Empêche sélection ligne
       >
         {currentValue ? (

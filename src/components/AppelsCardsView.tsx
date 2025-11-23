@@ -34,6 +34,8 @@ import {
   Users,
   BarChart3,
   FileSpreadsheet,
+  MoreHorizontal,
+  Check,
 } from "lucide-react"
 import { STATUS_COLORS, STATUS_OPTIONS, COLUMN_HEADERS, CONTACT_DATA_KEYS, DEFAULT_COLUMN_ORDER } from "../constants"
 import CallControl from "./CallControl"
@@ -55,6 +57,10 @@ import {
   DropdownMenuTrigger,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
 } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
@@ -941,420 +947,497 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       onDrop={handleDrop}
     >
       <DropZoneOverlay isVisible={isDragOver} isDragActive={isDragActive} />
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 pt-2 pb-2" role="toolbar" aria-label="Barre d’outils Appels">
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col gap-0.5">
-            <h1 className="text-xl font-semibold text-foreground">Appels</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-2 sm:px-4 md:px-6 pt-2 pb-2 min-w-0" role="toolbar" aria-label="Barre d'outils Appels">
+        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0 flex-shrink-0">
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <h1 className="text-lg sm:text-xl font-semibold text-foreground truncate">Appels</h1>
           </div>
           <ViewSwitcher
             currentView={viewMode}
             onViewChange={setViewMode}
           />
         </div>
-        {/* Contact Action Bar - Table View - Centered */}
-        {viewMode === 'table' && (
-          <div className="flex-1 flex justify-center">
-            <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-card p-3 shadow-sm min-w-[280px] w-fit">
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <span data-slot="avatar" className="relative flex size-8 shrink-0 overflow-hidden rounded-full h-8 w-8 flex-shrink-0">
-                  <span data-slot="avatar-fallback" className="bg-muted flex size-full items-center justify-center rounded-full">
-                    {selectedContact ? (selectedContact.prenom?.[0] || selectedContact.nom?.[0] || '?') : '?'}
-                  </span>
-                </span>
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium whitespace-nowrap" title={selectedContact ? `${selectedContact.prenom || ''} ${selectedContact.nom || ''}`.trim() : 'Aucun contact sélectionné'}>
-                    {selectedContact ? (`${selectedContact.prenom || ''} ${selectedContact.nom || ''}`.trim() || 'Sans nom') : 'Aucun contact sélectionné'}
-                  </span>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap" title={selectedContact?.telephone || '-'}>
-                    {selectedContact?.telephone || '-'}
-                  </span>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2 ml-auto justify-end">
-                <div className="hidden text-muted-foreground/50 text-sm sm:block">|</div>
-                <div className="flex items-center gap-2">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon"
-                          onClick={onCall}
-                          disabled={!selectedContact}
-                          className="size-10 rounded-full transition-all duration-200 hover:scale-105 bg-green-500 hover:bg-green-600 text-white shadow-lg focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                          aria-label="Appeler"
-                        >
-                          <Phone className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{selectedContact ? 'Appeler' : 'Sélectionnez un contact'}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={onSms}
-                          disabled={!selectedContact}
-                          className="size-10 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                          aria-label="SMS"
-                        >
-                          <MessageSquare className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>SMS</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={onEmail}
-                          disabled={!selectedContact || !selectedContact.email}
-                          className="size-10 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                          aria-label="Email"
-                        >
-                          <Mail className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Email</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={onQualification}
-                          disabled={!selectedContact}
-                          className="size-10 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                          aria-label="Qualification"
-                        >
-                          <FileCheck className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Qualification</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={onRappel}
-                          disabled={!selectedContact}
-                          className="size-10 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                          aria-label="Rappel"
-                        >
-                          <Bell className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Rappel</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={onRendezVous}
-                          disabled={!selectedContact}
-                          className="size-10 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                          aria-label="Rendez-vous"
-                        >
-                          <Calendar className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Rendez-vous</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="outline"
-                          onClick={onCalCom}
-                          disabled={!selectedContact}
-                          className="size-10 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                          aria-label="Cal.com"
-                        >
-                          <CalendarSearch className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Cal.com</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 w-full md:w-auto order-3 md:order-none justify-end flex-wrap">
+          {/* Boutons principaux toujours visibles - Importer, Exporter, Supprimer */}
+          <ButtonGroup className="shrink-0">
+            <Button 
+              size="sm"
+              variant="outline"
+              className="h-8 px-2 shrink-0"
+              onClick={() => {
+                const input = document.createElement('input')
+                input.type = 'file'
+                input.accept = '.csv,.tsv,.xlsx,.xls'
+                input.onchange = async (e) => {
+                  const files = (e.target as HTMLInputElement).files
+                  if (files && files.length > 0) {
+                    await analyzeAndOpenMappingDialog(files[0])
+                  }
+                }
+                input.click()
+              }}
+              title="Importer un fichier CSV/Excel"
+            >
+                <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Importer</span>
+              </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  size="sm" 
+                  disabled={contacts.length === 0}
+                  variant="outline"
+                  className="h-8 px-2 shrink-0"
+                  title="Exporter les données"
+                >
+                  <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Exporter</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 border shadow-lg bg-popover text-popover-foreground z-50">
+                <DropdownMenuLabel className="flex items-center gap-2">
+                  <Download className="w-4 h-4" />
+                  Options d'export
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                
+                <DropdownMenuCheckboxItem
+                  checked={exportOptions.table}
+                  onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, table: checked }))}
+                  onSelect={(e) => e.preventDefault()}
+                  disabled={contacts.length === 0}
+                  className="cursor-pointer"
+                >
+                  <BarChart3 className="mr-2 h-4 w-4" />
+                  <span>Table (CSV)</span>
+                  {contacts.length > 0 && (
+                    <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
+                  )}
+                </DropdownMenuCheckboxItem>
+
+                <DropdownMenuCheckboxItem
+                  checked={exportOptions.tableExcel}
+                  onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, tableExcel: checked }))}
+                  onSelect={(e) => e.preventDefault()}
+                  disabled={contacts.length === 0}
+                  className="cursor-pointer"
+                >
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  <span>Table (Excel)</span>
+                  {contacts.length > 0 && (
+                    <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
+                  )}
+                </DropdownMenuCheckboxItem>
+
+                <DropdownMenuCheckboxItem
+                  checked={exportOptions.contacts}
+                  onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, contacts: checked }))}
+                  onSelect={(e) => e.preventDefault()}
+                  disabled={googleContactsCount === 0}
+                  className="cursor-pointer"
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  <span>Contacts Google</span>
+                  {googleContactsCount > 0 && (
+                    <span className="ml-auto text-xs text-muted-foreground">({googleContactsCount})</span>
+                  )}
+                </DropdownMenuCheckboxItem>
+
+                <DropdownMenuCheckboxItem
+                  checked={exportOptions.agenda}
+                  onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, agenda: checked }))}
+                  onSelect={(e) => e.preventDefault()}
+                  disabled={calendarRemindersCount === 0}
+                  className="cursor-pointer"
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  <span>Agenda Google</span>
+                  {calendarRemindersCount > 0 && (
+                    <span className="ml-auto text-xs text-muted-foreground">({calendarRemindersCount})</span>
+                  )}
+                </DropdownMenuCheckboxItem>
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem
+                  onClick={handleUnifiedExport}
+                  className="cursor-pointer"
+                  disabled={Object.values(exportOptions).every(option => !option)}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  <span className="font-medium">Exporter la sélection</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </ButtonGroup>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button 
+                size="sm"
+                variant="destructive"
+                className="h-8 px-2 shrink-0"
+                title="Supprimer les contacts de l'onglet actif"
+              >
+                <Trash2 className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Supprimer</span>
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Êtes-vous sûr de vouloir supprimer tous les contacts de la liste actuelle ? 
+                  Cette action est irréversible.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={onClearActiveTab}
+                  className="bg-red-500 hover:bg-red-600 text-white"
+                >
+                  Supprimer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           {/* Progression globale déplacée dans l'en-tête du rail gauche */}
           {viewMode === 'cards' && (
             <>
-              {/* Separator removed to reduce visual noise */}
+              
+              {/* Menu overflow pour les options secondaires - visible uniquement quand nécessaire */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-9 px-2 shrink-0"
-                    title="Mode de recherche automatique"
+                    className="h-8 sm:h-9 px-2 shrink-0 lg:hidden"
+                    aria-label="Plus d'options"
                   >
-                    {autoSearchMode === 'linkedin' && <Linkedin className="h-4 w-4 text-blue-600" />}
-                    {autoSearchMode === 'linkedin-name' && <Linkedin className="h-4 w-4 text-blue-600" />}
-                    {autoSearchMode === 'linkedin-name-type' && <Linkedin className="h-4 w-4 text-blue-600" />}
-                    {autoSearchMode === 'google' && <Globe className="h-4 w-4 text-green-600" />}
-                    {autoSearchMode === 'link' && <Eye className="h-4 w-4 text-purple-600" />}
-                    {autoSearchMode === 'disabled' && <X className="h-4 w-4" />}
-                    <span className="sr-only">Changer le mode automatique</span>
+                    <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" side="bottom" sideOffset={5} className="w-64">
-                  <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1">
-                    Mode automatique
-                  </DropdownMenuLabel>
-                  <DropdownMenuRadioGroup value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)}>
-                    <DropdownMenuRadioItem value="disabled" className="cursor-pointer">
-                      <X className="mr-2 h-4 w-4" />
-                      <span>Désactivé</span>
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuRadioItem value="linkedin-name" className="cursor-pointer">
-                      <Linkedin className="mr-2 h-4 w-4 text-blue-600" />
-                      <span>LinkedIn (Prénom + Nom)</span>
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="linkedin-name-type" className="cursor-pointer">
-                      <Linkedin className="mr-2 h-4 w-4 text-blue-600" />
-                      <span>LinkedIn (Prénom + Nom + Type)</span>
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuRadioItem value="google" className="cursor-pointer">
-                      <Globe className="mr-2 h-4 w-4 text-green-600" />
-                      <span>Google</span>
-                    </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="link" className="cursor-pointer">
-                      <Eye className="mr-2 h-4 w-4 text-purple-600" />
-                      <span>Lien</span>
-                    </DropdownMenuRadioItem>
-                  </DropdownMenuRadioGroup>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Options</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  
+                  {/* Mode automatique */}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>
+                      {autoSearchMode === 'linkedin' && <Linkedin className="mr-2 h-4 w-4 text-blue-600" />}
+                      {autoSearchMode === 'linkedin-name' && <Linkedin className="mr-2 h-4 w-4 text-blue-600" />}
+                      {autoSearchMode === 'linkedin-name-type' && <Linkedin className="mr-2 h-4 w-4 text-blue-600" />}
+                      {autoSearchMode === 'google' && <Globe className="mr-2 h-4 w-4 text-green-600" />}
+                      {autoSearchMode === 'link' && <Eye className="mr-2 h-4 w-4 text-purple-600" />}
+                      {autoSearchMode === 'disabled' && <X className="mr-2 h-4 w-4" />}
+                      <span>Mode automatique</span>
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuPortal>
+                      <DropdownMenuSubContent>
+                        <DropdownMenuRadioGroup value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)}>
+                          <DropdownMenuRadioItem value="disabled" className="cursor-pointer">
+                            <X className="mr-2 h-4 w-4" />
+                            <span>Désactivé</span>
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuRadioItem value="linkedin-name" className="cursor-pointer">
+                            <Linkedin className="mr-2 h-4 w-4 text-blue-600" />
+                            <span>LinkedIn (Prénom + Nom)</span>
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="linkedin-name-type" className="cursor-pointer">
+                            <Linkedin className="mr-2 h-4 w-4 text-blue-600" />
+                            <span>LinkedIn (Prénom + Nom + Type)</span>
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuRadioItem value="google" className="cursor-pointer">
+                            <Globe className="mr-2 h-4 w-4 text-green-600" />
+                            <span>Google</span>
+                          </DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="link" className="cursor-pointer">
+                            <Eye className="mr-2 h-4 w-4 text-purple-600" />
+                            <span>Lien</span>
+                          </DropdownMenuRadioItem>
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuSubContent>
+                    </DropdownMenuPortal>
+                  </DropdownMenuSub>
+                  
+                  {/* Autocall */}
+                  <DropdownMenuItem
+                    onClick={() => {
+                      setIsAutocallActive(!isAutocallActive)
+                      toast.info(isAutocallActive ? 'Autocall désactivé' : 'Autocall activé')
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <PhoneCall className="mr-2 h-4 w-4" />
+                    <span>Autocall</span>
+                    {isAutocallActive && <Check className="ml-auto h-4 w-4" />}
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      size="sm"
-                      onClick={() => {
-                        setIsAutocallActive(!isAutocallActive)
-                        toast.info(isAutocallActive ? 'Autocall désactivé' : 'Autocall activé')
-                      }}
-                      variant={isAutocallActive ? 'default' : 'outline'}
-                      className="h-9"
-                    >
-                      <PhoneCall className="mr-2 h-4 w-4" />
-                      Autocall
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-sm bg-popover text-popover-foreground border-border">
-                    <div className="space-y-2">
-                      <p className="font-semibold text-foreground">Mode Autocall</p>
-                      <p className="text-xs text-muted-foreground">Active l'appel automatique du contact suivant après application d'un statut.</p>
-                      <div className="mt-2 space-y-1 text-xs">
-                        <p className="font-medium text-foreground">Raccourcis clavier :</p>
-                        <p className="text-foreground">• <kbd className="px-1 py-0.5 bg-muted text-foreground rounded">F1</kbd> : Appeler le contact</p>
-                        <p className="text-foreground">• <kbd className="px-1 py-0.5 bg-muted text-foreground rounded">F2-F10</kbd> : Appliquer un statut</p>
-                        <p className="text-muted-foreground mt-1">En mode Autocall, appliquer un statut (F2-F10) passe automatiquement au contact suivant et lance l'appel.</p>
-                      </div>
-                    </div>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              {/* Bouton 'Premier sans statut' déplacé dans l'en-tête du rail gauche */}
-              <ButtonGroup>
-                <Button 
-                  size="sm"
-                  variant="outline"
-                  className="h-9"
-                  onClick={() => {
-                    const input = document.createElement('input')
-                    input.type = 'file'
-                    input.accept = '.csv,.tsv,.xlsx,.xls'
-                    input.onchange = async (e) => {
-                      const files = (e.target as HTMLInputElement).files
-                      if (files && files.length > 0) {
-                        await analyzeAndOpenMappingDialog(files[0])
-                      }
-                    }
-                    input.click()
-                  }}
-                  title="Importer un fichier CSV/Excel"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Importer
-                </Button>
+              {/* Boutons secondaires visibles uniquement sur grands écrans */}
+              <div className="hidden lg:flex items-center gap-1.5 sm:gap-2 shrink-0">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button 
-                      size="sm" 
-                      disabled={contacts.length === 0}
+                    <Button
                       variant="outline"
-                      className="h-9"
-                      title="Exporter les données"
+                      size="sm"
+                      className="h-8 sm:h-9 px-2 shrink-0 text-xs sm:text-sm"
+                      title="Mode de recherche automatique"
                     >
-                      <Download className="h-4 w-4 mr-2" />
-                      Exporter
+                      {autoSearchMode === 'linkedin' && <Linkedin className="h-4 w-4 text-blue-600" />}
+                      {autoSearchMode === 'linkedin-name' && <Linkedin className="h-4 w-4 text-blue-600" />}
+                      {autoSearchMode === 'linkedin-name-type' && <Linkedin className="h-4 w-4 text-blue-600" />}
+                      {autoSearchMode === 'google' && <Globe className="h-4 w-4 text-green-600" />}
+                      {autoSearchMode === 'link' && <Eye className="h-4 w-4 text-purple-600" />}
+                      {autoSearchMode === 'disabled' && <X className="h-4 w-4" />}
+                      <span className="sr-only">Changer le mode automatique</span>
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56 border shadow-lg bg-popover text-popover-foreground z-50">
-                    <DropdownMenuLabel className="flex items-center gap-2">
-                      <Download className="w-4 h-4" />
-                      Options d'export
+                  <DropdownMenuContent align="start" side="bottom" sideOffset={5} className="w-64">
+                    <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1">
+                      Mode automatique
                     </DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    
-                    <DropdownMenuCheckboxItem
-                      checked={exportOptions.table}
-                      onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, table: checked }))}
-                      onSelect={(e) => e.preventDefault()}
-                      disabled={contacts.length === 0}
-                      className="cursor-pointer"
-                    >
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      <span>Table (CSV)</span>
-                      {contacts.length > 0 && (
-                        <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
-                      )}
-                    </DropdownMenuCheckboxItem>
-
-                    <DropdownMenuCheckboxItem
-                      checked={exportOptions.tableExcel}
-                      onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, tableExcel: checked }))}
-                      onSelect={(e) => e.preventDefault()}
-                      disabled={contacts.length === 0}
-                      className="cursor-pointer"
-                    >
-                      <FileSpreadsheet className="mr-2 h-4 w-4" />
-                      <span>Table (Excel)</span>
-                      {contacts.length > 0 && (
-                        <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
-                      )}
-                    </DropdownMenuCheckboxItem>
-
-                    <DropdownMenuCheckboxItem
-                      checked={exportOptions.contacts}
-                      onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, contacts: checked }))}
-                      onSelect={(e) => e.preventDefault()}
-                      disabled={googleContactsCount === 0}
-                      className="cursor-pointer"
-                    >
-                      <Users className="mr-2 h-4 w-4" />
-                      <span>Contacts Google</span>
-                      {googleContactsCount > 0 && (
-                        <span className="ml-auto text-xs text-muted-foreground">({googleContactsCount})</span>
-                      )}
-                    </DropdownMenuCheckboxItem>
-
-                    <DropdownMenuCheckboxItem
-                      checked={exportOptions.agenda}
-                      onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, agenda: checked }))}
-                      onSelect={(e) => e.preventDefault()}
-                      disabled={calendarRemindersCount === 0}
-                      className="cursor-pointer"
-                    >
-                      <Calendar className="mr-2 h-4 w-4" />
-                      <span>Agenda Google</span>
-                      {calendarRemindersCount > 0 && (
-                        <span className="ml-auto text-xs text-muted-foreground">({calendarRemindersCount})</span>
-                      )}
-                    </DropdownMenuCheckboxItem>
-
-                    <DropdownMenuSeparator />
-
-                    <DropdownMenuItem
-                      onClick={handleUnifiedExport}
-                      className="cursor-pointer"
-                      disabled={Object.values(exportOptions).every(option => !option)}
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      <span className="font-medium">Exporter la sélection</span>
-                    </DropdownMenuItem>
+                    <DropdownMenuRadioGroup value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)}>
+                      <DropdownMenuRadioItem value="disabled" className="cursor-pointer">
+                        <X className="mr-2 h-4 w-4" />
+                        <span>Désactivé</span>
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuRadioItem value="linkedin-name" className="cursor-pointer">
+                        <Linkedin className="mr-2 h-4 w-4 text-blue-600" />
+                        <span>LinkedIn (Prénom + Nom)</span>
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="linkedin-name-type" className="cursor-pointer">
+                        <Linkedin className="mr-2 h-4 w-4 text-blue-600" />
+                        <span>LinkedIn (Prénom + Nom + Type)</span>
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuRadioItem value="google" className="cursor-pointer">
+                        <Globe className="mr-2 h-4 w-4 text-green-600" />
+                        <span>Google</span>
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="link" className="cursor-pointer">
+                        <Eye className="mr-2 h-4 w-4 text-purple-600" />
+                        <span>Lien</span>
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>
-              </ButtonGroup>
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button 
-                    size="sm"
-                    variant="destructive"
-                    className="h-9"
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" /> Supprimer
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Êtes-vous sûr de vouloir supprimer tous les contacts de la liste actuelle ? 
-                      Cette action est irréversible.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Annuler</AlertDialogCancel>
-                    <AlertDialogAction 
-                      onClick={onClearActiveTab}
-                      className="bg-red-500 hover:bg-red-600 text-white"
-                    >
-                      Supprimer
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button 
+                        size="sm"
+                        onClick={() => {
+                          setIsAutocallActive(!isAutocallActive)
+                          toast.info(isAutocallActive ? 'Autocall désactivé' : 'Autocall activé')
+                        }}
+                        variant={isAutocallActive ? 'default' : 'outline'}
+                        className="h-8 sm:h-9 text-xs sm:text-sm shrink-0"
+                      >
+                        <PhoneCall className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                        <span className="hidden sm:inline">Autocall</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-sm bg-popover text-popover-foreground border-border">
+                      <div className="space-y-2">
+                        <p className="font-semibold text-foreground">Mode Autocall</p>
+                        <p className="text-xs text-muted-foreground">Active l'appel automatique du contact suivant après application d'un statut.</p>
+                        <div className="mt-2 space-y-1 text-xs">
+                          <p className="font-medium text-foreground">Raccourcis clavier :</p>
+                          <p className="text-foreground">• <kbd className="px-1 py-0.5 bg-muted text-foreground rounded">F1</kbd> : Appeler le contact</p>
+                          <p className="text-foreground">• <kbd className="px-1 py-0.5 bg-muted text-foreground rounded">F2-F10</kbd> : Appliquer un statut</p>
+                          <p className="text-muted-foreground mt-1">En mode Autocall, appliquer un statut (F2-F10) passe automatiquement au contact suivant et lance l'appel.</p>
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </>
           )}
         </div>
       </div>
+      {/* Contact Action Bar - Table View - Centered Below Title */}
+      {viewMode === 'table' && (
+        <div className="flex justify-center px-2 sm:px-4 md:px-6 py-2 min-w-0 w-full">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 rounded-lg border bg-card p-2 sm:p-3 shadow-sm min-w-0 w-full md:w-auto max-w-full">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 min-w-0">
+              <span data-slot="avatar" className="relative flex size-8 shrink-0 overflow-hidden rounded-full h-8 w-8 flex-shrink-0">
+                <span data-slot="avatar-fallback" className="bg-muted flex size-full items-center justify-center rounded-full">
+                  {selectedContact ? (selectedContact.prenom?.[0] || selectedContact.nom?.[0] || '?') : '?'}
+                </span>
+              </span>
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-medium truncate max-w-[120px] sm:max-w-none" title={selectedContact ? `${selectedContact.prenom || ''} ${selectedContact.nom || ''}`.trim() : 'Aucun contact sélectionné'}>
+                  {selectedContact ? (`${selectedContact.prenom || ''} ${selectedContact.nom || ''}`.trim() || 'Sans nom') : 'Aucun contact sélectionné'}
+                </span>
+                <span className="text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-none" title={selectedContact?.telephone || '-'}>
+                  {selectedContact?.telephone || '-'}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 flex-1 md:flex-initial justify-start md:justify-end">
+              <div className="hidden text-muted-foreground/50 text-sm sm:block shrink-0">|</div>
+              <div className="flex items-center gap-2 flex-wrap shrink-0">
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        onClick={onCall}
+                        disabled={!selectedContact}
+                        className="size-10 shrink-0 rounded-full transition-all duration-200 hover:scale-105 bg-green-500 hover:bg-green-600 text-white shadow-lg focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Appeler"
+                      >
+                        <Phone className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{selectedContact ? 'Appeler' : 'Sélectionnez un contact'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={onSms}
+                        disabled={!selectedContact}
+                        className="size-10 shrink-0 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="SMS"
+                      >
+                        <MessageSquare className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>SMS</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={onEmail}
+                        disabled={!selectedContact || !selectedContact.email}
+                        className="size-10 shrink-0 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Email"
+                      >
+                        <Mail className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Email</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={onQualification}
+                        disabled={!selectedContact}
+                        className="size-10 shrink-0 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Qualification"
+                      >
+                        <FileCheck className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Qualification</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={onRappel}
+                        disabled={!selectedContact}
+                        className="size-10 shrink-0 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Rappel"
+                      >
+                        <Bell className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Rappel</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={onRendezVous}
+                        disabled={!selectedContact}
+                        className="size-10 shrink-0 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Rendez-vous"
+                      >
+                        <Calendar className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Rendez-vous</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={onCalCom}
+                        disabled={!selectedContact}
+                        className="size-10 shrink-0 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        aria-label="Cal.com"
+                      >
+                        <CalendarSearch className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Cal.com</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       {viewMode === 'cards' ? (
-      <ResizablePanelGroup direction="horizontal" className="h-full min-h-0">
-        <ResizablePanel defaultSize={32} minSize={24} className="relative z-10 min-h-0 flex flex-col lg:max-h-none">
-          <div className="m-2 flex h-full flex-col rounded-lg border border-r-0 bg-card/40 overflow-hidden">
-          <div className="px-4 py-2.5 space-y-2.5 border-b">
-            <div className="flex items-center justify-between">
+      <ResizablePanelGroup direction="horizontal" className="h-full min-h-0 @container">
+        <ResizablePanel defaultSize={32} minSize={20} maxSize={50} className="relative z-10 min-h-0 flex flex-col overflow-hidden">
+          <div className="m-1 sm:m-2 flex h-full flex-col rounded-lg border border-r-0 bg-card/40 overflow-hidden min-w-0">
+          <div className="px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 space-y-2 border-b">
+            <div className="flex items-center justify-between gap-2 flex-nowrap min-w-0">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    className="flex items-center gap-2 px-2 sm:px-3 py-1.5 h-8 text-sm shrink-0"
+                    className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 md:px-3 py-1.5 h-7 sm:h-8 text-xs sm:text-sm shrink-0 min-w-0"
                   >
-                    <span className="inline-block w-2 h-2 rounded-full" style={{backgroundColor: tableTabs.find(t => t.id === activeTableTabId)?.color || 'var(--primary)'}}></span>
-                    <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">
+                    <span className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shrink-0" style={{backgroundColor: tableTabs.find(t => t.id === activeTableTabId)?.color || 'var(--primary)'}}></span>
+                    <span className="truncate max-w-[60px] xs:max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">
                       {tableTabs.find(t => t.id === activeTableTabId)?.name || 'Onglets'}
                     </span>
-                    <ChevronDown className="h-4 w-4 shrink-0" />
+                    <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="w-64">
@@ -1426,14 +1509,14 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground/70">
+              <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+                <p className="text-[10px] xs:text-xs text-muted-foreground/70 whitespace-nowrap">
                   {contacts.length} prospect{contacts.length > 1 ? "s" : ""}
                 </p>
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 gap-1.5 px-2.5"
+                  className="h-7 sm:h-8 gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 shrink-0"
                   title="Revenir au premier contact sans statut"
                   onClick={() => {
                     const firstWithoutStatus = filteredContacts.find(c => !c.statut || c.statut === ContactStatus.NonDefini)
@@ -1447,24 +1530,20 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   }}
                   disabled={!filteredContacts.some(c => !c.statut || c.statut === ContactStatus.NonDefini)}
                 >
-                  <ChevronUp className="h-4 w-4" />
+                  <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
                   <span className="sr-only">Premier sans statut</span>
                 </Button>
               </div>
             </div>
             {/* Search moved below inside Command with list */}
           </div>
-          <div className="flex-1 min-h-0 h-0 p-2">
-              <Command className="rounded-md border h-full">
+          <div className="flex-1 min-h-0 h-0 p-1.5 sm:p-2 flex flex-col">
+              <Command className="rounded-md border h-full flex flex-col">
               <CommandInput
                 placeholder="Rechercher..."
                 value={searchQuery}
                 onValueChange={onSearch}
-              />
-              {/* Barre de progression sobre (shadcn Progress) */}
-              <Progress
-                value={Math.max(0, Math.min(100, Math.round(completionPercent)))}
-                className="h-1"
+                className="h-8 sm:h-9 text-xs sm:text-sm"
               />
               <CommandList
                 ref={(el) => {
@@ -1484,7 +1563,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                     data-contact-card={contact.id}
                     value={`${contact.prenom} ${contact.nom} ${contact.telephone} ${contact.email}`}
                     className={cn(
-                      "px-3 py-3 cursor-pointer hover:bg-muted/50 data-[selected=true]:bg-transparent data-[selected=true]:text-foreground",
+                      "px-2 sm:px-3 py-2 sm:py-3 cursor-pointer hover:bg-muted/50 data-[selected=true]:bg-transparent data-[selected=true]:text-foreground",
                       isSelected && "bg-accent",
                     )}
                     aria-selected={isSelected}
@@ -1494,43 +1573,43 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                     }}
                   >
                     <>
-                    <div className="flex min-w-0 flex-1 items-center gap-2">
-                      <Avatar className="h-9 w-9 border">
-                        <AvatarFallback className="text-xs">
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
+                      <Avatar className="h-7 w-7 sm:h-9 sm:w-9 border shrink-0">
+                        <AvatarFallback className="text-[10px] sm:text-xs">
                           {(contact.prenom?.[0] ?? "").toUpperCase()
                             .concat(contact.nom?.[0] ?? "")
                             .slice(0, 2) || "?"}
                         </AvatarFallback>
                       </Avatar>
-                      <div className="flex min-w-0 flex-1 flex-col">
-                        <div className="truncate text-sm font-semibold text-foreground leading-tight">
+                      <div className="flex min-w-0 flex-1 flex-col min-w-0">
+                        <div className="truncate text-xs sm:text-sm font-semibold text-foreground leading-tight">
                           {[contact.prenom, contact.nom].filter(Boolean).join(" ") || "Sans nom"}
                         </div>
-                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                          <span className="flex items-center gap-0.5 truncate">
-                            <Phone className="h-2.5 w-2.5" />
-                            {contact.telephone || "-"}
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] text-muted-foreground">
+                          <span className="flex items-center gap-0.5 truncate min-w-0">
+                            <Phone className="h-2 w-2 sm:h-2.5 sm:w-2.5 shrink-0" />
+                            <span className="truncate">{contact.telephone || "-"}</span>
                           </span>
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-nowrap shrink-0">
                       {contact.dateRappel && (
-                        <div className="hidden md:flex items-center gap-1 text-[11px] text-muted-foreground">
-                          <CalendarIcon className="h-2.5 w-2.5 text-orange-500" />
-                          <span className="text-foreground">{formatDisplayDate(contact.dateRappel)}</span>
+                        <div className="hidden sm:flex items-center gap-1 text-[10px] sm:text-[11px] text-muted-foreground shrink-0">
+                          <CalendarIcon className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-orange-500 shrink-0" />
+                          <span className="text-foreground whitespace-nowrap">{formatDisplayDate(contact.dateRappel)}</span>
                         </div>
                       )}
                       {contact.dateRDV && (
-                        <div className="hidden md:flex items-center gap-1 text-[11px] text-muted-foreground">
-                          <CalendarIcon className="h-2.5 w-2.5 text-blue-500" />
-                          <span className="text-foreground">{formatDisplayDate(contact.dateRDV)}</span>
+                        <div className="hidden sm:flex items-center gap-1 text-[10px] sm:text-[11px] text-muted-foreground shrink-0">
+                          <CalendarIcon className="h-2 w-2 sm:h-2.5 sm:w-2.5 text-blue-500 shrink-0" />
+                          <span className="text-foreground whitespace-nowrap">{formatDisplayDate(contact.dateRDV)}</span>
                         </div>
                       )}
                       <Badge
                         variant="secondary"
                         className={cn(
-                          "rounded-full px-1.5 py-0 text-[9px] font-medium capitalize shrink-0",
+                          "rounded-full px-1 sm:px-1.5 py-0 text-[8px] sm:text-[9px] font-medium capitalize shrink-0",
                           statusConfig?.bg,
                           statusConfig?.text,
                           statusConfig?.darkBg,
@@ -1540,9 +1619,9 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         {contact.statut ?? ContactStatus.NonDefini}
                       </Badge>
                       {isCalling && (
-                        <div className="flex items-center gap-1 rounded-md border border-primary/20 bg-primary/10 px-2 py-1 text-[11px] text-primary">
-                          <PhoneCall className="h-3 w-3" />
-                          <span>Appel en cours…</span>
+                        <div className="hidden sm:flex items-center gap-1 rounded-md border border-primary/20 bg-primary/10 px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-[11px] text-primary shrink-0">
+                          <PhoneCall className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+                          <span className="whitespace-nowrap">Appel en cours…</span>
                         </div>
                       )}
                     </div>
@@ -1563,13 +1642,24 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                 )}
                 </CommandGroup>
               </CommandList>
+              {/* Section Statut des appels en bas */}
+              <div className="border-t p-2 sm:p-3 space-y-1.5 sm:space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs sm:text-sm text-muted-foreground">Statut des appels</span>
+                  <span className="text-xs sm:text-sm font-medium text-foreground">{Math.max(0, Math.min(100, Math.round(completionPercent)))}%</span>
+                </div>
+                <Progress
+                  value={Math.max(0, Math.min(100, Math.round(completionPercent)))}
+                  className="h-1"
+                />
+              </div>
             </Command>
           </div>
           </div>
         </ResizablePanel>
 
-        <ResizablePanel defaultSize={68} minSize={48} className="relative z-10 min-h-0 flex flex-col lg:max-h-none">
-          <div className="m-2 flex h-full flex-col rounded-lg border border-l-0 bg-card/30 overflow-hidden">
+        <ResizablePanel defaultSize={68} minSize={50} maxSize={80} className="relative z-10 min-h-0 flex flex-col overflow-hidden">
+          <div className="m-1 sm:m-2 flex h-full flex-col rounded-lg border border-l-0 bg-card/30 overflow-hidden min-w-0">
           {selectedContact ? (
             <div className="flex h-full flex-col">
                   <div className="relative bg-card/50 backdrop-blur-sm px-6 py-4" role="region" aria-label="En-tête du contact sélectionné">
@@ -1627,227 +1717,269 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
               </div>
               <div className="relative bg-card/60 px-6 py-2.5" role="toolbar" aria-label="Actions de recherche">
                 <Separator className="absolute left-0 right-0 -mx-6 bottom-0" />
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-3" onClick={() => onLinkedInSearch('name')}>
-                    <Linkedin className="h-4 w-4 text-blue-600" /> <span>LinkedIn</span>
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-3" onClick={() => onLinkedInSearch('name-type')}>
-                    <Linkedin className="h-4 w-4 text-blue-600" /> <span>LinkedIn+</span>
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-3" onClick={onGoogleSearch}>
-                    <Globe className="h-4 w-4 text-green-600" /> Google
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-3" onClick={onDirectLink} disabled={!selectedContact.lien}>
-                    <Eye className="h-4 w-4" /> Lien direct
-                  </Button>
+                <div className="flex items-center gap-2 flex-nowrap">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 sm:px-3 shrink-0" onClick={() => onLinkedInSearch('name')} aria-label="LinkedIn">
+                          <Linkedin className="h-4 w-4 text-blue-600" />
+                          <span className="hidden sm:inline">LinkedIn</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>LinkedIn</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 sm:px-3 shrink-0" onClick={() => onLinkedInSearch('name-type')} aria-label="LinkedIn+">
+                          <Linkedin className="h-4 w-4 text-blue-600" />
+                          <span className="hidden sm:inline">LinkedIn+</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>LinkedIn+</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 sm:px-3 shrink-0" onClick={onGoogleSearch} aria-label="Google">
+                          <Globe className="h-4 w-4 text-green-600" />
+                          <span className="hidden sm:inline">Google</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Google</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 sm:px-3 shrink-0" onClick={onDirectLink} disabled={!selectedContact.lien} aria-label="Lien direct">
+                          <Eye className="h-4 w-4" />
+                          <span className="hidden sm:inline">Lien direct</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Lien direct</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </div>
 
               <ScrollArea className="flex-1 min-h-0 h-0">
-                <div className="grid gap-6 px-6 py-6 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-                  <section className="space-y-6">
-                    <div className="section-card p-4 space-y-4">
-                      <h3 className="text-sm font-medium text-muted-foreground">Informations principales</h3>
-                      <Separator className="my-2 opacity-30" />
-                      <div className="grid gap-6">
-                        <div className="grid grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label htmlFor="contact-firstname">Prénom</Label>
-                            <Input
-                              id="contact-firstname"
-                              value={formState.prenom}
-                              onChange={(event) => handleFormChange("prenom", event.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="contact-lastname">Nom</Label>
-                            <Input
-                              id="contact-lastname"
-                              value={formState.nom}
-                              onChange={(event) => handleFormChange("nom", event.target.value)}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label htmlFor="contact-phone">Téléphone</Label>
-                            <Input
-                              id="contact-phone"
-                              value={formState.telephone}
-                              onChange={(event) => handleFormChange("telephone", event.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="contact-email">Email</Label>
-                            <Input
-                              id="contact-email"
-                              value={formState.email}
-                              onChange={(event) => handleFormChange("email", event.target.value)}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label htmlFor="contact-source">Source</Label>
-                            <Input
-                              id="contact-source"
-                              value={formState.source}
-                              onChange={(event) => handleFormChange("source", event.target.value)}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Statut</Label>
-                            <Select
-                              value={selectedStatus}
-                              onValueChange={(value: ContactStatus) => setSelectedStatus(value)}
-                            >
-                              <SelectTrigger className="justify-between">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {STATUS_OPTIONS.map((status) => (
-                                  <SelectItem key={status} value={status}>
-                                    {status}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="contact-comment">Notes</Label>
-                          <ZapWidget
-                            value={noteDraft}
-                            onChange={setNoteDraft}
-                            quickComments={QUICK_COMMENTS}
-                            rows={4}
-                          />
-                        </div>
-
-                      </div>
-                    </div>
-
-                    <div className="section-card p-4 space-y-4">
-                      <h3 className="text-sm font-medium text-muted-foreground">Rappels & Rendez-vous</h3>
-                      <Separator className="my-2 opacity-30" />
-                      <Tabs defaultValue="rappel" className="w-full">
-                        <TabsList>
-                          <TabsTrigger value="rappel">Rappel</TabsTrigger>
-                          <TabsTrigger value="rdv">RDV</TabsTrigger>
-                          <TabsTrigger value="appel">Appel</TabsTrigger>
-                        </TabsList>
-                        <div className="mt-4 space-y-4">
-                          <TabsContent value="rappel">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <DatePickerWithClear
-                                label="Date de rappel"
-                                value={formState.dateRappel}
-                                onChange={(value) => handleFormChange("dateRappel", value)}
-                                onClear={() => handleFormChange("dateRappel", "")}
-                              />
-                              <TimePickerWithClear
-                                label="Heure de rappel"
-                                value={formState.heureRappel}
-                                onChange={(value) => handleFormChange("heureRappel", value)}
-                                onClear={() => handleFormChange("heureRappel", "")}
-                              />
-                            </div>
-                          </TabsContent>
-                          <TabsContent value="rdv">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <DatePickerWithClear
-                                label="Date de RDV"
-                                value={formState.dateRDV}
-                                onChange={(value) => handleFormChange("dateRDV", value)}
-                                onClear={() => handleFormChange("dateRDV", "")}
-                              />
-                              <TimePickerWithClear
-                                label="Heure de RDV"
-                                value={formState.heureRDV}
-                                onChange={(value) => handleFormChange("heureRDV", value)}
-                                onClear={() => handleFormChange("heureRDV", "")}
-                              />
-                            </div>
-                          </TabsContent>
-                          <TabsContent value="appel">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              <DatePickerWithClear
-                                label="Date d'appel"
-                                value={formState.dateAppel}
-                                onChange={(value) => handleFormChange("dateAppel", value)}
-                                onClear={() => handleFormChange("dateAppel", "")}
-                              />
-                              <TimePickerWithClear
-                                label="Heure d'appel"
-                                value={formState.heureAppel}
-                                onChange={(value) => handleFormChange("heureAppel", value)}
-                                onClear={() => handleFormChange("heureAppel", "")}
-                              />
-                            </div>
-                            <div className="mt-4 space-y-2">
-                              <Label htmlFor="call-duration">Durée d'appel</Label>
+                <div className="px-6 py-6">
+                  <Tabs defaultValue="informations" className="w-full">
+                    <TabsList className="w-full justify-start">
+                      <TabsTrigger value="informations">Informations principales</TabsTrigger>
+                      <TabsTrigger value="historique">Historique</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="informations" className="mt-4 sm:mt-6 space-y-4 sm:space-y-6">
+                      <div className="section-card p-3 sm:p-4 space-y-3 sm:space-y-4">
+                        <div className="grid gap-4 sm:gap-6">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                            <div className="space-y-2">
+                              <Label htmlFor="contact-firstname">Prénom</Label>
                               <Input
-                                id="call-duration"
-                                value={formState.dureeAppel}
-                                placeholder="mm:ss"
-                                onChange={(event) => handleFormChange("dureeAppel", event.target.value)}
+                                id="contact-firstname"
+                                value={formState.prenom}
+                                onChange={(event) => handleFormChange("prenom", event.target.value)}
+                                className="text-sm"
                               />
                             </div>
-                          </TabsContent>
-                        </div>
-                      </Tabs>
-                    </div>
-                  </section>
-
-                  <section className="space-y-6">
-                    <div className="section-card p-4 space-y-4">
-                      <h3 className="text-sm font-medium text-muted-foreground">Historique</h3>
-                      <Separator className="my-2 opacity-30" />
-                      {callHistory.length > 0 ? (
-                        <div className="space-y-3">
-                          {callHistory.map((call) => (
-                            <div
-                              key={call.numero}
-                              className="rounded-lg border bg-muted/40 p-3 text-xs"
-                            >
-                              <div className="flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-2 font-medium text-foreground">
-                                  <History className="h-3.5 w-3.5 text-muted-foreground" />
-                                  <span>Appel {call.numero}</span>
-                                </div>
-                                {call.statut && (
-                                  <Badge variant="outline" className="text-[10px]">
-                                    {call.statut}
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="mt-1 flex items-center gap-2 text-muted-foreground">
-                                {call.date && (
-                                  <span>{call.date}</span>
-                                )}
-                              </div>
-                              {call.commentaire && (
-                                <p className="mt-2 text-muted-foreground/80">
-                                  {call.commentaire}
-                                </p>
-                              )}
+                            <div className="space-y-2">
+                              <Label htmlFor="contact-lastname">Nom</Label>
+                              <Input
+                                id="contact-lastname"
+                                value={formState.nom}
+                                onChange={(event) => handleFormChange("nom", event.target.value)}
+                                className="text-sm"
+                              />
                             </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-between rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-                          <span>Aucun historique enregistré.</span>
-                          <div className="flex items-center gap-2">
-                            <Button size="sm" variant="ghost" className="h-7 px-2" onClick={onCall} disabled={!selectedContact?.telephone}>
-                              <Phone className="h-3.5 w-3.5 mr-1" /> Commencer un appel
-                            </Button>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                            <div className="space-y-2">
+                              <Label htmlFor="contact-phone">Téléphone</Label>
+                              <Input
+                                id="contact-phone"
+                                value={formState.telephone}
+                                onChange={(event) => handleFormChange("telephone", event.target.value)}
+                                className="text-sm"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label htmlFor="contact-email">Email</Label>
+                              <Input
+                                id="contact-email"
+                                value={formState.email}
+                                onChange={(event) => handleFormChange("email", event.target.value)}
+                                className="text-sm"
+                              />
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+                            <div className="space-y-2">
+                              <Label htmlFor="contact-source">Source</Label>
+                              <Input
+                                id="contact-source"
+                                value={formState.source}
+                                onChange={(event) => handleFormChange("source", event.target.value)}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Statut</Label>
+                              <Select
+                                value={selectedStatus}
+                                onValueChange={(value: ContactStatus) => setSelectedStatus(value)}
+                              >
+                                <SelectTrigger className="justify-between">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {STATUS_OPTIONS.map((status) => (
+                                    <SelectItem key={status} value={status}>
+                                      {status}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="contact-comment">Notes</Label>
+                            <ZapWidget
+                              value={noteDraft}
+                              onChange={setNoteDraft}
+                              quickComments={QUICK_COMMENTS}
+                              rows={4}
+                            />
                           </div>
                         </div>
-                      )}
-                    </div>
+                      </div>
 
-
-                  </section>
+                      <div className="section-card p-4 space-y-4">
+                        <h3 className="text-sm font-medium text-muted-foreground">Rappels & Rendez-vous</h3>
+                        <Separator className="my-2 opacity-30" />
+                        <Tabs defaultValue="rappel" className="w-full">
+                          <TabsList className="w-full justify-start">
+                            <TabsTrigger value="rappel">Rappel</TabsTrigger>
+                            <TabsTrigger value="rdv">RDV</TabsTrigger>
+                            <TabsTrigger value="appel">Appel</TabsTrigger>
+                          </TabsList>
+                          <div className="mt-4 space-y-4">
+                            <TabsContent value="rappel">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <DatePickerWithClear
+                                  label="Date de rappel"
+                                  value={formState.dateRappel}
+                                  onChange={(value) => handleFormChange("dateRappel", value)}
+                                  onClear={() => handleFormChange("dateRappel", "")}
+                                />
+                                <TimePickerWithClear
+                                  label="Heure de rappel"
+                                  value={formState.heureRappel}
+                                  onChange={(value) => handleFormChange("heureRappel", value)}
+                                  onClear={() => handleFormChange("heureRappel", "")}
+                                />
+                              </div>
+                            </TabsContent>
+                            <TabsContent value="rdv">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <DatePickerWithClear
+                                  label="Date de RDV"
+                                  value={formState.dateRDV}
+                                  onChange={(value) => handleFormChange("dateRDV", value)}
+                                  onClear={() => handleFormChange("dateRDV", "")}
+                                />
+                                <TimePickerWithClear
+                                  label="Heure de RDV"
+                                  value={formState.heureRDV}
+                                  onChange={(value) => handleFormChange("heureRDV", value)}
+                                  onClear={() => handleFormChange("heureRDV", "")}
+                                />
+                              </div>
+                            </TabsContent>
+                            <TabsContent value="appel">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <DatePickerWithClear
+                                  label="Date d'appel"
+                                  value={formState.dateAppel}
+                                  onChange={(value) => handleFormChange("dateAppel", value)}
+                                  onClear={() => handleFormChange("dateAppel", "")}
+                                />
+                                <TimePickerWithClear
+                                  label="Heure d'appel"
+                                  value={formState.heureAppel}
+                                  onChange={(value) => handleFormChange("heureAppel", value)}
+                                  onClear={() => handleFormChange("heureAppel", "")}
+                                />
+                              </div>
+                              <div className="mt-4 space-y-2">
+                                <Label htmlFor="call-duration">Durée d'appel</Label>
+                                <Input
+                                  id="call-duration"
+                                  value={formState.dureeAppel}
+                                  placeholder="mm:ss"
+                                  onChange={(event) => handleFormChange("dureeAppel", event.target.value)}
+                                />
+                              </div>
+                            </TabsContent>
+                          </div>
+                        </Tabs>
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="historique" className="mt-6">
+                      <div className="section-card p-4 space-y-4">
+                        {callHistory.length > 0 ? (
+                          <div className="space-y-3">
+                            {callHistory.map((call) => (
+                              <div
+                                key={call.numero}
+                                className="rounded-lg border bg-muted/40 p-3 text-xs"
+                              >
+                                <div className="flex items-center justify-between gap-4">
+                                  <div className="flex items-center gap-2 font-medium text-foreground">
+                                    <History className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <span>Appel {call.numero}</span>
+                                  </div>
+                                  {call.statut && (
+                                    <Badge variant="outline" className="text-[10px]">
+                                      {call.statut}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="mt-1 flex items-center gap-2 text-muted-foreground">
+                                  {call.date && (
+                                    <span>{call.date}</span>
+                                  )}
+                                </div>
+                                {call.commentaire && (
+                                  <p className="mt-2 text-muted-foreground/80">
+                                    {call.commentaire}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-between rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                            <span>Aucun historique enregistré.</span>
+                            <div className="flex items-center gap-2">
+                              <Button size="sm" variant="ghost" className="h-7 px-2" onClick={onCall} disabled={!selectedContact?.telephone}>
+                                <Phone className="h-3.5 w-3.5 mr-1" /> Commencer un appel
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </div>
               </ScrollArea>
 
@@ -1875,19 +2007,19 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
               <div className="flex-1 bg-transparent rounded-none border-0 shadow-none overflow-hidden">
                 <div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="gap-2 flex h-full flex-col">
                   {/* Table Controls Bar - Fully Responsive */}
-                  <div className="flex items-center gap-2 px-1.5 py-1.5 border-b bg-card flex-wrap">
-                    {/* Groupe 1: Gestion colonnes + Mode auto + Recherche */}
-                    <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
+                  <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 px-1.5 py-1.5 bg-card w-full max-w-[95%] mx-auto">
+                    {/* Groupe 1: Gestion colonnes + Mode auto */}
+                    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-9 px-2 shrink-0"
+                            className="h-8 px-1.5 sm:px-2 shrink-0"
                             title="Gestion des colonnes"
                           >
                             <Settings2 className="h-4 w-4" />
-                            <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">
+                            <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs hidden sm:inline-flex">
                               {Object.values(visibleColumns).filter(Boolean).length}
                             </Badge>
                           </Button>
@@ -1987,7 +2119,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-9 px-2 shrink-0"
+                            className="h-8 px-1.5 sm:px-2 shrink-0"
                             title="Mode de recherche automatique"
                           >
                             {(autoSearchMode === 'linkedin' || autoSearchMode === 'linkedin-name' || autoSearchMode === 'linkedin-name-type') && <Linkedin className="h-4 w-4 text-blue-600" />}
@@ -2028,67 +2160,69 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         </DropdownMenuContent>
                       </DropdownMenu>
 
-                      <div className="relative flex-1 min-w-[180px] max-w-[300px]">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          placeholder="Rechercher dans la table..."
-                          value={searchQuery}
-                          onChange={(e) => onSearch(e.target.value)}
-                          className="pl-9 h-9"
-                        />
-                      </div>
+                    </div>
+                    
+                    {/* Champ de recherche */}
+                    <div className="relative flex-1 min-w-[140px] sm:min-w-[180px] max-w-full sm:max-w-[300px] order-3 sm:order-none">
+                      <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        placeholder="Rechercher..."
+                        value={searchQuery}
+                        onChange={(e) => onSearch(e.target.value)}
+                        className="pl-8 h-8 text-sm"
+                      />
                     </div>
                     
                     {/* Groupe 2: Boutons de recherche manuelle LinkedIn/Google/Lien */}
-                    <div className="flex items-center gap-2 flex-wrap shrink-0">
+                    <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap shrink-0 order-2 sm:order-none">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => onLinkedInSearch('name')}
                         disabled={!selectedContactId}
-                        className="h-8 gap-1.5 px-2 sm:px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2] shrink-0"
+                        className="h-8 px-2 sm:px-2.5 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2] shrink-0"
                         title="Rechercher sur LinkedIn (Prénom + Nom)"
                       >
                         <Linkedin className="h-4 w-4" />
-                        <span className="hidden sm:inline">LinkedIn</span>
+                        <span className="hidden lg:inline ml-1.5">LinkedIn</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => onLinkedInSearch('name-type')}
                         disabled={!selectedContactId}
-                        className="h-8 gap-1.5 px-2 sm:px-3 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2] shrink-0"
+                        className="h-8 px-2 sm:px-2.5 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2] shrink-0"
                         title="Rechercher sur LinkedIn (Prénom + Nom + Contexte)"
                       >
                         <Linkedin className="h-4 w-4" />
-                        <span className="hidden sm:inline">LinkedIn+</span>
+                        <span className="hidden lg:inline ml-1.5">LinkedIn+</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={onGoogleSearch}
                         disabled={!selectedContactId}
-                        className="h-8 gap-1.5 px-2 sm:px-3 bg-[#4285F4] hover:bg-[#357AE8] text-white border-[#4285F4] shrink-0"
+                        className="h-8 px-2 sm:px-2.5 bg-[#4285F4] hover:bg-[#357AE8] text-white border-[#4285F4] shrink-0"
                         title="Rechercher sur Google"
                       >
                         <Globe className="h-4 w-4" />
-                        <span className="hidden sm:inline">Google</span>
+                        <span className="hidden lg:inline ml-1.5">Google</span>
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={onDirectLink}
                         disabled={!selectedContactId}
-                        className="h-8 gap-1.5 px-2 sm:px-3 shrink-0"
+                        className="h-8 px-2 sm:px-2.5 shrink-0"
                         title="Ouvrir le lien direct"
                       >
                         <Eye className="h-4 w-4" />
-                        <span className="hidden sm:inline">Lien direct</span>
+                        <span className="hidden lg:inline ml-1.5">Lien direct</span>
                       </Button>
                     </div>
                     
                     {/* Groupe 3: Boutons d'actions */}
-                    <div className="flex items-center gap-2 flex-wrap shrink-0">
+                    <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap shrink-0 order-4 sm:order-none">
                       {/* Bouton pour revenir au premier contact sans statut */}
                       <TooltipProvider>
                           <Tooltip>
@@ -2113,11 +2247,11 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                     toast.info('Aucun contact sans statut trouvé');
                                   }
                                 }}
-                                className="h-8 gap-1.5 px-2 sm:px-3 bg-primary/10 hover:bg-primary/20 text-primary border-primary/30 shrink-0"
+                                className="h-8 px-2 sm:px-2.5 bg-primary/10 hover:bg-primary/20 text-primary border-primary/30 shrink-0"
                                 disabled={!filteredContacts.some(c => !c.statut || c.statut === ContactStatus.NonDefini)}
                               >
                                 <ChevronUp className="h-4 w-4" />
-                                <span className="sr-only md:not-sr-only hidden">Premier sans statut</span>
+                                <span className="hidden lg:inline ml-1.5">Premier sans statut</span>
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent side="bottom">
@@ -2126,154 +2260,15 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         </Tooltip>
                       </TooltipProvider>
                       
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const input = document.createElement('input')
-                          input.type = 'file'
-                          input.accept = '.csv,.tsv,.xlsx,.xls'
-                          input.onchange = async (e) => {
-                            const files = (e.target as HTMLInputElement).files
-                            if (files && files.length > 0) {
-                              await analyzeAndOpenMappingDialog(files[0])
-                            }
-                          }
-                          input.click()
-                        }}
-                        className="h-8 px-2 shrink-0"
-                        title="Importer un fichier CSV/Excel"
-                      >
-                        <Upload className="h-4 w-4" />
-                      </Button>
-                      
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="outline"
-                            size="sm"
-                            disabled={contacts.length === 0}
-                            className="h-8 px-2 shrink-0"
-                            title="Exporter les données"
+                            className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 h-8 text-sm shrink-0"
                           >
-                            <Download className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-56 border shadow-lg bg-popover text-popover-foreground z-50">
-                          <DropdownMenuLabel className="flex items-center gap-2">
-                            <Download className="w-4 h-4" />
-                            Options d'export
-                          </DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          
-                          <DropdownMenuCheckboxItem
-                            checked={exportOptions.table}
-                            onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, table: checked }))}
-                            onSelect={(e) => e.preventDefault()}
-                            disabled={contacts.length === 0}
-                            className="cursor-pointer"
-                          >
-                            <BarChart3 className="mr-2 h-4 w-4" />
-                            <span>Table (CSV)</span>
-                            {contacts.length > 0 && (
-                              <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
-                            )}
-                          </DropdownMenuCheckboxItem>
-
-                          <DropdownMenuCheckboxItem
-                            checked={exportOptions.tableExcel}
-                            onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, tableExcel: checked }))}
-                            onSelect={(e) => e.preventDefault()}
-                            disabled={contacts.length === 0}
-                            className="cursor-pointer"
-                          >
-                            <FileSpreadsheet className="mr-2 h-4 w-4" />
-                            <span>Table (Excel)</span>
-                            {contacts.length > 0 && (
-                              <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
-                            )}
-                          </DropdownMenuCheckboxItem>
-
-                          <DropdownMenuCheckboxItem
-                            checked={exportOptions.contacts}
-                            onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, contacts: checked }))}
-                            onSelect={(e) => e.preventDefault()}
-                            disabled={googleContactsCount === 0}
-                            className="cursor-pointer"
-                          >
-                            <Users className="mr-2 h-4 w-4" />
-                            <span>Contacts Google</span>
-                            {googleContactsCount > 0 && (
-                              <span className="ml-auto text-xs text-muted-foreground">({googleContactsCount})</span>
-                            )}
-                          </DropdownMenuCheckboxItem>
-
-                          <DropdownMenuCheckboxItem
-                            checked={exportOptions.agenda}
-                            onCheckedChange={(checked) => setExportOptions(prev => ({ ...prev, agenda: checked }))}
-                            onSelect={(e) => e.preventDefault()}
-                            disabled={calendarRemindersCount === 0}
-                            className="cursor-pointer"
-                          >
-                            <Calendar className="mr-2 h-4 w-4" />
-                            <span>Agenda Google</span>
-                            {calendarRemindersCount > 0 && (
-                              <span className="ml-auto text-xs text-muted-foreground">({calendarRemindersCount})</span>
-                            )}
-                          </DropdownMenuCheckboxItem>
-
-                          <DropdownMenuSeparator />
-
-                          <DropdownMenuItem
-                            onClick={handleUnifiedExport}
-                            className="cursor-pointer bg-primary/10 hover:bg-primary/20"
-                            disabled={Object.values(exportOptions).every(option => !option)}
-                          >
-                            <Download className="mr-2 h-4 w-4" />
-                            <span className="font-medium">Exporter la sélection</span>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="h-9 px-2 shrink-0"
-                              title="Supprimer les contacts de l'onglet actif"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Confirmer la suppression</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Êtes-vous sûr de vouloir supprimer tous les contacts de la liste actuelle ? 
-                              Cette action est irréversible.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annuler</AlertDialogCancel>
-                            <AlertDialogAction 
-                              onClick={onClearActiveTab}
-                              className="bg-red-500 hover:bg-red-600 text-white"
-                            >
-                              Supprimer
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                      
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="flex items-center gap-2 px-2 sm:px-3 py-1.5 h-8 text-sm shrink-0"
-                          >
-                            <span className="inline-block w-2 h-2 rounded-full" style={{backgroundColor: tableTabs.find(t => t.id === activeTableTabId)?.color || 'var(--primary)'}}></span>
+                            <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{backgroundColor: tableTabs.find(t => t.id === activeTableTabId)?.color || 'var(--primary)'}}></span>
                             <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">
-                              {tableTabs.find(t => t.id === activeTableTabId)?.name || 'Onglets'}
+                              {tableTabs.find(t => t.id === activeTableTabId)?.name || 'Contacts'}
                             </span>
                             <ChevronDown className="h-4 w-4 shrink-0" />
                           </Button>

@@ -1329,10 +1329,10 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
         collisionDetection={closestCenter}
         onDragEnd={handleDragEnd}
       >
-        <div className="contact-table-container h-full">
+        <div className="contact-table-container h-full w-full">
           <div 
             ref={scrollContainerRef}
-            className={cn(SHADCN_STYLES.tableContainer, "scrollbar-hidden h-full overflow-auto")}
+            className={cn(SHADCN_STYLES.tableContainer, "scrollbar-hidden h-full overflow-auto w-full")}
             style={{
               position: 'relative',
               height: '100%',

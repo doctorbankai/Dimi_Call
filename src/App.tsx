@@ -2857,7 +2857,9 @@ Dimitri MOREL - Arcanis Conseil`;
   return (
     <SidebarProvider
       className={cn(
-        "flex h-svh min-h-svh overflow-hidden bg-background"
+        "grid h-svh min-h-svh overflow-hidden bg-background",
+        "grid-cols-[auto_1fr]",
+        "@container"
       )}
       style={{
         minHeight: 0,
@@ -2877,7 +2879,7 @@ Dimitri MOREL - Arcanis Conseil`;
         onChangeViewMode={(mode) => setViewMode(mode)}
         theme={resolvedTheme}
       />
-      <SidebarInset className="flex-1 min-w-0 flex flex-col min-h-0 transition-all duration-200 ease-linear pt-0 mt-0">
+      <SidebarInset className="min-w-0 flex flex-col min-h-0 transition-all duration-200 ease-linear pt-0 mt-0 basis-full overflow-hidden">
         {/* Barre de titre personnalisée pour Electron */}
         <TitleBar
           theme={resolvedTheme}
@@ -2943,7 +2945,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
 
           {/* Main content card (includes header) */}
-          <div className="group-data-[variant=floating]:border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm bg-card text-foreground border border-border rounded-lg shadow-sm ml-2 mr-[4px] mt-[4px] mb-[4px] flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="group-data-[variant=floating]:border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm bg-card text-foreground border border-border rounded-lg shadow-sm ml-1 sm:ml-2 mr-[2px] sm:mr-[4px] mt-[2px] sm:mt-[4px] mb-[2px] sm:mb-[4px] flex-1 flex flex-col min-h-0 overflow-hidden min-w-0">
             {/* Header inside the white container */}
             <MainHeader
               theme={resolvedTheme}
@@ -2967,18 +2969,18 @@ Dimitri MOREL - Arcanis Conseil`;
               onAdbClick={handleTitleBarAdbClick}
             />
             <main className={cn(
-              "flex-1 flex flex-col pt-2 md:pt-3 pb-3 md:pb-5 px-3 md:px-5 space-y-3 overflow-hidden w-full min-h-0"
+              "flex-1 flex flex-col pt-2 md:pt-3 pb-3 md:pb-5 px-2 sm:px-3 md:px-5 space-y-2 md:space-y-3 overflow-hidden w-full min-h-0"
             )}>
 
               {/* Search bar area */}
-              <div className="flex items-center gap-3 w-full justify-between">
+              <div className="flex flex-wrap items-center gap-2 md:gap-3 w-full justify-between min-w-0">
                 {/* 0me encadr: Bascule Vue retire (dsormais dans la Sidebar) */}
                 {/* Call Control inline (à droite du slecteur de mode) */}
                 {viewMode === 'table' && (
                   <>
 
                     {/* Call Control - maintenant aprs la recherche */}
-                    <div className="flex-grow -mt-1">
+                    <div className="flex-grow min-w-0 w-full xl:w-auto -mt-1 order-1 xl:order-none">
                       <CallControl
                         contact={selectedContact}
                         isCalling={Boolean(activeCallContactId && selectedContact && activeCallContactId === selectedContact.id)}
@@ -3007,12 +3009,12 @@ Dimitri MOREL - Arcanis Conseil`;
 
                 {/* Bandeau filtres uniformisé pour Graph/BDD */}
                 {viewMode === 'graph' || viewMode === 'db' ? (
-                  <div className="flex-1 w-full bg-card rounded-lg p-3 shadow-sm border">
-                    <div className="flex flex-wrap items-center justify-between gap-2 w-full">
-                      <h1 className="text-xl font-semibold text-foreground">
+                  <div className="flex-1 w-full min-w-0 bg-card rounded-lg p-2 md:p-3 shadow-sm border">
+                    <div className="flex flex-wrap items-center justify-between gap-2 w-full min-w-0">
+                      <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">
                         {viewMode === 'graph' ? 'Graphiques' : 'Données'}
                       </h1>
-                      <div className="flex flex-wrap items-center justify-center gap-2">
+                      <div className="flex flex-wrap items-center justify-center gap-1.5 md:gap-2">
                         <DropdownMenu modal={false} open={filterMenuOpen} onOpenChange={setFilterMenuOpen}>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm" className="h-9 gap-2 px-3">

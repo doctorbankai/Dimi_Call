@@ -122,10 +122,10 @@ export const ContactCardsGrid: React.FC<ContactCardsGridProps> = ({
   }, [visibleCount, contacts.length])
 
   return (
-    <ScrollArea className="h-full w-full" ref={scrollRef}>
-      <div className="grid gap-4 p-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <ScrollArea className="h-full w-full min-h-0" ref={scrollRef}>
+      <div className="@container grid gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 md:p-4 grid-cols-1 @sm:grid-cols-2 @lg:grid-cols-3 @xl:grid-cols-4 min-w-0">
       {displayedContacts.map((contact) => (
-        <div key={contact.id} data-contact-id={contact.id}>
+        <div key={contact.id} data-contact-id={contact.id} className="min-w-0">
           <ContactCard
             contact={contact}
             isSelected={contact.id === selectedId}
