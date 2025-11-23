@@ -257,14 +257,35 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   // Authentication states - removed isAuthModalOpen (now using full page)
 
   // State declarations
+  const readSystemTheme = () => {
+    if (typeof window === 'undefined' || !window.matchMedia) {
+      return Theme.Light;
+    }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? Theme.Dark : Theme.Light;
+  };
+
   const [theme, setTheme] = useState<Theme>(() => {
     try {
-      const saved = localStorage.getItem('dimicall-theme');
-      return saved === 'light' ? Theme.Light : Theme.Dark;
+      const saved = localStorage.getItem('dimicall-theme') as Theme | null;
+      if (saved === Theme.Light || saved === Theme.Dark || saved === Theme.System) {
+        return saved;
+      }
     } catch {
-      return Theme.Dark;
+      // Ignore storage errors and fall back to system
     }
+    return Theme.System;
   });
+  const [systemTheme, setSystemTheme] = useState<Theme>(readSystemTheme);
+
+  const resolveThemeValue = useCallback(
+    (value: Theme) => (value === Theme.System ? systemTheme : value),
+    [systemTheme]
+  );
+  const resolvedTheme = resolveThemeValue(theme);
+  const handleToggleTheme = useCallback(
+    () => setTheme((current) => (resolveThemeValue(current) === Theme.Dark ? Theme.Light : Theme.Dark)),
+    [resolveThemeValue]
+  );
   const [activeMenuTab, setActiveMenuTab] = useState<'dimicall'>('dimicall');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [callStates, setCallStates] = useState<CallStates>({});
@@ -313,7 +334,7 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   useEffect(() => {
     try {
       localStorage.setItem('ui-density', uiDensity);
-    } catch {}
+    } catch { }
     const cls = 'density-compact';
     if (uiDensity === 'compact') document.body.classList.add(cls); else document.body.classList.remove(cls);
   }, [uiDensity]);
@@ -931,7 +952,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
   // Sauvegardes de prfrences utilisateur
   useEffect(() => {
-    try { localStorage.setItem('dimicall-theme', theme === Theme.Light ? 'light' : 'dark'); } catch { }
+    try { localStorage.setItem('dimicall-theme', theme); } catch { }
   }, [theme]);
   useEffect(() => {
     try { localStorage.setItem('dimicall-active-tab', activeMenuTab); } catch { }
@@ -1711,8 +1732,8 @@ Dimitri MOREL - Arcanis Conseil`;
       source && source !== primaryContext
         ? source
         : ecole && ecole !== primaryContext
-        ? ecole
-        : '';
+          ? ecole
+          : '';
 
     if (mode === 'name') {
       searchLinkedIn(prenom, nom);
@@ -1897,12 +1918,32 @@ Dimitri MOREL - Arcanis Conseil`;
     }
   }, [adbConnectionState.isConnected, adbConnecting, connectAdb]);
 
+  const applyDocumentTheme = useCallback((nextTheme: Theme) => {
+    const root = document.documentElement;
+    const isDark = nextTheme === Theme.Dark;
+    root.classList.toggle('dark', isDark);
+    root.dataset.theme = isDark ? 'dark' : 'light';
+    root.style.colorScheme = isDark ? 'dark' : 'light';
+  }, []);
+
   // Appliquer le thème de façon synchrone avant paint, sans styles inline
   useLayoutEffect(() => {
-    const isDark = theme === Theme.Dark;
-    const root = document.documentElement;
-    root.classList.toggle('dark', isDark);
-  }, [theme]);
+    applyDocumentTheme(resolvedTheme);
+  }, [resolvedTheme, applyDocumentTheme]);
+
+  useEffect(() => {
+    const mediaQuery = typeof window !== 'undefined' && window.matchMedia
+      ? window.matchMedia('(prefers-color-scheme: dark)')
+      : null;
+    if (!mediaQuery) return;
+
+    const handleSystemThemeChange = (event: MediaQueryListEvent) => {
+      setSystemTheme(event.matches ? Theme.Dark : Theme.Light);
+    };
+
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+  }, []);
 
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -2476,10 +2517,6 @@ Dimitri MOREL - Arcanis Conseil`;
 
 
 
-  const toggleTheme = () => {
-    setTheme(prevTheme => (prevTheme === Theme.Light ? Theme.Dark : Theme.Light));
-  };
-
   // Obtenir les colonnes essentielles depuis les rglages sauvegards
   const getEssentialColumns = () => {
     try {
@@ -2802,28 +2839,28 @@ Dimitri MOREL - Arcanis Conseil`;
         "--header-height": "2rem",
       } as React.CSSProperties}
     >
-        <AppSidebar
-          activeTab={activeMenuTab}
-          onTabChange={(tab) => {
-            if (tab === 'dimicall') setActiveMenuTab(tab)
-          }}
-          onSettingsClick={() => setIsSettingsOpen(true)}
-          viewMode={viewMode}
-          onChangeViewMode={(mode) => setViewMode(mode)}
-          theme={theme}
+      <AppSidebar
+        activeTab={activeMenuTab}
+        onTabChange={(tab) => {
+          if (tab === 'dimicall') setActiveMenuTab(tab)
+        }}
+        onSettingsClick={() => setIsSettingsOpen(true)}
+        viewMode={viewMode}
+        onChangeViewMode={(mode) => setViewMode(mode)}
+        theme={resolvedTheme}
+      />
+      <SidebarInset className="flex-1 min-w-0 flex flex-col min-h-0 transition-all duration-200 ease-linear pt-0 mt-0">
+        {/* Barre de titre personnalisée pour Electron */}
+        <TitleBar
+          theme={resolvedTheme}
         />
-        <SidebarInset className="flex-1 min-w-0 flex flex-col min-h-0 transition-all duration-200 ease-linear pt-0 mt-0">
-          {/* Barre de titre personnalisée pour Electron */}
-          <TitleBar
-            theme={theme}
-          />
 
-          {/* Contenu principal */}
-          <main className="flex flex-col flex-1 w-full min-h-0 min-w-0 overflow-hidden h-full">
-            {/* Notifications */}
+        {/* Contenu principal */}
+        <main className="flex flex-col flex-1 w-full min-h-0 min-w-0 overflow-hidden h-full">
+          {/* Notifications */}
 
-            {/* 🔧 Indicateur d'appel en cours avec chronomtrage en temps rel - DSACTIV */}
-            {/* {activeCallContactId && callStartTime && (
+          {/* 🔧 Indicateur d'appel en cours avec chronomtrage en temps rel - DSACTIV */}
+          {/* {activeCallContactId && callStartTime && (
          <div className="fixed top-4 left-4 z-50">
            <div className="flex items-center gap-3 px-4 py-3 bg-green-500/10 border border-green-300 dark:border-green-700 rounded-lg animate-pulse shadow-lg">
              <div className="flex items-center gap-2">
@@ -2850,60 +2887,60 @@ Dimitri MOREL - Arcanis Conseil`;
          </div>
        )} */}
 
-            {/* Modal de progression */}
-            {importProgress && (
-              <Dialog open={true} onOpenChange={() => setImportProgress(null)}>
-                <DialogContent className="sm:max-w-md" aria-describedby="import-progress-desc">
-                  <DialogHeader>
-                    <DialogTitle className="sr-only">Progression d'import</DialogTitle>
-                  </DialogHeader>
-                  <div id="import-progress-desc" className="flex flex-col items-center space-y-4 p-4">
-                    <div className="w-12 h-12 border-4 border-muted rounded-full animate-spin border-t-primary" />
-                    <div className="text-center space-y-2">
-                      <p className="text-sm font-medium">{importProgress.message}</p>
-                      {importProgress.percentage !== null && (
-                        <div className="w-full">
-                          <Progress value={importProgress.percentage} className="h-2" />
-                          <p className="text-xs text-muted-foreground mt-1">{importProgress.percentage}%</p>
-                        </div>
-                      )}
-                    </div>
+          {/* Modal de progression */}
+          {importProgress && (
+            <Dialog open={true} onOpenChange={() => setImportProgress(null)}>
+              <DialogContent className="sm:max-w-md" aria-describedby="import-progress-desc">
+                <DialogHeader>
+                  <DialogTitle className="sr-only">Progression d'import</DialogTitle>
+                </DialogHeader>
+                <div id="import-progress-desc" className="flex flex-col items-center space-y-4 p-4">
+                  <div className="w-12 h-12 border-4 border-muted rounded-full animate-spin border-t-primary" />
+                  <div className="text-center space-y-2">
+                    <p className="text-sm font-medium">{importProgress.message}</p>
+                    {importProgress.percentage !== null && (
+                      <div className="w-full">
+                        <Progress value={importProgress.percentage} className="h-2" />
+                        <p className="text-xs text-muted-foreground mt-1">{importProgress.percentage}%</p>
+                      </div>
+                    )}
                   </div>
-                </DialogContent>
-              </Dialog>
-            )}
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
 
-            {/* Toast/Modal lger d'export russi (Shadcn-like) */}
-            <Toaster position="bottom-right" richColors theme={theme === 'dark' ? 'dark' : 'light'} closeButton />
+          {/* Toast/Modal lger d'export russi (Shadcn-like) */}
+          <Toaster position="bottom-right" richColors theme={resolvedTheme === Theme.Dark ? 'dark' : 'light'} closeButton />
 
 
-            {/* Main content card (includes header) */}
-            <div className="group-data-[variant=floating]:border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm bg-white border rounded-lg shadow-sm ml-2 mr-[4px] mt-[4px] mb-[4px] flex-1 flex flex-col min-h-0 overflow-hidden">
-              {/* Header inside the white container */}
-              <MainHeader
-                theme={theme}
-                onToggleTheme={() => setTheme(theme === Theme.Dark ? Theme.Light : Theme.Dark)}
-                onOpenSettings={() => setIsSettingsOpen(true)}
-                updateDownloaded={Boolean(updateState?.downloaded)}
-                adbConnected={adbConnectionState.isConnected}
-                contacts={contacts}
-                onPickContact={(c) => {
-                  setSelectedContact(c)
-                }}
-                onNavigate={(mode) => setViewMode(mode)}
-                onOpenAnnuaireContact={handleOpenAnnuaireContact}
-                updateState={updateState}
-                onUpdateClick={installUpdate}
-                onUpdateConfirmationOpen={() => setIsUpdateConfirmationOpen(true)}
-                betaPreferences={betaPreferences}
-                isUpdateEnabled={isUpdateEnabled}
-                adbConnectionState={adbConnectionState}
-                adbConnecting={adbConnecting}
-                onAdbClick={handleTitleBarAdbClick}
-              />
-              <main className={cn(
-                "flex-1 flex flex-col pt-2 md:pt-3 pb-3 md:pb-5 px-3 md:px-5 space-y-3 overflow-hidden w-full min-h-0"
-              )}>
+          {/* Main content card (includes header) */}
+          <div className="group-data-[variant=floating]:border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm bg-card text-foreground border border-border rounded-lg shadow-sm ml-2 mr-[4px] mt-[4px] mb-[4px] flex-1 flex flex-col min-h-0 overflow-hidden">
+            {/* Header inside the white container */}
+            <MainHeader
+              theme={resolvedTheme}
+              onToggleTheme={handleToggleTheme}
+              onOpenSettings={() => setIsSettingsOpen(true)}
+              updateDownloaded={Boolean(updateState?.downloaded)}
+              adbConnected={adbConnectionState.isConnected}
+              contacts={contacts}
+              onPickContact={(c) => {
+                setSelectedContact(c)
+              }}
+              onNavigate={(mode) => setViewMode(mode)}
+              onOpenAnnuaireContact={handleOpenAnnuaireContact}
+              updateState={updateState}
+              onUpdateClick={installUpdate}
+              onUpdateConfirmationOpen={() => setIsUpdateConfirmationOpen(true)}
+              betaPreferences={betaPreferences}
+              isUpdateEnabled={isUpdateEnabled}
+              adbConnectionState={adbConnectionState}
+              adbConnecting={adbConnecting}
+              onAdbClick={handleTitleBarAdbClick}
+            />
+            <main className={cn(
+              "flex-1 flex flex-col pt-2 md:pt-3 pb-3 md:pb-5 px-3 md:px-5 space-y-3 overflow-hidden w-full min-h-0"
+            )}>
 
               {/* Search bar area */}
               <div className="flex items-center gap-3 w-full justify-between">
@@ -3066,7 +3103,7 @@ Dimitri MOREL - Arcanis Conseil`;
                           onUpdateContact={updateContact}
                           onDeleteContact={handleDeleteContact}
                           activeCallContactId={activeCallContactId}
-                          theme={theme}
+                          theme={resolvedTheme}
                           visibleColumns={visibleColumns}
                           columnHeaders={availableColumns.length > 0 ? availableColumns : COLUMN_HEADERS}
                           contactDataKeys={availableDataKeys.length > 0 ? availableDataKeys : CONTACT_DATA_KEYS as (keyof Contact | null)[]}
@@ -3523,7 +3560,7 @@ Dimitri MOREL - Arcanis Conseil`;
                                   onUpdateContact={updateContact}
                                   onDeleteContact={handleDeleteContact}
                                   activeCallContactId={activeCallContactId}
-                                  theme={theme}
+                                  theme={resolvedTheme}
                                   visibleColumns={visibleColumns}
                                   columnHeaders={availableColumns.length > 0 ? availableColumns : COLUMN_HEADERS}
                                   contactDataKeys={availableDataKeys.length > 0 ? availableDataKeys : CONTACT_DATA_KEYS as (keyof Contact | null)[]}
@@ -3597,7 +3634,7 @@ Dimitri MOREL - Arcanis Conseil`;
                   <Calendar2 onOpenAnnuaireContact={handleOpenAnnuaireContact} />
                 ) : viewMode === 'annuaire' ? (
                   <AnnuairePage
-                    theme={theme === Theme.Dark ? 'dark' : 'light'}
+                    theme={resolvedTheme === Theme.Dark ? 'dark' : 'light'}
                     onContactSelect={(contact) => setSelectedContact(contact)}
                     onCall={() => makePhoneCall()}
                     onSms={() => selectedContact && setIsSmsDialogOpen(true)}
@@ -3627,380 +3664,380 @@ Dimitri MOREL - Arcanis Conseil`;
                 )}
               </div>
             </main>
-            </div>
+          </div>
 
 
 
-            {/* Dialogs */}
-            {selectedContact && isEmailDialogOpen && (
-              <EmailDialog
-                isOpen={isEmailDialogOpen}
-                onClose={() => setIsEmailDialogOpen(false)}
-                contact={selectedContact}
-                showNotification={showNotification}
-                onUpdateContact={updateContact}
-              />
-            )}
-            {selectedContact && isSmsDialogOpen && (
-              <SmsDialog
-                isOpen={isSmsDialogOpen}
-                onClose={() => setIsSmsDialogOpen(false)}
-                contact={selectedContact}
-                onUpdateContact={updateContact}
-                onSendSms={async (civility, smsType, dateISO, time) => {
-                  await handleSms(civility as string, smsType, undefined, dateISO, time);
-                  setIsSmsDialogOpen(false);
-                }}
-              />
-            )}
-            {selectedContact && isRappelDialogOpen && (
-              <RappelDialog
-                isOpen={isRappelDialogOpen}
-                onClose={() => setIsRappelDialogOpen(false)}
-                contact={selectedContact}
-                onSave={(date, time) => {
-                  updateContact({ id: selectedContact.id, dateRappel: date, heureRappel: time });
-                  showNotification('success', `Rappel dfini pour ${selectedContact.prenom} le ${date} à ${time}.`);
-                  setIsRappelDialogOpen(false);
-                }}
-              />
-            )}
-            {selectedContact && isRendezVousDialogOpen && (
-              <RendezVousDialog
-                isOpen={isRendezVousDialogOpen}
-                onClose={() => setIsRendezVousDialogOpen(false)}
-                contact={selectedContact}
-                onSave={(date, time) => {
-                  updateContact({ id: selectedContact.id, dateRDV: date, heureRDV: time });
-                  showNotification('success', `Rendez-vous programm pour ${selectedContact.prenom} le ${date} à ${time}.`);
-                  setIsRendezVousDialogOpen(false);
-                }}
-              />
-            )}
-            {selectedContact && isQualificationDialogOpen && (
-              <QualificationDialog
-                isOpen={isQualificationDialogOpen}
-                onClose={() => setIsQualificationDialogOpen(false)}
-                onSave={(comment) => {
-                  updateContact({ id: selectedContact.id, commentaire: comment });
-                  showNotification('success', `Qualification enregistre pour ${selectedContact.prenom}.`);
-                  setIsQualificationDialogOpen(false);
-                }}
-                theme={theme}
-              />
-            )}
-            {isFnKeysInfoOpen && (
-              <GenericInfoDialog
-                isOpen={isFnKeysInfoOpen}
-                onClose={() => setIsFnKeysInfoOpen(false)}
-                title="Raccourcis Clavier"
-                content={
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      Utilisez les touches de fonction pour interagir rapidement avec le contact slectionn :
-                    </p>
+          {/* Dialogs */}
+          {selectedContact && isEmailDialogOpen && (
+            <EmailDialog
+              isOpen={isEmailDialogOpen}
+              onClose={() => setIsEmailDialogOpen(false)}
+              contact={selectedContact}
+              showNotification={showNotification}
+              onUpdateContact={updateContact}
+            />
+          )}
+          {selectedContact && isSmsDialogOpen && (
+            <SmsDialog
+              isOpen={isSmsDialogOpen}
+              onClose={() => setIsSmsDialogOpen(false)}
+              contact={selectedContact}
+              onUpdateContact={updateContact}
+              onSendSms={async (civility, smsType, dateISO, time) => {
+                await handleSms(civility as string, smsType, undefined, dateISO, time);
+                setIsSmsDialogOpen(false);
+              }}
+            />
+          )}
+          {selectedContact && isRappelDialogOpen && (
+            <RappelDialog
+              isOpen={isRappelDialogOpen}
+              onClose={() => setIsRappelDialogOpen(false)}
+              contact={selectedContact}
+              onSave={(date, time) => {
+                updateContact({ id: selectedContact.id, dateRappel: date, heureRappel: time });
+                showNotification('success', `Rappel dfini pour ${selectedContact.prenom} le ${date} à ${time}.`);
+                setIsRappelDialogOpen(false);
+              }}
+            />
+          )}
+          {selectedContact && isRendezVousDialogOpen && (
+            <RendezVousDialog
+              isOpen={isRendezVousDialogOpen}
+              onClose={() => setIsRendezVousDialogOpen(false)}
+              contact={selectedContact}
+              onSave={(date, time) => {
+                updateContact({ id: selectedContact.id, dateRDV: date, heureRDV: time });
+                showNotification('success', `Rendez-vous programm pour ${selectedContact.prenom} le ${date} à ${time}.`);
+                setIsRendezVousDialogOpen(false);
+              }}
+            />
+          )}
+          {selectedContact && isQualificationDialogOpen && (
+            <QualificationDialog
+              isOpen={isQualificationDialogOpen}
+              onClose={() => setIsQualificationDialogOpen(false)}
+              onSave={(comment) => {
+                updateContact({ id: selectedContact.id, commentaire: comment });
+                showNotification('success', `Qualification enregistre pour ${selectedContact.prenom}.`);
+                setIsQualificationDialogOpen(false);
+              }}
+              theme={resolvedTheme}
+            />
+          )}
+          {isFnKeysInfoOpen && (
+            <GenericInfoDialog
+              isOpen={isFnKeysInfoOpen}
+              onClose={() => setIsFnKeysInfoOpen(false)}
+              title="Raccourcis Clavier"
+              content={
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Utilisez les touches de fonction pour interagir rapidement avec le contact slectionn :
+                  </p>
 
-                    {/* F1 pour l'appel */}
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">Action d'appel :</p>
-                      <div className="flex items-center gap-3 p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                        <Badge variant="outline" className="font-mono text-xs bg-blue-100 dark:bg-blue-800">
-                          F1
-                        </Badge>
-                        <span className="text-sm font-medium">📞 Appeler le contact</span>
-                      </div>
+                  {/* F1 pour l'appel */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Action d'appel :</p>
+                    <div className="flex items-center gap-3 p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                      <Badge variant="outline" className="font-mono text-xs bg-blue-100 dark:bg-blue-800">
+                        F1
+                      </Badge>
+                      <span className="text-sm font-medium">📞 Appeler le contact</span>
                     </div>
+                  </div>
 
-                    {/* F2-F10 pour les statuts */}
-                    <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground">Changement de statut :</p>
-                      <div className="grid grid-cols-1 gap-2">
-                        {shortcutService.getShortcuts().map(({ key, label }) => (
-                          <div key={key} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
-                            <Badge variant="outline" className="font-mono text-xs">
-                              {key}
-                            </Badge>
-                            <span className="text-sm">{label}</span>
-                          </div>
-                        ))}
-                      </div>
+                  {/* F2-F10 pour les statuts */}
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-muted-foreground">Changement de statut :</p>
+                    <div className="grid grid-cols-1 gap-2">
+                      {shortcutService.getShortcuts().map(({ key, label }) => (
+                        <div key={key} className="flex items-center gap-3 p-2 rounded-lg bg-muted/50">
+                          <Badge variant="outline" className="font-mono text-xs">
+                            {key}
+                          </Badge>
+                          <span className="text-sm">{label}</span>
+                        </div>
+                      ))}
                     </div>
+                  </div>
 
-                    <div className="flex justify-center pt-2">
+                  <div className="flex justify-center pt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setIsFnKeysInfoOpen(false);
+                        setIsShortcutConfigOpen(true);
+                      }}
+                      className="text-xs"
+                    >
+                      Personnaliser les raccourcis F2-F10
+                    </Button>
+                  </div>
+                </div>
+              }
+              theme={resolvedTheme}
+            />
+          )}
+          {/* Supabase dialog supprim pour librer de l'espace */}
+
+          {/* Dialog de configuration des raccourcis */}
+          {isShortcutConfigOpen && (
+            <ShortcutConfigDialog
+              isOpen={isShortcutConfigOpen}
+              onClose={() => setIsShortcutConfigOpen(false)}
+              theme={resolvedTheme}
+              onSave={() => {
+                showNotification('success', 'Configuration des raccourcis sauvegarde', 3000);
+              }}
+            />
+          )}
+
+          {/* Dialog des rglages */}
+          {isSettingsOpen && (
+            <SettingsDialog
+              isOpen={isSettingsOpen}
+              onClose={() => setIsSettingsOpen(false)}
+              onSave={() => {
+                reloadEssentialColumns(); // Recharger les colonnes essentielles
+                showNotification('success', 'Rglages sauvegards avec succs', 3000);
+              }}
+              calcomUrl={calcomUrl}
+              onCalcomUrlChange={handleSaveCalcomUrl}
+              smsTemplate={smsTemplate}
+              onSmsTemplateChange={handleSaveSmsTemplate}
+              theme={theme}
+              onThemeChange={setTheme}
+            />
+          )}
+
+          {/* Indicateur de raccourci */}
+          <ShortcutIndicator
+            isVisible={shortcutIndicator.isVisible}
+            keyPressed={shortcutIndicator.key}
+            statusLabel={shortcutIndicator.label}
+            theme={resolvedTheme}
+            onClose={() => setShortcutIndicator({ isVisible: false, key: '', label: '' })}
+          />
+
+          {/* Dialog des logs ADB */}
+          {isAdbLogsDialogOpen && (
+            <Dialog open={isAdbLogsDialogOpen} onOpenChange={setIsAdbLogsDialogOpen}>
+              <DialogContent className="max-w-4xl max-h-[80vh]" aria-describedby="adb-logs-desc">
+                <DialogHeader>
+                  <DialogTitle>Logs ADB - Debug</DialogTitle>
+                </DialogHeader>
+                <div id="adb-logs-desc" className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div></div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAdbAutoDetection(!adbConnectionState.autoDetectionEnabled)}
+                      >
+                        {adbConnectionState.autoDetectionEnabled ? 'Dsactiver' : 'Activer'} dtection auto
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          const success = await restartAdb();
+                          showNotification(success ? 'success' : 'error', success ? 'Serveur ADB redmarr' : 'Erreur lors du redmarrage ADB');
+                        }}
+                      >
+                        Redmarrer ADB
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => {
-                          setIsFnKeysInfoOpen(false);
-                          setIsShortcutConfigOpen(true);
+                          const logs = getAdbLogs().join('\n');
+                          navigator.clipboard.writeText(logs);
+                          showNotification('success', 'Logs copis dans le presse-papier');
                         }}
-                        className="text-xs"
                       >
-                        Personnaliser les raccourcis F2-F10
+                        Copier logs
                       </Button>
                     </div>
                   </div>
-                }
-                theme={theme}
-              />
-            )}
-            {/* Supabase dialog supprim pour librer de l'espace */}
 
-            {/* Dialog de configuration des raccourcis */}
-            {isShortcutConfigOpen && (
-              <ShortcutConfigDialog
-                isOpen={isShortcutConfigOpen}
-                onClose={() => setIsShortcutConfigOpen(false)}
-                theme={theme}
-                onSave={() => {
-                  showNotification('success', 'Configuration des raccourcis sauvegarde', 3000);
-                }}
-              />
-            )}
-
-            {/* Dialog des rglages */}
-            {isSettingsOpen && (
-              <SettingsDialog
-                isOpen={isSettingsOpen}
-                onClose={() => setIsSettingsOpen(false)}
-                onSave={() => {
-                  reloadEssentialColumns(); // Recharger les colonnes essentielles
-                  showNotification('success', 'Rglages sauvegards avec succs', 3000);
-                }}
-                calcomUrl={calcomUrl}
-                onCalcomUrlChange={handleSaveCalcomUrl}
-                smsTemplate={smsTemplate}
-                onSmsTemplateChange={handleSaveSmsTemplate}
-                theme={theme}
-                onThemeChange={setTheme}
-              />
-            )}
-
-            {/* Indicateur de raccourci */}
-            <ShortcutIndicator
-              isVisible={shortcutIndicator.isVisible}
-              keyPressed={shortcutIndicator.key}
-              statusLabel={shortcutIndicator.label}
-              theme={theme}
-              onClose={() => setShortcutIndicator({ isVisible: false, key: '', label: '' })}
-            />
-
-            {/* Dialog des logs ADB */}
-            {isAdbLogsDialogOpen && (
-              <Dialog open={isAdbLogsDialogOpen} onOpenChange={setIsAdbLogsDialogOpen}>
-                <DialogContent className="max-w-4xl max-h-[80vh]" aria-describedby="adb-logs-desc">
-                  <DialogHeader>
-                    <DialogTitle>Logs ADB - Debug</DialogTitle>
-                  </DialogHeader>
-                  <div id="adb-logs-desc" className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div></div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setAdbAutoDetection(!adbConnectionState.autoDetectionEnabled)}
-                        >
-                          {adbConnectionState.autoDetectionEnabled ? 'Dsactiver' : 'Activer'} dtection auto
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={async () => {
-                            const success = await restartAdb();
-                            showNotification(success ? 'success' : 'error', success ? 'Serveur ADB redmarr' : 'Erreur lors du redmarrage ADB');
-                          }}
-                        >
-                          Redmarrer ADB
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            const logs = getAdbLogs().join('\n');
-                            navigator.clipboard.writeText(logs);
-                            showNotification('success', 'Logs copis dans le presse-papier');
-                          }}
-                        >
-                          Copier logs
-                        </Button>
-                      </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <strong>tat:</strong> {adbConnectionState.isConnected ? '✅ Connect' : '❌ Dconnect'}
                     </div>
-
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <strong>tat:</strong> {adbConnectionState.isConnected ? '✅ Connect' : '❌ Dconnect'}
-                      </div>
-                      <div>
-                        <strong>Dtection auto:</strong> {adbConnectionState.autoDetectionEnabled ? '✅ Active' : '❌ Dsactive'}
-                      </div>
-                      {adbConnectionState.device && (
-                        <>
-                          <div>
-                            <strong>Appareil:</strong> {adbConnectionState.device.name}
-                          </div>
-                          <div>
-                            <strong>Srie:</strong> {adbConnectionState.device.serial}
-                          </div>
-                        </>
-                      )}
-                      {adbConnectionState.batteryLevel && (
+                    <div>
+                      <strong>Dtection auto:</strong> {adbConnectionState.autoDetectionEnabled ? '✅ Active' : '❌ Dsactive'}
+                    </div>
+                    {adbConnectionState.device && (
+                      <>
                         <div>
-                          <strong>Batterie:</strong> {adbConnectionState.batteryLevel}% {adbConnectionState.isCharging ? '🔌' : '🔋'}
+                          <strong>Appareil:</strong> {adbConnectionState.device.name}
                         </div>
-                      )}
-                    </div>
-
-                    {adbConnectionState.error && (
-                      <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
-                        <strong className="text-red-600">Erreur:</strong> {adbConnectionState.error}
+                        <div>
+                          <strong>Srie:</strong> {adbConnectionState.device.serial}
+                        </div>
+                      </>
+                    )}
+                    {adbConnectionState.batteryLevel && (
+                      <div>
+                        <strong>Batterie:</strong> {adbConnectionState.batteryLevel}% {adbConnectionState.isCharging ? '🔌' : '🔋'}
                       </div>
                     )}
-
-                    <div className="space-y-2">
-                      <h3 className="font-medium">Logs en temps rel:</h3>
-                      <div className="bg-muted/50 rounded-lg p-3 max-h-96 overflow-y-auto hide-scrollbar font-mono text-xs">
-                        {getAdbLogs().length > 0 ? (
-                          getAdbLogs().map((log, index) => (
-                            <div key={index} className="mb-1">
-                              {log}
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-muted-foreground">Aucun log disponible</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
-
-            {/* Modal Cal.com */}
-            <CalendarModal
-              open={isCalendarModalOpen}
-              onOpenChange={setIsCalendarModalOpen}
-              contact={selectedContact || undefined}
-              theme={theme}
-              onSuccess={handleCalendarSuccess}
-            />
-
-            {/* Modal de configuration Cal.com */}
-            {isCalcomConfigOpen && (
-              <Dialog open={isCalcomConfigOpen} onOpenChange={setIsCalcomConfigOpen}>
-                <DialogContent className="sm:max-w-md" aria-describedby="calcom-config-desc">
-                  <DialogHeader>
-                    <DialogTitle>Configuration Cal.com</DialogTitle>
-                    <DialogDescription id="calcom-config-desc">
-                      Configurez l'URL de votre compte Cal.com pour la prise de rendez-vous.
-                    </DialogDescription>
-                  </DialogHeader>
-
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <label htmlFor="calcom-url" className="text-sm font-medium">
-                        URL Cal.com
-                      </label>
-                      <input
-                        id="calcom-url"
-                        type="url"
-                        defaultValue={calcomUrl}
-                        placeholder="https://cal.com/votre-nom/votre-vnement"
-                        className="w-full px-3 py-2 border border-input rounded-md text-sm bg-background"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            const input = e.target as HTMLInputElement;
-                            if (input.value.trim()) {
-                              handleSaveCalcomUrl(input.value.trim());
-                            }
-                          }
-                        }}
-                      />
-                    </div>
-
-                    <div className="text-xs text-muted-foreground space-y-1">
-                      <p> Utilisez l'URL complte de votre vnement Cal.com</p>
-                      <p> Format: https://cal.com/votre-nom/votre-vnement</p>
-                      <p> Les paramtres du contact seront ajouts automatiquement</p>
-                    </div>
                   </div>
 
-                  <DialogFooter className="gap-2">
-                    <Button variant="outline" onClick={() => setIsCalcomConfigOpen(false)}>
-                      Annuler
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        const input = document.getElementById('calcom-url') as HTMLInputElement;
-                        if (input?.value.trim()) {
-                          handleSaveCalcomUrl(input.value.trim());
-                        }
-                      }}
-                      className="bg-primary text-primary-foreground hover:bg-primary/90"
-                    >
-                      Sauvegarder
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            )}
+                  {adbConnectionState.error && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg">
+                      <strong className="text-red-600">Erreur:</strong> {adbConnectionState.error}
+                    </div>
+                  )}
 
-            {/* Pop-up de dconnexion Supabase */}
-            <SupabaseDisconnectDialog
-              open={!!auth.disconnectInfo}
-              info={auth.disconnectInfo}
-              onClose={auth.clearDisconnectInfo}
-              onRetry={async () => {
-                const ok = await auth.requestSessionRefresh();
-                if (ok) {
-                  auth.clearDisconnectInfo();
-                }
-              }}
-            />
+                  <div className="space-y-2">
+                    <h3 className="font-medium">Logs en temps rel:</h3>
+                    <div className="bg-muted/50 rounded-lg p-3 max-h-96 overflow-y-auto hide-scrollbar font-mono text-xs">
+                      {getAdbLogs().length > 0 ? (
+                        getAdbLogs().map((log, index) => (
+                          <div key={index} className="mb-1">
+                            {log}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-muted-foreground">Aucun log disponible</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          )}
 
-            {/* Dialog de confirmation de mise à jour */}
-            <UpdateConfirmationDialog
-              isOpen={isUpdateConfirmationOpen}
-              onClose={() => setIsUpdateConfirmationOpen(false)}
-              onConfirm={installUpdate}
-              updateInfo={updateState.updateInfo}
-            />
+          {/* Modal Cal.com */}
+          <CalendarModal
+            open={isCalendarModalOpen}
+            onOpenChange={setIsCalendarModalOpen}
+            contact={selectedContact || undefined}
+            theme={resolvedTheme}
+            onSuccess={handleCalendarSuccess}
+          />
 
-            {/* Dialog de confirmation de suppression des donnes */}
-            <Dialog open={isClearDataDialogOpen} onOpenChange={setIsClearDataDialogOpen}>
-              <DialogContent className="sm:max-w-[425px]">
+          {/* Modal de configuration Cal.com */}
+          {isCalcomConfigOpen && (
+            <Dialog open={isCalcomConfigOpen} onOpenChange={setIsCalcomConfigOpen}>
+              <DialogContent className="sm:max-w-md" aria-describedby="calcom-config-desc">
                 <DialogHeader>
-                  <DialogTitle>Supprimer toutes les donnes</DialogTitle>
-                  <DialogDescription>
-                    Cette action supprimera dfinitivement tous les contacts imports dans la table.
-                    Cette action ne peut pas tre annule.
+                  <DialogTitle>Configuration Cal.com</DialogTitle>
+                  <DialogDescription id="calcom-config-desc">
+                    Configurez l'URL de votre compte Cal.com pour la prise de rendez-vous.
                   </DialogDescription>
                 </DialogHeader>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsClearDataDialogOpen(false)}>
+
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <label htmlFor="calcom-url" className="text-sm font-medium">
+                      URL Cal.com
+                    </label>
+                    <input
+                      id="calcom-url"
+                      type="url"
+                      defaultValue={calcomUrl}
+                      placeholder="https://cal.com/votre-nom/votre-vnement"
+                      className="w-full px-3 py-2 border border-input rounded-md text-sm bg-background"
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          const input = e.target as HTMLInputElement;
+                          if (input.value.trim()) {
+                            handleSaveCalcomUrl(input.value.trim());
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p> Utilisez l'URL complte de votre vnement Cal.com</p>
+                    <p> Format: https://cal.com/votre-nom/votre-vnement</p>
+                    <p> Les paramtres du contact seront ajouts automatiquement</p>
+                  </div>
+                </div>
+
+                <DialogFooter className="gap-2">
+                  <Button variant="outline" onClick={() => setIsCalcomConfigOpen(false)}>
                     Annuler
                   </Button>
-                  <Button variant="destructive" onClick={confirmClearData}>
-                    Supprimer tout
+                  <Button
+                    onClick={() => {
+                      const input = document.getElementById('calcom-url') as HTMLInputElement;
+                      if (input?.value.trim()) {
+                        handleSaveCalcomUrl(input.value.trim());
+                      }
+                    }}
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    Sauvegarder
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
+          )}
 
-            {/* Dialog d'dition des onglets */}
-            <TabEditDialog
-              isOpen={isTabEditDialogOpen}
-              onClose={() => {
-                setIsTabEditDialogOpen(false)
-                setEditingTab(null)
-              }}
-              onSave={handleSaveTab}
-              currentName={editingTab?.name || ''}
-              currentColor={editingTab?.color || '#3b82f6'}
-            />
+          {/* Pop-up de dconnexion Supabase */}
+          <SupabaseDisconnectDialog
+            open={!!auth.disconnectInfo}
+            info={auth.disconnectInfo}
+            onClose={auth.clearDisconnectInfo}
+            onRetry={async () => {
+              const ok = await auth.requestSessionRefresh();
+              if (ok) {
+                auth.clearDisconnectInfo();
+              }
+            }}
+          />
 
-          </main>
-        </SidebarInset>
+          {/* Dialog de confirmation de mise à jour */}
+          <UpdateConfirmationDialog
+            isOpen={isUpdateConfirmationOpen}
+            onClose={() => setIsUpdateConfirmationOpen(false)}
+            onConfirm={installUpdate}
+            updateInfo={updateState.updateInfo}
+          />
+
+          {/* Dialog de confirmation de suppression des donnes */}
+          <Dialog open={isClearDataDialogOpen} onOpenChange={setIsClearDataDialogOpen}>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Supprimer toutes les donnes</DialogTitle>
+                <DialogDescription>
+                  Cette action supprimera dfinitivement tous les contacts imports dans la table.
+                  Cette action ne peut pas tre annule.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsClearDataDialogOpen(false)}>
+                  Annuler
+                </Button>
+                <Button variant="destructive" onClick={confirmClearData}>
+                  Supprimer tout
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Dialog d'dition des onglets */}
+          <TabEditDialog
+            isOpen={isTabEditDialogOpen}
+            onClose={() => {
+              setIsTabEditDialogOpen(false)
+              setEditingTab(null)
+            }}
+            onSave={handleSaveTab}
+            currentName={editingTab?.name || ''}
+            currentColor={editingTab?.color || '#3b82f6'}
+          />
+
+        </main>
+      </SidebarInset>
     </SidebarProvider>
   );
 };

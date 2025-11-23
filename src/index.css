@@ -2,13 +2,14 @@
 
 @import "tailwindcss";
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* Import des styles de la barre d'actions responsive */
 @import "./styles/contact-action-bar.css";
 
 /* Variables CSS personnalisées pour le design ultra moderne */
 :root {
+  color-scheme: light;
   /* Couleurs principales ultra modernes - AMÉLIORÉES POUR LE MODE CLAIR */
   --primary: 0 0% 10%; /* Noir shadcn-like pour accents */
   --primary-foreground: 0 0% 100%;
@@ -68,6 +69,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   /* Mode sombre ultra élégant */
   --primary: 0 0% 90%; /* Accent clair sur fond sombre */
   --primary-foreground: 0 0% 10%;

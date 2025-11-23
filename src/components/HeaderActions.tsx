@@ -95,10 +95,10 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
   const updateBadgeIntent = effectiveUpdateState.downloaded
     ? 'ready'
     : effectiveUpdateState.downloading
-    ? 'progress'
-    : effectiveUpdateState.checking
-    ? 'checking'
-    : 'idle'
+      ? 'progress'
+      : effectiveUpdateState.checking
+        ? 'checking'
+        : 'idle'
 
   const canInteractWithUpdate = Boolean(
     (effectiveUpdateState.downloaded && onUpdateConfirmationOpen) || onUpdateClick
@@ -128,10 +128,10 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
       updateBadgeIntent === 'ready'
         ? 'text-emerald-700 dark:text-emerald-200'
         : updateBadgeIntent === 'progress'
-        ? 'text-amber-700 dark:text-amber-200'
-        : updateBadgeIntent === 'checking'
-        ? 'text-sky-700 dark:text-sky-200'
-        : 'text-muted-foreground'
+          ? 'text-amber-700 dark:text-amber-200'
+          : updateBadgeIntent === 'checking'
+            ? 'text-sky-700 dark:text-sky-200'
+            : 'text-muted-foreground'
 
     return (
       <button
@@ -147,10 +147,10 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
           effectiveUpdateState.downloaded
             ? 'Nouvelle version téléchargée - cliquer pour installer'
             : effectiveUpdateState.downloading
-            ? 'Téléchargement de la mise à jour'
-            : effectiveUpdateState.checking
-            ? 'Recherche de mises à jour'
-            : 'Mise à jour disponible'
+              ? 'Téléchargement de la mise à jour'
+              : effectiveUpdateState.checking
+                ? 'Recherche de mises à jour'
+                : 'Mise à jour disponible'
         }
       >
         {effectiveUpdateState.downloading || effectiveUpdateState.checking ? (
@@ -179,14 +179,14 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
     const adbBadgeText = adbState.isConnected
       ? 'ADB connecté'
       : adbConnecting
-      ? 'Connexion ADB...'
-      : 'ADB déconnecté'
+        ? 'Connexion ADB...'
+        : 'ADB déconnecté'
 
     const adbBadgeTitle = adbState.isConnected
       ? `Appareil Android prêt${adbState.device?.name ? ` (${adbState.device.name})` : ''}`
       : adbConnecting
-      ? 'Connexion ADB en cours'
-      : adbState.error ?? 'Aucun appareil ADB détecté'
+        ? 'Connexion ADB en cours'
+        : adbState.error ?? 'Aucun appareil ADB détecté'
 
     return (
       <button

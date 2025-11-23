@@ -94,22 +94,22 @@ export enum Civility {
 }
 
 export enum QualificationStatutMarital {
-    Marie = "Marié",
-    Pacse = "Pacsé",
-    Celibataire = "Célibataire",
-    Concubinage = "En concubinage",
-    Veuf = "Veuf",
+  Marie = "Marié",
+  Pacse = "Pacsé",
+  Celibataire = "Célibataire",
+  Concubinage = "En concubinage",
+  Veuf = "Veuf",
 }
 
 export enum QualificationSituationPro {
-    CDD = "CDD",
-    CDI = "CDI",
-    ChefEntreprise = "Chef d'entreprise",
-    Freelance = "Freelance",
-    VIEVIA = "VIE/VIA",
-    Chomeur = "Chômeur",
-    Retraite = "Retraité",
-    Etudiant = "Étudiant",
+  CDD = "CDD",
+  CDI = "CDI",
+  ChefEntreprise = "Chef d'entreprise",
+  Freelance = "Freelance",
+  VIEVIA = "VIE/VIA",
+  Chomeur = "Chômeur",
+  Retraite = "Retraité",
+  Etudiant = "Étudiant",
 }
 
 export interface ElectronAPI {
@@ -118,20 +118,20 @@ export interface ElectronAPI {
   minimizeApp: () => Promise<void>;
   maximizeApp: () => Promise<void>;
   isMaximized: () => Promise<boolean>;
-  
+
   // APIs système
   platform: string;
-  
+
   // APIs de notification
   showNotification: (payload: DesktopNotificationPayload) => Promise<boolean>;
-  
+
   // APIs IPC pour les événements entrants
   ipcRenderer: {
     on: (channel: string, listener: (...args: any[]) => void) => void;
     removeListener: (channel: string, listener: (...args: any[]) => void) => void;
     removeAllListeners: (channel: string) => void;
   };
-  
+
   // APIs ADB
   adb: {
     getDevices: () => Promise<{ success: boolean; devices?: any[]; error?: string }>;
@@ -145,27 +145,27 @@ export interface ElectronAPI {
     startServer: () => Promise<{ success: boolean; message?: string; error?: string }>;
     cleanAuthKeys: () => Promise<{ success: boolean; message?: string; error?: string; deletedFiles?: string[] }>;
   };
-  
+
   // APIs DevTools
   devTools: {
     enable: () => Promise<{ success: boolean; error?: string }>;
     disable: () => Promise<{ success: boolean; error?: string }>;
     isEnabled: () => Promise<{ enabled: boolean }>;
   };
-  
+
   // API pour obtenir la version de l'app
   getAppVersion: () => Promise<string>;
   // API pour forcer la vérification manuelle des mises à jour
   checkForUpdates: (betaEnabled?: boolean, forceRefresh?: boolean) => Promise<{ status: string; message: string }>;
-  
+
   // APIs pour la gestion des mises à jour
   getUpdateStatus: () => Promise<{ updateAvailable: boolean; updateDownloaded: boolean; updateInfo: any }>;
   installUpdate: () => Promise<{ success: boolean; message?: string }>;
   revertToStable: () => Promise<{ success: boolean; message?: string }>;
-  
+
   // API pour synchroniser les préférences beta
   syncBetaPreferences: (preferences: any) => Promise<{ success: boolean; message?: string }>;
-  
+
   // Écouter les événements de mise à jour
   onUpdateChecking: (callback: () => void) => void;
   onUpdateAvailable: (callback: (updateInfo: any) => void) => void;
@@ -189,7 +189,7 @@ export interface ElectronAPI {
     openFile: (path: string) => Promise<{ success: boolean; error?: string }>;
     showInFolder: (path: string) => Promise<{ success: boolean; error?: string }>;
   };
-  
+
   // File operations
   listDirectory?: (path: string) => Promise<any>;
   createFolder?: (path: string, name: string) => Promise<any>;

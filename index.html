@@ -52,12 +52,27 @@
 }
 </script>
   <script>
-    try {
-      const saved = localStorage.getItem('dimicall-theme');
-      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const isDark = saved ? saved === 'dark' : prefersDark;
-      if (isDark) document.documentElement.classList.add('dark');
-    } catch (e) { /* ignore */ }
+    (() => {
+      try {
+        const saved = localStorage.getItem('dimicall-theme');
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const resolved = saved === 'light'
+          ? 'light'
+          : saved === 'dark'
+            ? 'dark'
+            : saved === 'system'
+              ? (prefersDark ? 'dark' : 'light')
+              : (prefersDark ? 'dark' : 'light');
+
+        const root = document.documentElement;
+        const isDark = resolved === 'dark';
+        root.classList.toggle('dark', isDark);
+        root.dataset.theme = resolved;
+        root.style.colorScheme = isDark ? 'dark' : 'light';
+      } catch (e) {
+        /* ignore */
+      }
+    })();
   </script>
 </head>
 <body>
