@@ -1,11 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Trophy, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { CATEGORY_DETAILS, CATEGORY_ORDER } from '../constants';
+import { getCategoryDetails, CATEGORY_ORDER } from '../constants';
 import type { ClassificationMap, ProspectProfile } from '../types';
 import { ProspectCategory } from '../types';
 
@@ -20,12 +20,27 @@ export const PreQualificationSummary: React.FC<PreQualificationSummaryProps> = (
   profiles,
   onRestart,
 }) => {
+  const [categoryNamesVersion, setCategoryNamesVersion] = useState(0);
+
+  // Écouter les changements de noms de catégories
+  useEffect(() => {
+    const handleCategoryNamesChange = () => {
+      setCategoryNamesVersion((prev) => prev + 1);
+    };
+    window.addEventListener('categoryNamesChanged', handleCategoryNamesChange);
+    return () => window.removeEventListener('categoryNamesChanged', handleCategoryNamesChange);
+  }, []);
+
+  // Obtenir les détails de catégories à jour
+  const categoryDetails = useMemo(() => getCategoryDetails(), [categoryNamesVersion]);
+
   const grouped = useMemo(() => {
     const base: Record<ProspectCategory, ProspectProfile[]> = {
       [ProspectCategory.Baleine]: [],
       [ProspectCategory.Poisson]: [],
       [ProspectCategory.Premature]: [],
       [ProspectCategory.Inexploitable]: [],
+      [ProspectCategory.Passer]: [],
     };
 
     profiles.forEach((profile) => {
@@ -39,10 +54,10 @@ export const PreQualificationSummary: React.FC<PreQualificationSummaryProps> = (
   }, [classifications, profiles]);
 
   return (
-    <div className="flex h-full flex-col gap-5 sm:gap-6 animate-in fade-in duration-500">
+    <div className="flex h-full flex-col gap-5 sm:gap-6 animate-in fade-in duration-500 w-full max-w-screen-2xl mx-auto">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2">
+        <div className="space-y-1 text-center sm:text-left">
+          <h2 className="text-xl sm:text-2xl font-bold tracking-tight flex items-center gap-2 justify-center sm:justify-start">
             <Trophy className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
             Pré-qualification terminée
           </h2>
@@ -56,10 +71,10 @@ export const PreQualificationSummary: React.FC<PreQualificationSummaryProps> = (
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:gap-6 lg:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
         {CATEGORY_ORDER.map((category) => {
           const entries = grouped[category] ?? [];
-          const details = CATEGORY_DETAILS[category];
+          const details = categoryDetails[category];
           return (
             <Card key={category} className="flex flex-col overflow-hidden border-2 hover:border-primary/20 transition-colors h-full">
               <CardHeader className="bg-muted/30 pb-4">
@@ -78,7 +93,7 @@ export const PreQualificationSummary: React.FC<PreQualificationSummaryProps> = (
               <Separator />
 
               <CardContent className="flex-1 p-0 min-h-[200px]">
-                <ScrollArea className="h-[240px] sm:h-[300px] w-full">
+                <ScrollArea className="h-[220px] xs:h-[260px] sm:h-[320px] w-full">
                   <div className="p-4 space-y-2">
                     {entries.length === 0 ? (
                       <div className="flex flex-col items-center justify-center h-full py-12 text-muted-foreground text-sm text-center">

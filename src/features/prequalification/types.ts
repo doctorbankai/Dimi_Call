@@ -3,6 +3,7 @@ export enum ProspectCategory {
   Poisson = 'Poisson',
   Premature = 'Prématuré',
   Inexploitable = 'Inexploitable',
+  Passer = 'Passer',
 }
 
 export interface ProspectProfile {

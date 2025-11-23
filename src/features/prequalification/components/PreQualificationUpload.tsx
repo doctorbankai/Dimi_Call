@@ -93,20 +93,20 @@ export const PreQualificationUpload: React.FC<PreQualificationUploadProps> = ({ 
   };
 
   return (
-    <div className="flex h-full flex-col items-center justify-center max-w-2xl mx-auto w-full px-2 sm:px-4 animate-in fade-in zoom-in duration-300">
-      <div className="text-center space-y-2 mb-8">
-        <div className="inline-flex items-center justify-center p-3 rounded-full bg-primary/10 mb-4">
+    <div className="flex h-full flex-col items-center justify-center max-w-2xl mx-auto w-full px-3 xs:px-4 sm:px-6 md:px-8 animate-in fade-in zoom-in duration-300">
+      <div className="text-center space-y-2 mb-8 w-full">
+        <div className="inline-flex items-center justify-center p-3 rounded-full bg-primary/10 mb-4 mx-auto">
           <UploadCloud className="h-8 w-8 text-primary" />
         </div>
-        <h2 className="text-2xl font-semibold tracking-tight">Importez vos prospects</h2>
-        <p className="text-muted-foreground max-w-md mx-auto">
+        <h2 className="text-xl xs:text-2xl sm:text-3xl font-semibold tracking-tight">Importez vos prospects</h2>
+        <p className="text-sm xs:text-base text-muted-foreground max-w-md mx-auto">
           Glissez votre fichier Excel ici. Assurez-vous d'avoir les colonnes "Prénom" et "Nom".
         </p>
       </div>
 
       <div
         className={cn(
-          'relative flex flex-col items-center justify-center w-full gap-4 rounded-xl border-2 border-dashed p-8 sm:p-12 transition-all duration-200 cursor-pointer hover:bg-muted/50',
+          'relative flex flex-col items-center justify-center w-full gap-4 rounded-xl border-2 border-dashed p-5 xs:p-8 sm:p-10 md:p-12 transition-all duration-200 cursor-pointer hover:bg-muted/50',
           isDragging ? 'border-primary bg-primary/5 scale-[1.02]' : 'border-muted-foreground/25',
           error ? 'border-destructive/50 bg-destructive/5' : ''
         )}

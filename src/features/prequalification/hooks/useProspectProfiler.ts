@@ -90,10 +90,43 @@ export const useProspectProfiler = (
     setCurrentIndex(lastIndex);
   }, [canGoBack, history]);
 
+  const jumpToProfile = useCallback(
+    (targetIndex: number) => {
+      if (targetIndex < 0 || targetIndex >= profiles.length) return;
+      // Ajouter l'index actuel à l'historique si on saute en avant
+      if (targetIndex > currentIndex) {
+        setHistory((prev) => [...prev, currentIndex]);
+      }
+      setCurrentIndex(targetIndex);
+    },
+    [currentIndex, profiles.length]
+  );
+
+  const classifyProfile = useCallback(
+    (profileId: string, category: ProspectCategory) => {
+      const profile = profiles.find((p) => p.id === profileId);
+      if (!profile) return;
+
+      const updatedProfile: ProspectProfile = { ...profile, status: category };
+      setProfiles((prev) => prev.map((p) => (p.id === updatedProfile.id ? updatedProfile : p)));
+      setClassifications((prev) => ({ ...prev, [profileId]: category }));
+      if (onProfileUpdate) {
+        onProfileUpdate(updatedProfile);
+      }
+    },
+    [profiles, onProfileUpdate]
+  );
+
   const completedCount = useMemo(() => Object.keys(classifications).length, [classifications]);
   const progress = useMemo(
     () => (profiles.length === 0 ? 0 : Math.min(100, Math.round((currentIndex / profiles.length) * 100))),
     [currentIndex, profiles.length]
+  );
+
+  // Profils non qualifiés
+  const unclassifiedProfiles = useMemo(
+    () => profiles.filter((p) => !classifications[p.id]),
+    [profiles, classifications]
   );
 
   return {
@@ -108,5 +141,9 @@ export const useProspectProfiler = (
     completedCount,
     currentIndex,
     progress,
+    jumpToProfile,
+    classifyProfile,
+    unclassifiedProfiles,
+    allProfiles: profiles,
   };
 };
