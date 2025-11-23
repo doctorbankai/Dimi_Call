@@ -1,5 +1,6 @@
 import './index.css';
 import React, { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from 'react';
+import type { DateRange } from 'react-day-picker';
 import { Theme, Contact, CallState, CallStates, ContactStatus, Civility, EmailType, CallMode, SmsType } from './types';
 import { useCallMode } from './context/ModeContext';
 import { APP_NAME, COLUMN_HEADERS, CONTACT_DATA_KEYS, headerIcons } from './constants';
@@ -447,13 +448,25 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
     }
   }
 
-  const handleCustomRangeSelect = (range?: { from?: Date; to?: Date }) => {
-    if (!range) return
-    const start = range.from ? formatYmd(range.from) : ''
-    const end = range.to ? formatYmd(range.to) : start
-    if (!start && !end) return
-    updateRangeAndBroadcast({ start, end }, 'custom')
+  const handleCustomRangeSelect = (range?: DateRange) => {
+    setCustomRangeDraft(range)
   }
+
+  const applyCustomRange = () => {
+    if (!customRangeDraft?.from && !customRangeDraft?.to) return
+    const start = customRangeDraft?.from ? formatYmd(customRangeDraft.from) : ''
+    const end = customRangeDraft?.to ? formatYmd(customRangeDraft.to) : start
+    updateRangeAndBroadcast({ start, end }, 'custom')
+    setFilterMenuOpen(false)
+  }
+
+  const resetCustomRange = () => {
+    setCustomRangeDraft(undefined)
+    applyQuickRange('all')
+    setFilterMenuOpen(false)
+  }
+
+  const formatDateLabel = (date?: Date) => (date ? date.toLocaleDateString('fr-FR') : '—')
   // Onglets Table
   const [tableTabs, setTableTabs] = useState<TableTab[]>(() => {
     try {
@@ -2617,6 +2630,21 @@ Dimitri MOREL - Arcanis Conseil`;
   const progressPercentage = totalContacts > 0 ? Math.round((processedContacts / totalContacts) * 100) : 0;
 
   const activeRange = viewMode === 'graph' ? graphRange : dbRange;
+  const activeDateRange = useMemo<DateRange | undefined>(() => {
+    if (!activeRange.start && !activeRange.end) return undefined;
+    return {
+      from: activeRange.start ? new Date(activeRange.start) : undefined,
+      to: activeRange.end ? new Date(activeRange.end) : undefined,
+    };
+  }, [activeRange.start, activeRange.end]);
+  const [customRangeDraft, setCustomRangeDraft] = useState<DateRange | undefined>(activeDateRange);
+
+  useEffect(() => {
+    if (filterMenuOpen) {
+      setCustomRangeDraft(activeDateRange);
+    }
+  }, [filterMenuOpen, activeDateRange]);
+
   const dateRangeLabel = (() => {
     if (filterQuick === 'all') return 'Tout';
     if (filterQuick === 'today') return "Aujourd'hui";
@@ -3063,18 +3091,47 @@ Dimitri MOREL - Arcanis Conseil`;
                                 {filterQuick === 'custom' && <Check className="ml-auto h-4 w-4 opacity-70" />}
                               </DropdownMenuSubTrigger>
                               <DropdownMenuPortal>
-                                <DropdownMenuSubContent className="p-3" sideOffset={8} alignOffset={-4}>
+                                <DropdownMenuSubContent
+                                  className="p-3 space-y-3 min-w-[520px]"
+                                  sideOffset={8}
+                                  alignOffset={-4}
+                                  onCloseAutoFocus={(event) => event.preventDefault()}
+                                >
+                                  <div className="text-xs text-muted-foreground px-1">
+                                    {formatDateLabel(customRangeDraft?.from)} → {formatDateLabel(customRangeDraft?.to)}
+                                  </div>
                                   <UiCalendar
                                     mode="range"
                                     numberOfMonths={2}
-                                    selected={{ from: activeRange.start ? new Date(activeRange.start) : undefined, to: activeRange.end ? new Date(activeRange.end) : undefined } as any}
-                                    onSelect={(range: any) => {
-                                      handleCustomRangeSelect(range || undefined)
-                                      if (range?.from && range?.to) {
-                                        setFilterMenuOpen(false)
-                                      }
-                                    }}
+                                    defaultMonth={customRangeDraft?.from || customRangeDraft?.to || undefined}
+                                    selected={customRangeDraft}
+                                    onSelect={(range) => handleCustomRangeSelect(range || undefined)}
                                   />
+                                  <div className="flex items-center justify-between gap-2 pt-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={resetCustomRange}
+                                    >
+                                      Réinitialiser
+                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setFilterMenuOpen(false)}
+                                      >
+                                        Fermer
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={applyCustomRange}
+                                        disabled={!customRangeDraft?.from || !customRangeDraft?.to}
+                                      >
+                                        Appliquer
+                                      </Button>
+                                    </div>
+                                  </div>
                                 </DropdownMenuSubContent>
                               </DropdownMenuPortal>
                             </DropdownMenuSub>

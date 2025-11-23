@@ -1,6 +1,0 @@
-{
-  "name": "Prospect Profiler",
-  "description": "An application to quickly classify LinkedIn prospects from an Excel file. It displays profiles one by one for categorization and provides a summary of the classifications.",
-  "requestFramePermissions": [],
-  "prompt": ""
-}
