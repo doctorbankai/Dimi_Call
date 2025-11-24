@@ -34,6 +34,7 @@ import {
   Archive,
   Code,
   Loader2,
+  Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -148,6 +149,7 @@ export const FilesPage: React.FC<FilesPageProps> = ({ contacts: propContacts = [
   const [isLoading, setIsLoading] = useState(false);
   const [clipboard, setClipboard] = useState<{ items: FileNode[]; operation: 'copy' | 'cut' } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const dragCounterRef = useRef(0);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set([STORAGE_DIR]));
   const [showPreview, setShowPreview] = useState(true);
 
@@ -334,17 +336,34 @@ export const FilesPage: React.FC<FilesPageProps> = ({ contacts: propContacts = [
     }
   };
 
+  // Reset dragging state when drag ends anywhere
+  useEffect(() => {
+    const handleDragEnd = () => {
+      setIsDragging(false);
+      dragCounterRef.current = 0;
+    };
+
+    document.addEventListener('dragend', handleDragEnd);
+    return () => {
+      document.removeEventListener('dragend', handleDragEnd);
+    };
+  }, []);
+
   // Drag and drop handlers
   const handleDragEnter = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragging(true);
+    dragCounterRef.current += 1;
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragging(true);
+    }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (e.currentTarget === e.target) {
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current === 0) {
       setIsDragging(false);
     }
   };
@@ -358,6 +377,7 @@ export const FilesPage: React.FC<FilesPageProps> = ({ contacts: propContacts = [
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
+    dragCounterRef.current = 0;
 
     const droppedFiles = e.dataTransfer.files;
     if (!droppedFiles || droppedFiles.length === 0) return;
@@ -470,36 +490,38 @@ export const FilesPage: React.FC<FilesPageProps> = ({ contacts: propContacts = [
   });
 
   // Render file icon
-  const renderFileIcon = (file: FileNode) => {
+  const renderFileIcon = (file: FileNode, size: 'sm' | 'md' = 'md') => {
+    const iconSize = size === 'sm' ? 'h-5 w-5' : 'h-7 w-7';
+    
     if (file.type === 'folder') {
-      return <Folder className="h-8 w-8 text-blue-500" />;
+      return <Folder className={cn(iconSize, "text-blue-500")} />;
     }
 
     const ext = file.extension.toLowerCase();
 
     if (['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp'].includes(ext)) {
-      return <Image className="h-8 w-8 text-green-500" />;
+      return <Image className={cn(iconSize, "text-green-500")} />;
     }
     if (['.pdf', '.doc', '.docx', '.txt', '.rtf', '.odt'].includes(ext)) {
-      return <FileText className="h-8 w-8 text-red-500" />;
+      return <FileText className={cn(iconSize, "text-red-500")} />;
     }
     if (['.xls', '.xlsx', '.csv', '.ods'].includes(ext)) {
-      return <FileSpreadsheet className="h-8 w-8 text-emerald-500" />;
+      return <FileSpreadsheet className={cn(iconSize, "text-emerald-500")} />;
     }
     if (['.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.webm'].includes(ext)) {
-      return <Video className="h-8 w-8 text-purple-500" />;
+      return <Video className={cn(iconSize, "text-purple-500")} />;
     }
     if (['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac'].includes(ext)) {
-      return <Music className="h-8 w-8 text-pink-500" />;
+      return <Music className={cn(iconSize, "text-pink-500")} />;
     }
     if (['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2'].includes(ext)) {
-      return <Archive className="h-8 w-8 text-orange-500" />;
+      return <Archive className={cn(iconSize, "text-orange-500")} />;
     }
     if (['.js', '.ts', '.jsx', '.tsx', '.py', '.java', '.cpp', '.c', '.html', '.css', '.json', '.xml'].includes(ext)) {
-      return <Code className="h-8 w-8 text-cyan-500" />;
+      return <Code className={cn(iconSize, "text-cyan-500")} />;
     }
 
-    return <File className="h-8 w-8 text-gray-500" />;
+    return <File className={cn(iconSize, "text-muted-foreground")} />;
   };
 
   // Render file item
@@ -523,46 +545,97 @@ export const FilesPage: React.FC<FilesPageProps> = ({ contacts: propContacts = [
       >
         <div
           className={cn(
-            "cursor-pointer rounded-lg transition-colors",
-            viewMode === 'grid' && "flex flex-col items-center p-4 hover:bg-accent",
-            viewMode === 'list' && "flex items-center gap-3 p-2 hover:bg-accent",
-            viewMode === 'details' && "flex items-center gap-3 p-2 hover:bg-accent",
-            isSelected && "bg-accent"
+            "cursor-pointer rounded-lg transition-all duration-200 group",
+            viewMode === 'grid' && "flex flex-col items-center p-4 hover:bg-accent/50 hover:shadow-md border border-transparent hover:border-border",
+            viewMode === 'list' && "flex items-center gap-3 p-3 rounded-md hover:bg-accent/50",
+            viewMode === 'details' && "flex items-center gap-3 p-3 rounded-md hover:bg-accent/50",
+            isSelected && "bg-accent border-border shadow-sm"
           )}
           onClick={() => setSelectedFile(file)}
           onDoubleClick={() => navigateToFolder(file)}
         >
-          {renderFileIcon(file)}
-          <div className={cn(
-            "flex flex-col",
-            viewMode === 'grid' && "mt-2 text-center w-full",
-            viewMode === 'list' && "flex-1 min-w-0",
-            viewMode === 'details' && "flex-1 min-w-0"
-          )}>
-            <span className="text-sm truncate">
-              {file.name}
-            </span>
-            {file.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {file.tags.map(tag => (
-                  <Badge key={tag} variant="secondary" className="text-xs">
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-            )}
-          </div>
-          {viewMode === 'details' && (
+          {viewMode === 'grid' ? (
             <>
-              <span className="text-xs text-muted-foreground w-24">
-                {file.type === 'folder' ? 'Folder' : file.extension}
-              </span>
-              <span className="text-xs text-muted-foreground w-24">
-                {file.type === 'file' ? formatFileSize(file.size) : '-'}
-              </span>
-              <span className="text-xs text-muted-foreground w-32">
-                {new Date(file.modifiedAt).toLocaleDateString()}
-              </span>
+              <div className={cn(
+                "flex items-center justify-center w-16 h-16 rounded-xl mb-3 transition-transform group-hover:scale-105",
+                isSelected ? "bg-primary/10" : "bg-muted/50"
+              )}>
+                {renderFileIcon(file, 'md')}
+              </div>
+              <div className="flex flex-col items-center w-full min-w-0">
+                <span className="text-sm font-medium truncate w-full text-center">
+                  {file.name}
+                </span>
+                {file.type === 'file' && (
+                  <span className="text-xs text-muted-foreground mt-1">
+                    {formatFileSize(file.size)}
+                  </span>
+                )}
+                {file.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2 justify-center">
+                    {file.tags.slice(0, 2).map(tag => (
+                      <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {file.tags.length > 2 && (
+                      <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                        +{file.tags.length - 2}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className={cn(
+                "flex items-center justify-center w-10 h-10 rounded-lg flex-shrink-0 transition-transform group-hover:scale-105",
+                isSelected ? "bg-primary/10" : "bg-muted/50"
+              )}>
+                {renderFileIcon(file, 'sm')}
+              </div>
+              <div className={cn(
+                "flex flex-col flex-1 min-w-0",
+                viewMode === 'list' && "gap-1",
+                viewMode === 'details' && "gap-0.5"
+              )}>
+                <span className="text-sm font-medium truncate">
+                  {file.name}
+                </span>
+                {viewMode === 'list' && file.type === 'file' && (
+                  <span className="text-xs text-muted-foreground">
+                    {formatFileSize(file.size)} • {new Date(file.modifiedAt).toLocaleDateString('fr-FR')}
+                  </span>
+                )}
+                {file.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {file.tags.slice(0, 3).map(tag => (
+                      <Badge key={tag} variant="secondary" className="text-xs px-1.5 py-0">
+                        {tag}
+                      </Badge>
+                    ))}
+                    {file.tags.length > 3 && (
+                      <Badge variant="secondary" className="text-xs px-1.5 py-0">
+                        +{file.tags.length - 3}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </div>
+              {viewMode === 'details' && (
+                <>
+                  <span className="text-xs text-muted-foreground w-20 text-right">
+                    {file.type === 'folder' ? 'Dossier' : file.extension}
+                  </span>
+                  <span className="text-xs text-muted-foreground w-24 text-right">
+                    {file.type === 'file' ? formatFileSize(file.size) : '-'}
+                  </span>
+                  <span className="text-xs text-muted-foreground w-32 text-right">
+                    {new Date(file.modifiedAt).toLocaleDateString('fr-FR')}
+                  </span>
+                </>
+              )}
             </>
           )}
         </div>
@@ -652,7 +725,7 @@ export const FilesPage: React.FC<FilesPageProps> = ({ contacts: propContacts = [
   };
 
   return (
-    <div className="flex h-full flex-col gap-4 w-full overflow-hidden">
+    <div className="flex h-full flex-col w-full overflow-hidden bg-background">
       <input
         ref={fileInputRef}
         type="file"
@@ -661,125 +734,160 @@ export const FilesPage: React.FC<FilesPageProps> = ({ contacts: propContacts = [
         onChange={handleFileSelect}
       />
 
-      {/* Navbar / Bandeau */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 border-b">
-        <div className="flex items-center gap-4">
-          <div className="flex flex-col gap-0.5">
-            <h1 className="text-xl font-semibold text-foreground">Gestionnaire de Fichiers</h1>
-            <p className="text-sm text-muted-foreground">
-              {files.length} élément{files.length > 1 ? 's' : ''} • {currentPath}
-            </p>
-          </div>
-        </div>
-        
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRegenerateContactFolders}
-          disabled={isRegenerating || contactsFromDb.length === 0}
-          title="Créer automatiquement les dossiers manquants pour tous les contacts"
-          className="h-9"
-        >
-          {isRegenerating ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Création en cours...
-            </>
-          ) : (
-            <>
-              <Folder className="h-4 w-4 mr-2" />
-              Régénérer dossiers
-            </>
-          )}
-        </Button>
-      </div>
-
-      <div
-        className="flex flex-col flex-1 overflow-hidden relative"
-        onDragEnter={handleDragEnter}
-        onDragLeave={handleDragLeave}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
-      <FileManagerToolbar
-        currentPath={currentPath}
-        onNavigate={loadDirectory}
-        searchTerm={searchTerm}
-        onSearchChange={setSearchTerm}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-        filterType={filterType}
-        onFilterChange={setFilterType}
-        onOpenLocation={handleOpenLocation}
-        onCreateFolder={() => setIsCreateFolderOpen(true)}
-        onUploadFiles={handleUploadClick}
-      />
-
-      <div className="flex-1 mx-4 mb-4 overflow-hidden">
-        <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* File Tree */}
-          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-            <FileTree
-              rootPath={STORAGE_DIR}
-              currentPath={currentPath}
-              onNavigate={loadDirectory}
-              expandedFolders={expandedFolders}
-              onToggleExpand={handleToggleExpand}
-            />
-          </ResizablePanel>
-
-          <ResizableHandle />
-
-          {/* Content View */}
-          <ResizablePanel defaultSize={showPreview ? 50 : 80} minSize={40}>
-            <ScrollArea className="h-full">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      {/* Hero Header */}
+      <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
+        <div className="px-8 py-6">
+          <div className="flex items-start justify-between gap-6">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">
+                Gestionnaire de Fichiers
+              </h1>
+              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <Folder className="h-4 w-4" />
+                  {files.length} élément{files.length > 1 ? 's' : ''}
+                </span>
+                <span className="text-muted-foreground/60">•</span>
+                <span className="truncate font-mono text-xs">{currentPath}</span>
               </div>
-            ) : filteredFiles.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-                <Folder className="h-16 w-16 mb-4 opacity-50" />
-                <p>No files found</p>
-              </div>
-            ) : (
-              <div
-                className={cn(
-                  "p-4",
-                  viewMode === 'grid' && "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4",
-                  viewMode === 'list' && "space-y-1",
-                  viewMode === 'details' && "space-y-1"
-                )}
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRegenerateContactFolders}
+                disabled={isRegenerating || contactsFromDb.length === 0}
+                title="Créer automatiquement les dossiers manquants pour tous les contacts"
+                className="h-9 gap-2"
               >
-                {filteredFiles.map(renderFileItem)}
-              </div>
-            )}
-          </ScrollArea>
-        </ResizablePanel>
-
-          {/* Preview Panel */}
-          {showPreview && selectedFile && (
-            <>
-              <ResizableHandle />
-              <ResizablePanel defaultSize={30} minSize={20} maxSize={40}>
-                <FilePreview
-                  file={selectedFile}
-                  onClose={() => setShowPreview(false)}
-                />
-              </ResizablePanel>
-            </>
-          )}
-        </ResizablePanelGroup>
-      </div>
-
-      {isDragging && (
-        <div className="absolute inset-0 bg-primary/10 border-4 border-dashed border-primary flex items-center justify-center z-50">
-          <div className="text-center">
-            <p className="text-2xl font-bold text-primary">Drop files here</p>
-            <p className="text-muted-foreground">to upload to {currentPath}</p>
+                {isRegenerating ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Création...
+                  </>
+                ) : (
+                  <>
+                    <Folder className="h-4 w-4" />
+                    Régénérer dossiers
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
-      )}
+      </div>
+
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <FileManagerToolbar
+          currentPath={currentPath}
+          onNavigate={loadDirectory}
+          searchTerm={searchTerm}
+          onSearchChange={setSearchTerm}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+          filterType={filterType}
+          onFilterChange={setFilterType}
+          onOpenLocation={handleOpenLocation}
+          onCreateFolder={() => setIsCreateFolderOpen(true)}
+          onUploadFiles={handleUploadClick}
+        />
+
+        <div className="flex-1 px-6 pb-6 overflow-hidden relative">
+          <ResizablePanelGroup direction="horizontal" className="h-full gap-2">
+            {/* File Tree */}
+            <ResizablePanel defaultSize={24} minSize={18} maxSize={32} className="min-w-0">
+              <FileTree
+                rootPath={STORAGE_DIR}
+                currentPath={currentPath}
+                onNavigate={loadDirectory}
+                expandedFolders={expandedFolders}
+                onToggleExpand={handleToggleExpand}
+              />
+            </ResizablePanel>
+
+            <ResizableHandle className="w-1 bg-border/50 hover:bg-border transition-colors" />
+
+            {/* Content View */}
+            <ResizablePanel defaultSize={showPreview ? 50 : 76} minSize={40} className="min-w-0 flex flex-col relative">
+              <ScrollArea
+                className="flex-1 min-h-0"
+                onDragEnter={handleDragEnter}
+                onDragLeave={handleDragLeave}
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+              >
+                <div className="h-full flex flex-col min-h-0">
+                  {isLoading ? (
+                    <div className="flex items-center justify-center flex-1 min-h-[400px]">
+                      <div className="flex flex-col items-center gap-3">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <p className="text-sm text-muted-foreground">Chargement...</p>
+                      </div>
+                    </div>
+                  ) : filteredFiles.length === 0 ? (
+                    <div className="flex-1 flex items-center justify-center p-6 min-h-0">
+                      <div className="flex flex-col items-center justify-center text-center">
+                        <div className="rounded-full bg-muted/70 p-6 mb-4">
+                          <Folder className="h-12 w-12 text-primary/60" />
+                        </div>
+                        <h3 className="text-lg font-semibold text-foreground mb-2">
+                          Aucun fichier trouvé
+                        </h3>
+                        <p className="text-sm text-muted-foreground max-w-md">
+                          {searchTerm
+                            ? `Aucun résultat pour "${searchTerm}"`
+                            : 'Zone de dépôt active sur toute la surface. Glissez-déposez vos fichiers ici ou utilisez le bouton « Téléverser ».'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className={cn(
+                        "p-6",
+                        viewMode === 'grid' && "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4",
+                        viewMode === 'list' && "space-y-1",
+                        viewMode === 'details' && "space-y-1"
+                      )}
+                    >
+                      {filteredFiles.map(renderFileItem)}
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
+              {/* Modern Dropzone Overlay - Only on content panel */}
+              {isDragging && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/5 backdrop-blur-sm border-2 border-dashed border-primary/50 rounded-lg pointer-events-none">
+                  <div className="text-center space-y-3">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 border-2 border-primary/30">
+                      <Upload className="h-8 w-8 text-primary animate-bounce" />
+                    </div>
+                    <div>
+                      <p className="text-xl font-semibold text-foreground">Déposez vos fichiers ici</p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Pour les ajouter à <span className="font-mono text-xs">{currentPath}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </ResizablePanel>
+
+            {/* Preview Panel */}
+            {showPreview && selectedFile && (
+              <>
+                <ResizableHandle className="w-1 bg-border/50 hover:bg-border transition-colors" />
+                <ResizablePanel defaultSize={26} minSize={20} maxSize={40} className="min-w-0">
+                  <FilePreview
+                    file={selectedFile}
+                    onClose={() => setShowPreview(false)}
+                  />
+                </ResizablePanel>
+              </>
+            )}
+          </ResizablePanelGroup>
+        </div>
 
       <CreateFolderDialog
         open={isCreateFolderOpen}
