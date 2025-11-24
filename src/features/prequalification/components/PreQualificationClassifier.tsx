@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useCallback, useState } from 'react';
+import React, { useEffect, useMemo, useCallback, useState, useRef } from 'react';
 import { Linkedin, ArrowLeft, Clock, Search, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,6 +54,7 @@ export const PreQualificationClassifier: React.FC<PreQualificationClassifierProp
   const [categoryNamesVersion, setCategoryNamesVersion] = useState(0);
   const [mobileQueueOpen, setMobileQueueOpen] = useState(false);
   const [mobileUnclassifiedOpen, setMobileUnclassifiedOpen] = useState(false);
+  const manualLaunchRef = useRef(false);
   const isFirstContact = currentIndex === 0;
   const shouldAutoLaunch = !isFirstContact || firstSearchLaunched;
 
@@ -97,6 +98,11 @@ export const PreQualificationClassifier: React.FC<PreQualificationClassifierProp
 
   // Ouvrir automatiquement LinkedIn seulement si ce n'est pas le premier contact OU si la recherche a déjà été lancée
   useEffect(() => {
+    // Ne pas ouvrir automatiquement si c'est un lancement manuel
+    if (manualLaunchRef.current) {
+      manualLaunchRef.current = false;
+      return;
+    }
     if (currentProfile && shouldAutoLaunch) {
       openLinkedInWindow(linkedInSearchUrl);
     }
@@ -104,6 +110,7 @@ export const PreQualificationClassifier: React.FC<PreQualificationClassifierProp
 
   const handleLaunchSearch = useCallback(() => {
     if (linkedInSearchUrl) {
+      manualLaunchRef.current = true;
       openLinkedInWindow(linkedInSearchUrl);
       setFirstSearchLaunched(true);
     }
