@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import * as XLSX from 'xlsx';
-import { Download, UploadCloud, Settings2 } from 'lucide-react';
+import { Download, Upload, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
 import { Separator } from '@/components/ui/separator';
 import { getCategoryDetails, CATEGORY_ORDER } from './constants';
 import { PreQualificationUpload } from './components/PreQualificationUpload';
@@ -215,14 +216,13 @@ export const PreQualificationPage: React.FC = () => {
     <div className="flex h-full flex-col space-y-3 xs:space-y-4 md:space-y-6 px-2 xs:px-3 sm:px-4 md:px-6 lg:px-10 pb-4 sm:pb-6">
       <div className="w-full max-w-screen-2xl mx-auto space-y-4 sm:space-y-5 md:space-y-6">
         {/* Header Section */}
-        <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-start md:justify-between lg:items-center">
-          <div className="space-y-1 sm:space-y-1.5 text-center md:text-left">
-            <h1 className="text-xl xs:text-2xl md:text-3xl font-bold tracking-tight">Pré-qualification</h1>
-            <p className="text-sm xs:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto md:mx-0">
-              Qualifiez rapidement vos prospects via LinkedIn. Importez un fichier Excel et classez vos contacts.
-            </p>
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-2 sm:px-4 md:px-6 pt-2 pb-2 min-w-0" role="toolbar" aria-label="Barre d'outils Pré-qualification">
+          <div className="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0 flex-shrink-0">
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <h1 className="text-lg sm:text-xl font-semibold text-foreground truncate">Pré-qualification</h1>
+            </div>
           </div>
-          <div className="flex flex-col gap-2 xs:gap-3 xs:flex-row xs:flex-wrap xs:items-center xs:justify-end w-full md:w-auto">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 w-full md:w-auto order-3 md:order-none justify-end flex-wrap">
             <input
               ref={replaceFileInputRef}
               type="file"
@@ -233,29 +233,43 @@ export const PreQualificationPage: React.FC = () => {
                 if (file) handleReplaceFile(file);
               }}
             />
-            <div className="flex flex-col gap-2 xs:gap-3 xs:flex-row xs:flex-wrap w-full md:w-auto">
+            <ButtonGroup className="shrink-0">
               {profiles.length > 0 && (
-                <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 w-full">
-                  <Button variant="outline" size="sm" onClick={triggerReplaceFile} className="w-full justify-center text-xs xs:text-sm">
-                    <UploadCloud className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    <span className="truncate">Nouvel import</span>
+                <>
+                  <Button 
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-2 shrink-0"
+                    onClick={triggerReplaceFile}
+                    title="Importer un fichier CSV/Excel"
+                  >
+                    <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Importer</span>
                   </Button>
-                  <Button variant="outline" size="sm" onClick={exportToExcel} className="w-full justify-center text-xs xs:text-sm">
-                    <Download className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                    Exporter
+                  <Button 
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-2 shrink-0"
+                    onClick={exportToExcel}
+                    disabled={profiles.length === 0}
+                    title="Exporter"
+                  >
+                    <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden sm:inline">Exporter</span>
                   </Button>
-                </div>
+                </>
               )}
               <Button
-                variant="outline"
                 size="sm"
+                variant="outline"
+                className="h-8 px-2 shrink-0"
                 onClick={() => setCategoryNamesDialogOpen(true)}
-                className="w-full xs:w-auto justify-center text-xs xs:text-sm"
+                title="Personnaliser"
               >
-                <Settings2 className="mr-1.5 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                Personnaliser
+                <Settings2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Personnaliser</span>
               </Button>
-            </div>
+            </ButtonGroup>
           </div>
         </div>
 
