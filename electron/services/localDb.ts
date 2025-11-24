@@ -198,9 +198,11 @@ export function insertStatusEvent(event: NewStatusEvent): StatusEvent {
 export function listStatusEvents(startDate?: string, endDate?: string): StatusEvent[] {
   if (!sqlite || !db) throw new Error('DB non initialisée')
   if (startDate && endDate) {
+    // Pour la date de fin, on utilise < au lieu de <= car toRangeBoundaries ajoute déjà un jour
+    // et utilise 00:00:00 du jour suivant, ce qui permet d'inclure toute la journée précédente
     return sqlite.prepare(`
       SELECT * FROM status_events
-      WHERE applied_at BETWEEN ? AND ?
+      WHERE applied_at >= ? AND applied_at < ?
       ORDER BY applied_at DESC
     `).all(startDate, endDate) as StatusEvent[]
   }
@@ -212,9 +214,10 @@ export function listStatusEvents(startDate?: string, endDate?: string): StatusEv
     `).all(startDate) as StatusEvent[]
   }
   if (endDate) {
+    // Pour la date de fin seule, on utilise < au lieu de <=
     return sqlite.prepare(`
       SELECT * FROM status_events
-      WHERE applied_at <= ?
+      WHERE applied_at < ?
       ORDER BY applied_at DESC
     `).all(endDate) as StatusEvent[]
   }

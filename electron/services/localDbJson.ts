@@ -312,11 +312,27 @@ export function insertStatusEvent(event: NewStatusEvent): StatusEvent {
 export function listStatusEvents(startDate?: string, endDate?: string): StatusEvent[] {
   let events = [...data.events]
   if (startDate && endDate) {
-    events = events.filter(e => e.applied_at >= startDate && e.applied_at <= endDate)
+    // Pour la date de fin, on utilise < au lieu de <= car toRangeBoundaries ajoute déjà un jour
+    // et utilise 00:00:00 du jour suivant, ce qui permet d'inclure toute la journée précédente
+    events = events.filter(e => {
+      // Normaliser les formats de date pour la comparaison
+      const eventDate = e.applied_at.replace('T', ' ').replace(/\.\d{3}Z?$/, '').replace('Z', '')
+      const start = startDate.replace('T', ' ').replace(/\.\d{3}Z?$/, '').replace('Z', '')
+      const end = endDate.replace('T', ' ').replace(/\.\d{3}Z?$/, '').replace('Z', '')
+      return eventDate >= start && eventDate < end
+    })
   } else if (startDate) {
-    events = events.filter(e => e.applied_at >= startDate)
+    events = events.filter(e => {
+      const eventDate = e.applied_at.replace('T', ' ').replace(/\.\d{3}Z?$/, '').replace('Z', '')
+      const start = startDate.replace('T', ' ').replace(/\.\d{3}Z?$/, '').replace('Z', '')
+      return eventDate >= start
+    })
   } else if (endDate) {
-    events = events.filter(e => e.applied_at <= endDate)
+    events = events.filter(e => {
+      const eventDate = e.applied_at.replace('T', ' ').replace(/\.\d{3}Z?$/, '').replace('Z', '')
+      const end = endDate.replace('T', ' ').replace(/\.\d{3}Z?$/, '').replace('Z', '')
+      return eventDate < end
+    })
   }
   return events
 }

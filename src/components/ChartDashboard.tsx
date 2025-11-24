@@ -3,6 +3,7 @@ import { Contact } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Cell, LabelList } from 'recharts';
+import { localDbService } from '@/services/localDbService';
  
 
 type ChartDashboardProps = {
@@ -26,12 +27,9 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
 
   const fetchLocalEvents = async () => {
     try {
-      if (typeof window !== 'undefined' && window.electronAPI?.localdb) {
-        const start = startDate ? `${startDate} 00:00:00` : undefined;
-        const end = endDate ? `${endDate} 23:59:59` : undefined;
-        const res = await window.electronAPI.localdb.listStatus(start, end);
-        if (res?.success) setLocalEvents(res.data || []);
-      }
+      // Utiliser localDbService qui applique correctement toRangeBoundaries
+      const events = await localDbService.listByDateRange(startDate || undefined, endDate || undefined);
+      setLocalEvents(events);
     } catch (e) {
       // silencieux
     }

@@ -30,7 +30,17 @@ const toRangeBoundaries = (start?: string, end?: string): { start?: string; end?
     if (!trimmed) {
       return undefined;
     }
-    return `${trimmed} ${isEnd ? '23:59:59' : '00:00:00'}`;
+    if (isEnd) {
+      // Pour inclure toute la journée de fin, on ajoute un jour et on utilise 00:00:00
+      // puis on utilisera < au lieu de <= dans la comparaison
+      const date = new Date(trimmed);
+      date.setDate(date.getDate() + 1);
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d} 00:00:00`;
+    }
+    return `${trimmed} 00:00:00`;
   };
 
   return {
