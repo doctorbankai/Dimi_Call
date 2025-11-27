@@ -6,13 +6,14 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Trash2, RefreshCw, Upload, Download, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, FileSpreadsheet } from 'lucide-react'
+import { Trash2, RefreshCw, Upload, Download, Calendar as CalendarIcon, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, FileSpreadsheet, Wand2 } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { Contact, ContactStatus } from '@/types'
 import type { StatusEventRecord } from '@/types/statusEvent'
 import { localDbService } from '@/services/localDbService'
 import { SupabaseShareDialog } from '@/components/SupabaseShareDialog'
+import { toast } from 'sonner'
 
 type StatusEvent = StatusEventRecord
 
@@ -26,6 +27,7 @@ export default function PaginatedEventTable() {
   const [sortKey, setSortKey] = useState<keyof StatusEvent | 'id'>('id')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  const [repairing, setRepairing] = useState(false)
 
   const loadAll = async () => {
     setIsLoading(true)
@@ -34,6 +36,24 @@ export default function PaginatedEventTable() {
       setEvents(data)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleRepair = async () => {
+    setRepairing(true)
+    try {
+      const res = await localDbService.repair()
+      await loadAll()
+      if (res.success) {
+        toast.success(`Nettoyage terminé (${res.updated}/${res.scanned})`)
+      } else {
+        toast.error('Nettoyage échoué')
+      }
+    } catch (error) {
+      toast.error('Erreur pendant le nettoyage')
+      console.error('[PaginatedEventTable] repair failed', error)
+    } finally {
+      setRepairing(false)
     }
   }
 
@@ -337,9 +357,32 @@ export default function PaginatedEventTable() {
               variant="outline"
               size="sm"
               className="h-8"
-              title="Supprimer la sélection"
-              disabled={false}
-              onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-delete'))}
+              title="Nettoyer et normaliser la base"
+              disabled={repairing}
+              onClick={handleRepair}
+            >
+              <Wand2 className="h-4 w-4 mr-1" />
+              {repairing ? 'Nettoyage…' : 'Nettoyer'}
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              title="Supprimer toutes les données (base locale)"
+              disabled={repairing}
+              onClick={async () => {
+                const ok = window.confirm('Supprimer toutes les données SQLite ? Cette action est irréversible.')
+                if (!ok) return
+                const success = await localDbService.clearAll()
+                if (success) {
+                  setSelectedIds(new Set())
+                  setSelectedId(null)
+                  await loadAll()
+                } else {
+                  toast.error('La suppression a échoué')
+                }
+              }}
             >
               <Trash2 className="h-4 w-4" />
             </Button>

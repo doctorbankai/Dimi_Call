@@ -1,6 +1,7 @@
-import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
+import type { SupabaseClient, RealtimeChannel } from '@supabase/supabase-js';
 import { Contact, ContactStatus } from '../types';
 import { normalizeDurationMmSs, normalizeIsoDate, normalizeTime24hValue } from '@/utils/datetimeNormalization';
+import { supabase } from '@/lib/supabase';
 
 // Configuration Supabase - DOIT être configuré via variables d'environnement
 const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL;
@@ -26,110 +27,45 @@ export interface RealtimeContactUpdate {
 }
 
 class SupabaseService {
-  private client!: SupabaseClient;
+  private client: SupabaseClient | null = SUPABASE_URL && SUPABASE_ANON_KEY ? supabase : null;
 
   // Getter pour accéder au client Supabase depuis d'autres services
   getClient(): SupabaseClient {
     if (!this.isReady()) {
       throw new Error('Client Supabase non configuré');
     }
-    return this.client;
+    return this.client!;
   }
   private realtimeChannel: RealtimeChannel | null = null;
   private listeners: Array<(update: RealtimeContactUpdate) => void> = [];
-  private isConfigured: boolean = false;
+  private isConfigured: boolean = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
   private connectionTested: boolean = false;
   private discoveredColumns: string[] = [];
-  private currentUrl: string = '';
-  private currentKey: string = '';
+  private currentUrl: string = SUPABASE_URL || '';
   private idColumnName: string = 'id'; // Nom de la colonne d'identité détectée
 
   constructor() {
-    this.bootstrapConfiguration();
+    this.configureFromEnvironment();
   }
 
-  private bootstrapConfiguration() {
-    const stored = this.loadConfigFromStorage();
-    if (stored.url && stored.key) {
-      this.configure(stored.url, stored.key);
-      return;
-    }
-
+  private configureFromEnvironment() {
     if (SUPABASE_URL && SUPABASE_ANON_KEY) {
-      this.configure(SUPABASE_URL, SUPABASE_ANON_KEY);
+      this.client = supabase;
+      this.isConfigured = true;
+      this.currentUrl = SUPABASE_URL;
+    } else {
+      this.client = null;
+      this.isConfigured = false;
+      this.currentUrl = '';
     }
   }
 
-  private loadConfigFromStorage(): { url: string; key: string } {
-    try {
-      const config = localStorage.getItem('supabase_config');
-      if (config) {
-        const parsed = JSON.parse(config);
-        return {
-          url: parsed.url || '',
-          key: parsed.anon_key || ''
-        };
-      }
-    } catch (error) {
-      // Configuration non trouvée
-    }
-    return { url: '', key: '' };
-  }
-
-  private saveConfigToStorage(url: string, key: string) {
-    try {
-      const config = { url, anon_key: key };
-      localStorage.setItem('supabase_config', JSON.stringify(config));
-    } catch (error) {
-      console.error('❌ Erreur sauvegarde configuration:', error);
-    }
-  }
-
-  // Nouvelle méthode pour configuration manuelle (comme dans l'ancienne app)
-  configureManually(url: string, anonKey: string): Promise<{ success: boolean; error?: string }> {
-    return new Promise((resolve) => {
-      try {
-        this.configure(url, anonKey);
-
-        // Tester la connexion
-        this.testConnection().then((result) => {
-          if (result.success) {
-            // Sauvegarder la configuration si elle fonctionne
-            this.saveConfigToStorage(url, anonKey);
-            resolve({ success: true });
-          } else {
-            resolve({ success: false, error: result.error });
-          }
-        }).catch((error) => {
-          resolve({ success: false, error: error.message });
-        });
-
-      } catch (error: any) {
-        resolve({ success: false, error: error.message });
-      }
+  // Configuration manuelle désactivée pour éviter la persistance de clés sensibles
+  configureManually(_url: string, _anonKey: string): Promise<{ success: boolean; error?: string }> {
+    return Promise.resolve({
+      success: false,
+      error: 'La configuration Supabase est gérée via les variables d’environnement. Aucune saisie manuelle ni stockage local.'
     });
-  }
-
-  configure(url: string, anonKey: string) {
-    if (!url || !anonKey) {
-      console.warn('⚠️ Configuration Supabase incomplète')
-      this.isConfigured = false
-      this.client = undefined as any
-      this.currentUrl = ''
-      this.currentKey = ''
-      return
-    }
-
-    try {
-      this.client = createClient(url, anonKey)
-      this.isConfigured = true
-      this.currentUrl = url
-      this.currentKey = anonKey
-    } catch (error) {
-      console.error('❌ Erreur configuration client:', error)
-      this.isConfigured = false
-      this.client = undefined as any
-    }
   }
 
   isReady(): boolean {
@@ -139,7 +75,7 @@ class SupabaseService {
   ensureConfigured(): boolean {
     if (this.isReady()) return true
 
-    this.bootstrapConfiguration()
+    this.configureFromEnvironment()
     return this.isReady()
   }
 

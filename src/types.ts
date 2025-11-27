@@ -182,6 +182,12 @@ export interface ElectronAPI {
     getPath: () => Promise<{ success: boolean; data?: string | null }>;
     exportCsv: () => Promise<{ success: boolean; path?: string; error?: string }>;
     importCsv: () => Promise<{ success: boolean; count?: number; error?: string }>;
+    exportXlsx?: () => Promise<{ success: boolean; path?: string; error?: string }>;
+    importXlsx?: () => Promise<{ success: boolean; count?: number; error?: string }>;
+    delete?: (id: number) => Promise<{ success: boolean; error?: string }>;
+    update?: (payload: any) => Promise<{ success: boolean; data?: any; error?: string }>;
+    updateLatestForContact?: (contactId: string, fields: any) => Promise<{ success: boolean; data?: any; error?: string }>;
+    repair?: () => Promise<{ success?: boolean; updated?: number; scanned?: number; error?: string }>;
   };
 
   // APIs File Manager

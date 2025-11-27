@@ -751,6 +751,21 @@ app.whenReady().then(async () => {
     }
   })
 
+  ipcMain.handle('localdb:repair', async () => {
+    try {
+      await ensureLocalDbInitialized()
+      console.log('[LOCALDB] repair')
+      if (localDbInitDone && localDbModule?.repairStatusEvents) {
+        const res = localDbModule.repairStatusEvents()
+        return { success: true, updated: res.updated, scanned: res.scanned }
+      }
+      return { success: false, error: 'repair-not-supported' }
+    } catch (e: any) {
+      console.error('[LOCALDB] repair error:', e)
+      return { success: false, error: e?.message || String(e) }
+    }
+  })
+
   ipcMain.handle('localdb:delete', async (event, id: number) => {
     try {
       await ensureLocalDbInitialized()
@@ -761,6 +776,20 @@ app.whenReady().then(async () => {
       return { success: true, data: localDbJsonStatic.deleteStatusEvent(id) }
     } catch (e: any) {
       console.error('[LOCALDB] delete error:', e)
+      return { success: false, error: e?.message || String(e) }
+    }
+  })
+
+  ipcMain.handle('localdb:clear', async () => {
+    try {
+      await ensureLocalDbInitialized()
+      if (localDbInitDone && localDbModule?.clearStatusEvents) {
+        return { success: true, data: localDbModule.clearStatusEvents() }
+      }
+      ensureJsonDbInitialized()
+      return { success: true, data: localDbJsonStatic.clearStatusEvents() }
+    } catch (e: any) {
+      console.error('[LOCALDB] clear error:', e)
       return { success: false, error: e?.message || String(e) }
     }
   })

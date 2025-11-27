@@ -128,7 +128,7 @@ export const SupabaseDataDialog: React.FC<SupabaseDataDialogProps> = ({ isOpen, 
   console.log('🐛 SupabaseDataDialog rendu avec isOpen:', isOpen);
 
   // États principaux
-  const [step, setStep] = useState<'config' | 'mapping' | 'preview'>('config');
+  const [step, setStep] = useState<'mapping' | 'preview'>('mapping');
   const [rawContacts, setRawContacts] = useState<RawContact[]>([]);
   const [availableColumns, setAvailableColumns] = useState<string[]>([]);
   const [columnMappings, setColumnMappings] = useState<ColumnMapping[]>([]);
@@ -139,9 +139,6 @@ export const SupabaseDataDialog: React.FC<SupabaseDataDialogProps> = ({ isOpen, 
   
   // Configuration Supabase
   const [showConfigForm, setShowConfigForm] = useState(false);
-  const [configUrl, setConfigUrl] = useState('');
-  const [configKey, setConfigKey] = useState('');
-  const [configuring, setConfiguring] = useState(false);
   
   // États de la table (pour l'étape preview)
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -175,6 +172,7 @@ export const SupabaseDataDialog: React.FC<SupabaseDataDialogProps> = ({ isOpen, 
     try {
       const connectionInfo = supabaseService.getConnectionInfo();
       if (!connectionInfo.configured) {
+        setError('Supabase n’est pas configuré. Définissez VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY dans votre environnement.');
         setShowConfigForm(true);
         return;
       }
@@ -182,6 +180,7 @@ export const SupabaseDataDialog: React.FC<SupabaseDataDialogProps> = ({ isOpen, 
       await loadInitialData();
     } catch (error) {
       console.error('Erreur lors de la vérification de configuration:', error);
+      setError(error instanceof Error ? error.message : 'Configuration Supabase indisponible');
       setShowConfigForm(true);
     }
   };
@@ -226,34 +225,6 @@ export const SupabaseDataDialog: React.FC<SupabaseDataDialogProps> = ({ isOpen, 
       console.error('Erreur lors du chargement de plus de données:', error);
     }
   };
-
-  const handleManualConfiguration = async () => {
-    if (!configUrl.trim() || !configKey.trim()) {
-      setError('Veuillez remplir tous les champs');
-      return;
-    }
-
-    setConfiguring(true);
-    setError(null);
-
-    try {
-      supabaseService.configureManually(configUrl.trim(), configKey.trim());
-      const testResult = await supabaseService.testConnection();
-      
-      if (testResult.success) {
-        setShowConfigForm(false);
-        await loadInitialData();
-      } else {
-        setError(testResult.error || 'Échec de la connexion');
-      }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Erreur de configuration');
-    } finally {
-      setConfiguring(false);
-    }
-  };
-
-
 
   const generateAutomaticMappings = () => {
     const mappings: ColumnMapping[] = [];
@@ -533,33 +504,24 @@ export const SupabaseDataDialog: React.FC<SupabaseDataDialogProps> = ({ isOpen, 
           <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md bg-card text-card-foreground z-[9999]">
           <DialogHeader className="bg-card text-card-foreground">
-            <DialogTitle>Configuration Supabase</DialogTitle>
+            <DialogTitle>Configuration Supabase requise</DialogTitle>
             <DialogDescription>
-              Configurez les paramètres de connexion à votre base de données Supabase.
+              Cette version lit la configuration via les variables d’environnement du poste. Aucun stockage local ni saisie manuelle de clés.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 bg-card text-card-foreground">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">URL Supabase</label>
-              <Input
-                type="url"
-                placeholder="https://votre-projet.supabase.co"
-                value={configUrl}
-                onChange={(e) => setConfigUrl(e.target.value)}
-                disabled={configuring}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Clé anonyme</label>
-              <Input
-                type="password"
-                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                value={configKey}
-                onChange={(e) => setConfigKey(e.target.value)}
-                disabled={configuring}
-              />
+            <div className="rounded-lg border p-4 space-y-2 bg-muted/40">
+              <p className="text-sm text-muted-foreground">
+                Définissez ces variables avant de lancer l’app :
+              </p>
+              <div className="bg-muted rounded-md p-3 text-xs font-mono space-y-1">
+                <div>VITE_SUPABASE_URL=https://votre-projet.supabase.co</div>
+                <div>VITE_SUPABASE_ANON_KEY=&lt;clé anonyme Supabase&gt;</div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Redémarrez ensuite l’application pour recharger la configuration.
+              </p>
             </div>
             
             {error && (
@@ -569,12 +531,11 @@ export const SupabaseDataDialog: React.FC<SupabaseDataDialogProps> = ({ isOpen, 
             )}
             
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={onClose} disabled={configuring}>
-                Annuler
+              <Button variant="outline" onClick={onClose}>
+                Fermer
               </Button>
-              <Button onClick={handleManualConfiguration} disabled={configuring}>
-                {configuring && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Connecter
+              <Button onClick={() => { setShowConfigForm(false); void checkConfiguration(); }}>
+                Réessayer
               </Button>
             </div>
           </div>
@@ -730,9 +691,6 @@ export const SupabaseDataDialog: React.FC<SupabaseDataDialogProps> = ({ isOpen, 
                   Annuler
                 </Button>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setStep('config')}>
-                    Retour
-                  </Button>
                   <Button 
                     onClick={() => setStep('preview')} 
                     disabled={columnMappings.filter(m => m.appColumn && m.appColumn !== 'no-mapping').length === 0}

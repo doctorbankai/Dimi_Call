@@ -236,6 +236,8 @@ const electronAPI: ElectronAPI = {
     delete: (id: number) => ipcRenderer.invoke('localdb:delete', id),
     update: (payload: any) => ipcRenderer.invoke('localdb:update', payload),
     updateLatestForContact: (contactId: string, fields: any) => ipcRenderer.invoke('localdb:update-latest-for-contact', contactId, fields),
+    clear: () => ipcRenderer.invoke('localdb:clear'),
+    repair: () => ipcRenderer.invoke('localdb:repair'),
   },
 
   // APIs File Manager

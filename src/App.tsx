@@ -36,6 +36,7 @@ import {
   exportGoogleCalendarCSV,
   reorderContactsColumns
 } from './services/dataService';
+import { localDbService } from './services/localDbService';
 
 import { useAdb } from './hooks/useAdb';
 import { useAutoUpdate } from './hooks/useAutoUpdate';
@@ -70,7 +71,7 @@ import {
 import {
   Phone, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck, Linkedin, Globe, ExternalLink,
   Download, Keyboard, RefreshCw, Sun, Moon, Columns, X, Filter, Infinity, Search, Zap, EyeOff,
-  Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2, Users, Timer, BarChart3, Database,
+  Upload, Smartphone, Wifi, WifiOff, Loader2, FileSpreadsheet, Settings2, Eye, Trash2, Users, Timer, BarChart3, Database, Table2,
   ChevronLeft, ChevronRight, ChevronDown, Plus, Edit, RotateCcw, Pencil, Palette, Check
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -306,8 +307,8 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
     }
   });
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [tableUpdateKey, setTableUpdateKey] = useState(0);
-  const [appUpdateKey, setAppUpdateKey] = useState(0);
+  const [tableUpdateKey] = useState(0);
+  const [appUpdateKey] = useState(0);
 
   // Exposer la cl de mise à jour pour les composants parents
   React.useEffect(() => {
@@ -381,6 +382,50 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const [filterMenuOpen, setFilterMenuOpen] = useState(false)
   const [filterQuick, setFilterQuick] = useState<QuickRangeKey>('all')
   const [dbSelectedCount, setDbSelectedCount] = useState<number>(0)
+
+  // Throttled persistence to avoid blocking on every keystroke
+  const contactsPersistRef = useRef<Contact[] | null>(null);
+  const contactsPersistTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const PERSIST_DELAY_MS = 800;
+
+  const flushPendingContacts = useCallback((snapshot?: Contact[]) => {
+    const dataToPersist = snapshot ?? contactsPersistRef.current;
+    if (!dataToPersist) return;
+    try {
+      saveContacts(dataToPersist);
+      if (hasImportedTable()) {
+        const savedTable = loadImportedTable();
+        if (savedTable?.metadata) {
+          saveImportedTable(dataToPersist, savedTable.metadata);
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde des contacts:', error);
+    }
+    contactsPersistRef.current = null;
+  }, []);
+
+  const schedulePersistContacts = useCallback((nextContacts: Contact[], options?: { immediate?: boolean }) => {
+    contactsPersistRef.current = nextContacts;
+
+    if (options?.immediate) {
+      if (contactsPersistTimerRef.current) {
+        clearTimeout(contactsPersistTimerRef.current);
+        contactsPersistTimerRef.current = null;
+      }
+      flushPendingContacts(nextContacts);
+      return;
+    }
+
+    if (contactsPersistTimerRef.current) {
+      return; // déjà planifié
+    }
+
+    contactsPersistTimerRef.current = setTimeout(() => {
+      flushPendingContacts();
+      contactsPersistTimerRef.current = null;
+    }, PERSIST_DELAY_MS);
+  }, [flushPendingContacts]);
 
   const formatYmd = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 
@@ -581,6 +626,31 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
     }
     window.addEventListener('dimicall-db-selection', onSel as any)
     return () => window.removeEventListener('dimicall-db-selection', onSel as any)
+  }, [])
+
+  // Nettoyage automatique de la base locale (limité à une fois toutes les 6h)
+  useEffect(() => {
+    let cancelled = false
+    const runRepair = async () => {
+      try {
+        if (typeof window === 'undefined' || !(window as any).electronAPI?.localdb?.repair) return
+        const lastRun = (() => { try { return Number(localStorage.getItem('dimicall-last-db-repair') || '0') } catch { return 0 } })()
+        const SIX_HOURS = 6 * 60 * 60 * 1000
+        if (Date.now() - lastRun < SIX_HOURS) return
+        const res = await localDbService.repair()
+        if (cancelled) return
+        if (res.success) {
+          try { localStorage.setItem('dimicall-last-db-repair', String(Date.now())) } catch { }
+          if (res.updated > 0) {
+            toast.success(`Base locale nettoyée (${res.updated}/${res.scanned})`)
+          }
+        }
+      } catch (error) {
+        console.error('[App] auto repair localdb failed', error)
+      }
+    }
+    runRepair()
+    return () => { cancelled = true }
   }, [])
 
   // Persister tabs
@@ -1030,18 +1100,6 @@ Dimitri MOREL - Arcanis Conseil`;
       // console.log('🔄 [UPDATE] Contacts mis à jour:', updatedContacts.length, 'contacts');
       // console.log('🔄 [UPDATE] Contact modifi:', updatedContact);
 
-      // Sauvegarder les contacts mis à jour
-      saveContacts(updatedContacts);
-
-      // Si on a une table importe, la mettre à jour aussi
-      if (hasImportedTable()) {
-        const savedTable = loadImportedTable();
-        if (savedTable && savedTable.metadata) {
-          saveImportedTable(updatedContacts, savedTable.metadata);
-
-        }
-      }
-
       return updatedContacts; // Forcer le re-render immdiat
     });
 
@@ -1058,16 +1116,14 @@ Dimitri MOREL - Arcanis Conseil`;
       }
       let hasChanges = false;
       const nextTabs = prevTabs.map(tab => {
-        let tabChanged = false;
-        const updatedTabContacts = tab.contacts.map(tabContact => {
-          if (tabContact.id === resolvedContact.id) {
-            tabChanged = true;
-            hasChanges = true;
-            return { ...tabContact, ...resolvedContact };
-          }
-          return tabContact;
-        });
-        return tabChanged ? { ...tab, contacts: updatedTabContacts } : tab;
+        const idx = tab.contacts.findIndex(tabContact => tabContact.id === resolvedContact.id);
+        if (idx === -1) {
+          return tab;
+        }
+        const updatedTabContacts = [...tab.contacts];
+        updatedTabContacts[idx] = { ...tab.contacts[idx], ...resolvedContact };
+        hasChanges = true;
+        return { ...tab, contacts: updatedTabContacts };
       });
       return hasChanges ? nextTabs : prevTabs;
     });
@@ -1078,16 +1134,6 @@ Dimitri MOREL - Arcanis Conseil`;
       setSelectedContact(updatedContact);
       // console.log('?? [UPDATE] Contact slectionn mis  jour:', updatedContact);
     }
-
-    // ?? Forcer le re-render de la table
-    setTableUpdateKey(prev => prev + 1);
-    // console.log('?? [UPDATE] Table update key incrmente:', tableUpdateKey + 1);
-
-    // ?? Forcer le re-render de l'application entire aprs un dlai
-    setTimeout(() => {
-      setAppUpdateKey(prev => prev + 1);
-      // console.log('?? [UPDATE] App update key incrmente:', appUpdateKey + 1);
-    }, 100);
 
     // Forcer un petit dlai pour que l'interface se mette à jour
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -1392,7 +1438,7 @@ Dimitri MOREL - Arcanis Conseil`;
       setActiveTableTabId(defaultTabId);
 
       // 6. Nettoyer le localStorage
-      saveContacts([]);
+      schedulePersistContacts([], { immediate: true });
       saveCallStates({});
       clearImportedTable();
 
@@ -1402,7 +1448,7 @@ Dimitri MOREL - Arcanis Conseil`;
       console.error('Erreur lors de la suppression des donnes:', error);
       showNotification('error', 'Erreur lors de la suppression des donnes');
     }
-  }, [activeCallContactId, showNotification]);
+  }, [activeCallContactId, showNotification, schedulePersistContacts]);
 
   const handleClearData = useCallback(() => {
     setIsClearDataDialogOpen(true);
@@ -1715,6 +1761,10 @@ Dimitri MOREL - Arcanis Conseil`;
       showNotification('success', `${exportCount} export(s) effectué(s) avec succès`);
     }
   }, [exportOptions, contacts, googleContactsCount, calendarRemindersCount, showNotification]);
+
+  const handleDbExport = useCallback(async () => {
+    await localDbService.exportXlsx();
+  }, []);
 
   // Handlers pour les recherches LinkedIn et Google
   const handleLinkedInSearch = useCallback((modeOrContact?: 'name' | 'name-type' | Contact, contact?: Contact) => {
@@ -2076,11 +2126,22 @@ Dimitri MOREL - Arcanis Conseil`;
   }, [isInitialized, showNotification]);
 
   useEffect(() => {
-    // Ne sauvegarder que si on n'est pas en train de restaurer
-    if (contacts.length > 0) {
-      saveContacts(contacts);
-    }
-  }, [contacts]);
+    if (!isInitialized) return;
+    // Persistance throttlee; on force immediate pour les vidages
+    schedulePersistContacts(contacts, { immediate: contacts.length === 0 });
+  }, [contacts, schedulePersistContacts, isInitialized]);
+
+  useEffect(() => {
+    return () => {
+      if (contactsPersistTimerRef.current) {
+        clearTimeout(contactsPersistTimerRef.current);
+        contactsPersistTimerRef.current = null;
+      }
+      if (contactsPersistRef.current) {
+        flushPendingContacts(contactsPersistRef.current);
+      }
+    };
+  }, [flushPendingContacts]);
 
   useEffect(() => {
     saveCallStates(callStates);
@@ -3011,10 +3072,54 @@ Dimitri MOREL - Arcanis Conseil`;
                 {viewMode === 'graph' || viewMode === 'db' ? (
                   <div className="flex-1 w-full min-w-0 bg-card rounded-lg p-2 md:p-3 shadow-sm border">
                     <div className="flex flex-wrap items-center justify-between gap-2 w-full min-w-0">
-                      <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">
-                        {viewMode === 'graph' ? 'Graphiques' : 'Données'}
-                      </h1>
-                      <div className="flex flex-wrap items-center justify-center gap-1.5 md:gap-2">
+                      <div className="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0">
+                        <div className="flex flex-col min-w-0">
+                          <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">
+                            {viewMode === 'graph' ? 'Visuels' : 'Table'}
+                          </h1>
+                          <p className="hidden sm:block text-xs text-muted-foreground">
+                            Base SQLite locale partagée entre visuels et table
+                          </p>
+                        </div>
+                        <div
+                          role="group"
+                          data-slot="button-group"
+                          aria-label="Sélectionner le mode d'affichage"
+                          className="inline-flex w-fit items-stretch rounded-md border bg-muted/40 p-0.5 [&>*]:rounded-none [&>*:not(:first-child)]:-ml-px [&>*:first-child]:rounded-l-md [&>*:last-child]:rounded-r-md"
+                        >
+                          <Button
+                            data-slot="button"
+                            variant={viewMode === 'graph' ? 'default' : 'outline'}
+                            size="sm"
+                            aria-pressed={viewMode === 'graph'}
+                            className={cn("h-9 px-3 gap-1.5", viewMode === 'graph' ? "shadow-sm" : "bg-background")}
+                            onClick={() => setViewMode('graph')}
+                          >
+                            <BarChart3 className="h-4 w-4" />
+                            <span className="hidden sm:inline">Visuels</span>
+                            <span className="sm:hidden">Visu</span>
+                          </Button>
+                          <Button
+                            data-slot="button"
+                            variant={viewMode === 'db' ? 'default' : 'outline'}
+                            size="sm"
+                            aria-pressed={viewMode === 'db'}
+                            className={cn("h-9 px-3 gap-1.5", viewMode === 'db' ? "shadow-sm" : "bg-background")}
+                            onClick={() => setViewMode('db')}
+                          >
+                            <Table2 className="h-4 w-4" />
+                            <span className="hidden sm:inline">Table</span>
+                            <span className="sm:hidden">Table</span>
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center justify-end gap-1.5 md:gap-2">
+                        {viewMode === 'db' && (
+                          <Button variant="outline" size="sm" className="h-9 gap-2 px-3" onClick={handleDbExport}>
+                            <FileSpreadsheet className="h-4 w-4" />
+                            <span className="text-sm">Exporter</span>
+                          </Button>
+                        )}
                         <DropdownMenu modal={false} open={filterMenuOpen} onOpenChange={setFilterMenuOpen}>
                           <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm" className="h-9 gap-2 px-3">

@@ -52,6 +52,99 @@ let sqlite: Database.Database | null = null
 let db: ReturnType<typeof drizzle> | null = null
 let dbFilePathMemo: string | null = null
 
+const toLocalYMD = (d: Date) => {
+  const yyyy = d.getFullYear()
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+const normalizeDateOnly = (value?: string | null): string | null => {
+  const raw = (value ?? '').trim()
+  if (!raw) return null
+  const iso = /^\d{4}-\d{2}-\d{2}$/
+  if (iso.test(raw)) return raw
+  const dmy = /^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/
+  const ymd = /^(\d{4})[\/\-](\d{2})[\/\-](\d{2})$/
+  let parsed: Date | null = null
+  if (dmy.test(raw)) {
+    const [, dd, mm, yy] = dmy.exec(raw)!
+    parsed = new Date(`${yy}-${mm}-${dd}T00:00:00Z`)
+  } else if (ymd.test(raw)) {
+    const [, yy, mm, dd] = ymd.exec(raw)!
+    parsed = new Date(`${yy}-${mm}-${dd}T00:00:00Z`)
+  } else {
+    const candidate = new Date(raw)
+    if (!isNaN(candidate.getTime())) parsed = candidate
+  }
+  return parsed ? toLocalYMD(parsed) : null
+}
+
+const normalizeTime = (value?: string | null): string | null => {
+  const raw = (value ?? '').trim()
+  if (!raw) return null
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(raw)
+  if (!m) return null
+  const h = Math.min(23, Math.max(0, Number(m[1])))
+  const min = Math.min(59, Math.max(0, Number(m[2])))
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`
+}
+
+const normalizeDuration = (value?: string | null): string | null => {
+  const raw = (value ?? '').trim()
+  if (!raw) return null
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(raw)
+  if (!m) return null
+  const h = Number(m[1])
+  const min = Number(m[2])
+  const sec = m[3] ? Number(m[3]) : 0
+  const totalSeconds = (h > 0 ? h * 3600 : 0) + min * 60 + sec
+  const mm = Math.floor(totalSeconds / 60)
+  const ss = totalSeconds % 60
+  return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`
+}
+
+const normalizeStatus = (value?: string | null): string | null => {
+  const raw = (value ?? '').trim()
+  if (!raw) return 'Non défini'
+  const lowered = raw.toLowerCase()
+  if (lowered === 'do') return 'D0'
+  if (lowered === 'ro') return 'R0'
+  if (lowered === 'non defini' || lowered === 'non défini') return 'Non défini'
+  return raw
+}
+
+const normalizeAppliedAt = (value?: string | null): string => {
+  const raw = (value ?? '').trim()
+  if (!raw) return new Date().toISOString()
+  const parse = (v: string) => {
+    const d = new Date(v)
+    return isNaN(d.getTime()) ? null : d
+  }
+  let parsed = parse(raw)
+  if (!parsed) {
+    const onlyDate = normalizeDateOnly(raw)
+    parsed = onlyDate ? new Date(`${onlyDate}T00:00:00Z`) : null
+  }
+  return (parsed ?? new Date()).toISOString()
+}
+
+const normalizePhone = (value?: string | null): string | null => {
+  const raw = (value ?? '').replace(/\s+/g, '').trim()
+  if (!raw) return null
+  const digits = raw.replace(/[^\d]/g, '')
+  if (!digits) return null
+  if (raw.startsWith('+')) return `+${digits}`
+  if (digits.startsWith('00')) return `+${digits.slice(2)}`
+  return digits
+}
+
+const normalizeEmail = (value?: string | null): string | null => {
+  const raw = (value ?? '').trim()
+  if (!raw) return null
+  return raw.toLowerCase()
+}
+
 export function initDb(dbFilePath: string) {
   if (db) return
   const dir = path.dirname(dbFilePath)
@@ -372,6 +465,91 @@ export function replaceAllStatusEvents(events: StatusEvent[]): { success: boolea
   })
   tx(events)
   return { success: true, count: events.length }
+}
+
+export function clearStatusEvents(): { success: boolean; deleted: number } {
+  if (!sqlite || !db) throw new Error('DB non initialisée')
+  const info = sqlite.prepare(`DELETE FROM status_events`).run()
+  return { success: true, deleted: info.changes ?? 0 }
+}
+
+export function repairStatusEvents(): { success: boolean; scanned: number; updated: number } {
+  if (!sqlite || !db) throw new Error('DB non initialisée')
+  const columns = sqlite.prepare(`PRAGMA table_info(status_events)`).all() as Array<{ name: string }>
+  const available = new Set(columns.map(c => c.name))
+  const rows = sqlite.prepare(`SELECT * FROM status_events`).all() as any[]
+  const updatableCols = Array.from(available).filter((c) => c !== 'id')
+  if (updatableCols.length === 0) {
+    return { success: true, scanned: rows.length, updated: 0 }
+  }
+
+  const setSql = updatableCols.map((col) => `${col} = @${col}`).join(', ')
+  const stmt = sqlite.prepare(`UPDATE status_events SET ${setSql} WHERE id = @id`)
+
+  const sanitize = (row: any) => {
+    const base: any = { id: row.id }
+    const set = (key: string, value: any) => {
+      if (!available.has(key)) return
+      base[key] = value
+    }
+
+    const contactId = (row.contact_id || row.contactId || row.id || '').toString().trim()
+    set('contact_id', contactId || (row.id ? String(row.id) : ''))
+    set('new_status', normalizeStatus(row.new_status ?? row.newStatus))
+    set('old_status', normalizeStatus(row.old_status ?? row.oldStatus))
+    set('applied_at', normalizeAppliedAt(row.applied_at))
+    set('prenom', (row.prenom ?? '').trim() || null)
+    set('nom', (row.nom ?? '').trim() || null)
+    set('telephone', normalizePhone(row.telephone))
+    set('email', normalizeEmail(row.email))
+    set('commentaire', (row.commentaire ?? row.comment ?? '').trim() || null)
+    set('dateRappel', normalizeDateOnly(row.dateRappel))
+    set('heureRappel', normalizeTime(row.heureRappel))
+    set('dateRDV', normalizeDateOnly(row.dateRDV))
+    set('heureRDV', normalizeTime(row.heureRDV))
+    set('dateAppel', normalizeDateOnly(row.dateAppel))
+    set('heureAppel', normalizeTime(row.heureAppel))
+    set('dureeAppel', normalizeDuration(row.dureeAppel))
+    set('dateEntree', normalizeDateOnly(row.dateEntree))
+    set('heureEntree', normalizeTime(row.heureEntree))
+    set('numeroLigne', typeof row.numeroLigne === 'number' && Number.isFinite(row.numeroLigne) ? row.numeroLigne : null)
+    set('source', row.source ?? null)
+    set('statut', normalizeStatus(row.statut ?? row.new_status ?? row.newStatus))
+    set('lien', row.lien ?? null)
+    set('sexe', row.sexe ?? null)
+    set('don', row.don ?? null)
+    set('qualite', row.qualite ?? null)
+    set('type', row.type ?? null)
+    set('date', normalizeDateOnly(row.date))
+    set('uid', row.uid ?? null)
+    set('uid_supabase', row.uid_supabase ?? row.uidSupabase ?? null)
+    set('utilisateur', row.utilisateur ?? null)
+    set('actions', row.actions ?? null)
+    set('statutAppel', normalizeStatus(row.statutAppel))
+    set('statutRDV', normalizeStatus(row.statutRDV))
+    set('commentaireRDV', row.commentaireRDV ?? null)
+    return base
+  }
+
+  const isDifferent = (a: any, b: any) => {
+    for (const key of Object.keys(b)) {
+      if (a[key] !== b[key]) return true
+    }
+    return false
+  }
+
+  let updated = 0
+  const tx = sqlite.transaction((events: any[]) => {
+    for (const row of events) {
+      const clean = sanitize(row)
+      if (isDifferent(row, clean)) {
+        stmt.run(clean)
+        updated++
+      }
+    }
+  })
+  tx(rows)
+  return { success: true, scanned: rows.length, updated }
 }
 
 

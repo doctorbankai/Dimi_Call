@@ -233,12 +233,15 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
     return Array.from(latestByContact.values()).filter((e) => !!e.dateRappel).length;
   }, [localEvents]);
 
-  // Durée d'appel utilitaire (mm:ss -> secondes)
-  const parseDuration = (mmss?: string) => {
-    if (!mmss) return 0;
-    const m = /^(\d{1,2}):(\d{2})$/.exec(mmss);
-    if (!m) return 0;
-    return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  // Durée d'appel utilitaire (supporte mm:ss ou hh:mm:ss)
+  const parseDuration = (value?: string) => {
+    if (!value) return 0;
+    const parts = String(value).trim().split(':');
+    if (parts.length < 2 || parts.length > 3) return 0;
+    const nums = parts.map((p) => Number(p));
+    if (nums.some((n) => Number.isNaN(n))) return 0;
+    if (nums.length === 2) return nums[0] * 60 + nums[1];
+    return nums[0] * 3600 + nums[1] * 60 + nums[2];
   };
   const averageDurationSeconds = useMemo(() => {
     let sum = 0;

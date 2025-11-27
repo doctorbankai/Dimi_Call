@@ -201,6 +201,13 @@ function ensureDir(filePath: string) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
 }
 
+export function clearStatusEvents(): { success: boolean; deleted: number } {
+  const deleted = data.events.length
+  data.events = []
+  persist()
+  return { success: true, deleted }
+}
+
 function readFileSafe(filePath: string) {
   try {
     if (fs.existsSync(filePath)) {

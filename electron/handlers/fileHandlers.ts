@@ -1,23 +1,34 @@
 // File Handlers for Electron IPC
 
-import { ipcMain, shell } from 'electron';
+import { app, ipcMain, shell } from 'electron';
 import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
-// Storage directory
-const STORAGE_DIR = 'C:\\DimiCall';
+// Storage directory (resolved per platform, under the user data folder)
+const STORAGE_SUBDIR = 'DimiCall';
+
+function getStorageDirectory(): string {
+  // Keep everything under userData to avoid platform-specific paths
+  return path.join(app.getPath('userData'), STORAGE_SUBDIR);
+}
+
+function normalizeForComparison(targetPath: string): string {
+  const resolved = path.resolve(targetPath);
+  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+}
 
 /**
  * Ensure the storage directory exists
  */
 async function ensureStorageDirectory(): Promise<void> {
+  const storageDir = getStorageDirectory();
   try {
-    await fs.access(STORAGE_DIR);
+    await fs.access(storageDir);
   } catch {
-    await fs.mkdir(STORAGE_DIR, { recursive: true });
-    console.log(`✅ Created storage directory: ${STORAGE_DIR}`);
+    await fs.mkdir(storageDir, { recursive: true });
+    console.log(`✅ Created storage directory: ${storageDir}`);
   }
 }
 
@@ -83,9 +94,12 @@ function getMimeType(extension: string): string {
  * Validate path is within storage directory
  */
 function isValidPath(targetPath: string): boolean {
-  const normalized = path.normalize(targetPath).replace(/\//g, '\\');
-  const storageNormalized = path.normalize(STORAGE_DIR).replace(/\//g, '\\');
-  return normalized.startsWith(storageNormalized) || normalized === storageNormalized;
+  const normalized = normalizeForComparison(targetPath);
+  const storageNormalized = normalizeForComparison(getStorageDirectory());
+  return (
+    normalized === storageNormalized ||
+    normalized.startsWith(storageNormalized + path.sep)
+  );
 }
 
 /**
@@ -102,21 +116,27 @@ export function registerFileHandlers(): void {
     try {
       console.log(`📂 [FILE] Listing directory: ${targetPath}`);
       
-      if (!isValidPath(targetPath)) {
+      const storageDir = getStorageDirectory();
+      const effectiveTarget = targetPath || storageDir;
+      
+      // Always ensure the storage directory exists before proceeding
+      await ensureStorageDirectory();
+
+      if (!isValidPath(effectiveTarget)) {
         return {
           success: false,
           error: {
             type: 'PERMISSION_DENIED',
             message: 'Access denied: Path is outside storage directory',
-            path: targetPath,
+            path: effectiveTarget,
           },
         };
       }
 
-      const entries = await fs.readdir(targetPath, { withFileTypes: true });
+      const entries = await fs.readdir(effectiveTarget, { withFileTypes: true });
       const files = await Promise.all(
         entries.map(async (entry) => {
-          const fullPath = path.join(targetPath, entry.name);
+          const fullPath = path.join(effectiveTarget, entry.name);
           return getFileNode(fullPath);
         })
       );
@@ -132,7 +152,7 @@ export function registerFileHandlers(): void {
           error: {
             type: 'FILE_NOT_FOUND',
             message: 'Directory not found',
-            path: targetPath,
+            path: effectiveTarget,
           },
         };
       }
@@ -556,7 +576,7 @@ export function registerFileHandlers(): void {
         }
       }
       
-      const file = await searchForFile(STORAGE_DIR);
+      const file = await searchForFile(getStorageDirectory());
       
       if (file) {
         console.log(`✅ [FILE] Found file: ${file.name}`);

@@ -1201,7 +1201,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
       header: col.label,
       accessorKey: col.key === 'index' ? undefined : col.key,
       accessorFn: col.key === 'index' 
-        ? (row) => contacts.indexOf(row) + 1
+        ? (_row, index) => index + 1
         : undefined,
       enableResizing: true,
       minSize: COLUMN_RESIZE_CONFIG.fixed[col.label as keyof typeof COLUMN_RESIZE_CONFIG.fixed] 
@@ -1215,7 +1215,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
         canSort: col.canSort
       }
     }));
-  }, [visibleOrderedColumnsBase, contacts]);
+  }, [visibleOrderedColumnsBase]);
 
   // State pour column sizing TanStack
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});

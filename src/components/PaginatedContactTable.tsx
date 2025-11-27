@@ -75,10 +75,6 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
   pageSizeOptions = [25, 50, 100],
   className = '',
 }, ref) => {
-  // Virtualisation FORCÉE pour optimisation de performance
-  // Plus de feature flag - toujours activé pour garantir les performances
-  const useVirtualizedTable = true;
-
   // États pour le drag & drop
   const [isDragOver, setIsDragOver] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
@@ -116,6 +112,9 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
       }
     })(),
   });
+
+  // Virtualisation conservée pour garder l'UI identique (même structure/scroll horizontal)
+  const useVirtualizedTable = true;
 
   // Handlers pour le drag & drop
   const handleDragEnter = (e: React.DragEvent) => {

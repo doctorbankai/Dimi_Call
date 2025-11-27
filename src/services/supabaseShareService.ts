@@ -3,7 +3,6 @@ import { supabaseService } from '@/services/supabaseService'
 import { supabaseLogger } from '@/lib/supabase-logger'
 import { loadContacts } from '@/services/dataService'
 import type { Contact } from '@/types'
-import { supabase } from '@/lib/supabase'
 import { normalizeDurationMmSs, normalizeIsoDate, normalizeIsoDateTime, normalizeTime24hValue } from '@/utils/datetimeNormalization'
 
 type SyncTarget = 'phone' | 'blacklist' | 'calls'
@@ -642,7 +641,8 @@ function loadContactsSnapshot(): Contact[] {
 
 async function getCurrentAuthIdentity(): Promise<AuthIdentity> {
   try {
-    const { data, error } = await supabase.auth.getSession()
+    const client = supabaseService.getClient()
+    const { data, error } = await client.auth.getSession()
     if (error) throw error
     const user = data.session?.user
     return {

@@ -8,6 +8,7 @@ interface LocalDbApi {
   exportXlsx?: () => Promise<{ success?: boolean; path?: string; error?: unknown }>;
   importCsv?: () => Promise<{ success?: boolean; error?: unknown }>;
   importXlsx?: () => Promise<{ success?: boolean; error?: unknown }>;
+  repair?: () => Promise<{ success?: boolean; updated?: number; scanned?: number; error?: unknown }>;
 }
 
 const getLocalDbApi = (): LocalDbApi | null => {
@@ -17,11 +18,136 @@ const getLocalDbApi = (): LocalDbApi | null => {
   return ((window as any)?.electronAPI?.localdb as LocalDbApi) ?? null;
 };
 
-const normalizeEvents = (data: unknown): StatusEventRecord[] => {
-  if (Array.isArray(data)) {
-    return data as StatusEventRecord[];
+const toLocalYMD = (d: Date) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const normalizeDate = (value?: string | null): string | null => {
+  const raw = (value ?? '').trim();
+  if (!raw) return null;
+  const iso = /^\d{4}-\d{2}-\d{2}$/;
+  if (iso.test(raw)) return raw;
+  const dmy = /^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/;
+  const ymd = /^(\d{4})[\/\-](\d{2})[\/\-](\d{2})$/;
+  let parsed: Date | null = null;
+  if (dmy.test(raw)) {
+    const [, dd, mm, yy] = dmy.exec(raw)!;
+    parsed = new Date(`${yy}-${mm}-${dd}T00:00:00Z`);
+  } else if (ymd.test(raw)) {
+    const [, yy, mm, dd] = ymd.exec(raw)!;
+    parsed = new Date(`${yy}-${mm}-${dd}T00:00:00Z`);
+  } else {
+    const candidate = new Date(raw);
+    if (!isNaN(candidate.getTime())) parsed = candidate;
   }
-  return [];
+  return parsed ? toLocalYMD(parsed) : null;
+};
+
+const normalizeTime = (value?: string | null): string | null => {
+  const raw = (value ?? '').trim();
+  if (!raw) return null;
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(raw);
+  if (!m) return null;
+  const h = Math.min(23, Math.max(0, Number(m[1])));
+  const min = Math.min(59, Math.max(0, Number(m[2])));
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+};
+
+const normalizeDuration = (value?: string | null): string | null => {
+  const raw = (value ?? '').trim();
+  if (!raw) return null;
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/.exec(raw);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  const sec = m[3] ? Number(m[3]) : 0;
+  const totalSeconds = (h > 0 ? h * 3600 : 0) + min * 60 + sec;
+  const mm = Math.floor(totalSeconds / 60);
+  const ss = totalSeconds % 60;
+  return `${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+};
+
+const normalizeStatus = (value?: string | null): string | null => {
+  const raw = (value ?? '').trim();
+  if (!raw) return 'Non défini';
+  const lowered = raw.toLowerCase();
+  if (lowered === 'do') return 'D0';
+  if (lowered === 'ro') return 'R0';
+  if (lowered === 'non defini' || lowered === 'non défini') return 'Non défini';
+  return raw;
+};
+
+const normalizeAppliedAt = (value?: string | null): string => {
+  const raw = (value ?? '').trim();
+  if (!raw) return new Date().toISOString();
+  const tryParse = (val: string) => {
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? null : d;
+  };
+  let parsed = tryParse(raw);
+  if (!parsed) {
+    const onlyDate = normalizeDate(raw);
+    parsed = onlyDate ? new Date(`${onlyDate}T00:00:00Z`) : null;
+  }
+  return (parsed ?? new Date()).toISOString();
+};
+
+const normalizePhone = (value?: string | null): string | null => {
+  const raw = (value ?? '').replace(/\s+/g, '').trim();
+  if (!raw) return null;
+  const digits = raw.replace(/[^\d]/g, '');
+  if (!digits) return null;
+  if (raw.startsWith('+')) return `+${digits}`;
+  if (digits.startsWith('00')) return `+${digits.slice(2)}`;
+  return digits;
+};
+
+const normalizeEmail = (value?: string | null): string | null => {
+  const raw = (value ?? '').trim();
+  if (!raw) return null;
+  return raw.toLowerCase();
+};
+
+const sanitizeEvent = (record: StatusEventRecord): StatusEventRecord => {
+  const contactId = (record.contact_id || (record as any).contactId || record.id || '').toString().trim();
+  const newStatus = normalizeStatus(record.new_status ?? record.newStatus);
+  const oldStatus = normalizeStatus(record.old_status);
+
+  const next: StatusEventRecord = {
+    ...record,
+    contact_id: contactId || (record.id ? String(record.id) : ''),
+    new_status: newStatus,
+    old_status: oldStatus,
+    applied_at: normalizeAppliedAt(record.applied_at),
+    prenom: (record.prenom ?? '').trim() || null,
+    nom: (record.nom ?? '').trim() || null,
+    telephone: normalizePhone(record.telephone),
+    email: normalizeEmail(record.email ?? (record as any).mail),
+    commentaire: (record.commentaire ?? (record as any).comment ?? '').trim() || null,
+    dateRappel: normalizeDate(record.dateRappel),
+    heureRappel: normalizeTime(record.heureRappel),
+    dateRDV: normalizeDate(record.dateRDV),
+    heureRDV: normalizeTime(record.heureRDV),
+    dateAppel: normalizeDate(record.dateAppel),
+    heureAppel: normalizeTime(record.heureAppel),
+    dureeAppel: normalizeDuration(record.dureeAppel),
+    dateEntree: normalizeDate(record.dateEntree),
+    heureEntree: normalizeTime(record.heureEntree),
+    numeroLigne: typeof record.numeroLigne === 'number' && Number.isFinite(record.numeroLigne) ? record.numeroLigne : null,
+    statut: normalizeStatus(record.statut) || newStatus,
+    statutAppel: normalizeStatus(record.statutAppel),
+    statutRDV: normalizeStatus(record.statutRDV),
+    uid_supabase: (record as any).uid_supabase ?? null,
+  };
+  return next;
+};
+
+const normalizeEvents = (data: unknown): StatusEventRecord[] => {
+  if (!Array.isArray(data)) return [];
+  return (data as StatusEventRecord[]).map(sanitizeEvent);
 };
 
 const toRangeBoundaries = (start?: string, end?: string): { start?: string; end?: string } => {
@@ -181,5 +307,44 @@ export const localDbService = {
     } catch (error) {
       console.error('[localDbService] selection event failed', error);
     }
+  },
+
+  async clearAll(): Promise<boolean> {
+    const api = getLocalDbApi();
+    if (!api?.clear) {
+      return false;
+    }
+    try {
+      const res = await api.clear();
+      if (res?.success) {
+        try {
+          window.dispatchEvent(new CustomEvent('dimicall-toast', { detail: { type: 'success', title: 'Base locale réinitialisée' } }));
+        } catch {}
+        return true;
+      }
+    } catch (error) {
+      console.error('[localDbService] clearAll failed', error);
+    }
+    return false;
+  },
+
+  async repair(): Promise<{ success: boolean; updated: number; scanned: number }> {
+    const api = getLocalDbApi();
+    if (!api?.repair) {
+      return { success: false, updated: 0, scanned: 0 };
+    }
+    try {
+      const res = await api.repair();
+      if (res?.success) {
+        return {
+          success: true,
+          updated: Number(res.updated || 0),
+          scanned: Number(res.scanned || 0),
+        };
+      }
+    } catch (error) {
+      console.error('[localDbService] repair failed', error);
+    }
+    return { success: false, updated: 0, scanned: 0 };
   },
 };
