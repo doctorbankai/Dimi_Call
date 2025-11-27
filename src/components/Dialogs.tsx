@@ -4,12 +4,12 @@ import { Button, Input, Select, Modal } from './Common';
 import { generateGmailComposeUrl, generateSmsMessage } from '../services/dataService';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
   DialogOverlay,
   DialogPortal
@@ -18,12 +18,12 @@ import { Button as ShadcnButton } from '@/components/ui/button';
 import { Input as ShadcnInput } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { 
-  Select as ShadcnSelect, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select as ShadcnSelect,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
 } from '@/components/ui/select';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -62,7 +62,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
           console.warn('Format de date invalide dans dateRDV:', contact.dateRDV);
         }
       }
-      
+
       // Pré-remplir l'heure si elle existe dans le contact
       if (contact.heureRDV) {
         setSelectedTime(contact.heureRDV);
@@ -105,7 +105,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
     }
 
     const emailUrl = generateGmailComposeUrl(contactWithDateTime, emailType, civility);
-    
+
     try {
       window.open(emailUrl, '_blank');
       showNotification('success', 'Email Gmail ouvert dans un nouvel onglet');
@@ -152,7 +152,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
                 ))}
               </SelectContent>
             </ShadcnSelect>
-            
+
             <ShadcnSelect value={emailType} onValueChange={(value) => setEmailType(value as EmailType)}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Type d'email" />
@@ -215,7 +215,7 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
             </div>
           </div>
         )}
-        
+
         <div className="bg-muted text-muted-foreground p-3 rounded text-sm">
           <strong>Aperçu:</strong> Email {emailTypeOptions.find(opt => opt.value === emailType)?.label} pour {civilityOptions.find(opt => opt.value === civility)?.label} {contact.prenom} {contact.nom}
           {needsDateTime && selectedDate && selectedTime && (
@@ -224,11 +224,11 @@ const EmailDialog: React.FC<EmailDialogProps> = ({ isOpen, onClose, contact, sho
             </div>
           )}
         </div>
-        
+
         <div className="flex justify-end space-x-3 pt-4">
           <Button variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             onClick={handleGenerateEmail}
             disabled={needsDateTime && (!selectedDate || !selectedTime)}
           >
@@ -263,7 +263,7 @@ const SmsDialog: React.FC<SmsDialogProps> = ({ isOpen, onClose, contact, onSendS
           if (!isNaN(dateRDV.getTime())) {
             setSelectedDate(dateRDV);
           }
-        } catch {}
+        } catch { }
       }
       if (contact.heureRDV) {
         setSelectedTime(contact.heureRDV);
@@ -290,7 +290,7 @@ const SmsDialog: React.FC<SmsDialogProps> = ({ isOpen, onClose, contact, onSendS
 
   const needsDateTime = smsType === SmsType.D0Visio || smsType === SmsType.R0Interne || smsType === SmsType.R0Externe;
 
-    // Mettre Ã  jour la prévisualisation du message Ã  chaque changement
+  // Mettre Ã  jour la prévisualisation du message Ã  chaque changement
   useEffect(() => {
     if (!contact) return;
     try {
@@ -307,7 +307,7 @@ const SmsDialog: React.FC<SmsDialogProps> = ({ isOpen, onClose, contact, onSendS
     }
   }, [contact, civility, smsType, selectedDate, selectedTime]);
 
-const handleSendSms = () => {
+  const handleSendSms = () => {
     const dateISO = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : undefined;
     onSendSms(civility, smsType, dateISO, selectedTime || undefined);
   };
@@ -348,7 +348,7 @@ const handleSendSms = () => {
                 ))}
               </SelectContent>
             </ShadcnSelect>
-            
+
             <ShadcnSelect value={smsType} onValueChange={(value) => setSmsType(value as SmsType)}>
               <SelectTrigger className="w-full">
                 <SelectValue placeholder="Type de SMS" />
@@ -363,7 +363,7 @@ const handleSendSms = () => {
             </ShadcnSelect>
           </div>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div></div>
           <div>
@@ -429,11 +429,11 @@ const handleSendSms = () => {
             </div>
           )}
         </div>
-        
+
         <div className="flex justify-end space-x-3 pt-4">
           <Button variant="ghost" onClick={onClose}>Annuler</Button>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             onClick={handleSendSms}
             disabled={needsDateTime && (!selectedDate || !selectedTime)}
           >
@@ -474,12 +474,28 @@ interface RendezVousDialogProps {
 }
 
 const RendezVousDialog: React.FC<RendezVousDialogProps> = ({ isOpen, onClose, contact, onSave }) => {
-  const [date, setDate] = useState(contact?.dateRDV || '');
+  const [date, setDate] = useState<Date | undefined>(() => {
+    if (!contact?.dateRDV) return undefined;
+    const parsed = new Date(contact.dateRDV);
+    return isNaN(parsed.getTime()) ? undefined : parsed;
+  });
   const [time, setTime] = useState(contact?.heureRDV || '');
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const modalContentRef = React.useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (!contact) return;
+    if (contact.dateRDV) {
+      const parsed = new Date(contact.dateRDV);
+      setDate(isNaN(parsed.getTime()) ? undefined : parsed);
+    } else {
+      setDate(undefined);
+    }
+    setTime(contact.heureRDV || '');
+  }, [contact]);
+
   const handleSave = () => {
-    onSave(date, time);
+    onSave(date ? format(date, 'yyyy-MM-dd') : '', time);
   };
 
   return (
@@ -489,10 +505,46 @@ const RendezVousDialog: React.FC<RendezVousDialogProps> = ({ isOpen, onClose, co
           Contact: <strong>{contact?.prenom} {contact?.nom}</strong>
         </p>
         <div className="grid grid-cols-2 gap-4">
-          <Input value={date} onChange={(e) => setDate(e.target.value)} placeholder="YYYY-MM-DD" type="date" />
-          <TimePickerSimple 
-            value={time} 
-            onChange={setTime} 
+          <div className="relative">
+            <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !date && "text-muted-foreground"
+                  )}
+                  aria-label="Choisir une date de rendez-vous"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date ? format(date, 'dd MMM yyyy', { locale: fr }) : "Choisir une date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-auto p-0 z-[100003]"
+                align="start"
+                side="bottom"
+                sideOffset={6}
+                collisionPadding={10}
+                collisionBoundary={modalContentRef.current || undefined}
+                container={modalContentRef.current || undefined}
+              >
+                <Calendar
+                  mode="single"
+                  locale={fr}
+                  selected={date}
+                  onSelect={(newDate) => {
+                    setDate(newDate || undefined);
+                    setIsCalendarOpen(false);
+                  }}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+          <TimePickerSimple
+            value={time}
+            onChange={setTime}
             placeholder="HH:mm"
             container={modalContentRef.current}
             zIndex={100002}
@@ -528,12 +580,12 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
   const statutMaritalOptions = [
     { value: '', label: 'Sélectionner...' },
     { value: 'none', label: 'Non renseigné' },
-    ...Object.values(QualificationStatutMarital).map(s => ({value: s, label: s}))
+    ...Object.values(QualificationStatutMarital).map(s => ({ value: s, label: s }))
   ];
   const situationProOptions = [
     { value: '', label: 'Sélectionner...' },
     { value: 'none', label: 'Non renseigné' },
-    ...Object.values(QualificationSituationPro).map(s => ({value: s, label: s}))
+    ...Object.values(QualificationSituationPro).map(s => ({ value: s, label: s }))
   ];
 
   useEffect(() => {
@@ -548,38 +600,38 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
     } else {
       setResultat('N/A');
     }
-    
+
     // Générer le commentaire en excluant les valeurs non définies
     const commentParts: string[] = ['Qualification:'];
-    
+
     if (statutMarital && statutMarital !== 'reset') {
       commentParts.push(`Statut marital: ${statutMarital}`);
     }
-    
+
     if (situationPro && situationPro !== 'reset') {
       commentParts.push(`Situation pro.: ${situationPro}`);
     }
-    
+
     if (rev > 0) {
       commentParts.push(`Revenus foyer: ${rev}€`);
     }
-    
+
     if (chg > 0) {
       commentParts.push(`Charges foyer: ${chg}€`);
     }
-    
+
     if (liq > 0) {
       commentParts.push(`Liquidités disponibles: ${liq}€`);
     }
-    
+
     if (eff > 0) {
       commentParts.push(`Effort d'épargne: ${eff}€`);
     }
-    
+
     if (rev > 0 && chg > 0) {
       commentParts.push(`Résultat calculé: ${calculatedResult.toFixed(2)}`);
     }
-    
+
     // Si aucune information n'a été saisie, afficher un message par défaut
     if (commentParts.length === 1) {
       setCommentaire('Qualification: Aucune information saisie.');
@@ -587,15 +639,15 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
       setCommentaire(commentParts.join(', ') + '.');
     }
   }, [revenus, charges, liquidites, effortEpargne, situationPro, statutMarital]);
-  
+
   const handleSave = () => {
     // Combiner le commentaire automatique et le commentaire personnel
     let commentaireFinal = commentaire;
-    
+
     if (commentairePersonnel.trim()) {
       commentaireFinal += '\n\nCommentaire personnel: ' + commentairePersonnel.trim();
     }
-    
+
     onSave(commentaireFinal);
     onClose();
   };
@@ -627,118 +679,118 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
               Saisissez les informations pour qualifier le contact et générer un commentaire automatique.
             </DialogDescription>
           </DialogHeader>
-        
-        <div className="space-y-6 py-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+          <div className="space-y-6 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Statut marital</Label>
+                <Select
+                  options={statutMaritalOptions}
+                  value={statutMarital}
+                  onChange={(value) => handleSelectChange('statutMarital', value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Situation professionnelle</Label>
+                <Select
+                  options={situationProOptions}
+                  value={situationPro}
+                  onChange={(value) => handleSelectChange('situationPro', value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Revenus du foyer (€)</Label>
+                <ShadcnInput
+                  type="number"
+                  value={revenus}
+                  onChange={(e) => setRevenus(e.target.value)}
+                  placeholder="Ex: 5000"
+                  className="bg-input text-foreground border-slate-300 dark:border-slate-600"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Charges du foyer (€)</Label>
+                <ShadcnInput
+                  type="number"
+                  value={charges}
+                  onChange={(e) => setCharges(e.target.value)}
+                  placeholder="Ex: 2000"
+                  className="bg-input text-foreground border-slate-300 dark:border-slate-600"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Résultat calculé</Label>
+                <ShadcnInput
+                  value={resultat}
+                  readOnly
+                  className="bg-muted text-muted-foreground"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Liquidités disponibles (€)</Label>
+                <ShadcnInput
+                  type="number"
+                  value={liquidites}
+                  onChange={(e) => setLiquidites(e.target.value)}
+                  placeholder="Ex: 10000"
+                  className="bg-input text-foreground border-slate-300 dark:border-slate-600"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Effort d'épargne (€)</Label>
+                <ShadcnInput
+                  type="number"
+                  value={effortEpargne}
+                  onChange={(e) => setEffortEpargne(e.target.value)}
+                  placeholder="Ex: 500"
+                  className="bg-input text-foreground border-slate-300 dark:border-slate-600"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Statut marital</Label>
-              <Select
-                options={statutMaritalOptions}
-                value={statutMarital}
-                onChange={(value) => handleSelectChange('statutMarital', value)}
+              <Label htmlFor="commentaire" className="text-sm font-medium">
+                Commentaire de qualification
+              </Label>
+              <Textarea
+                id="commentaire"
+                value={commentaire}
+                onChange={(e) => setCommentaire(e.target.value)}
+                rows={4}
+                className="w-full resize-none bg-input text-foreground border-slate-300 dark:border-slate-600"
+                placeholder="Commentaire automatique basé© sur les informations saisies..."
               />
             </div>
+
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Situation professionnelle</Label>
-              <Select
-                options={situationProOptions}
-                value={situationPro}
-                onChange={(value) => handleSelectChange('situationPro', value)}
+              <Label htmlFor="commentairePersonnel" className="text-sm font-medium">
+                Commentaire personnel
+              </Label>
+              <Textarea
+                id="commentairePersonnel"
+                value={commentairePersonnel}
+                onChange={(e) => setCommentairePersonnel(e.target.value)}
+                rows={3}
+                className="w-full resize-none bg-input text-foreground border-slate-300 dark:border-slate-600"
+                placeholder="Ajoutez vos observations personnelles ici..."
               />
             </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Revenus du foyer (€)</Label>
-              <ShadcnInput
-                type="number"
-                value={revenus}
-                onChange={(e) => setRevenus(e.target.value)}
-                placeholder="Ex: 5000"
-                className="bg-input text-foreground border-slate-300 dark:border-slate-600"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Charges du foyer (€)</Label>
-              <ShadcnInput
-                type="number"
-                value={charges}
-                onChange={(e) => setCharges(e.target.value)}
-                placeholder="Ex: 2000"
-                className="bg-input text-foreground border-slate-300 dark:border-slate-600"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Résultat calculé</Label>
-              <ShadcnInput
-                value={resultat}
-                readOnly
-                className="bg-muted text-muted-foreground"
-              />
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Liquidités disponibles (€)</Label>
-              <ShadcnInput
-                type="number"
-                value={liquidites}
-                onChange={(e) => setLiquidites(e.target.value)}
-                placeholder="Ex: 10000"
-                className="bg-input text-foreground border-slate-300 dark:border-slate-600"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Effort d'épargne (€)</Label>
-              <ShadcnInput
-                type="number"
-                value={effortEpargne}
-                onChange={(e) => setEffortEpargne(e.target.value)}
-                placeholder="Ex: 500"
-                className="bg-input text-foreground border-slate-300 dark:border-slate-600"
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="commentaire" className="text-sm font-medium">
-              Commentaire de qualification
-            </Label>
-            <Textarea
-              id="commentaire"
-              value={commentaire}
-              onChange={(e) => setCommentaire(e.target.value)}
-              rows={4}
-              className="w-full resize-none bg-input text-foreground border-slate-300 dark:border-slate-600"
-              placeholder="Commentaire automatique basé© sur les informations saisies..."
-            />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="commentairePersonnel" className="text-sm font-medium">
-              Commentaire personnel
-            </Label>
-            <Textarea
-              id="commentairePersonnel"
-              value={commentairePersonnel}
-              onChange={(e) => setCommentairePersonnel(e.target.value)}
-              rows={3}
-              className="w-full resize-none bg-input text-foreground border-slate-300 dark:border-slate-600"
-              placeholder="Ajoutez vos observations personnelles ici..."
-            />
-          </div>
-        </div>
-        
-        <DialogFooter className="gap-2">
-          <ShadcnButton variant="outline" onClick={onClose}>
-            Annuler
-          </ShadcnButton>
-          <ShadcnButton onClick={handleSave} className="bg-primary text-primary-foreground hover:bg-primary/90">
-            Enregistrer Qualification
-          </ShadcnButton>
-        </DialogFooter>
+          <DialogFooter className="gap-2">
+            <ShadcnButton variant="outline" onClick={onClose}>
+              Annuler
+            </ShadcnButton>
+            <ShadcnButton onClick={handleSave} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              Enregistrer Qualification
+            </ShadcnButton>
+          </DialogFooter>
         </DialogContent>
       </DialogPortal>
     </Dialog>

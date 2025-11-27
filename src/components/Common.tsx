@@ -74,15 +74,16 @@ interface ModalProps {
 }
 
 // Composant Button ultra moderne
-export const Button: React.FC<ButtonProps> = ({ 
+export const Button = React.forwardRef<HTMLButtonElement, ButtonProps & React.ButtonHTMLAttributes<HTMLButtonElement>>(({ 
   onClick, 
   children, 
   disabled, 
   variant = 'ghost', 
   size = 'md', 
   className,
-  type = 'button'
-}) => {
+  type = 'button',
+  ...props
+}, ref) => {
   const getVariant = () => {
     switch (variant) {
       case 'primary': return 'default';
@@ -103,6 +104,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <ShadcnButton
+      ref={ref}
       onClick={onClick}
       disabled={disabled}
       variant={getVariant()}
@@ -114,11 +116,12 @@ export const Button: React.FC<ButtonProps> = ({
         "focus-visible:ring-2 focus-visible:ring-primary/50",
         className
       )}
+      {...props}
     >
       {children}
     </ShadcnButton>
   );
-};
+});
 
 // Composant Input ultra moderne
 export const Input: React.FC<InputProps> = ({ 

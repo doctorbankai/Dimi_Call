@@ -61,6 +61,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
   DropdownMenuPortal,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
@@ -2007,222 +2008,212 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
               <div className="flex-1 bg-transparent rounded-none border-0 shadow-none overflow-hidden">
                 <div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="gap-2 flex h-full flex-col">
                   {/* Table Controls Bar - Fully Responsive */}
-                  <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 px-1.5 py-1.5 bg-card w-full max-w-[95%] mx-auto">
-                    {/* Groupe 1: Gestion colonnes + Mode auto */}
-                    <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 px-1.5 sm:px-2 shrink-0"
-                            title="Gestion des colonnes"
-                          >
-                            <Settings2 className="h-4 w-4" />
-                            <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs hidden sm:inline-flex">
-                              {Object.values(visibleColumns).filter(Boolean).length}
-                            </Badge>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" side="bottom" sideOffset={5} className="w-64">
-                          <DropdownMenuLabel className="flex items-center gap-2">
-                            <Eye className="h-4 w-4" />
-                            Gestion des colonnes
-                          </DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          {orderedColumnHeaders.map((header) => (
-                            <DropdownMenuCheckboxItem
-                              key={header}
-                              checked={visibleColumns[header]}
-                              onCheckedChange={() => toggleColumnVisibility(header)}
-                              onSelect={(e) => e.preventDefault()}
-                              className="flex items-center gap-2"
+                  <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 py-1.5 bg-card w-full max-w-[95%] mx-auto px-1.5">
+                    {/* Groupe gauche : colonnes, recherche manuelle & champ de recherche */}
+                    <div className="flex flex-1 flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
+                      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-1.5 sm:px-2 shrink-0"
+                              title="Gestion des colonnes"
                             >
-                              {header}
+                              <Settings2 className="h-4 w-4" />
+                              <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs hidden sm:inline-flex">
+                                {Object.values(visibleColumns).filter(Boolean).length}
+                              </Badge>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="start" side="bottom" sideOffset={5} className="w-64">
+                            <DropdownMenuLabel className="flex items-center gap-2">
+                              <Eye className="h-4 w-4" />
+                              Gestion des colonnes
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            {orderedColumnHeaders.map((header) => (
+                              <DropdownMenuCheckboxItem
+                                key={header}
+                                checked={visibleColumns[header]}
+                                onCheckedChange={() => toggleColumnVisibility(header)}
+                                onSelect={(e) => e.preventDefault()}
+                                className="flex items-center gap-2"
+                              >
+                                {header}
+                              </DropdownMenuCheckboxItem>
+                            ))}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuCheckboxItem
+                              checked={Object.values(visibleColumns).every(Boolean)}
+                              onCheckedChange={() => {
+                                const newVisibility: Record<string, boolean> = {}
+                                orderedColumnHeaders.forEach(header => {
+                                  newVisibility[header] = true
+                                })
+                                setVisibleColumns(newVisibility)
+                                localStorage.setItem('appels2-visible-columns', JSON.stringify(newVisibility))
+                              }}
+                              onSelect={(e) => e.preventDefault()}
+                              className="flex items-center gap-2 text-primary"
+                            >
+                              <Eye className="h-4 w-4" />
+                              Afficher toutes les colonnes disponibles
                             </DropdownMenuCheckboxItem>
-                          ))}
-                          <DropdownMenuSeparator />
-                          <DropdownMenuCheckboxItem
-                            checked={Object.values(visibleColumns).every(Boolean)}
-                            onCheckedChange={() => {
-                              const newVisibility: Record<string, boolean> = {}
-                              orderedColumnHeaders.forEach(header => {
-                                newVisibility[header] = true
-                              })
-                              setVisibleColumns(newVisibility)
-                              localStorage.setItem('appels2-visible-columns', JSON.stringify(newVisibility))
-                            }}
-                            onSelect={(e) => e.preventDefault()}
-                            className="flex items-center gap-2 text-primary"
-                          >
-                            <Eye className="h-4 w-4" />
-                            Afficher toutes les colonnes disponibles
-                          </DropdownMenuCheckboxItem>
-                          <DropdownMenuCheckboxItem
-                            checked={(() => {
-                              const essentialCols = getEssentialColumns();
-                              return orderedColumnHeaders.every(header => 
-                                essentialCols.includes(header) ? visibleColumns[header] : !visibleColumns[header]
-                              );
-                            })()}
-                            onCheckedChange={() => {
-                              const essentialCols = getEssentialColumns();
-                              const newVisibility: Record<string, boolean> = {}
-                              orderedColumnHeaders.forEach(header => {
-                                // Garder les colonnes essentielles visibles, masquer les optionnelles
-                                newVisibility[header] = essentialCols.includes(header);
-                              })
-                              setVisibleColumns(newVisibility)
-                              localStorage.setItem('appels2-visible-columns', JSON.stringify(newVisibility))
-                            }}
-                            onSelect={(e) => e.preventDefault()}
-                            className="flex items-center gap-2 text-orange-600 dark:text-orange-400"
-                          >
-                            <EyeOff className="h-4 w-4" />
-                            Masquer les colonnes optionnelles
-                          </DropdownMenuCheckboxItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <Tabs value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)} className="w-auto">
-                        <TabsList className="h-9 hidden">
-                          <TabsTrigger 
-                            value="disabled" 
-                            className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground dark:data-[state=active]:bg-primary/90 dark:data-[state=active]:text-primary-foreground"
-                          >
-                            Désactivé
-                          </TabsTrigger>
-                          <TabsTrigger 
-                            value="linkedin" 
-                            className="text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white dark:data-[state=active]:bg-blue-500"
-                          >
-                            <Linkedin className="h-3.5 w-3.5 mr-1.5" />
-                            LinkedIn
-                          </TabsTrigger>
-                          <TabsTrigger 
-                            value="google" 
-                            className="text-xs data-[state=active]:bg-green-600 data-[state=active]:text-white dark:data-[state=active]:bg-green-500"
-                          >
-                            <Globe className="h-3.5 w-3.5 mr-1.5" />
-                            Google
-                          </TabsTrigger>
-                          <TabsTrigger 
-                            value="link" 
-                            className="text-xs data-[state=active]:bg-purple-600 data-[state=active]:text-white dark:data-[state=active]:bg-purple-500"
-                          >
-                            <Eye className="h-3.5 w-3.5 mr-1.5" />
-                            Lien
-                          </TabsTrigger>
-                        </TabsList>
-                      </Tabs>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 px-1.5 sm:px-2 shrink-0"
-                            title="Mode de recherche automatique"
-                          >
-                            {(autoSearchMode === 'linkedin' || autoSearchMode === 'linkedin-name' || autoSearchMode === 'linkedin-name-type') && <Linkedin className="h-4 w-4 text-blue-600" />}
-                            {autoSearchMode === 'google' && <Globe className="h-4 w-4 text-green-600" />}
-                            {autoSearchMode === 'link' && <Eye className="h-4 w-4 text-purple-600" />}
-                            {autoSearchMode === 'disabled' && <X className="h-4 w-4" />}
-                            <span className="sr-only">Changer le mode automatique</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" side="bottom" sideOffset={5} className="w-64">
-                          <DropdownMenuLabel className="text-xs text-muted-foreground px-2 py-1">
-                            Mode automatique
-                          </DropdownMenuLabel>
+                            <DropdownMenuCheckboxItem
+                              checked={(() => {
+                                const essentialCols = getEssentialColumns();
+                                return orderedColumnHeaders.every(header => 
+                                  essentialCols.includes(header) ? visibleColumns[header] : !visibleColumns[header]
+                                );
+                              })()}
+                              onCheckedChange={() => {
+                                const essentialCols = getEssentialColumns();
+                                const newVisibility: Record<string, boolean> = {}
+                                orderedColumnHeaders.forEach(header => {
+                                  newVisibility[header] = essentialCols.includes(header);
+                                })
+                                setVisibleColumns(newVisibility)
+                                localStorage.setItem('appels2-visible-columns', JSON.stringify(newVisibility))
+                              }}
+                              onSelect={(e) => e.preventDefault()}
+                              className="flex items-center gap-2 text-orange-600 dark:text-orange-400"
+                            >
+                              <EyeOff className="h-4 w-4" />
+                              Masquer les colonnes optionnelles
+                            </DropdownMenuCheckboxItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                        <Tabs value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)} className="w-auto">
+                          <TabsList className="h-9 hidden">
+                            <TabsTrigger 
+                              value="disabled" 
+                              className="text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground dark:data-[state=active]:bg-primary/90 dark:data-[state=active]:text-primary-foreground"
+                            >
+                              Désactivé
+                            </TabsTrigger>
+                            <TabsTrigger 
+                              value="linkedin" 
+                              className="text-xs data-[state=active]:bg-blue-600 data-[state=active]:text-white dark:data-[state=active]:bg-blue-500"
+                            >
+                              <Linkedin className="h-3.5 w-3.5 mr-1.5" />
+                              LinkedIn
+                            </TabsTrigger>
+                            <TabsTrigger 
+                              value="google" 
+                              className="text-xs data-[state=active]:bg-green-600 data-[state=active]:text-white dark:data-[state=active]:bg-green-500"
+                            >
+                              <Globe className="h-3.5 w-3.5 mr-1.5" />
+                              Google
+                            </TabsTrigger>
+                            <TabsTrigger 
+                              value="link" 
+                              className="text-xs data-[state=active]:bg-purple-600 data-[state=active]:text-white dark:data-[state=active]:bg-purple-500"
+                            >
+                              <Eye className="h-3.5 w-3.5 mr-1.5" />
+                              Lien
+                            </TabsTrigger>
+                          </TabsList>
+                        </Tabs>
+                      </div>
+                      <div className="relative flex-1 min-w-[160px] sm:min-w-[200px] max-w-full">
+                        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          placeholder="Rechercher..."
+                          value={searchQuery}
+                          onChange={(e) => onSearch(e.target.value)}
+                          className="pl-8 h-8 text-sm"
+                        />
+                      </div>
+                      <div className="flex items-center shrink-0">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={!selectedContactId}
+                              className="h-8 px-2 sm:px-2.5 gap-1.5 shrink-0"
+                              title="Recherches rapides et mode automatique"
+                            >
+                              <Search className="h-4 w-4" />
+                              <ChevronDown className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-64">
+                            {/* Section Recherches rapides (manuelle) */}
+                            <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                              Recherches rapides
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuGroup>
+                              <DropdownMenuItem
+                                onClick={() => onLinkedInSearch('name')}
+                                disabled={!selectedContactId}
+                                className="cursor-pointer"
+                              >
+                                <Linkedin className="mr-2 h-4 w-4 text-[#0A66C2]" />
+                                <span>LinkedIn (Prénom + Nom)</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() => onLinkedInSearch('name-type')}
+                                disabled={!selectedContactId}
+                                className="cursor-pointer"
+                              >
+                                <Linkedin className="mr-2 h-4 w-4 text-[#0A66C2]" />
+                                <span>LinkedIn+</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={onGoogleSearch}
+                                disabled={!selectedContactId}
+                                className="cursor-pointer"
+                              >
+                                <Globe className="mr-2 h-4 w-4 text-[#4285F4]" />
+                                <span>Google</span>
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={onDirectLink}
+                                disabled={!selectedContactId}
+                                className="cursor-pointer"
+                              >
+                                <Eye className="mr-2 h-4 w-4 text-purple-600" />
+                                <span>Lien direct</span>
+                              </DropdownMenuItem>
+                            </DropdownMenuGroup>
+                            
+                            {/* Section Mode automatique */}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                              Mode automatique
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
                             <DropdownMenuRadioGroup value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)}>
-                            <DropdownMenuRadioItem value="disabled" className="cursor-pointer">
-                              <X className="mr-2 h-4 w-4" />
-                              <span>Désactivé</span>
-                            </DropdownMenuRadioItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuRadioItem value="linkedin-name" className="cursor-pointer">
-                              <Linkedin className="mr-2 h-4 w-4 text-blue-600" />
-                              <span>LinkedIn (Prénom + Nom)</span>
-                            </DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="linkedin-name-type" className="cursor-pointer">
-                              <Linkedin className="mr-2 h-4 w-4 text-blue-600" />
-                              <span>LinkedIn+</span>
-                            </DropdownMenuRadioItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuRadioItem value="google" className="cursor-pointer">
-                              <Globe className="mr-2 h-4 w-4 text-green-600" />
-                              <span>Google</span>
-                            </DropdownMenuRadioItem>
-                            <DropdownMenuRadioItem value="link" className="cursor-pointer">
-                              <Eye className="mr-2 h-4 w-4 text-purple-600" />
-                              <span>Lien</span>
-                            </DropdownMenuRadioItem>
-                          </DropdownMenuRadioGroup>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-
+                              <DropdownMenuRadioItem value="disabled" className="cursor-pointer">
+                                <X className="mr-2 h-4 w-4 text-muted-foreground" />
+                                <span>Désactivé</span>
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="linkedin-name" className="cursor-pointer">
+                                <Linkedin className="mr-2 h-4 w-4 text-[#0A66C2]" />
+                                <span>LinkedIn (Prénom + Nom)</span>
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="linkedin-name-type" className="cursor-pointer">
+                                <Linkedin className="mr-2 h-4 w-4 text-[#0A66C2]" />
+                                <span>LinkedIn+</span>
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="google" className="cursor-pointer">
+                                <Globe className="mr-2 h-4 w-4 text-[#4285F4]" />
+                                <span>Google</span>
+                              </DropdownMenuRadioItem>
+                              <DropdownMenuRadioItem value="link" className="cursor-pointer">
+                                <Eye className="mr-2 h-4 w-4 text-purple-600" />
+                                <span>Lien</span>
+                              </DropdownMenuRadioItem>
+                            </DropdownMenuRadioGroup>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
-                    
-                    {/* Champ de recherche */}
-                    <div className="relative flex-1 min-w-[140px] sm:min-w-[180px] max-w-full sm:max-w-[300px] order-3 sm:order-none">
-                      <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input
-                        placeholder="Rechercher..."
-                        value={searchQuery}
-                        onChange={(e) => onSearch(e.target.value)}
-                        className="pl-8 h-8 text-sm"
-                      />
-                    </div>
-                    
-                    {/* Groupe 2: Boutons de recherche manuelle LinkedIn/Google/Lien */}
-                    <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap shrink-0 order-2 sm:order-none">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onLinkedInSearch('name')}
-                        disabled={!selectedContactId}
-                        className="h-8 px-2 sm:px-2.5 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2] shrink-0"
-                        title="Rechercher sur LinkedIn (Prénom + Nom)"
-                      >
-                        <Linkedin className="h-4 w-4" />
-                        <span className="hidden lg:inline ml-1.5">LinkedIn</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onLinkedInSearch('name-type')}
-                        disabled={!selectedContactId}
-                        className="h-8 px-2 sm:px-2.5 bg-[#0A66C2] hover:bg-[#004182] text-white border-[#0A66C2] shrink-0"
-                        title="Rechercher sur LinkedIn (Prénom + Nom + Contexte)"
-                      >
-                        <Linkedin className="h-4 w-4" />
-                        <span className="hidden lg:inline ml-1.5">LinkedIn+</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onGoogleSearch}
-                        disabled={!selectedContactId}
-                        className="h-8 px-2 sm:px-2.5 bg-[#4285F4] hover:bg-[#357AE8] text-white border-[#4285F4] shrink-0"
-                        title="Rechercher sur Google"
-                      >
-                        <Globe className="h-4 w-4" />
-                        <span className="hidden lg:inline ml-1.5">Google</span>
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onDirectLink}
-                        disabled={!selectedContactId}
-                        className="h-8 px-2 sm:px-2.5 shrink-0"
-                        title="Ouvrir le lien direct"
-                      >
-                        <Eye className="h-4 w-4" />
-                        <span className="hidden lg:inline ml-1.5">Lien direct</span>
-                      </Button>
-                    </div>
-                    
-                    {/* Groupe 3: Boutons d'actions */}
-                    <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap shrink-0 order-4 sm:order-none">
+                    {/* Groupe droite : actions contextuelles */}
+                    <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap shrink-0">
                       {/* Bouton pour revenir au premier contact sans statut */}
                       <TooltipProvider>
                           <Tooltip>
@@ -2251,7 +2242,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                 disabled={!filteredContacts.some(c => !c.statut || c.statut === ContactStatus.NonDefini)}
                               >
                                 <ChevronUp className="h-4 w-4" />
-                                <span className="hidden lg:inline ml-1.5">Premier sans statut</span>
+                                <span className="sr-only">Premier sans statut</span>
                               </Button>
                             </TooltipTrigger>
                             <TooltipContent side="bottom">
@@ -2396,8 +2387,6 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
 }
 
 export default AppelsCardsView
-
-
 
 
 

@@ -66,22 +66,22 @@ const INPUT_BASE_CLASS = "h-8 px-3 py-1 text-sm border-0 bg-transparent focus:bg
 // Shadcn Table Classes Constants
 const SHADCN_STYLES = {
   // Container
-  tableContainer: "rounded-md border bg-background",
+  tableContainer: "rounded-md border bg-card border-border",
   
   // Header
-  tableHeader: "sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60",
-  headerRow: "flex border-b",
+  tableHeader: "sticky top-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/70 border-b border-border",
+  headerRow: "flex border-b border-border",
   headerCell: "h-10 flex items-center px-3 py-2 text-left text-xs font-medium text-muted-foreground select-none transition-colors",
   headerCellSortable: "cursor-pointer hover:bg-muted/50",
   headerCellFirst: "first:rounded-tl-md",
   headerCellLast: "last:rounded-tr-md",
   
   // Body
-  tableBody: "relative",
-  bodyRow: "flex border-b border-border hover:bg-muted/50 cursor-pointer transition-colors",
+  tableBody: "relative bg-card",
+  bodyRow: "flex border-b border-border hover:bg-muted/50 cursor-pointer transition-colors bg-card",
   bodyRowSelected: "bg-accent text-accent-foreground",
   bodyRowActiveCall: "bg-green-50 hover:bg-green-100 dark:bg-green-950/50 dark:hover:bg-green-950/80",
-  bodyCell: "px-3 py-2 text-sm flex items-center flex-shrink-0",
+  bodyCell: "px-3 py-2 text-sm flex items-center flex-shrink-0 text-foreground",
   
   // Sort Icons
   sortIcon: "h-3 w-3 text-muted-foreground transition-colors",
