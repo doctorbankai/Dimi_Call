@@ -1219,6 +1219,23 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
 
   // State pour column sizing TanStack
   const [columnSizing, setColumnSizing] = useState<ColumnSizingState>({});
+  const [isSizingLoaded, setIsSizingLoaded] = useState(false);
+
+  // ✅ Charger columnSizing depuis localStorage au démarrage (une seule fois)
+  useEffect(() => {
+    if (isSizingLoaded) return;
+    
+    try {
+      const saved = localStorage.getItem(COLUMN_SIZING_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setColumnSizing(parsed);
+      }
+      setIsSizingLoaded(true);
+    } catch {
+      setIsSizingLoaded(true);
+    }
+  }, [isSizingLoaded]);
 
   // Instancier TanStack Table
   const table = useReactTable({
@@ -1228,7 +1245,18 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
       columnSizing,
       columnOrder  // ✅ AJOUTÉ pour drag & drop
     },
-    onColumnSizingChange: setColumnSizing,
+    onColumnSizingChange: (updater) => {
+      setColumnSizing(prev => {
+        const next = typeof updater === 'function' ? updater(prev) : updater;
+        // Sauvegarder immédiatement les changements manuels
+        try {
+          if (Object.keys(next).length > 0) {
+            localStorage.setItem(COLUMN_SIZING_STORAGE_KEY, JSON.stringify(next));
+          }
+        } catch {}
+        return next;
+      });
+    },
     onColumnOrderChange: setColumnOrder,  // ✅ AJOUTÉ pour drag & drop
     columnResizeMode: 'onChange',         // Resize en temps réel
     columnResizeDirection: 'ltr',         // ✅ AJOUTÉ Direction resize
@@ -1239,38 +1267,22 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
     enableSorting: false // On garde notre tri custom
   });
 
-  // Synchroniser autoSizes avec columnSizing
+  // Synchroniser autoSizes avec columnSizing (seulement si pas de valeur sauvegardée)
   useLayoutEffect(() => {
-    if (Object.keys(autoSizes).length > 0) {
-      setColumnSizing(prev => ({
-        ...prev,
-        ...autoSizes
-      }));
-    }
-  }, [autoSizes]);
-
-  // ✅ AJOUTÉ : Charger columnSizing depuis localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(COLUMN_SIZING_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        setColumnSizing(prev => ({
-          ...prev,
-          ...parsed
-        }));
-      }
-    } catch {}
-  }, []);
-
-  // ✅ AJOUTÉ : Sauvegarder columnSizing dans localStorage
-  useEffect(() => {
-    try {
-      if (Object.keys(columnSizing).length > 0) {
-        localStorage.setItem(COLUMN_SIZING_STORAGE_KEY, JSON.stringify(columnSizing));
-      }
-    } catch {}
-  }, [columnSizing]);
+    if (!isSizingLoaded || Object.keys(autoSizes).length === 0) return;
+    
+    setColumnSizing(prev => {
+      // Ne pas écraser les valeurs existantes - seulement remplir les manquantes
+      const merged = { ...prev };
+      Object.keys(autoSizes).forEach(colId => {
+        // Appliquer autoSize seulement si aucune valeur n'existe pour cette colonne
+        if (merged[colId] === undefined) {
+          merged[colId] = autoSizes[colId];
+        }
+      });
+      return merged;
+    });
+  }, [autoSizes, isSizingLoaded]);
 
   // Visible ordered columns avec tailles TanStack
   const visibleOrderedColumns = useMemo(() => {
@@ -1380,7 +1392,8 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
                                 // Auto-resize au contenu
                                 const autoSize = autoSizes[column.id];
                                 if (autoSize) {
-                                  setColumnSizing(prev => ({
+                                  // Utiliser table.setColumnSizing pour déclencher onColumnSizingChange et la sauvegarde
+                                  table.setColumnSizing(prev => ({
                                     ...prev,
                                     [column.id]: autoSize
                                   }));
