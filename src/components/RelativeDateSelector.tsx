@@ -214,7 +214,7 @@ export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
           onChange={handleQuantityChange}
           placeholder="1"
           disabled={disabled}
-          className="w-20 h-9 text-center touch-manipulation"
+          className="w-20 h-9 text-center touch-manipulation bg-white text-foreground border-slate-300 dark:bg-slate-900/60 dark:border-slate-600 focus-visible:ring-2 focus-visible:ring-primary/20"
           aria-label="Quantité pour le calcul de date relative"
           aria-describedby="quantity-help"
           inputMode="numeric"
@@ -226,7 +226,7 @@ export const RelativeDateSelector: React.FC<RelativeDateSelectorProps> = ({
           disabled={disabled}
         >
           <SelectTrigger 
-            className="w-32 h-9 touch-manipulation" 
+            className="w-32 h-9 touch-manipulation bg-white text-foreground border-slate-300 dark:bg-slate-900/60 dark:border-slate-600 focus-visible:ring-2 focus-visible:ring-primary/20 shadow-none" 
             aria-label="Unité de temps pour le calcul de date relative"
             aria-describedby="unit-help"
           >

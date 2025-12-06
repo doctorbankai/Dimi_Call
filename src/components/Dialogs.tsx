@@ -512,6 +512,8 @@ const RendezVousDialog: React.FC<RendezVousDialogProps> = ({ isOpen, onClose, co
                   variant="outline"
                   className={cn(
                     "w-full justify-start text-left font-normal",
+                    "bg-white text-foreground border-slate-300 dark:bg-slate-900/60 dark:border-slate-600",
+                    "focus-visible:ring-2 focus-visible:ring-primary/20 shadow-none",
                     !date && "text-muted-foreground"
                   )}
                   aria-label="Choisir une date de rendez-vous"
@@ -688,6 +690,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
                   options={statutMaritalOptions}
                   value={statutMarital}
                   onChange={(value) => handleSelectChange('statutMarital', value)}
+                  className="bg-white text-foreground dark:bg-slate-900/60"
                 />
               </div>
               <div className="space-y-2">
@@ -696,6 +699,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
                   options={situationProOptions}
                   value={situationPro}
                   onChange={(value) => handleSelectChange('situationPro', value)}
+                  className="bg-white text-foreground dark:bg-slate-900/60"
                 />
               </div>
             </div>
@@ -708,7 +712,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
                   value={revenus}
                   onChange={(e) => setRevenus(e.target.value)}
                   placeholder="Ex: 5000"
-                  className="bg-input text-foreground border-slate-300 dark:border-slate-600"
+                  className="bg-white text-foreground border-slate-300 dark:bg-slate-900/60 dark:border-slate-600"
                 />
               </div>
               <div className="space-y-2">
@@ -718,7 +722,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
                   value={charges}
                   onChange={(e) => setCharges(e.target.value)}
                   placeholder="Ex: 2000"
-                  className="bg-input text-foreground border-slate-300 dark:border-slate-600"
+                  className="bg-white text-foreground border-slate-300 dark:bg-slate-900/60 dark:border-slate-600"
                 />
               </div>
               <div className="space-y-2">
@@ -726,7 +730,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
                 <ShadcnInput
                   value={resultat}
                   readOnly
-                  className="bg-muted text-muted-foreground"
+                  className="bg-white text-foreground border-slate-300 dark:bg-slate-900/60 dark:border-slate-600"
                 />
               </div>
             </div>
@@ -739,7 +743,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
                   value={liquidites}
                   onChange={(e) => setLiquidites(e.target.value)}
                   placeholder="Ex: 10000"
-                  className="bg-input text-foreground border-slate-300 dark:border-slate-600"
+                  className="bg-white text-foreground border-slate-300 dark:bg-slate-900/60 dark:border-slate-600"
                 />
               </div>
               <div className="space-y-2">
@@ -749,7 +753,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
                   value={effortEpargne}
                   onChange={(e) => setEffortEpargne(e.target.value)}
                   placeholder="Ex: 500"
-                  className="bg-input text-foreground border-slate-300 dark:border-slate-600"
+                  className="bg-white text-foreground border-slate-300 dark:bg-slate-900/60 dark:border-slate-600"
                 />
               </div>
             </div>
@@ -763,7 +767,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
                 value={commentaire}
                 onChange={(e) => setCommentaire(e.target.value)}
                 rows={4}
-                className="w-full resize-none bg-input text-foreground border-slate-300 dark:border-slate-600"
+                className="w-full resize-none bg-white text-foreground border-slate-300 dark:bg-slate-900/60 dark:border-slate-600"
                 placeholder="Commentaire automatique basé© sur les informations saisies..."
               />
             </div>
@@ -777,7 +781,7 @@ const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen, onClo
                 value={commentairePersonnel}
                 onChange={(e) => setCommentairePersonnel(e.target.value)}
                 rows={3}
-                className="w-full resize-none bg-input text-foreground border-slate-300 dark:border-slate-600"
+                className="w-full resize-none bg-white text-foreground border-slate-300 dark:bg-slate-900/60 dark:border-slate-600"
                 placeholder="Ajoutez vos observations personnelles ici..."
               />
             </div>

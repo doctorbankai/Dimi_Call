@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Input } from '@/components/ui/input';
-import { Clock } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { X } from 'lucide-react';
 
 interface TimePickerProps {
   value: string;
@@ -14,126 +13,86 @@ interface TimePickerProps {
   id?: string;
   'aria-label'?: string;
   'aria-describedby'?: string;
-  container?: HTMLElement | null;
-  zIndex?: number;
+  container?: HTMLElement | null; // Conservé pour compatibilité (non utilisé avec le nouveau design)
+  zIndex?: number; // Conservé pour compatibilité
+  onClear?: () => void;
+  stepMinutes?: number;
 }
+
+const buildTimeOptions = (stepMinutes: number) => {
+  const safeStep = Math.min(Math.max(stepMinutes, 1), 60);
+  const slotsPerHour = Math.floor(60 / safeStep);
+  return Array.from({ length: 24 * slotsPerHour }, (_, index) => {
+    const hour = Math.floor(index / slotsPerHour);
+    const minute = (index % slotsPerHour) * safeStep;
+    return `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+  });
+};
 
 export const TimePicker: React.FC<TimePickerProps> = ({
   value,
   onChange,
   disabled = false,
-  placeholder = "HH:mm",
+  placeholder = "Sélectionner",
   className,
   id,
   'aria-label': ariaLabel,
   'aria-describedby': ariaDescribedBy,
-  container,
-  zIndex = 20100,
+  onClear,
+  stepMinutes = 5,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const normalizedValue = value && value.trim() !== '' ? value : undefined;
+  const hasValue = Boolean(normalizedValue);
+  const timeOptions = buildTimeOptions(stepMinutes);
 
-  // Generate hours (00-23)
-  const hours = Array.from({ length: 24 }, (_, i) => 
-    i.toString().padStart(2, '0')
+  const triggerClasses = cn(
+    "flex-1 bg-white text-foreground border-slate-300 dark:bg-slate-900/60 dark:border-slate-600",
+    "focus-visible:ring-2 focus-visible:ring-primary/20 shadow-none",
+    className
   );
 
-  // Generate minutes (00, 05, 10, ..., 55)
-  const minutes = Array.from({ length: 12 }, (_, i) => 
-    (i * 5).toString().padStart(2, '0')
-  );
-
-  const handleHourSelect = (hour: string) => {
-    const currentMinute = value ? value.split(':')[1] : '00';
-    const timeString = `${hour}:${currentMinute}`;
-    onChange(timeString);
+  const handleClear = () => {
+    onChange('');
+    onClear?.();
   };
-
-  const handleMinuteSelect = (minute: string) => {
-    const currentHour = value ? value.split(':')[0] : '00';
-    const timeString = `${currentHour}:${minute}`;
-    onChange(timeString);
-  };
-
-  const currentHour = value ? value.split(':')[0] : '';
-  const currentMinute = value ? value.split(':')[1] : '';
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
-      <Clock className="h-4 w-4 text-muted-foreground" />
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className={cn(
-              "w-full justify-start text-left font-normal",
-              !value && "text-muted-foreground"
-            )}
-            disabled={disabled}
-            id={id}
-            aria-label={ariaLabel}
-            aria-describedby={ariaDescribedBy}
-          >
-            {value || placeholder}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent 
-          className="w-auto p-4" 
-          align="start" 
-          container={container}
-          style={{ zIndex }}
+    <div className="flex items-center gap-2 w-full">
+      <Select
+        value={normalizedValue}
+        onValueChange={onChange}
+        disabled={disabled}
+      >
+        <SelectTrigger
+          className={triggerClasses}
+          id={id}
+          aria-label={ariaLabel}
+          aria-describedby={ariaDescribedBy}
         >
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <div className="text-sm font-medium mb-2">Heures</div>
-              <div 
-                className="relative h-40 overflow-y-auto overflow-x-hidden rounded-md border"
-                onWheel={(e) => e.stopPropagation()}
-              >
-                <div className="grid gap-1 p-1">
-                  {hours.map((hour) => (
-                    <Button
-                      key={hour}
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        "justify-start h-8 text-xs",
-                        currentHour === hour && "bg-accent text-accent-foreground"
-                      )}
-                      onClick={() => handleHourSelect(hour)}
-                    >
-                      {hour}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div>
-              <div className="text-sm font-medium mb-2">Minutes</div>
-              <div 
-                className="relative h-40 overflow-y-auto overflow-x-hidden rounded-md border"
-                onWheel={(e) => e.stopPropagation()}
-              >
-                <div className="grid gap-1 p-1">
-                  {minutes.map((minute) => (
-                    <Button
-                      key={minute}
-                      variant="ghost"
-                      size="sm"
-                      className={cn(
-                        "justify-start h-8 text-xs",
-                        currentMinute === minute && "bg-accent text-accent-foreground"
-                      )}
-                      onClick={() => handleMinuteSelect(minute)}
-                    >
-                      {minute}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
+          <SelectValue placeholder={placeholder}>
+            {normalizedValue || placeholder}
+          </SelectValue>
+        </SelectTrigger>
+        <SelectContent className="max-h-60 z-[100002]">
+          {timeOptions.map((time) => (
+            <SelectItem key={time} value={time}>
+              {time}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {hasValue && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleClear}
+          className="h-10 w-10 hover:bg-destructive/10 hover:text-destructive"
+          title="Effacer l'heure"
+          aria-label="Effacer l'heure"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      )}
     </div>
   );
 };
