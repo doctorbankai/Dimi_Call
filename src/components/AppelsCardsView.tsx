@@ -1459,26 +1459,35 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                 <p className="text-[10px] xs:text-xs text-muted-foreground/70 whitespace-nowrap">
                   {contacts.length} prospect{contacts.length > 1 ? "s" : ""}
                 </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 sm:h-8 gap-1 sm:gap-1.5 px-1.5 sm:px-2.5 shrink-0"
-                  title="Revenir au premier contact sans statut"
-                  onClick={() => {
-                    const firstWithoutStatus = filteredContacts.find(c => !c.statut || c.statut === ContactStatus.NonDefini)
-                    if (firstWithoutStatus) {
-                      shouldAutoScrollRef.current = true
-                      onSelectContact(firstWithoutStatus)
-                      toast.info('Premier contact sans statut sélectionné')
-                    } else {
-                      toast.info('Aucun contact sans statut trouvé')
-                    }
-                  }}
-                  disabled={!filteredContacts.some(c => !c.statut || c.statut === ContactStatus.NonDefini)}
-                >
-                  <ChevronUp className="h-3 w-3 sm:h-4 sm:w-4" />
-                  <span className="sr-only">Premier sans statut</span>
-                </Button>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-1.5 px-2 sm:px-3 shrink-0"
+                        aria-label="Premier sans statut"
+                        onClick={() => {
+                          const firstWithoutStatus = filteredContacts.find(c => !c.statut || c.statut === ContactStatus.NonDefini)
+                          if (firstWithoutStatus) {
+                            shouldAutoScrollRef.current = true
+                            onSelectContact(firstWithoutStatus)
+                            toast.info('Premier contact sans statut sélectionné')
+                          } else {
+                            toast.info('Aucun contact sans statut trouvé')
+                          }
+                        }}
+                        disabled={!filteredContacts.some(c => !c.statut || c.statut === ContactStatus.NonDefini)}
+                      >
+                        <ChevronUp className="h-4 w-4" />
+                        <span className="sr-only">Premier sans statut</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Revenir au premier contact sans statut</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
             {/* Search moved below inside Command with list */}
@@ -1644,9 +1653,13 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
           <div className="m-1 sm:m-2 flex h-full flex-col rounded-lg border bg-card overflow-hidden min-w-0">
           {selectedContact ? (
             <div className="flex h-full flex-col">
-                  <div className="relative bg-card/50 backdrop-blur-sm px-6 py-4" role="region" aria-label="En-tête du contact sélectionné">
-                    <Separator className="absolute left-0 right-0 -mx-6 bottom-0" />
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div
+                    className="relative w-full bg-card rounded-t-lg"
+                    role="region"
+                    aria-label="En-tête du contact sélectionné"
+                  >
+                    <Separator className="absolute inset-x-0 bottom-0" />
+                <div className="px-6 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-12 w-12 border">
                       <AvatarFallback>
@@ -1698,9 +1711,9 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   </div>
                 </div>
               </div>
-              <div className="relative bg-card/60 px-6 py-2.5" role="toolbar" aria-label="Actions de recherche">
-                <Separator className="absolute left-0 right-0 -mx-6 bottom-0" />
-                <div className="flex items-center gap-2 flex-nowrap">
+              <div className="relative bg-card/60" role="toolbar" aria-label="Actions de recherche">
+                <Separator className="absolute inset-x-0 bottom-0" />
+                <div className="px-6 py-2.5 flex items-center gap-2 flex-nowrap">
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
