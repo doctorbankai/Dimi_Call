@@ -13,7 +13,7 @@ import { AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Phone, User, Mail, MessageCircle, Clock, Calendar as CalendarIcon, FileText, ArrowUpDown,
-  ArrowUp, ArrowDown, Zap, Hourglass, Users, Hash, FolderOpen, X, Bell, GripVertical
+  ArrowUp, ArrowDown, Zap, Hourglass, Users, Hash, FolderOpen, X, Bell, GripVertical, Linkedin, Globe, Eye
 } from 'lucide-react';
 import { ReminderDialog } from './ReminderDialog';
 import StatusSelect from './StatusSelect';
@@ -69,8 +69,8 @@ const SHADCN_STYLES = {
   tableContainer: "rounded-md border bg-card border-border",
   
   // Header
-  tableHeader: "sticky top-0 z-10 bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/70 border-b border-border",
-  headerRow: "flex border-b border-border",
+  tableHeader: "sticky top-0 z-10 bg-card border-b border-border rounded-t-md overflow-hidden",
+  headerRow: "flex",
   headerCell: "h-10 flex items-center px-3 py-2 text-left text-xs font-medium text-muted-foreground select-none transition-colors",
   headerCellSortable: "cursor-pointer hover:bg-muted/50",
   headerCellFirst: "first:rounded-tl-md",
@@ -102,6 +102,7 @@ const SHADCN_SPACING = {
 const COLUMN_RESIZE_CONFIG = {
   // Fixed-width columns (never resize)
   fixed: {
+    'Profil': 150,
     '#': 50,
     'Statut': 120,
     'Date Rappel': 180,  // ✅ Augmenté pour "Sélectionner" + bouton Bell
@@ -133,8 +134,8 @@ const COLUMN_RESIZE_CONFIG = {
 
 // Mobile Column Configuration
 const MOBILE_COLUMN_CONFIG = {
-  sm: ['#', 'Prénom', 'Nom', 'Statut', 'Commentaire'],
-  md: ['#', 'Prénom', 'Nom', 'Téléphone', 'Statut', 'Commentaire', 'Date Rappel'],
+  sm: ['Profil', '#', 'Prénom', 'Nom', 'Statut', 'Commentaire'],
+  md: ['Profil', '#', 'Prénom', 'Nom', 'Téléphone', 'Statut', 'Commentaire', 'Date Rappel'],
   lg: 'all' as const,
   xl: 'all' as const
 };
@@ -488,6 +489,8 @@ interface SortableHeaderProps {
   onResizeHandleTouchStart?: (e: React.TouchEvent) => void;
   onResizeHandleDoubleClick?: () => void;
   isResizing?: boolean;
+  isFirst?: boolean;
+  isLast?: boolean;
 }
 
 const SortableHeader: React.FC<SortableHeaderProps> = ({
@@ -497,7 +500,9 @@ const SortableHeader: React.FC<SortableHeaderProps> = ({
   onResizeHandleMouseDown,
   onResizeHandleTouchStart,
   onResizeHandleDoubleClick,
-  isResizing
+  isResizing,
+  isFirst,
+  isLast
 }) => {
   const {
     attributes,
@@ -520,6 +525,8 @@ const SortableHeader: React.FC<SortableHeaderProps> = ({
       className={cn(
         SHADCN_STYLES.headerCell,
         "header-cell-interactive relative",
+        isFirst && "rounded-tl-md",
+        isLast && "rounded-tr-md",
         isDragging && "is-dragging",
         isResizing && "is-resizing"
       )}
@@ -594,6 +601,9 @@ interface ContactTableProps {
   onToggleColumnVisibility: (header: string) => void;
   availableColumns?: string[];
   onFileImport?: (file: File) => Promise<void>;
+  onLinkedInSearch: (mode?: 'name' | 'name-type') => void;
+  onGoogleSearch: () => void;
+  onDirectLink: () => void;
 }
 
 export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableProps>(({
@@ -611,6 +621,9 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
   onToggleColumnVisibility,
   availableColumns = [],
   onFileImport,
+  onLinkedInSearch,
+  onGoogleSearch,
+  onDirectLink,
 }, ref) => {
   const [editingCell, setEditingCell] = useState<{ contactId: string; field: keyof Contact } | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -655,6 +668,11 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
     if (oldIndex !== -1 && newIndex !== -1) {
       const newOrder = [...columnOrder];
       newOrder.splice(newIndex, 0, newOrder.splice(oldIndex, 1)[0]);
+      if (newOrder.includes('profil') && newOrder[0] !== 'profil') {
+        const profilIndex = newOrder.indexOf('profil');
+        newOrder.splice(profilIndex, 1);
+        newOrder.unshift('profil');
+      }
       setColumnOrder(newOrder);
       
       // Sync avec TanStack Table
@@ -678,8 +696,22 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
   // Create dynamic columns based on props
   const dynamicColumns = useMemo((): ColumnConfig[] => {
     return columnHeaders.map((header, index) => {
+      if (header === 'Profil') {
+        return {
+          id: 'profil',
+          key: 'index',
+          label: 'Profil',
+          icon: User,
+          width: '170px',
+          minWidth: '150px',
+          canHide: false,
+          canSort: false,
+          defaultVisible: true,
+        };
+      }
       const dataKey = contactDataKeys[index];
       const headerToIdMap: Record<string, string> = {
+        'Profil': 'profil',
         '#': 'numeroLigne',
         'Sexe': 'sexe',
         'Prénom': 'prenom',
@@ -704,6 +736,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
       };
 
       const iconMap: Record<string, React.ComponentType<any>> = {
+        'Profil': User,
         '#': Hash,
         'Prénom': User,
         'Nom': User,
@@ -746,7 +779,7 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
       return [];
     }
 
-    const enforcedLabels = ['#', ...DEFAULT_COLUMN_ORDER, 'Don', 'Date', 'UID'];
+    const enforcedLabels = ['Profil', '#', ...DEFAULT_COLUMN_ORDER, 'Don', 'Date', 'UID'];
     const enforcedIds = enforcedLabels
       .map(label => dynamicColumns.find(col => col.label === label)?.id)
       .filter((id): id is string => Boolean(id));
@@ -974,8 +1007,59 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
 
   // Render cell content
   const renderCellContent = (contact: Contact, column: ColumnConfig) => {
-    const columnKey = column.key as keyof Contact;
-    
+    if (column.id === 'profil') {
+      const actions = [
+        {
+          key: 'linkedin-name',
+          title: 'LinkedIn (Prénom + Nom)',
+          icon: <Linkedin className="h-4 w-4 text-[#0A66C2]" />,
+          handler: () => onLinkedInSearch('name'),
+        },
+        {
+          key: 'linkedin-plus',
+          title: 'LinkedIn+',
+          icon: <Linkedin className="h-4 w-4 text-[#D4AF37]" />,
+          handler: () => onLinkedInSearch('name-type'),
+        },
+        {
+          key: 'google',
+          title: 'Google',
+          icon: <Globe className="h-4 w-4 text-[#4285F4]" />,
+          handler: () => onGoogleSearch(),
+        },
+        {
+          key: 'direct-link',
+          title: 'Lien direct',
+          icon: <Eye className="h-4 w-4 text-purple-600" />,
+          handler: () => onDirectLink(),
+        },
+      ];
+
+      return (
+        <div className="flex items-center gap-1 w-full widget-no-scroll">
+          {actions.map(action => (
+            <Button
+              key={action.key}
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 p-0 text-muted-foreground hover:text-primary"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelectContact(contact);
+                setTimeout(() => {
+                  action.handler();
+                }, 0);
+              }}
+              title={action.title}
+            >
+              {action.icon}
+            </Button>
+          ))}
+        </div>
+      );
+    }
+
     if (column.id === 'index') {
       const index = contacts.findIndex(c => c.id === contact.id) + 1;
       return (
@@ -984,6 +1068,8 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
         </span>
       );
     }
+
+    const columnKey = column.key as keyof Contact;
     
     const value = contact[columnKey];
 
@@ -1160,8 +1246,15 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
       .map(id => dynamicColumns.find(col => col.id === id))
       .filter((col): col is ColumnConfig => {
         if (!col) return false;
-        return visibleColumns[col.label] !== false;
+        return col.label === 'Profil' || visibleColumns[col.label] !== false;
       });
+
+    // Forcer la colonne "Profil" à rester en première position
+    const profilIndex = visibleCols.findIndex(col => col.id === 'profil');
+    if (profilIndex > 0) {
+      const [profilCol] = visibleCols.splice(profilIndex, 1);
+      visibleCols.unshift(profilCol);
+    }
     
     // Apply responsive filtering based on screen size
     return getVisibleColumnsForScreenSize(visibleCols, screenSize);
@@ -1342,16 +1435,16 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
         onDragEnd={handleDragEnd}
       >
         <div className="contact-table-container h-full w-full">
-          <div 
-            ref={scrollContainerRef}
-            className={cn(SHADCN_STYLES.tableContainer, "scrollbar-hidden h-full overflow-auto w-full")}
-            style={{
-              position: 'relative',
-              height: '100%',
-              overflow: 'auto',
-              display: 'block'
-            }}
-          >
+        <div 
+          ref={scrollContainerRef}
+          className={cn(SHADCN_STYLES.tableContainer, "h-full overflow-auto overflow-x-auto w-full")}
+          style={{
+            position: 'relative',
+            height: '100%',
+            overflow: 'auto',
+            display: 'block'
+          }}
+        >
             <AnimatePresence mode="wait">
               {contacts.length === 0 ? (
                 <EmptyState key="empty" />
@@ -1360,13 +1453,15 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
                   items={columnOrder}
                   strategy={horizontalListSortingStrategy}
                 >
-                  <div className="relative w-full min-w-[560px] md:min-w-0">
+                  <div className="relative w-max min-w-full">
                     {/* Header */}
                     <div className={SHADCN_STYLES.tableHeader}>
                       <div className={SHADCN_STYLES.headerRow}>
                         {visibleOrderedColumns.map((column) => {
                           const tanstackCol = table.getColumn(column.id);
                           const isResizing = tanstackCol?.getIsResizing() ?? false;
+                          const isFirst = visibleOrderedColumns[0]?.id === column.id;
+                          const isLast = visibleOrderedColumns[visibleOrderedColumns.length - 1]?.id === column.id;
                           
                           return (
                             <SortableHeader
@@ -1378,6 +1473,8 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
                                 maxWidth: column.calculatedWidth,
                                 flexShrink: 0
                               }}
+                              isFirst={isFirst}
+                              isLast={isLast}
                               onResizeHandleMouseDown={(e) => {
                                 const header = table.getHeaderGroups()[0]?.headers.find(h => h.column.id === column.id);
                                 const handler = header?.getResizeHandler();

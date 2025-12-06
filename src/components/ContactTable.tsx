@@ -398,6 +398,9 @@ interface ContactTableProps {
   onToggleColumnVisibility: (header: string) => void;
   availableColumns?: string[];
   onFileImport?: (file: File) => Promise<void>;
+  onLinkedInSearch?: (mode?: 'name' | 'name-type') => void;
+  onGoogleSearch?: () => void;
+  onDirectLink?: () => void;
 }
 
 export const ContactTable = forwardRef<ContactTableRef, ContactTableProps>(({

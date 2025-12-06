@@ -27,6 +27,9 @@ interface PaginatedContactTableProps {
   initialItemsPerPage?: number;
   pageSizeOptions?: number[];
   className?: string;
+  onLinkedInSearch?: (mode?: 'name' | 'name-type') => void;
+  onGoogleSearch?: () => void;
+  onDirectLink?: () => void;
 }
 
 // Définir les expectedTargets pour ImportMappingDialog
@@ -74,6 +77,9 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
   initialItemsPerPage = 25,
   pageSizeOptions = [25, 50, 100],
   className = '',
+  onLinkedInSearch = () => {},
+  onGoogleSearch = () => {},
+  onDirectLink = () => {},
 }, ref) => {
   // États pour le drag & drop
   const [isDragOver, setIsDragOver] = useState(false);
@@ -370,7 +376,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
       <DropZoneOverlay isVisible={isDragOver} isDragActive={isDragActive} />
       
       {/* Table avec données paginées */}
-      <div className="flex-1 flex items-center justify-center w-full max-w-[95%] mx-auto" style={{ minHeight: 0, overflow: 'hidden' }}>
+      <div className="flex-1 flex items-center justify-center w-full max-w-none min-w-0" style={{ minHeight: 0 }}>
         {useVirtualizedTable ? (
           <VirtualizedContactTable
             ref={ref as React.Ref<VirtualizedContactTableRef>}
@@ -388,6 +394,9 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
             onToggleColumnVisibility={onToggleColumnVisibility}
             availableColumns={availableColumns}
             onFileImport={onFileImport}
+            onLinkedInSearch={onLinkedInSearch}
+            onGoogleSearch={onGoogleSearch}
+            onDirectLink={onDirectLink}
           />
         ) : (
           <ContactTable
@@ -406,6 +415,9 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
             onToggleColumnVisibility={onToggleColumnVisibility}
             availableColumns={availableColumns}
             onFileImport={onFileImport}
+            onLinkedInSearch={onLinkedInSearch}
+            onGoogleSearch={onGoogleSearch}
+            onDirectLink={onDirectLink}
           />
         )}
       </div>

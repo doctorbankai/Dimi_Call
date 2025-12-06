@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import { Contact, ContactStatus, CallStates } from "../types"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -8,19 +7,14 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
   Bell,
   Calendar,
-  CalendarSearch,
   ChevronDown,
   ChevronUp,
-  Clock,
   Download,
   Eye,
   EyeOff,
-  FileCheck,
   Globe,
   History,
   Linkedin,
-  Mail,
-  MessageSquare,
   Phone,
   PhoneCall,
   Search,
@@ -33,10 +27,9 @@ import {
   Users,
   BarChart3,
   FileSpreadsheet,
-  MoreHorizontal,
   Check,
 } from "lucide-react"
-import { STATUS_COLORS, STATUS_OPTIONS, COLUMN_HEADERS, CONTACT_DATA_KEYS, DEFAULT_COLUMN_ORDER } from "../constants"
+import { STATUS_COLORS, STATUS_OPTIONS, COLUMN_HEADERS, DEFAULT_COLUMN_ORDER } from "../constants"
 import CallControl from "./CallControl"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
@@ -73,7 +66,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import StatusSelect from "./StatusSelect"
 import { DatePickerWithClear } from "./DatePickerWithClear"
 import { TimePickerWithClear } from "./TimePickerWithClear"
 import { ZapWidget } from "./ZapWidget"
@@ -96,7 +88,6 @@ import { exportContactsToFile, exportGoogleContactsCSV, exportGoogleCalendarCSV,
 import { ViewSwitcher, ViewMode } from '@/components/ViewSwitcher'
 import { PaginatedContactTable } from '@/components/PaginatedContactTable'
 import type { ContactTableRef } from '@/components/ContactTable'
-import { StatusCompletionChart } from '@/components/StatusCompletionChart'
 import { useCallMode } from "../context/ModeContext"
 import { StatusConfigService } from "../services/statusConfigService"
 // Retire le radial chart dans la barre de recherche
@@ -187,11 +178,6 @@ const formatDisplayDate = (value?: string) => {
   }
 }
 
-const formatDisplayTime = (value?: string) => {
-  if (!value) return ""
-  return value
-}
-
 const formatDisplayDateTime = (date?: string, time?: string) => {
   const formattedDate = formatDisplayDate(date)
   if (!formattedDate) return ""
@@ -251,12 +237,12 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   onLinkedInSearch,
   onGoogleSearch,
   onDirectLink,
-  onExport,
+  onExport: _onExport,
   onClearActiveTab,
   searchQuery,
   onSearch,
-  onImportDialog,
-  onExportDialog,
+  onImportDialog: _onImportDialog,
+  onExportDialog: _onExportDialog,
   autoSearchMode,
   onAutoSearchModeChange,
   // Props pour la gestion des onglets
@@ -268,7 +254,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   onDeleteTab,
 }) => {
   const [visibleCount, setVisibleCount] = useState(40)
-  const [activeFilter, setActiveFilter] = useState<'all' | 'rappel' | 'rdv' | 'status'>('all')
+  const [activeFilter] = useState<'all' | 'rappel' | 'rdv' | 'status'>('all')
   
   // Ref pour tracker si le scroll doit être automatique (uniquement au clic)
   const shouldAutoScrollRef = useRef(false)
@@ -281,25 +267,30 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     }
   })
   const { mode } = useCallMode()
+  const columnHeadersWithProfile = useMemo(() => ['Profil', ...COLUMN_HEADERS], [])
   // Charger la configuration des colonnes essentielles depuis les paramètres
   const getEssentialColumns = (): string[] => {
     const saved = localStorage.getItem('dimicall_column_config');
     if (saved) {
       try {
         const config = JSON.parse(saved);
-        return Object.keys(config).filter(key => config[key] === true);
+        const essentials = Object.keys(config).filter(key => config[key] === true);
+        if (!essentials.includes('Profil')) {
+          essentials.unshift('Profil');
+        }
+        return essentials;
       } catch (error) {
         console.error('Erreur lors du chargement de la config des colonnes:', error);
       }
     }
     // Configuration par défaut si rien n'est sauvegardé
-    return ['#', 'Prénom', 'Nom', 'Commentaire'];
+    return ['Profil', '#', 'Prénom', 'Nom', 'Commentaire'];
   };
 
   const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(() => {
     // Par défaut, toutes les colonnes sont visibles
     const defaultVisible: Record<string, boolean> = {};
-    COLUMN_HEADERS.forEach(header => {
+    columnHeadersWithProfile.forEach(header => {
       defaultVisible[header] = true;
     });
     // Tenter de charger la configuration sauvegardée
@@ -309,7 +300,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
         const parsed = JSON.parse(saved) as Record<string, boolean>;
         const merged: Record<string, boolean> = {};
         // Ne garder que les colonnes connues et ajouter les nouvelles en visible par défaut
-        COLUMN_HEADERS.forEach(header => {
+        columnHeadersWithProfile.forEach(header => {
           merged[header] = typeof parsed[header] === 'boolean' ? parsed[header] : true;
         });
         return merged;
@@ -322,9 +313,10 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
 
   // Ordre des colonnes - utilise l'ordre par défaut si disponible
   const orderedColumnHeaders = useMemo(() => {
-    // Créer un ordre basé sur DEFAULT_COLUMN_ORDER
-    const ordered: string[] = [];
-    const remainingHeaders = new Set(COLUMN_HEADERS);
+    // Créer un ordre basé sur DEFAULT_COLUMN_ORDER avec "Profil" toujours en premier
+    const ordered: string[] = ['Profil'];
+    const remainingHeaders = new Set(columnHeadersWithProfile);
+    remainingHeaders.delete('Profil');
     
     // Ajouter d'abord les colonnes dans l'ordre par défaut si elles existent
     DEFAULT_COLUMN_ORDER.forEach(header => {
@@ -340,11 +332,12 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     });
     
     return ordered;
-  }, [])
+  }, [columnHeadersWithProfile])
 
   // Créer les clés de données correspondantes dans le même ordre
   const orderedContactDataKeys = useMemo(() => {
     const keyMap: Record<string, keyof Contact | null> = {
+      'Profil': null,
       '#': 'numeroLigne',
       'Sexe': 'sexe',
       'Prénom': 'prenom',
@@ -373,7 +366,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   }, [orderedColumnHeaders])
   const [isDragOver, setIsDragOver] = useState(false)
   const [isDragActive, setIsDragActive] = useState(false)
-  const [importProgress, setImportProgress] = useState<{ percentage: number; message: string } | null>(null)
+  const [importProgress] = useState<{ percentage: number; message: string } | null>(null)
   const [mappingDialog, setMappingDialog] = useState<{
     open: boolean
     file: File | null
@@ -931,6 +924,9 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   }, [selectedContact, isAutocallActive, filteredContacts, onCall, onUpdateContact, onSelectContact])
 
   const toggleColumnVisibility = (header: string) => {
+    if (header === 'Profil') {
+      return;
+    }
     setVisibleColumns(prev => {
       const next = { ...prev, [header]: !prev[header] };
       try {
@@ -1227,142 +1223,23 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                 </span>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 flex-1 md:flex-initial justify-start md:justify-end">
-              <div className="hidden text-muted-foreground/50 text-sm sm:block shrink-0">|</div>
-              <div className="flex items-center gap-2 flex-wrap shrink-0">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        onClick={onCall}
-                        disabled={!selectedContact}
-                        className="size-10 shrink-0 rounded-full transition-all duration-200 hover:scale-105 bg-green-500 hover:bg-green-600 text-white shadow-none focus-visible:ring-2 focus-visible:ring-green-400 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label="Appeler"
-                      >
-                        <Phone className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{selectedContact ? 'Appeler' : 'Sélectionnez un contact'}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={onSms}
-                        disabled={!selectedContact}
-                        className="size-10 shrink-0 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label="SMS"
-                      >
-                        <MessageSquare className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>SMS</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={onEmail}
-                        disabled={!selectedContact || !selectedContact.email}
-                        className="size-10 shrink-0 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label="Email"
-                      >
-                        <Mail className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Email</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={onQualification}
-                        disabled={!selectedContact}
-                        className="size-10 shrink-0 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label="Qualification"
-                      >
-                        <FileCheck className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Qualification</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={onRappel}
-                        disabled={!selectedContact}
-                        className="size-10 shrink-0 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label="Rappel"
-                      >
-                        <Bell className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Rappel</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={onRendezVous}
-                        disabled={!selectedContact}
-                        className="size-10 shrink-0 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label="Rendez-vous"
-                      >
-                        <Calendar className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Rendez-vous</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={onCalCom}
-                        disabled={!selectedContact}
-                        className="size-10 shrink-0 rounded-full transition-all duration-200 hover:scale-105 border-2 hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                        aria-label="Cal.com"
-                      >
-                        <CalendarSearch className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Cal.com</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
+            <div className="flex items-center flex-1 md:flex-initial justify-start md:justify-end">
+              <CallControl
+                contact={selectedContact}
+                isCalling={Boolean(activeCallContactId && selectedContact && activeCallContactId === selectedContact.id)}
+                callStartTime={callStartTime}
+                onCall={onCall}
+                onHangUp={onHangUp}
+                onEmail={onEmail}
+                onSms={onSms}
+                onRappel={onRappel}
+                onRendezVous={onRendezVous}
+                onCalCom={onCalCom}
+                onQualification={onQualification}
+                adbConnected={adbConnected}
+                displayMode="actions-only"
+                className="gap-2 flex-nowrap"
+              />
             </div>
           </div>
         </div>
@@ -1731,7 +1608,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 sm:px-3 shrink-0" onClick={() => onLinkedInSearch('name-type')} aria-label="LinkedIn+">
-                          <Linkedin className="h-4 w-4 text-blue-600" />
+                          <Linkedin className="h-4 w-4 text-[#D4AF37]" />
                           <span className="hidden sm:inline">LinkedIn+</span>
                         </Button>
                       </TooltipTrigger>
@@ -2007,7 +1884,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-8 px-1.5 sm:px-2 shrink-0"
+                              className="h-8 px-1.5 sm:px-2 shrink-0 shadow-none"
                               title="Gestion des colonnes"
                             >
                               <Settings2 className="h-4 w-4" />
@@ -2025,8 +1902,9 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             {orderedColumnHeaders.map((header) => (
                               <DropdownMenuCheckboxItem
                                 key={header}
-                                checked={visibleColumns[header]}
-                                onCheckedChange={() => toggleColumnVisibility(header)}
+                                disabled={header === 'Profil'}
+                                checked={header === 'Profil' ? true : visibleColumns[header]}
+                                onCheckedChange={() => header !== 'Profil' && toggleColumnVisibility(header)}
                                 onSelect={(e) => e.preventDefault()}
                                 className="flex items-center gap-2"
                               >
@@ -2063,6 +1941,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                 orderedColumnHeaders.forEach(header => {
                                   newVisibility[header] = essentialCols.includes(header);
                                 })
+                                newVisibility['Profil'] = true
                                 setVisibleColumns(newVisibility)
                                 localStorage.setItem('appels2-visible-columns', JSON.stringify(newVisibility))
                               }}
@@ -2106,7 +1985,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           </TabsList>
                         </Tabs>
                       </div>
-                      <div className="relative flex-1 min-w-[160px] sm:min-w-[200px] max-w-full">
+                      <div className="relative flex-1 min-w-[160px] sm:min-w-[200px] max-w-[360px]">
                         <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                           placeholder="Rechercher..."
@@ -2114,92 +1993,6 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           onChange={(e) => onSearch(e.target.value)}
                           className="pl-8 h-8 text-sm"
                         />
-                      </div>
-                      <div className="flex items-center shrink-0">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={!selectedContactId}
-                              className="h-8 px-2 sm:px-2.5 gap-1.5 shrink-0"
-                              title="Recherches rapides et mode automatique"
-                            >
-                              <Search className="h-4 w-4" />
-                              <ChevronDown className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-64">
-                            {/* Section Recherches rapides (manuelle) */}
-                            <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                              Recherches rapides
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuGroup>
-                              <DropdownMenuItem
-                                onClick={() => onLinkedInSearch('name')}
-                                disabled={!selectedContactId}
-                                className="cursor-pointer"
-                              >
-                                <Linkedin className="mr-2 h-4 w-4 text-[#0A66C2]" />
-                                <span>LinkedIn (Prénom + Nom)</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => onLinkedInSearch('name-type')}
-                                disabled={!selectedContactId}
-                                className="cursor-pointer"
-                              >
-                                <Linkedin className="mr-2 h-4 w-4 text-[#0A66C2]" />
-                                <span>LinkedIn+</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={onGoogleSearch}
-                                disabled={!selectedContactId}
-                                className="cursor-pointer"
-                              >
-                                <Globe className="mr-2 h-4 w-4 text-[#4285F4]" />
-                                <span>Google</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={onDirectLink}
-                                disabled={!selectedContactId}
-                                className="cursor-pointer"
-                              >
-                                <Eye className="mr-2 h-4 w-4 text-purple-600" />
-                                <span>Lien direct</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuGroup>
-                            
-                            {/* Section Mode automatique */}
-                            <DropdownMenuSeparator />
-                            <DropdownMenuLabel className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                              Mode automatique
-                            </DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuRadioGroup value={autoSearchMode} onValueChange={(value) => onAutoSearchModeChange(value as any)}>
-                              <DropdownMenuRadioItem value="disabled" className="cursor-pointer">
-                                <X className="mr-2 h-4 w-4 text-muted-foreground" />
-                                <span>Désactivé</span>
-                              </DropdownMenuRadioItem>
-                              <DropdownMenuRadioItem value="linkedin-name" className="cursor-pointer">
-                                <Linkedin className="mr-2 h-4 w-4 text-[#0A66C2]" />
-                                <span>LinkedIn (Prénom + Nom)</span>
-                              </DropdownMenuRadioItem>
-                              <DropdownMenuRadioItem value="linkedin-name-type" className="cursor-pointer">
-                                <Linkedin className="mr-2 h-4 w-4 text-[#0A66C2]" />
-                                <span>LinkedIn+</span>
-                              </DropdownMenuRadioItem>
-                              <DropdownMenuRadioItem value="google" className="cursor-pointer">
-                                <Globe className="mr-2 h-4 w-4 text-[#4285F4]" />
-                                <span>Google</span>
-                              </DropdownMenuRadioItem>
-                              <DropdownMenuRadioItem value="link" className="cursor-pointer">
-                                <Eye className="mr-2 h-4 w-4 text-purple-600" />
-                                <span>Lien</span>
-                              </DropdownMenuRadioItem>
-                            </DropdownMenuRadioGroup>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
                       </div>
                     </div>
                     {/* Groupe droite : actions contextuelles */}
@@ -2209,6 +2002,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button 
+                                variant="outline"
                                 size="sm"
                                 onClick={() => {
                                   // Trouver le premier contact sans statut ou avec statut "Non défini"
@@ -2228,7 +2022,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                     toast.info('Aucun contact sans statut trouvé');
                                   }
                                 }}
-                                className="h-8 px-2 sm:px-2.5 bg-primary/10 hover:bg-primary/20 text-primary border-primary/30 shrink-0"
+                                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 h-8 text-sm text-primary border-primary/40 hover:bg-primary/10 shrink-0 shadow-none"
                                 disabled={!filteredContacts.some(c => !c.statut || c.statut === ContactStatus.NonDefini)}
                               >
                                 <ChevronUp className="h-4 w-4" />
@@ -2245,7 +2039,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="outline"
-                            className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 h-8 text-sm shrink-0"
+                            className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 h-8 text-sm shrink-0 shadow-none"
                           >
                             <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{backgroundColor: tableTabs.find(t => t.id === activeTableTabId)?.color || 'var(--primary)'}}></span>
                             <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">
@@ -2345,6 +2139,9 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       onFileImport={analyzeAndOpenMappingDialog}
                       initialItemsPerPage={25}
                       pageSizeOptions={[25, 50, 100]}
+                      onLinkedInSearch={onLinkedInSearch}
+                      onGoogleSearch={onGoogleSearch}
+                      onDirectLink={onDirectLink}
                     />
                   </div>
                 </div>
