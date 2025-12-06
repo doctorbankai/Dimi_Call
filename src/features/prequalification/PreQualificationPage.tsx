@@ -3,7 +3,6 @@ import * as XLSX from 'xlsx';
 import { Download, Upload, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
-import { Separator } from '@/components/ui/separator';
 import { getCategoryDetails, CATEGORY_ORDER } from './constants';
 import { PreQualificationUpload } from './components/PreQualificationUpload';
 import { PreQualificationClassifier } from './components/PreQualificationClassifier';
@@ -216,7 +215,7 @@ export const PreQualificationPage: React.FC = () => {
     <div className="flex h-full flex-col space-y-3 xs:space-y-4 md:space-y-6 px-2 xs:px-3 sm:px-4 md:px-6 lg:px-10 pb-4 sm:pb-6">
       <div className="w-full max-w-screen-2xl mx-auto space-y-4 sm:space-y-5 md:space-y-6">
         {/* Header Section */}
-        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-2 sm:px-4 md:px-6 pt-2 pb-2 min-w-0" role="toolbar" aria-label="Barre d'outils Pré-qualification">
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-2 sm:px-4 md:px-6 pt-2 pb-2 min-w-0 bg-white dark:bg-background rounded-md transition-colors" role="toolbar" aria-label="Barre d'outils Pré-qualification">
           <div className="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0 flex-shrink-0">
             <div className="flex flex-col gap-0.5 min-w-0">
               <h1 className="text-lg sm:text-xl font-semibold text-foreground truncate">Pré-qualification</h1>
@@ -239,7 +238,7 @@ export const PreQualificationPage: React.FC = () => {
                   <Button 
                     size="sm"
                     variant="outline"
-                    className="h-8 px-2 shrink-0"
+                    className="h-8 px-2 shrink-0 bg-white dark:bg-card border-border/70 shadow-none"
                     onClick={triggerReplaceFile}
                     title="Importer un fichier CSV/Excel"
                   >
@@ -249,7 +248,7 @@ export const PreQualificationPage: React.FC = () => {
                   <Button 
                     size="sm"
                     variant="outline"
-                    className="h-8 px-2 shrink-0"
+                    className="h-8 px-2 shrink-0 bg-white dark:bg-card border-border/70 shadow-none"
                     onClick={exportToExcel}
                     disabled={profiles.length === 0}
                     title="Exporter"
@@ -262,7 +261,7 @@ export const PreQualificationPage: React.FC = () => {
               <Button
                 size="sm"
                 variant="outline"
-                className="h-8 px-2 shrink-0"
+                className="h-8 px-2 shrink-0 bg-white dark:bg-card border-border/70 shadow-none"
                 onClick={() => setCategoryNamesDialogOpen(true)}
                 title="Personnaliser"
               >
@@ -273,17 +272,15 @@ export const PreQualificationPage: React.FC = () => {
           </div>
         </div>
 
-        <Separator />
-
         {/* Minimalist Stats Section */}
         {profiles.length > 0 && (
-          <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-3 md:gap-4 rounded-lg border bg-card/50 p-2.5 sm:p-3 md:p-4 shadow-sm">
+          <div className="grid w-full max-w-5xl mx-auto grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 justify-center rounded-lg border bg-card/50 p-2 sm:p-2.5 md:p-3 shadow-sm">
             {CATEGORY_ORDER.map((category) => {
               const details = categoryDetails[category];
               const count = stats.counts[category] || 0;
 
               return (
-                <div key={category} className="flex items-center gap-2 sm:gap-3 px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-md hover:bg-muted/40 transition-colors min-h-[68px] xs:min-h-[82px]">
+                <div key={category} className="flex items-center gap-2 sm:gap-3 px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-md hover:bg-muted/40 transition-colors min-h-[60px] xs:min-h-[74px]">
                   <div
                     className={cn(
                       "p-1.5 sm:p-2 rounded-md bg-background shadow-sm text-muted-foreground shrink-0 [&_svg]:h-4 [&_svg]:w-4 sm:[&_svg]:h-5 sm:[&_svg]:w-5",
@@ -312,7 +309,7 @@ export const PreQualificationPage: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex-1 w-full max-w-screen-2xl mx-auto min-h-0 rounded-lg sm:rounded-xl border bg-background shadow-sm overflow-hidden">
         <div className={cn(
-          "h-full w-full overflow-y-auto",
+          "h-full w-full overflow-y-auto bg-white dark:bg-background transition-colors",
           step === 'classify' ? "p-1 sm:p-2 md:p-3 lg:p-4 xl:p-6" : "p-2 sm:p-3 md:p-4 lg:p-6 xl:p-8 max-w-7xl mx-auto"
         )}>
           {step === 'upload' ? (

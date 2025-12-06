@@ -278,6 +278,13 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
     return Theme.System;
   });
   const [systemTheme, setSystemTheme] = useState<Theme>(readSystemTheme);
+  useEffect(() => {
+    try {
+      localStorage.setItem('dimicall-theme', theme);
+    } catch {
+      // Ignore storage write issues (private mode, etc.)
+    }
+  }, [theme]);
 
   const resolveThemeValue = useCallback(
     (value: Theme) => (value === Theme.System ? systemTheme : value),
@@ -2915,6 +2922,10 @@ Dimitri MOREL - Arcanis Conseil`;
     return <LoginPage />;
   }
 
+  const hasNativeTitleBar =
+    typeof window !== 'undefined' && Boolean((window as any).electronAPI);
+  const headerHeight = hasNativeTitleBar ? '2rem' : '0px';
+
   return (
     <SidebarProvider
       className={cn(
@@ -2924,10 +2935,10 @@ Dimitri MOREL - Arcanis Conseil`;
       )}
       style={{
         minHeight: 0,
-        paddingTop: "var(--header-height)",
+        paddingTop: hasNativeTitleBar ? headerHeight : 0,
         "--sidebar-width": "16rem",
         "--sidebar-width-icon": "3rem",
-        "--header-height": "2rem",
+        "--header-height": headerHeight,
       } as React.CSSProperties}
     >
       <AppSidebar
@@ -2940,7 +2951,7 @@ Dimitri MOREL - Arcanis Conseil`;
         onChangeViewMode={(mode) => setViewMode(mode)}
         theme={resolvedTheme}
       />
-      <SidebarInset className="min-w-0 flex flex-col min-h-0 transition-all duration-200 ease-linear pt-0 mt-0 basis-full overflow-hidden">
+      <SidebarInset className="min-w-0 flex flex-col min-h-0 transition-all duration-200 ease-linear pt-0 mt-0 basis-full overflow-hidden pl-0 md:peer-data-[variant=inset]:m-0 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-0">
         {/* Barre de titre personnalisée pour Electron */}
         <TitleBar
           theme={resolvedTheme}
@@ -3006,7 +3017,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
 
           {/* Main content card (includes header) */}
-          <div className="group-data-[variant=floating]:border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm bg-card text-foreground border border-border rounded-lg shadow-sm ml-1 sm:ml-2 mr-[2px] sm:mr-[4px] mt-[2px] sm:mt-[4px] mb-[2px] sm:mb-[4px] flex-1 flex flex-col min-h-0 overflow-hidden min-w-0">
+           <div className="group-data-[variant=floating]:border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm bg-card text-foreground border border-border rounded-lg shadow-sm mr-[2px] sm:mr-[4px] mt-[2px] sm:mt-[4px] mb-[2px] sm:mb-[4px] flex-1 flex flex-col min-h-0 overflow-hidden min-w-0">
             {/* Header inside the white container */}
             <MainHeader
               theme={resolvedTheme}
@@ -3070,59 +3081,39 @@ Dimitri MOREL - Arcanis Conseil`;
 
                 {/* Bandeau filtres uniformisé pour Graph/BDD */}
                 {viewMode === 'graph' || viewMode === 'db' ? (
-                  <div className="flex-1 w-full min-w-0 bg-card rounded-lg p-2 md:p-3 shadow-sm border">
-                    <div className="flex flex-wrap items-center justify-between gap-2 w-full min-w-0">
+                  <div className="w-full min-w-0">
+                    <div
+                      className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-2 sm:px-4 md:px-6 pt-2 pb-2 w-full min-w-0"
+                      role="toolbar"
+                      aria-label="Barre d'outils Graphiques"
+                    >
                       <div className="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0">
                         <div className="flex flex-col min-w-0">
-                          <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">
-                            {viewMode === 'graph' ? 'Visuels' : 'Table'}
+                          <h1 className="text-lg sm:text-xl font-semibold text-foreground truncate">
+                            {viewMode === 'graph' ? 'Graphiques' : 'Données'}
                           </h1>
-                          <p className="hidden sm:block text-xs text-muted-foreground">
-                            Base SQLite locale partagée entre visuels et table
-                          </p>
                         </div>
-                        <div
-                          role="group"
-                          data-slot="button-group"
-                          aria-label="Sélectionner le mode d'affichage"
-                          className="inline-flex w-fit items-stretch rounded-md border bg-muted/40 p-0.5 [&>*]:rounded-none [&>*:not(:first-child)]:-ml-px [&>*:first-child]:rounded-l-md [&>*:last-child]:rounded-r-md"
-                        >
-                          <Button
-                            data-slot="button"
-                            variant={viewMode === 'graph' ? 'default' : 'outline'}
-                            size="sm"
-                            aria-pressed={viewMode === 'graph'}
-                            className={cn("h-9 px-3 gap-1.5", viewMode === 'graph' ? "shadow-sm" : "bg-background")}
-                            onClick={() => setViewMode('graph')}
-                          >
-                            <BarChart3 className="h-4 w-4" />
-                            <span className="hidden sm:inline">Visuels</span>
-                            <span className="sm:hidden">Visu</span>
-                          </Button>
-                          <Button
-                            data-slot="button"
-                            variant={viewMode === 'db' ? 'default' : 'outline'}
-                            size="sm"
-                            aria-pressed={viewMode === 'db'}
-                            className={cn("h-9 px-3 gap-1.5", viewMode === 'db' ? "shadow-sm" : "bg-background")}
-                            onClick={() => setViewMode('db')}
-                          >
-                            <Table2 className="h-4 w-4" />
-                            <span className="hidden sm:inline">Table</span>
-                            <span className="sm:hidden">Table</span>
-                          </Button>
-                        </div>
+                        <div className="h-9" />
                       </div>
-                      <div className="flex flex-wrap items-center justify-end gap-1.5 md:gap-2">
+                      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 w-full md:w-auto order-3 md:order-none justify-end flex-wrap">
                         {viewMode === 'db' && (
-                          <Button variant="outline" size="sm" className="h-9 gap-2 px-3" onClick={handleDbExport}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-9 gap-2 px-3 bg-white dark:bg-card border-border/70 shadow-none"
+                            onClick={handleDbExport}
+                          >
                             <FileSpreadsheet className="h-4 w-4" />
                             <span className="text-sm">Exporter</span>
                           </Button>
                         )}
                         <DropdownMenu modal={false} open={filterMenuOpen} onOpenChange={setFilterMenuOpen}>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-9 gap-2 px-3">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-9 gap-2 px-3 bg-white dark:bg-card border-border/70 shadow-none"
+                            >
                               <Calendar className="h-4 w-4" />
                               <span className="text-sm">{dateRangeLabel}</span>
                               <ChevronDown className="h-3.5 w-3.5 opacity-70" />

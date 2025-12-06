@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { ButtonGroup } from '@/components/ui/button-group';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
@@ -12,9 +13,15 @@ import { localDbService } from '@/services/localDbService';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
 import { Contact, ContactStatus } from '@/types';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar as DateRangeCalendar } from '@/components/ui/calendar';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,8 +45,8 @@ import {
   Upload,
   Trash2,
   FileSpreadsheet,
-  ArrowUpNarrowWide,
   X,
+  Filter,
 } from 'lucide-react';
 import type { StatusEventRecord } from '@/types/statusEvent';
 import { formatPhoneNumber, importContactsFromFile } from '../services/dataService';
@@ -548,8 +555,8 @@ export function AnnuairePage({
   const [selectedContact, setSelectedContact] = useState<DirectoryContact | null>(null);
   const [isContactDialogOpen, setIsContactDialogOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState<'nom' | 'prenom' | 'statut' | 'firstCall' | 'firstD0R0' | 'lastCall' | 'phone'>('nom');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortBy] = useState<'nom' | 'prenom' | 'statut' | 'firstCall' | 'firstD0R0' | 'lastCall' | 'phone'>('nom');
+  const [sortOrder] = useState<'asc' | 'desc'>('asc');
   const [statusCategory, setStatusCategory] = useState<StatusCategory>('all');
 
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
@@ -1077,28 +1084,12 @@ export function AnnuairePage({
     []
   );
 
-  const sortFieldLabel = useMemo(() => {
-    switch (sortBy) {
-      case 'phone':
-        return 'Téléphone';
-      case 'lastCall':
-        return 'Dernier appel';
-      case 'prenom':
-        return 'Prénom';
-      case 'statut':
-        return 'Statut';
-      case 'firstCall':
-        return '1er appel';
-      case 'firstD0R0':
-        return '1er D0/R0';
-      default:
-        return 'Nom';
-    }
-  }, [sortBy]);
-
-  const handleSortOrderToggle = useCallback(() => {
-    setSortOrder((previous) => (previous === 'asc' ? 'desc' : 'asc'));
-  }, []);
+  const statusCategoryLabel = useMemo(
+    () =>
+      statusCategoryOptions.find((option) => option.value === statusCategory)?.label ??
+      'Filtrer par catégorie',
+    [statusCategory, statusCategoryOptions]
+  );
 
   const rangeLabel = useMemo(() => {
     if (!dateRange.start && !dateRange.end) {
@@ -1606,7 +1597,7 @@ export function AnnuairePage({
   return (
     <div className="flex h-full flex-col gap-4 w-full overflow-hidden">
       {/* Navbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 border-b">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 bg-white dark:bg-background rounded-md transition-colors">
         <div className="flex items-center gap-4">
           <div className="flex flex-col gap-0.5">
             <h1 className="text-xl font-semibold text-foreground">Annuaire</h1>
@@ -1623,157 +1614,62 @@ export function AnnuairePage({
           <ViewSwitcher currentView={viewMode} onViewChange={handleViewChange} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative flex-1 min-w-[220px]">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Rechercher un contact..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-9 h-9"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                aria-label="Effacer la recherche"
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                onClick={() => setSearchTerm('')}
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9"
-            onClick={handleSortOrderToggle}
-            title={sortOrder === 'asc' ? 'Tri croissant' : 'Tri décroissant'}
-          >
-            <ArrowUpNarrowWide className="h-4 w-4" />
-          </Button>
-          <Select value={sortBy} onValueChange={(value) => setSortBy(value as any)}>
-            <SelectTrigger className="h-9 w-[200px]">
-              <SelectValue placeholder="Trier par" aria-label={`Trier par ${sortFieldLabel}`} />
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem value="nom">Nom</SelectItem>
-              <SelectItem value="prenom">Prénom</SelectItem>
-              <SelectItem value="statut">Statut</SelectItem>
-              <SelectItem value="firstCall">Date du premier appel</SelectItem>
-              <SelectItem value="firstD0R0">Date du premier D0/R0</SelectItem>
-              <SelectItem value="lastCall">Dernier appel</SelectItem>
-              <SelectItem value="phone">Téléphone</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      {/* Filters & actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-b">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex items-center gap-2">
-            {quickFilters.map(({ key, label }) => (
-              <Button
-                key={key}
-                size="sm"
-                variant={filterQuick === key ? 'default' : 'outline'}
-                className="h-8"
-                onClick={() => handleQuickFilter(key as QuickFilterKey)}
-              >
-                {label}
-              </Button>
-            ))}
-          </div>
-          <Popover open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8">
-                <Calendar className="h-4 w-4 mr-2" />
-                {rangeLabel}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="p-2" align="start">
-              <DateRangeCalendar
-                mode="range"
-                selected={{
-                  from: dateRange.start ? new Date(dateRange.start) : undefined,
-                  to: dateRange.end ? new Date(dateRange.end) : undefined,
-                }}
-                onSelect={handleCustomRange}
-                numberOfMonths={2}
-              />
-            </PopoverContent>
-          </Popover>
-          <Select
-            value={statusCategory}
-            onValueChange={(value) => setStatusCategory(value as StatusCategory)}
-          >
-            <SelectTrigger className="h-8 w-[220px]">
-              <SelectValue placeholder="Filtrer par catégorie" />
-            </SelectTrigger>
-            <SelectContent align="start">
-              {statusCategoryOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-9"
-            onClick={() => dispatchLocalDbEvent('dimicall-db-import')}
-            title="Importer un fichier CSV/Excel"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Importer
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button 
-                variant="outline"
-                size="sm" 
-                disabled={contacts.length === 0}
-                className="h-9"
-                title="Exporter les données"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Exporter
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56 border shadow-lg bg-popover text-popover-foreground z-50">
-              <DropdownMenuLabel className="flex items-center gap-2">
-                <Download className="w-4 h-4" />
-                Options d'export
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => dispatchLocalDbEvent('dimicall-db-export')}>
-                CSV
-                {contacts.length > 0 && (
-                  <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
-                )}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => dispatchLocalDbEvent('dimicall-db-export-xlsx')}>
-                <FileSpreadsheet className="mr-2 h-4 w-4" />
-                Excel (.xlsx)
-                {contacts.length > 0 && (
-                  <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
-                )}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <ButtonGroup className="shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-2 shrink-0 shadow-none bg-white dark:bg-card border-border/70"
+              onClick={() => dispatchLocalDbEvent('dimicall-db-import')}
+              title="Importer un fichier CSV/Excel"
+            >
+              <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Importer</span>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline"
+                  size="sm" 
+                  disabled={contacts.length === 0}
+                  className="h-8 px-2 shrink-0 shadow-none bg-white dark:bg-card border-border/70"
+                  title="Exporter les données"
+                >
+                  <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">Exporter</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-56 border shadow-none bg-popover text-popover-foreground z-50">
+                <DropdownMenuLabel className="flex items-center gap-2">
+                  <Download className="w-4 h-4" />
+                  Options d'export
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => dispatchLocalDbEvent('dimicall-db-export')}>
+                  CSV
+                  {contacts.length > 0 && (
+                    <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => dispatchLocalDbEvent('dimicall-db-export-xlsx')}>
+                  <FileSpreadsheet className="mr-2 h-4 w-4" />
+                  Excel (.xlsx)
+                  {contacts.length > 0 && (
+                    <span className="ml-auto text-xs text-muted-foreground">({contacts.length})</span>
+                  )}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </ButtonGroup>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9"
+                className="h-8 px-2 shadow-none bg-white dark:bg-card border-border/70"
                 title="Supprimer la sélection"
                 disabled={!hasSelection}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -1799,12 +1695,12 @@ export function AnnuairePage({
               <Button
                 variant="destructive"
                 size="sm"
-                className="h-9"
+                className="h-8 px-2 shadow-none"
                 title="Réinitialiser toute la base de données"
                 disabled={contacts.length === 0}
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Réinitialiser tout
+                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Réinitialiser tout</span>
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -1833,6 +1729,104 @@ export function AnnuairePage({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+        </div>
+      </div>
+
+      {/* Filters & actions */}
+      <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b">
+        <div className="flex flex-wrap items-center gap-2 flex-1">
+          <div className="relative w-full min-w-[200px] max-w-md sm:w-[320px]">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Rechercher un contact..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-9 h-9"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                aria-label="Effacer la recherche"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setSearchTerm('')}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <Select
+            value={statusCategory}
+            onValueChange={(value) => setStatusCategory(value as StatusCategory)}
+          >
+            <SelectTrigger
+              aria-label={statusCategoryLabel}
+              className="h-8 w-10 px-0 justify-center"
+            >
+              <Filter className="h-4 w-4" aria-hidden="true" />
+              <span className="sr-only">{statusCategoryLabel}</span>
+            </SelectTrigger>
+            <SelectContent align="start">
+              {statusCategoryOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DropdownMenu open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen} modal={false}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex items-center justify-center gap-2 rounded-md border bg-transparent px-0 py-2 text-sm whitespace-nowrap shadow-none transition-colors outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 h-8 w-10"
+                aria-label={rangeLabel}
+              >
+                <Calendar className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">{rangeLabel}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="start"
+              side="bottom"
+              sideOffset={4}
+              avoidCollisions={false}
+              className="w-fit max-w-[min(100vw-32px,520px)] p-0 overflow-y-auto overflow-x-hidden"
+              style={{ maxHeight: 'min(80vh, 560px)' }}
+            >
+              <div className="p-3 space-y-3">
+                <div className="text-sm font-medium text-foreground">Plages rapides</div>
+                <div className="flex flex-wrap gap-2">
+                  {quickFilters.map(({ key, label }) => (
+                    <Button
+                      key={key}
+                      size="sm"
+                      variant={filterQuick === key ? 'default' : 'ghost'}
+                      className="h-8"
+                      onClick={() => {
+                        handleQuickFilter(key as QuickFilterKey);
+                        setIsDatePickerOpen(false);
+                      }}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+                <Separator />
+                <div>
+                  <div className="mb-2 text-sm font-medium text-foreground">Plage personnalisée</div>
+                  <DateRangeCalendar
+                    mode="range"
+                    selected={{
+                      from: dateRange.start ? new Date(dateRange.start) : undefined,
+                      to: dateRange.end ? new Date(dateRange.end) : undefined,
+                    }}
+                    onSelect={handleCustomRange}
+                    numberOfMonths={2}
+                  />
+                </div>
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

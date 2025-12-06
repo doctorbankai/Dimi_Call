@@ -937,7 +937,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             <div className="space-y-3">
               <Label className="text-sm font-medium">Préférences Beta</Label>
               {diagnosticInfo.betaPreferences && (
-                <div className="bg-muted/50 p-3 rounded-md text-sm font-mono">
+                <div className="bg-white dark:bg-card p-3 rounded-md text-sm font-mono border shadow-none">
                   <pre>{JSON.stringify(diagnosticInfo.betaPreferences, null, 2)}</pre>
                 </div>
               )}
@@ -946,7 +946,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             <div className="space-y-3">
               <Label className="text-sm font-medium">État des mises à jour</Label>
               {diagnosticInfo.updateStatus && (
-                <div className="bg-muted/50 p-3 rounded-md text-sm font-mono">
+                <div className="bg-white dark:bg-card p-3 rounded-md text-sm font-mono border shadow-none">
                   <pre>{JSON.stringify(diagnosticInfo.updateStatus, null, 2)}</pre>
                 </div>
               )}
@@ -1310,7 +1310,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               </div>
 
               {/* Variables Help */}
-              <div className="bg-muted/50 p-4 rounded-lg border">
+              <div className="bg-white dark:bg-card p-4 rounded-lg border shadow-none">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Settings className="w-4 h-4 text-muted-foreground" />
@@ -1353,7 +1353,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Bandeau mode actif */}
-          <div className="flex items-center justify-between p-3 rounded-md bg-accent/30 border">
+          <div className="flex items-center justify-between p-3 rounded-md bg-white dark:bg-card border shadow-none">
             <div className="text-sm">
               Mode actif : <strong>{callMode === CallMode.Apporteur ? 'Apporteur' : 'Client'}</strong>
             </div>
@@ -1383,7 +1383,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           </div>
 
           {/* Informations d'aide */}
-          <div className="bg-muted/50 rounded-lg p-4 border">
+          <div className="bg-white dark:bg-card rounded-lg p-4 border shadow-none">
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <Settings className="w-4 h-4 text-muted-foreground" />
@@ -1404,7 +1404,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
           {/* Aperçu de l'URL finale */}
           {localCalcomUrl && (
-            <div className="bg-muted/50 rounded-lg p-4 border">
+            <div className="bg-white dark:bg-card rounded-lg p-4 border shadow-none">
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-sm font-medium">Aperçu</span>
               </div>
@@ -1496,7 +1496,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Bandeau mode actif */}
-              <div className="flex items-center justify-between p-3 rounded-md bg-accent/30 border">
+              <div className="flex items-center justify-between p-3 rounded-md bg-white dark:bg-card border shadow-none">
                 <div className="text-sm">
                   Mode actif : <strong>{callMode === CallMode.Apporteur ? 'Apporteur' : 'Client'}</strong>
                 </div>
@@ -1531,7 +1531,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               </div>
 
               {/* Variables Help */}
-              <div className="bg-muted/50 p-4 rounded-lg border">
+              <div className="bg-white dark:bg-card p-4 rounded-lg border shadow-none">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Settings className="w-4 h-4 text-muted-foreground" />
@@ -1555,7 +1555,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
               {/* Aperçu avec exemple */}
               {currentTemplate && (
-                <div className="bg-muted/50 rounded-lg p-4 border">
+                <div className="bg-white dark:bg-card rounded-lg p-4 border shadow-none">
                   <div className="flex items-center gap-2 mb-3">
                     <MessageSquare className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Aperçu avec exemple</span>
@@ -1678,7 +1678,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             </div>
           </div>
           
-          <div className="p-4 bg-muted/50 rounded-lg">
+          <div className="p-4 bg-white dark:bg-card rounded-lg border shadow-none">
             <p className="text-sm text-muted-foreground">
               <strong>Note :</strong> Ces pages sont masquées par défaut. Activez-les uniquement si vous avez besoin d'accéder aux fonctionnalités spécifiques qu'elles offrent.
             </p>
@@ -2010,7 +2010,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent showCloseButton={false} className="max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1400px] xl:max-w-7xl w-full h-[95vh] sm:h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="p-3 sm:p-4 border-b flex-row items-center justify-between gap-2">
+        <DialogHeader className="p-3 sm:p-4 border-b flex-row items-center justify-between gap-2 bg-white dark:bg-background transition-colors">
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
             <span className="hidden sm:inline">Réglages de l'application</span>
@@ -2037,9 +2037,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           </div>
         </DialogHeader>
 
-        <div className="flex flex-1 overflow-hidden min-h-0">
+        <div className="flex flex-1 overflow-hidden min-h-0 bg-white dark:bg-background transition-colors">
           {/* Sidebar de navigation */}
-          <div className="w-48 sm:w-56 md:w-64 border-r bg-muted/30 p-2 sm:p-3 md:p-4 flex-shrink-0 h-full overflow-y-auto">
+          <div className="w-48 sm:w-56 md:w-64 border-r bg-white dark:bg-muted/20 p-2 sm:p-3 md:p-4 flex-shrink-0 h-full overflow-y-auto transition-colors">
             <div className="pb-3 sm:pb-4 hidden sm:block">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-md bg-foreground/10 flex items-center justify-center">
@@ -2081,7 +2081,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         </div>
         
         {/* Pied de page avec boutons */}
-        <div className="p-3 sm:p-4 border-t flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 bg-muted/30">
+        <div className="p-3 sm:p-4 border-t flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 bg-white dark:bg-background transition-colors">
           <Button variant="ghost" onClick={handleReset} className="text-xs sm:text-sm h-8 sm:h-9">Réinitialiser</Button>
           <Button onClick={handleSave} disabled={!hasChanges} className="text-xs sm:text-sm h-8 sm:h-9">
             <Save className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" />

@@ -28,7 +28,7 @@ export const getCategoryDetails = (): Record<
       description: 'Compte stratégique et prioritaire',
       badgeClass: 'bg-sky-500/15 text-sky-600 dark:text-sky-200 border-sky-500/30',
       buttonClass:
-        'bg-gradient-to-br from-sky-500 to-indigo-500 text-white shadow-lg shadow-sky-500/20 hover:shadow-xl hover:shadow-sky-500/30',
+        'bg-gradient-to-br from-sky-500/12 via-sky-500/8 to-indigo-500/12 text-foreground border-sky-500/35 shadow-[0_12px_32px_-18px_rgba(14,165,233,0.55)] hover:shadow-[0_12px_32px_-14px_rgba(14,165,233,0.65)] hover:border-sky-500/60',
       icon: WhaleIcon,
     },
     [ProspectCategory.Poisson]: {
@@ -36,7 +36,7 @@ export const getCategoryDetails = (): Record<
       description: 'Bon fit, opportunité standard',
       badgeClass: 'bg-cyan-500/15 text-cyan-600 dark:text-cyan-200 border-cyan-500/30',
       buttonClass:
-        'bg-gradient-to-br from-cyan-500 to-emerald-500 text-white shadow-lg shadow-emerald-500/20 hover:shadow-xl hover:shadow-emerald-500/30',
+        'bg-gradient-to-br from-cyan-500/12 via-cyan-400/10 to-emerald-500/12 text-foreground border-cyan-500/35 shadow-[0_12px_32px_-18px_rgba(16,185,129,0.55)] hover:shadow-[0_12px_32px_-14px_rgba(16,185,129,0.65)] hover:border-emerald-500/60',
       icon: FishIcon,
     },
     [ProspectCategory.Premature]: {
@@ -44,7 +44,7 @@ export const getCategoryDetails = (): Record<
       description: 'Potentiel mais timing non idéal',
       badgeClass: 'bg-amber-500/15 text-amber-700 dark:text-amber-200 border-amber-500/30',
       buttonClass:
-        'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/20 hover:shadow-xl hover:shadow-amber-500/30',
+        'bg-gradient-to-br from-amber-500/14 via-amber-400/10 to-orange-500/14 text-foreground border-amber-500/40 shadow-[0_12px_32px_-18px_rgba(245,158,11,0.55)] hover:shadow-[0_12px_32px_-14px_rgba(245,158,11,0.65)] hover:border-amber-500/65',
       icon: PrematureIcon,
     },
     [ProspectCategory.Inexploitable]: {
@@ -52,7 +52,7 @@ export const getCategoryDetails = (): Record<
       description: 'Non pertinent ou données insuffisantes',
       badgeClass: 'bg-rose-500/15 text-rose-700 dark:text-rose-200 border-rose-500/30',
       buttonClass:
-        'bg-gradient-to-br from-rose-500 to-red-600 text-white shadow-lg shadow-rose-500/20 hover:shadow-xl hover:shadow-rose-500/30',
+        'bg-gradient-to-br from-rose-500/14 via-rose-400/10 to-red-500/14 text-foreground border-rose-500/40 shadow-[0_12px_32px_-18px_rgba(244,63,94,0.55)] hover:shadow-[0_12px_32px_-14px_rgba(244,63,94,0.65)] hover:border-rose-500/65',
       icon: InexploitableIcon,
     },
     [ProspectCategory.Passer]: {
@@ -60,7 +60,7 @@ export const getCategoryDetails = (): Record<
       description: 'Passer ce profil pour le moment',
       badgeClass: 'bg-gray-500/15 text-gray-700 dark:text-gray-200 border-gray-500/30',
       buttonClass:
-        'bg-gradient-to-br from-gray-500 to-gray-600 text-white shadow-lg shadow-gray-500/20 hover:shadow-xl hover:shadow-gray-500/30',
+        'bg-gradient-to-br from-gray-500/12 via-gray-400/10 to-gray-600/12 text-foreground border-gray-500/35 shadow-[0_12px_32px_-18px_rgba(107,114,128,0.45)] hover:shadow-[0_12px_32px_-14px_rgba(107,114,128,0.55)] hover:border-gray-500/60',
       icon: PasserIcon,
     },
   };

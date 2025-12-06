@@ -120,7 +120,8 @@ const CallControl: React.FC<CallControlProps> = ({
 
   const subtleIconClasses = cn(
     iconBaseClasses,
-    "bg-muted/70 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent shadow-none"
+    "bg-white text-foreground hover:bg-muted/60 border border-border/70 shadow-none",
+    "dark:bg-muted/70 dark:text-muted-foreground dark:hover:bg-muted dark:border-transparent"
   );
 
   const renderPrimaryButtons = () => (

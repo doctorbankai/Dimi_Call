@@ -24,7 +24,10 @@ export function ViewSwitcher({ currentView, onViewChange, className }: ViewSwitc
         onClick={() => onViewChange('cards')}
         aria-label="Vue en cartes"
         aria-pressed={currentView === 'cards'}
-        className="h-9 px-3 shadow-none"
+        className={cn(
+          "h-9 px-3 shadow-none",
+          currentView !== 'cards' && "bg-white dark:bg-card border-border/70"
+        )}
       >
         <LayoutGrid className="h-4 w-4 mr-2" />
         <span className="hidden sm:inline">Cards</span>
@@ -35,7 +38,10 @@ export function ViewSwitcher({ currentView, onViewChange, className }: ViewSwitc
         onClick={() => onViewChange('table')}
         aria-label="Vue en tableau"
         aria-pressed={currentView === 'table'}
-        className="h-9 px-3 shadow-none"
+        className={cn(
+          "h-9 px-3 shadow-none",
+          currentView !== 'table' && "bg-white dark:bg-card border-border/70"
+        )}
       >
         <Table2 className="h-4 w-4 mr-2" />
         <span className="hidden sm:inline">Table</span>

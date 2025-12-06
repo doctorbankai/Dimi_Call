@@ -27,7 +27,7 @@ export function UpcomingEventsCard() {
   const remainingCount = upcomingEvents.length - displayedEvents.length;
 
   return (
-    <div data-slot="card" className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm">
+    <div data-slot="card" className="bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-none">
       <div data-slot="card-header" className="@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6">
         <div data-slot="card-title" className="font-semibold flex items-center gap-2 text-lg">
           <Clock className="h-5 w-5" aria-hidden="true" />

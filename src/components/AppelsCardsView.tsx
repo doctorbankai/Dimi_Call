@@ -964,7 +964,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       onDrop={handleDrop}
     >
       <DropZoneOverlay isVisible={isDragOver} isDragActive={isDragActive} />
-      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-2 sm:px-4 md:px-6 pt-2 pb-2 min-w-0" role="toolbar" aria-label="Barre d'outils Appels">
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-2 sm:px-4 md:px-6 pt-2 pb-2 min-w-0 bg-white dark:bg-background rounded-md transition-colors" role="toolbar" aria-label="Barre d'outils Appels">
         <div className="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0 flex-shrink-0">
           <div className="flex flex-col gap-0.5 min-w-0">
             <h1 className="text-lg sm:text-xl font-semibold text-foreground truncate">Appels</h1>
@@ -980,7 +980,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 sm:px-3 shrink-0 text-xs sm:text-sm gap-2 shadow-none"
+                className="h-8 px-2 sm:px-3 shrink-0 text-xs sm:text-sm gap-2 shadow-none bg-white dark:bg-card"
                 title="Réglages"
               >
                 <Settings2 className="h-4 w-4" />
@@ -1062,7 +1062,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
             <Button 
               size="sm"
               variant="outline"
-              className="h-8 px-2 shrink-0 shadow-none"
+              className="h-8 px-2 shrink-0 shadow-none bg-white dark:bg-card"
               onClick={() => {
                 const input = document.createElement('input')
                 input.type = 'file'
@@ -1086,7 +1086,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   size="sm" 
                   disabled={contacts.length === 0}
                   variant="outline"
-                  className="h-8 px-2 shrink-0 shadow-none"
+                  className="h-8 px-2 shrink-0 shadow-none bg-white dark:bg-card"
                   title="Exporter les données"
                 >
                   <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -1254,7 +1254,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="outline"
-                    className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 md:px-3 py-1.5 h-7 sm:h-8 text-xs sm:text-sm shrink-0 min-w-0 shadow-none"
+                    className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 md:px-3 py-1.5 h-7 sm:h-8 text-xs sm:text-sm shrink-0 min-w-0 shadow-none bg-white dark:bg-card border-border/70"
                   >
                     <span className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shrink-0" style={{backgroundColor: tableTabs.find(t => t.id === activeTableTabId)?.color || 'var(--primary)'}}></span>
                     <span className="truncate max-w-[60px] xs:max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">

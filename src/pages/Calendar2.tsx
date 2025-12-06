@@ -17,6 +17,13 @@ export default function Calendar2({ onOpenAnnuaireContact }: Calendar2Props) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    document.body.classList.add('calendar-no-shadow');
+    return () => {
+      document.body.classList.remove('calendar-no-shadow');
+    };
+  }, []);
+
+  useEffect(() => {
     // Charger les événements depuis la base de données locale
     const loadEvents = async () => {
       try {
@@ -97,14 +104,14 @@ export default function Calendar2({ onOpenAnnuaireContact }: Calendar2Props) {
   }
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col">
+    <div className="flex-1 min-h-0 flex flex-col calendar-no-shadow">
       <CalendarProvider
         events={events}
         users={USERS_MOCK}
         onOpenAnnuaireContact={onOpenAnnuaireContact}
         onCompleteEvent={handleCompleteEvent}
       >
-        <div className="border-b px-4 py-3 flex items-center justify-between">
+        <div className="px-4 py-3 flex items-center justify-between">
           <h1 className="text-xl font-semibold">Calendrier</h1>
         </div>
         <div className="flex gap-4 p-4 h-full overflow-hidden">

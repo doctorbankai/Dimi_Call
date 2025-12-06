@@ -41,12 +41,12 @@
   /* Radius ultra moderne */
   --radius: 0.75rem;
 
-  /* Ombres subtiles - AMÉLIORÉES */
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
-  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.06), 0 1px 2px -1px rgb(0 0 0 / 0.06);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  /* Ombres neutralisées globalement */
+  --shadow-sm: none;
+  --shadow: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
   --sidebar: hsl(0 0% 98%);
   --sidebar-foreground: hsl(240 5.3% 26.1%);
   --sidebar-primary: hsl(240 5.9% 10%);
@@ -66,6 +66,19 @@
   --chart-4: hsl(262 89% 66%); /* Violet */
   --chart-5: hsl(0 84% 63%);   /* Rouge */
   --chart-6: hsl(24 95% 57%);  /* Orange vif */
+}
+
+.calendar-no-shadow,
+.calendar-no-shadow * {
+  box-shadow: none !important;
+}
+
+.calendar-no-shadow {
+  --shadow-sm: none;
+  --shadow: none;
+  --shadow-md: none;
+  --shadow-lg: none;
+  --shadow-xl: none;
 }
 
 .dark {
@@ -130,6 +143,13 @@ button:focus:not(:focus-visible),
 button:focus-visible,
 [role="button"]:focus-visible,
 [data-slot="dropdown-menu-trigger"]:focus-visible {
+  outline: 2px solid hsl(var(--ring)) !important;
+  outline-offset: 2px !important;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
   outline: 2px solid hsl(var(--ring)) !important;
   outline-offset: 2px !important;
 }
@@ -209,8 +229,7 @@ body {
     hsl(var(--card)) 0%, 
     hsl(var(--accent)) 100%);
   border: 1px solid hsl(var(--border));
-  box-shadow: 0 1px 3px 0 rgb(59 130 246 / 0.05), 
-              0 1px 2px -1px rgb(59 130 246 / 0.05);
+  box-shadow: none;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -241,15 +260,14 @@ body {
     hsl(var(--accent)) 0%, 
     hsl(var(--primary) / 0.1) 100%);
   border-color: hsl(var(--primary) / 0.3);
-  box-shadow: 0 4px 12px 0 rgb(59 130 246 / 0.15), 
-              0 2px 4px -1px rgb(59 130 246 / 0.1);
+  box-shadow: none;
 }
 
 .dark .ribbon-button-modern {
   /* Conserver l'apparence sombre en mode sombre */
   background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .gradient-border {
@@ -334,25 +352,23 @@ body {
     hsl(var(--accent) / 0.3) 100%);
   border: 1px solid hsl(var(--border));
   border-radius: var(--radius);
-  box-shadow: 0 1px 3px 0 rgb(59 130 246 / 0.08), 
-              0 1px 2px -1px rgb(59 130 246 / 0.08);
+  box-shadow: none;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-ultra:hover {
-  box-shadow: 0 4px 12px 0 rgb(59 130 246 / 0.12), 
-              0 2px 4px -1px rgb(59 130 246 / 0.12);
+  box-shadow: none;
   border-color: hsl(var(--primary) / 0.2);
   transform: translateY(-1px);
 }
 
 .dark .card-ultra {
   background: hsl(var(--card));
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .dark .card-ultra:hover {
-  box-shadow: var(--shadow-md);
+  box-shadow: none;
   transform: translateY(-1px);
 }
 
@@ -392,14 +408,13 @@ body {
   padding: 0.5rem 0.75rem;
   font-size: 0.875rem;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 3px 0 rgb(59 130 246 / 0.05);
+  box-shadow: none;
 }
 
 .input-ultra:focus {
   outline: none;
   border-color: hsl(var(--ring));
-  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.15), 
-              0 2px 6px 0 rgb(59 130 246 / 0.1);
+  box-shadow: none;
   background: hsl(var(--card));
   transform: translateY(-1px);
 }
@@ -410,11 +425,11 @@ body {
 
 .dark .input-ultra {
   background-color: hsl(var(--background));
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
 }
 
 .dark .input-ultra:focus {
-  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+  box-shadow: none;
   transform: none;
 }
 
@@ -425,8 +440,7 @@ body {
   border-spacing: 0;
   border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: 0 2px 8px 0 rgb(59 130 246 / 0.08), 
-              0 1px 3px 0 rgb(59 130 246 / 0.08);
+  box-shadow: none;
   border: 1px solid hsl(var(--border));
 }
 
@@ -460,7 +474,7 @@ body {
 }
 
 .dark .table-ultra {
-  box-shadow: var(--shadow-sm);
+  box-shadow: none;
   border: 1px solid hsl(var(--border));
 }
 
@@ -521,20 +535,20 @@ body {
 
 /* Effets de survol ultra modernes */
 .hover-lift {
-  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  transition: transform 0.2s ease-in-out;
 }
 
 .hover-lift:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: none;
 }
 
 .hover-glow {
-  transition: box-shadow 0.2s ease-in-out;
+  transition: none;
 }
 
 .hover-glow:hover {
-  box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+  box-shadow: none;
 }
 
 /* Typographie ultra moderne */
@@ -638,7 +652,7 @@ body {
   gap: 0.75rem;
   padding: 1rem;
   border-radius: var(--radius);
-  box-shadow: var(--shadow-lg);
+  box-shadow: none;
   backdrop-filter: blur(10px);
   border: 1px solid hsl(var(--border));
   animation: slideIn 0.3s ease-out;
@@ -701,7 +715,7 @@ body {
 [data-radix-select-content] {
   background-color: hsl(var(--popover)) !important;
   border: 1px solid hsl(var(--border)) !important;
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+  box-shadow: none !important;
   backdrop-filter: blur(8px);
 }
 
@@ -715,7 +729,7 @@ body {
 [data-slot="popover-content"] {
   background-color: hsl(var(--popover)) !important;
   border: 1px solid hsl(var(--border)) !important;
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1) !important;
+  box-shadow: none !important;
 }
 
 .dark [data-slot="popover-content"] {
@@ -747,7 +761,7 @@ body {
 
 .status-badge:hover {
   transform: scale(1.02);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: none;
 }
 
 /* Indicateur de sélection de ligne */
@@ -759,7 +773,7 @@ body {
   width: 4px;
   background: linear-gradient(180deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
   border-radius: 0 2px 2px 0;
-  box-shadow: 0 0 10px hsl(var(--primary) / 0.3);
+  box-shadow: none;
 }
 
 /* Amélioration des champs date/heure */
@@ -866,7 +880,7 @@ body {
   z-index: 100 !important;
   background: hsl(var(--background)) !important;
   border-bottom: 1px solid hsl(var(--border)) !important;
-  box-shadow: 0 2px 8px 0 rgb(0 0 0 / 0.1), 0 1px 4px -1px rgb(0 0 0 / 0.1) !important;
+  box-shadow: none !important;
 }
 
 /* CRITICAL: Chaque th individuel doit avoir position: sticky */
@@ -1090,17 +1104,11 @@ table:has(.sticky-table-header),
 
 /* Effet de glow subtil pour le panneau actif */
 .panel-glow {
-  box-shadow: 
-    0 0 0 1px rgba(59, 130, 246, 0.1),
-    0 4px 12px rgba(59, 130, 246, 0.08),
-    0 16px 32px rgba(59, 130, 246, 0.04);
+  box-shadow: none;
 }
 
 .dark .panel-glow {
-  box-shadow: 
-    0 0 0 1px rgba(147, 197, 253, 0.1),
-    0 4px 12px rgba(147, 197, 253, 0.06),
-    0 16px 32px rgba(147, 197, 253, 0.03);
+  box-shadow: none;
 }
 
 /* Animation ultra smooth pour le bouton toggle */
@@ -1273,7 +1281,7 @@ table:has(.sticky-table-header),
   opacity: 1 !important;
   background-color: hsl(var(--popover)) !important; /* noir en dark, blanc cassé en clair */
   border: 1px solid hsl(var(--border)) !important;
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -2px rgb(0 0 0 / 0.1) !important;
+  box-shadow: none !important;
   color: hsl(var(--popover-foreground)) !important;
   z-index: 250 !important;
 }
@@ -1284,7 +1292,7 @@ table:has(.sticky-table-header),
   background-color: hsl(var(--popover)) !important;
   border: 1px solid hsl(var(--border)) !important;
   color: hsl(var(--popover-foreground)) !important;
-  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.45), 0 4px 6px -2px rgb(0 0 0 / 0.25) !important;
+  box-shadow: none !important;
 }
 
 /* Force l'opacité des éléments de dropdown */
@@ -1489,6 +1497,12 @@ table {
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    box-shadow: none !important;
+  }
+
+  *::before,
+  *::after {
+    box-shadow: none !important;
   }
   body {
     @apply bg-background text-foreground;

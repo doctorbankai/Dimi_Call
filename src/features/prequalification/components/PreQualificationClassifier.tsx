@@ -182,6 +182,16 @@ export const PreQualificationClassifier: React.FC<PreQualificationClassifierProp
             </span>
           </div>
 
+          {/* Raccourcis clavier */}
+          <div className="w-full mt-1 sm:mt-1.5 md:mt-2">
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2 px-2 py-1.5 rounded-md border bg-white dark:bg-muted/40 text-[9px] xs:text-[10px] sm:text-[11px] md:text-[12px] text-muted-foreground shadow-sm">
+              <span className="font-medium text-foreground/85">Raccourcis :</span>
+              <kbd className="px-1 py-0.5 bg-background rounded border text-[9px] sm:text-[10px] font-mono shadow-inner">1-5</kbd>
+              <span className="text-muted-foreground/80">ou</span>
+              <kbd className="px-1 py-0.5 bg-background rounded border text-[9px] sm:text-[10px] font-mono shadow-inner">Espace</kbd>
+            </div>
+          </div>
+
           {/* Profile Card - Ultra Compact sur mobile */}
           <Card className="border shadow-sm shrink-0">
             <CardContent className="p-1.5 sm:p-2 md:p-3 lg:p-4 xl:p-6 text-center space-y-1 sm:space-y-1.5 md:space-y-2 lg:space-y-3 xl:space-y-4">
@@ -288,9 +298,6 @@ export const PreQualificationClassifier: React.FC<PreQualificationClassifierProp
             </Button>
           </div>
 
-          <div className="text-center text-[8px] xs:text-[9px] sm:text-[10px] md:text-[11px] lg:text-[12px] text-muted-foreground shrink-0 mt-1">
-            Raccourcis : <kbd className="px-0.5 bg-muted rounded border text-[7px] sm:text-[8px]">1-5</kbd> ou <kbd className="px-0.5 bg-muted rounded border text-[7px] sm:text-[8px]">Espace</kbd>
-          </div>
         </div>
       </div>
 

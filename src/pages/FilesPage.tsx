@@ -725,7 +725,7 @@ export const FilesPage: React.FC<FilesPageProps> = ({ contacts: propContacts = [
   };
 
   return (
-    <div className="flex h-full flex-col w-full overflow-hidden bg-background">
+    <div className="flex h-full flex-col w-full overflow-hidden bg-white dark:bg-background text-foreground transition-colors">
       <input
         ref={fileInputRef}
         type="file"
@@ -734,54 +734,46 @@ export const FilesPage: React.FC<FilesPageProps> = ({ contacts: propContacts = [
         onChange={handleFileSelect}
       />
 
-      {/* Hero Header */}
-      <div className="border-b bg-card/50 backdrop-blur supports-[backdrop-filter]:bg-card/50">
-        <div className="px-8 py-6">
-          <div className="flex items-start justify-between gap-6">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">
-                Gestionnaire de Fichiers
-              </h1>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1.5">
+      {/* Header aligné avec Appels */}
+      <div className="bg-card border-b border-border/80">
+        <div
+          className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-2 sm:px-4 md:px-6 pt-2 pb-2 min-w-0"
+          role="toolbar"
+          aria-label="En-tête Fichiers"
+        >
+          <div className="flex flex-col gap-1 min-w-0">
+            <h1 className="text-lg sm:text-xl font-semibold text-foreground truncate">
+              Gestionnaire de Fichiers
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRegenerateContactFolders}
+              disabled={isRegenerating || contactsFromDb.length === 0}
+              title="Créer automatiquement les dossiers manquants pour tous les contacts"
+              className="h-8 px-3 sm:px-4 gap-2 shadow-none bg-white dark:bg-card border-border/70"
+            >
+              {isRegenerating ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Création...
+                </>
+              ) : (
+                <>
                   <Folder className="h-4 w-4" />
-                  {files.length} élément{files.length > 1 ? 's' : ''}
-                </span>
-                <span className="text-muted-foreground/60">•</span>
-                <span className="truncate font-mono text-xs">{currentPath}</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRegenerateContactFolders}
-                disabled={isRegenerating || contactsFromDb.length === 0}
-                title="Créer automatiquement les dossiers manquants pour tous les contacts"
-                className="h-9 gap-2"
-              >
-                {isRegenerating ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Création...
-                  </>
-                ) : (
-                  <>
-                    <Folder className="h-4 w-4" />
-                    Régénérer dossiers
-                  </>
-                )}
-              </Button>
-            </div>
+                  Régénérer dossiers
+                </>
+              )}
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="flex flex-col flex-1 overflow-hidden">
         <FileManagerToolbar
-          currentPath={currentPath}
-          onNavigate={loadDirectory}
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
           viewMode={viewMode}
@@ -793,7 +785,7 @@ export const FilesPage: React.FC<FilesPageProps> = ({ contacts: propContacts = [
           onUploadFiles={handleUploadClick}
         />
 
-        <div className="flex-1 px-6 pb-6 overflow-hidden relative">
+        <div className="flex-1 px-6 pb-6 overflow-hidden relative bg-white dark:bg-background transition-colors">
           <ResizablePanelGroup direction="horizontal" className="h-full gap-2">
             {/* File Tree */}
             <ResizablePanel defaultSize={24} minSize={18} maxSize={32} className="min-w-0">

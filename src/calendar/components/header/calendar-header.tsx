@@ -1,6 +1,7 @@
 import { Columns, Grid3x3, List, Grid2x2, CalendarRange } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useCalendar } from "@/calendar/contexts/calendar-context";
 
 import { TodayButton } from "@/calendar/components/header/today-button";
@@ -30,7 +31,10 @@ export function CalendarHeader({ view, events }: IProps) {
           aria-label="View by day" 
           size="icon" 
           variant={view === "day" ? "default" : "outline"} 
-          className="rounded-r-none [&_svg]:size-5"
+          className={cn(
+            "rounded-r-none [&_svg]:size-5",
+            view !== "day" && "bg-white dark:bg-card border-border/70"
+          )}
         >
           <List strokeWidth={1.8} />
         </Button>
@@ -40,7 +44,10 @@ export function CalendarHeader({ view, events }: IProps) {
           aria-label="View by week"
           size="icon"
           variant={view === "week" ? "default" : "outline"}
-          className="-ml-px rounded-none [&_svg]:size-5"
+          className={cn(
+            "-ml-px rounded-none [&_svg]:size-5",
+            view !== "week" && "bg-white dark:bg-card border-border/70"
+          )}
         >
           <Columns strokeWidth={1.8} />
         </Button>
@@ -50,7 +57,10 @@ export function CalendarHeader({ view, events }: IProps) {
           aria-label="View by month"
           size="icon"
           variant={view === "month" ? "default" : "outline"}
-          className="-ml-px rounded-none [&_svg]:size-5"
+          className={cn(
+            "-ml-px rounded-none [&_svg]:size-5",
+            view !== "month" && "bg-white dark:bg-card border-border/70"
+          )}
         >
           <Grid2x2 strokeWidth={1.8} />
         </Button>
@@ -60,7 +70,10 @@ export function CalendarHeader({ view, events }: IProps) {
           aria-label="View by year"
           size="icon"
           variant={view === "year" ? "default" : "outline"}
-          className="-ml-px rounded-none [&_svg]:size-5"
+          className={cn(
+            "-ml-px rounded-none [&_svg]:size-5",
+            view !== "year" && "bg-white dark:bg-card border-border/70"
+          )}
         >
           <Grid3x3 strokeWidth={1.8} />
         </Button>
@@ -70,7 +83,10 @@ export function CalendarHeader({ view, events }: IProps) {
           aria-label="View by agenda"
           size="icon"
           variant={view === "agenda" ? "default" : "outline"}
-          className="-ml-px rounded-l-none [&_svg]:size-5"
+          className={cn(
+            "-ml-px rounded-l-none [&_svg]:size-5",
+            view !== "agenda" && "bg-white dark:bg-card border-border/70"
+          )}
         >
           <CalendarRange strokeWidth={1.8} />
         </Button>

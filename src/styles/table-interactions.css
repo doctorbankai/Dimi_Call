@@ -61,12 +61,12 @@
 
 .sortable-chosen {
   transform: rotate(1deg);
-  box-shadow: 0 4px 12px hsl(var(--primary) / 0.2);
+  box-shadow: none;
 }
 
 .sortable-drag {
   opacity: 0.8;
-  box-shadow: 0 8px 24px hsl(var(--primary) / 0.3);
+  box-shadow: none;
   z-index: 100;
 }
 
@@ -79,7 +79,7 @@
 .drag-overlay {
   background: hsl(var(--background));
   border: 2px solid hsl(var(--primary) / 0.5);
-  box-shadow: 0 8px 24px hsl(var(--primary) / 0.3);
+  box-shadow: none;
   border-radius: 4px;
 }
 
