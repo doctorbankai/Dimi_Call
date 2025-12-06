@@ -32,7 +32,7 @@ export const DatePickerWithClear: React.FC<DatePickerWithClearProps> = ({
             <Button
               variant="outline"
               className={cn(
-                "flex-1 justify-start text-left font-normal",
+                "flex-1 justify-start text-left font-normal bg-white dark:bg-input/30 border border-input hover:bg-white dark:hover:bg-input/50 shadow-none",
                 !value && "text-muted-foreground"
               )}
             >
@@ -40,7 +40,7 @@ export const DatePickerWithClear: React.FC<DatePickerWithClearProps> = ({
               {value ? format(new Date(value), "dd MMM yyyy", { locale: fr }) : "Sélectionner"}
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
+          <PopoverContent className="w-auto p-0 shadow-none" align="start">
             <Calendar
               mode="single"
               locale={fr}

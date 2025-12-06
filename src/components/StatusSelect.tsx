@@ -14,6 +14,7 @@ interface StatusSelectProps {
   triggerClassName?: string;
   contentClassName?: string;
   size?: 'sm' | 'default';
+  displayAsBadge?: boolean;
 }
 
 const StatusSelect = React.memo<StatusSelectProps>(({
@@ -23,6 +24,7 @@ const StatusSelect = React.memo<StatusSelectProps>(({
   triggerClassName,
   contentClassName,
   size = 'default',
+  displayAsBadge = true,
 }) => {
   const { mode } = useCallMode();
   const [internalValue, setInternalValue] = useState<StatusValue | ''>(value || '');
@@ -100,7 +102,9 @@ const StatusSelect = React.memo<StatusSelectProps>(({
         onClick={(e) => e.stopPropagation()} // ✅ Empêche sélection ligne
       >
         {currentValue ? (
-          renderStatusBadge(currentValue)
+          displayAsBadge
+            ? renderStatusBadge(currentValue)
+            : <span className="text-xs font-medium text-foreground">{StatusConfigService.getLabel(currentValue, mode)}</span>
         ) : (
           <span className="text-xs text-muted-foreground">{placeholder}</span>
         )}
@@ -116,7 +120,12 @@ const StatusSelect = React.memo<StatusSelectProps>(({
   );
 }, (prevProps, nextProps) => {
   // Only re-render if value changes
-  return prevProps.value === nextProps.value;
+  return (
+    prevProps.value === nextProps.value &&
+    prevProps.displayAsBadge === nextProps.displayAsBadge &&
+    prevProps.triggerClassName === nextProps.triggerClassName &&
+    prevProps.contentClassName === nextProps.contentClassName
+  );
 });
 
 StatusSelect.displayName = 'StatusSelect';
