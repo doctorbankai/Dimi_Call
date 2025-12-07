@@ -11,7 +11,7 @@ import {
   SidebarGroupLabel,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Settings, Calendar, Phone, BarChart3, Database, MailQuestion, HelpCircle, BookOpen, Sparkles } from 'lucide-react';
+import { Settings, Calendar, Phone, BarChart3, Database, MailQuestion, HelpCircle, BookOpen, Sparkles, Files } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { UserProfileDialog } from './UserProfileDialog';
 import { TicketForm } from './TicketForm';
@@ -237,7 +237,7 @@ export function AppSidebar({
                   tooltip="Fichiers"
                   className="w-full justify-start gap-3 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:gap-0"
                 >
-                  <Database className="w-4 h-4" />
+                  <Files className="w-4 h-4" />
                   <span>Fichiers</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>

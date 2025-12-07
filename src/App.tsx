@@ -1619,7 +1619,7 @@ Dimitri MOREL - Arcanis Conseil`;
   }, [contacts]);
 
   const [exportOptions, setExportOptions] = useState({
-    table: true,
+    table: false,
     tableExcel: true,
     contacts: false,
     agenda: false,

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Mail, X, Save, Undo, ChevronDown, Palette, Calendar, MessageSquare, Sun, Moon, Monitor, Keyboard, RotateCcw, DownloadCloud, Info, CheckCircle, ExternalLink, Columns, FileText, Eye, PhoneCall } from 'lucide-react';
+import { Settings, Mail, X, Save, Undo, ChevronDown, Palette, Calendar, MessageSquare, Sun, Moon, Monitor, Keyboard, RotateCcw, DownloadCloud, Info, CheckCircle, ExternalLink, Columns, FileText, PhoneCall } from 'lucide-react';
 import { BetaOptInSettings } from './BetaOptInSettings';
 import { LogsViewer } from './LogsViewer';
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
@@ -128,7 +128,7 @@ const DEFAULT_COLUMN_CONFIG = {
   'Source': { isEssential: false, label: 'Source du contact' }
 };
 
-type SettingsCategory = 'email' | 'sms' | 'calcom' | 'appearance' | 'shortcuts' | 'update' | 'columns' | 'statuses' | 'data-sharing' | 'pages-visibility' | 'diagnostic' | 'logs';
+type SettingsCategory = 'email' | 'sms' | 'calcom' | 'appearance' | 'shortcuts' | 'update' | 'columns' | 'statuses' | 'data-sharing' | 'diagnostic' | 'logs';
 
 const getCategories = (devToolsEnabled: boolean, updateEnabled: boolean = true) => [
   { 
@@ -178,12 +178,6 @@ const getCategories = (devToolsEnabled: boolean, updateEnabled: boolean = true) 
     label: 'Partage des données',
     icon: Settings,
     description: 'Configuration du partage Supabase'
-  },
-  {
-    id: 'pages-visibility' as SettingsCategory,
-    label: 'Visibilité des pages',
-    icon: Eye,
-    description: 'Afficher ou masquer certaines pages'
   },
   // Section Mise à jour visible uniquement si les mises à jour sont activées
   ...(updateEnabled ? [{
@@ -288,23 +282,6 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   // Éditeur de statuts: configuration par mode (libellés/couleurs/visibilité)
   const [statusConfig, setStatusConfig] = useState<StatusConfigMap>(() => StatusConfigService.getConfig());
   
-  // Visibilité des pages
-  const [pagesVisibility, setPagesVisibility] = useState<{
-    showAppelsPage: boolean;
-    showDonneesPage: boolean;
-  }>(() => {
-    try {
-      const saved = localStorage.getItem('dimicall_pages_visibility');
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (error) {
-      console.error('Erreur lors du chargement de la visibilité des pages:', error);
-    }
-    return { showAppelsPage: false, showDonneesPage: false };
-  });
-  const [pagesVisibilityChanged, setPagesVisibilityChanged] = useState(false);
-
   // Hooks pour les paramètres de mise à jour (déplacés ici pour éviter les erreurs de hooks conditionnels)
   const { betaPreferences, setBetaPreferences, revertToStable, isUpdateEnabled, manualUpdateInfo } = useAutoUpdate();
   
@@ -570,12 +547,6 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       if (columnConfigChanged) {
         localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(columnConfig));
         setColumnConfigChanged(false);
-      }
-      
-      // Sauvegarder la visibilité des pages si elle a changé
-      if (pagesVisibilityChanged) {
-        localStorage.setItem('dimicall_pages_visibility', JSON.stringify(pagesVisibility));
-        setPagesVisibilityChanged(false);
       }
       
       // NOUVEAU : Sauvegarder les préférences bêta
@@ -1626,68 +1597,6 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     </Card>
   );
 
-  const renderPagesVisibilitySettings = () => {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Visibilité des pages</CardTitle>
-          <CardDescription>
-            Choisissez quelles pages afficher dans la barre latérale
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="space-y-0.5">
-                <Label htmlFor="show-appels-page" className="text-base font-medium">
-                  Page "Appels"
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Afficher la page "Appels" (ancienne version) dans la barre latérale
-                </p>
-              </div>
-              <Switch
-                id="show-appels-page"
-                checked={pagesVisibility.showAppelsPage}
-                onCheckedChange={(checked) => {
-                  setPagesVisibility(prev => ({ ...prev, showAppelsPage: checked }));
-                  setPagesVisibilityChanged(true);
-                  setHasChanges(true);
-                }}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between p-4 border rounded-lg">
-              <div className="space-y-0.5">
-                <Label htmlFor="show-donnees-page" className="text-base font-medium">
-                  Page "Données"
-                </Label>
-                <p className="text-sm text-muted-foreground">
-                  Afficher la page "Données" dans la barre latérale
-                </p>
-              </div>
-              <Switch
-                id="show-donnees-page"
-                checked={pagesVisibility.showDonneesPage}
-                onCheckedChange={(checked) => {
-                  setPagesVisibility(prev => ({ ...prev, showDonneesPage: checked }));
-                  setPagesVisibilityChanged(true);
-                  setHasChanges(true);
-                }}
-              />
-            </div>
-          </div>
-          
-          <div className="p-4 bg-white dark:bg-card rounded-lg border shadow-none">
-            <p className="text-sm text-muted-foreground">
-              <strong>Note :</strong> Ces pages sont masquées par défaut. Activez-les uniquement si vous avez besoin d'accéder aux fonctionnalités spécifiques qu'elles offrent.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  };
-
   const renderShortcutSettings = () => {
     const availableStatuses = Object.values(ContactStatus);
 
@@ -1998,8 +1907,6 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         return renderStatusEditor();
       case 'data-sharing':
         return renderDataSharingSettings();
-      case 'pages-visibility':
-        return renderPagesVisibilitySettings();
       case 'logs':
         return renderLogsSettings();
       default:

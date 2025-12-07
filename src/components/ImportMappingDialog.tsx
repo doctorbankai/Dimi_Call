@@ -670,7 +670,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
             </TabsContent>
           </Tabs>
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 flex-shrink-0 pt-3 sm:pt-4 border-t mt-3 sm:mt-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 flex-shrink-0 pt-3 sm:pt-4 mt-3 sm:mt-4">
             <div className="text-[10px] sm:text-xs text-muted-foreground">
               {filterMode === 'remove' && removedPhones.length > 0
                 ? `${removedPhones.length} numéro(s) seront ignorés lors de l’import.`

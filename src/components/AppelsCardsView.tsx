@@ -379,7 +379,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
   })
   const [isAutocallActive, setIsAutocallActive] = useState(false)
   const [exportOptions, setExportOptions] = useState({
-    table: true,
+    table: false,
     tableExcel: true,
     contacts: false,
     agenda: false
