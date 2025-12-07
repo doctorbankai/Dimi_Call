@@ -246,12 +246,24 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
         adbConnected={adbConnected}
       />
 
-      <Button variant="ghost" size="icon" onClick={onToggleTheme} aria-label="Toggle theme">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="text-foreground hover:bg-muted/60"
+        onClick={onToggleTheme}
+        aria-label="Toggle theme"
+      >
         {theme === Theme.Dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         <span className="sr-only">Toggle theme</span>
       </Button>
 
-      <Button variant="ghost" size="icon" onClick={onOpenSettings} aria-label="Settings">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="text-foreground hover:bg-muted/60"
+        onClick={onOpenSettings}
+        aria-label="Settings"
+      >
         <Settings className="h-4 w-4" />
       </Button>
 

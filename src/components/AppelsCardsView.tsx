@@ -53,7 +53,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
   DropdownMenuPortal,
-  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu"
 import {
   AlertDialog,
@@ -1884,7 +1883,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             <Button
                               variant="outline"
                               size="sm"
-                              className="h-8 px-1.5 sm:px-2 shrink-0 shadow-none"
+                              className="h-8 px-1.5 sm:px-2 shrink-0 shadow-none bg-white text-foreground dark:text-slate-900 dark:bg-white hover:bg-slate-50 dark:hover:bg-slate-100 border border-border"
                               title="Gestion des colonnes"
                             >
                               <Settings2 className="h-4 w-4" />
@@ -2022,7 +2021,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                     toast.info('Aucun contact sans statut trouvé');
                                   }
                                 }}
-                                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 h-8 text-sm text-primary border-primary/40 hover:bg-primary/10 shrink-0 shadow-none"
+                            className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 h-8 text-sm shrink-0 shadow-none bg-white text-foreground dark:text-slate-900 dark:bg-white hover:bg-slate-50 dark:hover:bg-slate-100 border border-border"
                                 disabled={!filteredContacts.some(c => !c.statut || c.statut === ContactStatus.NonDefini)}
                               >
                                 <ChevronUp className="h-4 w-4" />
@@ -2039,7 +2038,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         <DropdownMenuTrigger asChild>
                           <Button
                             variant="outline"
-                            className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 h-8 text-sm shrink-0 shadow-none"
+                            className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 h-8 text-sm shrink-0 shadow-none bg-white text-foreground dark:text-slate-900 dark:bg-white hover:bg-slate-50 dark:hover:bg-slate-100 border border-border"
                           >
                             <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{backgroundColor: tableTabs.find(t => t.id === activeTableTabId)?.color || 'var(--primary)'}}></span>
                             <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">

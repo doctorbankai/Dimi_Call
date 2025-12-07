@@ -62,7 +62,7 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
   }, [])
 
   return (
-    <header className="bg-background/40 sticky top-0 z-40 flex h-12 sm:h-14 shrink-0 items-center gap-1 sm:gap-2 border-b backdrop-blur-md transition-[width,height] ease-linear min-w-0">
+    <header className="bg-white dark:bg-white text-foreground dark:text-slate-900 sticky top-0 z-40 flex h-12 sm:h-14 shrink-0 items-center gap-1 sm:gap-2 border-b backdrop-blur-md transition-[width,height] ease-linear min-w-0">
       <div className="flex w-full items-center gap-1 px-2 sm:px-3 md:px-4 lg:gap-2 min-w-0 flex-wrap">
         <SidebarTrigger className="size-8 sm:size-9 shrink-0" />
         <Separator orientation="vertical" className="mx-1 sm:mx-2 h-4 hidden sm:block" />

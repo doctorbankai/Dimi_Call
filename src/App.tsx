@@ -3280,7 +3280,7 @@ Dimitri MOREL - Arcanis Conseil`;
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-9 px-2 shrink-0"
+                                  className="h-9 px-2 shrink-0 bg-white text-foreground dark:text-slate-900 dark:bg-white hover:bg-slate-50 dark:hover:bg-slate-100 border border-border"
                                     title="Gestion des colonnes"
                                   >
                                     <Settings2 className="h-4 w-4" />

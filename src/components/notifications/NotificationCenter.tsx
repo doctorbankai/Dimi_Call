@@ -425,8 +425,8 @@ export const NotificationCenterButton = ({
           variant="ghost"
           size="icon"
           className={cn(
-            "relative",
-            triggerHasActivity ? "text-destructive hover:text-destructive" : "text-muted-foreground"
+            "relative text-foreground hover:bg-muted/60 hover:text-foreground",
+            triggerHasActivity && "text-destructive hover:text-destructive"
           )}
           aria-label="Centre de notifications"
         >

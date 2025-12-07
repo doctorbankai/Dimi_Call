@@ -8,10 +8,11 @@ import { Separator } from '@/components/ui/separator'
 import { cn } from '@/lib/utils'
 import { formatPhoneNumber, normalizeHeader, normalizePhoneNumber } from '../services/dataService'
 import { Badge } from '@/components/ui/badge'
-import { AlertCircle, CheckCircle2, Sparkles, TriangleAlert } from 'lucide-react'
+import { AlertCircle, CheckCircle2, CircleHelp, Sparkles, TriangleAlert } from 'lucide-react'
 import { useSupabaseShare } from '@/hooks/useSupabaseShare'
 import { supabaseService } from '@/services/supabaseService'
 import { extractPhoneCandidates } from '@/services/phoneUtils'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 
 type HeaderOption = {
   label: string
@@ -347,33 +348,75 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose() }}>
-        <DialogContent ref={dialogContentRef} className="max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1400px] w-full max-h-[95vh] overflow-hidden flex flex-col p-3 sm:p-4 lg:p-6">
-          <DialogHeader className="flex-shrink-0">
-            <DialogTitle>Importer et mapper les colonnes</DialogTitle>
+        <DialogContent
+          ref={dialogContentRef}
+          className="max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1400px] w-full max-h-[95vh] overflow-hidden flex flex-col p-3 sm:p-4 lg:p-6 bg-white dark:bg-white text-foreground dark:text-slate-900"
+        >
+          <DialogHeader className="flex-shrink-0 space-y-2">
+            <div className="flex items-center gap-2">
+              <DialogTitle className="text-lg leading-none font-semibold">Importer et mapper les colonnes</DialogTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-muted-foreground/20 text-muted-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    aria-label="Voir les règles d'import"
+                  >
+                    <CircleHelp className="h-4 w-4" />
+                    <span className="sr-only">Voir les règles d'import</span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="right"
+                  sideOffset={8}
+                  className="max-w-sm text-left leading-relaxed space-y-1 z-[100001]"
+                >
+                  <div className="font-semibold">Règles d’import</div>
+                  <p>Champs obligatoires : Prénom, Nom, Téléphone.</p>
+                  <p>Champs facultatifs : Email, Source, Statut, Commentaire, Date/Heure Rappel, Date/Heure RDV, Date/Heure Appel, Durée Appel, Lien…</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <DialogDescription>
               {fileName ? `Fichier: ${fileName}` : 'Sélectionnez la correspondance entre vos colonnes et les champs attendus.'}
             </DialogDescription>
           </DialogHeader>
 
         <div className="grid grid-cols-1 gap-3 sm:gap-4 overflow-y-auto flex-1 min-h-0">
-          <div className="bg-muted/40 rounded-md border p-3 text-sm">
-            <div className="font-medium mb-1">Règles d’import</div>
-            <div className="text-muted-foreground">
-              - Champs obligatoires: Prénom, Nom, Téléphone. Vous pouvez ajouter Email, Source, Statut, Commentaire, Date/Heure Rappel, Date/Heure RDV, Date/Heure Appel, Durée Appel, Lien, etc.
-            </div>
-          </div>
-
           <Tabs defaultValue="mapping">
             <TabsList>
               <TabsTrigger value="mapping">Mapping des en-têtes</TabsTrigger>
               <TabsTrigger value="preview">Aperçu (5 premières lignes)</TabsTrigger>
             </TabsList>
 
-            <div className="mt-4 rounded-md border bg-muted/30 p-3 space-y-3">
+            <div className="mt-4 rounded-md border bg-white dark:bg-white text-foreground dark:text-slate-900 p-3 space-y-3">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-2 text-xs sm:text-sm font-medium">
                   <TriangleAlert className={cn('h-4 w-4', (phoneWarnings.shared || phoneWarnings.blacklist) ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')} />
                   Vérification Supabase
+                  {(phoneWarnings.shared > 0 || phoneWarnings.blacklist > 0) && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-muted-foreground/20 text-muted-foreground hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                          aria-label="Afficher les options de traitement Supabase"
+                        >
+                          <CircleHelp className="h-3.5 w-3.5" />
+                          <span className="sr-only">Afficher les options de traitement Supabase</span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        sideOffset={8}
+                        className="max-w-sm text-left leading-relaxed space-y-1 z-[100001]"
+                      >
+                        <p>
+                          Les lignes concernées peuvent être retirées automatiquement avant import pour éviter les doublons ou respecter la liste noire. Vous pouvez également isoler ces lignes pour vérification.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
                 <div className="text-[11px] sm:text-xs text-muted-foreground">
                   {isCheckingPhones ? 'Analyse des numéros…' : state.supabaseReady ? 'Connexion Supabase active' : 'Supabase non connecté'}
@@ -401,14 +444,21 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                     </div>
                   )}
                   <div className="grid gap-3 rounded-md border border-amber-200/70 bg-amber-50 dark:bg-amber-900/15 p-3">
-                    <p className="text-muted-foreground">
-                      Les lignes concernées peuvent être retirées automatiquement avant import pour éviter les doublons ou respecter la liste noire. Vous pouvez également isoler ces lignes pour vérification.
-                    </p>
                     <div className="flex flex-wrap gap-2">
-                      <Button variant="outline" size="sm" className="text-[11px] sm:text-xs h-7" onClick={() => applyFilter('remove')}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-[11px] sm:text-xs h-7 bg-white text-foreground border border-muted-foreground/30 hover:bg-white/90 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+                        onClick={() => applyFilter('remove')}
+                      >
                         Supprimer les lignes détectées
                       </Button>
-                      <Button variant="outline" size="sm" className="text-[11px] sm:text-xs h-7" onClick={() => applyFilter('isolate')}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-[11px] sm:text-xs h-7 bg-white text-foreground border border-muted-foreground/30 hover:bg-white/90 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+                        onClick={() => applyFilter('isolate')}
+                      >
                         Voir uniquement les lignes détectées
                       </Button>
                       {filterMode !== 'none' && (
@@ -417,10 +467,14 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                         </Button>
                       )}
                       {phoneWarnings.details.length > 0 && (
-                        <Button variant="ghost" size="sm" className="text-[11px] sm:text-xs h-7" onClick={() => {
-                          console.log('[ImportMappingDialog] 📋 Détails numéros détectés', phoneWarnings.details)
-                          setDetailsOpen(true)
-                        }}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-[11px] sm:text-xs h-7 bg-white text-foreground border border-muted-foreground/30 hover:bg-white/90 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+                          onClick={() => {
+                            console.log('[ImportMappingDialog] 📋 Détails numéros détectés', phoneWarnings.details)
+                            setDetailsOpen(true)
+                          }}>
                           Détails
                         </Button>
                       )}
@@ -438,7 +492,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
 
             <TabsContent value="mapping" className="mt-2">
               <div className="rounded-lg border">
-                <div className="bg-muted/50 rounded-t-lg">
+                <div className="rounded-t-lg bg-white dark:bg-white text-foreground dark:text-slate-900">
                   {/* Ligne 1 : Titres des colonnes */}
                   <div className="grid grid-cols-12 gap-2 sm:gap-4 p-2 sm:p-3 border-b">
                     <div className="col-span-5 font-medium text-xs sm:text-sm">Colonne détectée</div>
@@ -475,7 +529,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="h-7 px-1.5 sm:px-2 text-[10px] sm:text-xs"
+                        className="h-7 px-1.5 sm:px-2 text-[10px] sm:text-xs bg-white text-foreground border border-muted-foreground/30 hover:bg-white/90 dark:bg-slate-900 dark:text-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
                         onClick={() => setMapping((prev) => ({ ...prev, ...suggestions }))}
                         title="Tenter l'auto-détection"
                       >
@@ -585,7 +639,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
               <div className="rounded-lg border overflow-auto">
                 <table className="w-full text-xs">
                   <thead>
-                    <tr className="bg-muted/40">
+                    <tr className="bg-white dark:bg-white text-foreground dark:text-slate-900 border-b">
                       {headers.map((h, i) => (
                         <th key={i} className="px-2 py-1 text-left whitespace-nowrap">
                           <div className="flex items-center gap-2">
@@ -670,7 +724,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
               detailsSummary.map((item, index) => (
                 <div
                   key={`${item.phone}-${index}`}
-                  className="rounded-md border border-border/70 bg-muted/40 p-3 space-y-2"
+                  className="rounded-md border border-border/70 bg-white dark:bg-white text-foreground dark:text-slate-900 p-3 space-y-2"
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex flex-col gap-0.5">
