@@ -2,7 +2,8 @@ import React, { useState, useCallback } from 'react';
 import { BetaPreferences } from '../types/update';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Checkbox } from './ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { AlertTriangle, Beaker, Shield, ArrowLeft, Code } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Beaker, Code, Shield } from 'lucide-react';
 
 export interface BetaOptInSettingsProps {
   /** Préférences bêta actuelles */
@@ -105,114 +106,120 @@ export const BetaOptInSettings: React.FC<BetaOptInSettingsProps> = ({
   return (
     <>
       <div className="space-y-4">
-        {/* Section principale */}
-        <div className="flex items-start space-x-3">
-          <div className="flex-shrink-0 w-8 h-8 rounded-md bg-orange-500/10 flex items-center justify-center">
-            <Beaker className="w-4 h-4 text-orange-600" />
-          </div>
-          <div className="flex-1 space-y-3">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                <h4 className="font-medium text-sm">Versions bêta</h4>
-                {isCurrentVersionBeta && (
-                  <Badge variant="outline" className="text-xs bg-orange-50 text-orange-700 border-orange-200">
-                    BETA
-                  </Badge>
-                )}
+        <div className="relative overflow-hidden rounded-xl border bg-card/60 px-6 py-5 shadow-sm flex flex-col gap-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-orange-500/10">
+                <Beaker className="h-5 w-5 text-orange-600" />
               </div>
-              <p className="text-xs text-muted-foreground">
-                Recevez les nouvelles fonctionnalités en avant-première
-              </p>
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="text-sm font-semibold leading-none">Versions bêta</h4>
+                  {isCurrentVersionBeta && (
+                    <Badge variant="outline" className="border-orange-200 bg-orange-50 text-[11px] text-orange-700">
+                      BETA
+                    </Badge>
+                  )}
+                  {betaPreferences.enabled && (
+                    <Badge variant="secondary" className="text-[11px]">Activé</Badge>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Recevez les nouvelles fonctionnalités en avant-première.
+                </p>
+              </div>
             </div>
-
-            {/* Checkbox d'activation */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="beta-opt-in"
-                checked={betaPreferences.enabled}
-                onCheckedChange={handleBetaToggle}
-                disabled={isRevertingToStable}
-              />
-              <label
-                htmlFor="beta-opt-in"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Recevoir les versions bêta
-              </label>
+            <div className="flex flex-col items-end gap-2 text-right">
+              <div className="flex items-center gap-2">
+                <Label htmlFor="beta-opt-in" className="text-xs text-muted-foreground">
+                  Recevoir les versions bêta
+                </Label>
+                <Switch
+                  id="beta-opt-in"
+                  checked={betaPreferences.enabled}
+                  onCheckedChange={(checked) => handleBetaToggle(!!checked)}
+                  disabled={isRevertingToStable}
+                  aria-label="Recevoir les versions bêta"
+                />
+              </div>
             </div>
+          </div>
 
-            {/* Informations supplémentaires */}
-            {betaPreferences.enabled && (
-              <div className="p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-lg">
-                <div className="flex items-start gap-2">
-                  <Shield className="w-4 h-4 text-orange-600 dark:text-orange-400 mt-0.5 flex-shrink-0" />
-                  <div className="text-xs text-orange-800 dark:text-orange-200">
-                    <p className="font-medium mb-1">Versions bêta activées</p>
-                    <ul className="space-y-1 text-orange-700 dark:text-orange-300">
-                      <li>• Nouvelles fonctionnalités en test</li>
-                      <li>• Outils de débogage automatiquement activés</li>
-                      <li>• Mises à jour plus fréquentes</li>
-                      <li>• Possibilité de bugs ou d'instabilités</li>
-                    </ul>
-                  </div>
+          {betaPreferences.enabled && (
+            <div className="mt-4 rounded-lg border border-orange-200 bg-orange-50/90 p-3 dark:border-orange-800 dark:bg-orange-950/20">
+              <div className="flex items-start gap-2">
+                <Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-orange-600 dark:text-orange-400" />
+                <div className="text-xs text-orange-800 dark:text-orange-200">
+                  <p className="mb-1 font-medium">Versions bêta activées</p>
+                  <ul className="space-y-1 text-orange-700 dark:text-orange-300">
+                    <li>• Nouvelles fonctionnalités en test</li>
+                    <li>• Outils de débogage automatiquement activés</li>
+                    <li>• Mises à jour plus fréquentes</li>
+                    <li>• Possibilité de bugs ou d'instabilités</li>
+                  </ul>
                 </div>
               </div>
-            )}
+            </div>
+          )}
 
-            {/* Bouton de retour à la version stable */}
-            {isCurrentVersionBeta && onRevertToStable && (
+          {isCurrentVersionBeta && onRevertToStable && (
+            <div className="mt-4 flex justify-end">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={handleRevertToStable}
                 disabled={isRevertingToStable}
-                className="text-xs"
+                className="gap-1 text-xs"
               >
-                <ArrowLeft className="w-3 h-3 mr-1" />
+                <ArrowLeft className="h-3 w-3" />
                 {isRevertingToStable ? 'Retour en cours...' : 'Revenir à la version stable'}
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
-      </div>
 
-      {/* Section DevTools */}
-      <div className="space-y-4 pt-4 border-t">
-        <div className="flex items-start space-x-3">
-          <div className="flex-shrink-0 w-8 h-8 rounded-md bg-blue-500/10 flex items-center justify-center">
-            <Code className="w-4 h-4 text-blue-600" />
-          </div>
-          <div className="flex-1 space-y-3">
-            <div>
-              <h4 className="font-medium text-sm">Outils de développement</h4>
-              <p className="text-xs text-muted-foreground">
-                Activez les DevTools pour analyser et déboguer l'application
-              </p>
+        {betaPreferences.enabled && (
+          <div className="relative overflow-hidden rounded-xl border bg-card/60 px-6 py-5 shadow-sm flex flex-col gap-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10">
+                  <Code className="h-5 w-5 text-blue-600" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-sm font-semibold leading-none">Outils de développement</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Activez les DevTools pour analyser et déboguer l'application.
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-col items-end gap-2 text-right">
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="devtools-toggle" className="text-xs text-muted-foreground">
+                    Activer les DevTools
+                  </Label>
+                  <Switch
+                    id="devtools-toggle"
+                    checked={devToolsEnabled}
+                    onCheckedChange={(checked) => onDevToolsToggle(!!checked)}
+                    disabled={isRevertingToStable}
+                    aria-label="Activer les outils de développement (Ctrl+Shift+I)"
+                  />
+                </div>
+                <Badge
+                  variant={devToolsEnabled ? 'default' : 'secondary'}
+                  className="text-[10px] uppercase tracking-wide"
+                >
+                  {devToolsEnabled ? 'Activés' : 'Désactivés'}
+                </Badge>
+              </div>
             </div>
 
-            {/* Checkbox DevTools */}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="devtools-toggle"
-                checked={devToolsEnabled}
-                onCheckedChange={onDevToolsToggle}
-                disabled={isRevertingToStable}
-              />
-              <label
-                htmlFor="devtools-toggle"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-              >
-                Activer les outils de développement (Ctrl+Shift+I)
-              </label>
-            </div>
-
-            {/* Informations DevTools */}
             {devToolsEnabled && (
-              <div className="p-3 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <div className="mt-4 rounded-lg border border-blue-200 bg-blue-50/90 p-3 dark:border-blue-800 dark:bg-blue-950/20">
                 <div className="flex items-start gap-2">
-                  <Code className="w-4 h-4 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0" />
+                  <Code className="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-600 dark:text-blue-400" />
                   <div className="text-xs text-blue-800 dark:text-blue-200">
-                    <p className="font-medium mb-1">DevTools activés</p>
+                    <p className="mb-1 font-medium">DevTools activés</p>
                     <ul className="space-y-1 text-blue-700 dark:text-blue-300">
                       <li>• Accès à la console de développement</li>
                       <li>• Inspection des éléments et du DOM</li>
@@ -224,7 +231,7 @@ export const BetaOptInSettings: React.FC<BetaOptInSettingsProps> = ({
               </div>
             )}
           </div>
-        </div>
+        )}
       </div>
 
       {/* Dialog d'avertissement pour la première activation */}

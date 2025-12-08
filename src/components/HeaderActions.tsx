@@ -1,16 +1,28 @@
 import React, { useMemo } from 'react'
+import { createPortal } from 'react-dom'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Settings, Sun, Moon, DownloadCloud, Smartphone, AlertCircle, RefreshCcw } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Sun, Moon, DownloadCloud, Smartphone, AlertCircle, RefreshCcw, HelpCircle, BookOpen, MailQuestion, Wrench } from 'lucide-react'
 import { useSupabaseAuth } from '@/lib/auth-client'
-import { Theme } from '@/types'
+import { CallMode, Theme } from '@/types'
 import { NotificationCenterButton } from '@/components/notifications/NotificationCenter'
 import { BetaPreferences, UpdateState } from '@/types/update'
 import { AdbConnectionState } from '@/services/adbService'
 import { cn } from '@/lib/utils'
+import { useCallMode } from '@/context/ModeContext'
 import packageJson from '../../package.json'
 import { Spinner } from '@/components/ui/spinner'
+import { Switch } from '@/components/ui/switch'
 
 type HeaderActionsProps = {
   theme: Theme
@@ -28,6 +40,9 @@ type HeaderActionsProps = {
   adbConnectionState?: AdbConnectionState
   adbConnecting?: boolean
   onAdbClick?: (event: React.MouseEvent<HTMLButtonElement>) => void
+  onOpenHelp?: () => void
+  onOpenSupport?: () => void
+  onOpenTroubleshoot?: () => void
 }
 
 export const HeaderActions: React.FC<HeaderActionsProps> = ({
@@ -46,9 +61,20 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
   adbConnectionState,
   adbConnecting = false,
   onAdbClick,
+  onOpenHelp,
+  onOpenSupport,
+  onOpenTroubleshoot,
 }) => {
   const auth = useSupabaseAuth()
   const email = auth.user?.email || 'user'
+  const { mode, setMode } = useCallMode()
+  const modeLabel = mode === CallMode.Apporteur ? 'Apporteur' : 'Client'
+  const [shockwaveId, setShockwaveId] = React.useState(0)
+  const handleModeToggle = (checked: boolean) => {
+    const next = checked ? CallMode.Apporteur : CallMode.Client
+    setMode(next)
+    if (checked) setShockwaveId((id) => id + 1)
+  }
 
   // Build simple initials-based avatar data URL
   const initials = (email?.split('@')[0] || 'U')
@@ -233,6 +259,53 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
         {renderUpdateBadge()}
         {renderAdbBadge()}
       </div>
+      {typeof document !== 'undefined' &&
+        createPortal(
+          <AnimatePresence>
+            {shockwaveId > 0 && mode === CallMode.Apporteur && (
+              <motion.div
+                key={shockwaveId}
+                className="pointer-events-none fixed inset-0 z-[99998]"
+                initial={{ scale: 0.2, opacity: 0.35 }}
+                animate={{ scale: 4.2, opacity: 0 }}
+                transition={{ duration: 0.8, ease: 'easeOut' }}
+                style={{
+                  background:
+                    'radial-gradient(circle at center, rgba(236,72,153,0.55) 0%, rgba(168,85,247,0.35) 35%, rgba(34,211,238,0.35) 55%, transparent 70%)',
+                  transformOrigin: 'center center',
+                  willChange: 'transform, opacity',
+                }}
+              />
+            )}
+          </AnimatePresence>,
+          document.body
+        )}
+      <div
+        className="relative flex items-center gap-2 rounded-full border border-border/70 bg-white px-3 py-1 shadow-sm dark:border-border/60 dark:bg-neutral-900"
+        aria-label={`Mode actuel : ${modeLabel}`}
+      >
+        <span className="text-xs sm:text-sm text-muted-foreground">Mode :</span>
+        <Badge
+          variant={mode === CallMode.Apporteur ? 'default' : 'secondary'}
+          className={
+            mode === CallMode.Apporteur
+              ? 'text-[11px] sm:text-xs px-2 bg-gradient-to-r from-fuchsia-500 via-purple-500 to-cyan-400 text-white border-0 shadow-[0_0_12px_rgba(236,72,153,0.35)]'
+              : 'text-[11px] sm:text-xs px-2'
+          }
+        >
+          {modeLabel}
+        </Badge>
+        <Switch
+          checked={mode === CallMode.Apporteur}
+          onCheckedChange={handleModeToggle}
+          aria-label="Changer le mode d'appel"
+          className={
+            mode === CallMode.Apporteur
+              ? 'scale-75 sm:scale-100 data-[state=checked]:bg-[linear-gradient(90deg,#ec4899,#a855f7,#22d3ee)] data-[state=unchecked]:bg-[linear-gradient(90deg,#e5e7eb,#d1d5db,#e5e7eb)] shadow-[0_0_10px_rgba(168,85,247,0.35)] border-transparent'
+              : 'scale-75 sm:scale-100'
+          }
+        />
+      </div>
       <NotificationCenterButton
         onNavigateToCalendar={() => onNavigate?.('calendar-2')}
         onNavigateToAnnuaire={(id, name) => {
@@ -257,15 +330,32 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
         <span className="sr-only">Toggle theme</span>
       </Button>
 
-      <Button
-        variant="ghost"
-        size="icon"
-        className="text-foreground hover:bg-muted/60"
-        onClick={onOpenSettings}
-        aria-label="Settings"
-      >
-        <Settings className="h-4 w-4" />
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-foreground hover:bg-muted/60"
+            aria-label="Aide"
+          >
+            <HelpCircle className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem onClick={() => onOpenHelp?.()}>
+            <BookOpen className="h-4 w-4" />
+            <span>Documentation</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onOpenTroubleshoot?.()}>
+            <Wrench className="h-4 w-4" />
+            <span>Dépannage</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onOpenSupport?.()}>
+            <MailQuestion className="h-4 w-4" />
+            <span>Contacter le support</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <Separator orientation="vertical" className="mx-2 h-4" />
 
@@ -275,10 +365,21 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
             <img alt={email} src={avatarSvg} className="aspect-square size-full" />
           </button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem disabled>{email}</DropdownMenuItem>
+        <DropdownMenuContent align="end" className="w-64 p-1">
+          <DropdownMenuLabel className="flex items-center gap-3 rounded-md px-3 py-2">
+            <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+              {initials}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-semibold">{email}</span>
+              <span className="text-xs text-muted-foreground">Compte connecté</span>
+            </div>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onOpenSettings}>Paramètres</DropdownMenuItem>
-          <DropdownMenuItem onClick={() => auth.signOut?.()}>Déconnexion</DropdownMenuItem>
+          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => auth.signOut?.()}>
+            Déconnexion
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

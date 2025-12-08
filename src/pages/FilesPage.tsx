@@ -798,7 +798,10 @@ export const FilesPage: React.FC<FilesPageProps> = ({ contacts: propContacts = [
               />
             </ResizablePanel>
 
-            <ResizableHandle className="w-1 bg-border/50 hover:bg-border transition-colors" />
+            <ResizableHandle
+              withHandle
+              className="group w-3 rounded-md bg-transparent hover:bg-primary/5 transition-colors after:bg-border after:opacity-70 hover:after:bg-primary/50 hover:after:opacity-100 focus-visible:after:opacity-100"
+            />
 
             {/* Content View */}
             <ResizablePanel defaultSize={showPreview ? 50 : 76} minSize={40} className="min-w-0 flex flex-col relative">
@@ -869,7 +872,10 @@ export const FilesPage: React.FC<FilesPageProps> = ({ contacts: propContacts = [
             {/* Preview Panel */}
             {showPreview && selectedFile && (
               <>
-                <ResizableHandle className="w-1 bg-border/50 hover:bg-border transition-colors" />
+                <ResizableHandle
+                  withHandle
+                  className="group w-3 rounded-md bg-transparent hover:bg-primary/5 transition-colors after:bg-border after:opacity-70 hover:after:bg-primary/50 hover:after:opacity-100 focus-visible:after:opacity-100"
+                />
                 <ResizablePanel defaultSize={26} minSize={20} maxSize={40} className="min-w-0">
                   <FilePreview
                     file={selectedFile}

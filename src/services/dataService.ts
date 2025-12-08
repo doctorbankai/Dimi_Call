@@ -1237,19 +1237,19 @@ export const generateGmailComposeUrl = (
   const defaultTemplates = {
     [EmailType.PremierContact]: {
       subject: "Arcanis Conseil - Premier Contact",
-      body: "Bonjour {titre} {nom},\n\nPour resituer mon appel, je suis gérant privé au sein du cabinet de gestion de patrimoine Arcanis Conseil. Je vous envoie l'adresse de notre site web que vous puissiez en savoir d'avantage : https://arcanis-conseil.fr\n\nLe site est avant tout une vitrine, le mieux est de m'appeler si vous souhaitez davantage d'informations ou de prendre un créneau de 30 minutes dans mon agenda via ce lien : https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true\n\nBien à vous,"
+      body: "Bonjour @titre @nom,\n\nPour resituer mon appel, je suis gérant privé au sein du cabinet de gestion de patrimoine Arcanis Conseil. Je vous envoie l'adresse de notre site web que vous puissiez en savoir d'avantage : https://arcanis-conseil.fr\n\nLe site est avant tout une vitrine, le mieux est de m'appeler si vous souhaitez davantage d'informations ou de prendre un créneau de 30 minutes dans mon agenda via ce lien : https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true\n\nBien à vous,"
     },
     [EmailType.D0Visio]: {
       subject: "Confirmation rendez-vous visio - Arcanis Conseil",
-      body: "Bonjour {titre} {nom}, merci pour votre temps lors de notre échange téléphonique. \n\nSuite à notre appel, je vous confirme {rdv} en visio.\n\nPour rappel, notre entretien durera une trentaine de minutes. Le but est de vous présenter plus en détail Arcanis Conseil, d'effectuer ensemble l'état des lieux de votre situation patrimoniale (revenus, patrimoine immobilier, épargne constituée etc.), puis de vous donner un diagnostic de vos leviers. Notre métier est de vous apporter un conseil pertinent et personnalisé sur l'optimisation de votre patrimoine.\n\nJe vous invite à visiter notre site internet pour de plus amples renseignements avant le début de notre échange : www.arcanis-conseil.fr\n\nN'hésitez pas à revenir vers moi en cas de question ou d'un besoin supplémentaire d'information.\n\nBien cordialement"
+      body: "Bonjour @titre @nom, merci pour votre temps lors de notre échange téléphonique. \n\nSuite à notre appel, je vous confirme @rdv en visio.\n\nPour rappel, notre entretien durera une trentaine de minutes. Le but est de vous présenter plus en détail Arcanis Conseil, d'effectuer ensemble l'état des lieux de votre situation patrimoniale (revenus, patrimoine immobilier, épargne constituée etc.), puis de vous donner un diagnostic de vos leviers. Notre métier est de vous apporter un conseil pertinent et personnalisé sur l'optimisation de votre patrimoine.\n\nJe vous invite à visiter notre site internet pour de plus amples renseignements avant le début de notre échange : www.arcanis-conseil.fr\n\nN'hésitez pas à revenir vers moi en cas de question ou d'un besoin supplémentaire d'information.\n\nBien cordialement"
     },
     [EmailType.R0Interne]: {
       subject: "Confirmation rendez-vous présentiel - Arcanis Conseil",
-      body: "Bonjour {titre} {nom}, merci pour votre temps lors de notre échange téléphonique. \n\nSuite à notre appel, je vous confirme {rdv} dans nos locaux au 22 rue la Boétie, 75008 Paris.\n\nPour rappel, notre entretien durera une trentaine de minutes. Le but est de vous présenter plus en détail Arcanis Conseil, d'effectuer ensemble l'état des lieux de votre situation patrimoniale (revenus, patrimoine immobilier, épargne constituée etc.), puis de vous donner un diagnostic de vos leviers. Notre métier est de vous apporter un conseil pertinent et personnalisé sur l'optimisation de votre patrimoine.\n\nJe vous invite à visiter notre site internet pour de plus amples renseignements avant le début de notre échange : www.arcanis-conseil.fr\n\nN'hésitez pas à revenir vers moi en cas de question ou d'un besoin supplémentaire d'information.\n\nBien cordialement"
+      body: "Bonjour @titre @nom, merci pour votre temps lors de notre échange téléphonique. \n\nSuite à notre appel, je vous confirme @rdv dans nos locaux au 22 rue la Boétie, 75008 Paris.\n\nPour rappel, notre entretien durera une trentaine de minutes. Le but est de vous présenter plus en détail Arcanis Conseil, d'effectuer ensemble l'état des lieux de votre situation patrimoniale (revenus, patrimoine immobilier, épargne constituée etc.), puis de vous donner un diagnostic de vos leviers. Notre métier est de vous apporter un conseil pertinent et personnalisé sur l'optimisation de votre patrimoine.\n\nJe vous invite à visiter notre site internet pour de plus amples renseignements avant le début de notre échange : www.arcanis-conseil.fr\n\nN'hésitez pas à revenir vers moi en cas de question ou d'un besoin supplémentaire d'information.\n\nBien cordialement"
     },
     [EmailType.R0Externe]: {
       subject: "Confirmation rendez-vous présentiel - Arcanis Conseil",
-      body: "Bonjour {titre} {nom}, merci pour votre temps lors de notre échange téléphonique. \n\nSuite à notre appel, je vous confirme {rdv} à {adresse}.\n\nPour rappel, notre entretien durera une trentaine de minutes. Le but est de vous présenter plus en détail Arcanis Conseil, d'effectuer ensemble l'état des lieux de votre situation patrimoniale (revenus, patrimoine immobilier, épargne constituée etc.), puis de vous donner un diagnostic de vos leviers. Notre métier est de vous apporter un conseil pertinent et personnalisé sur l'optimisation de votre patrimoine.\n\nJe vous invite à visiter notre site internet pour de plus amples renseignements avant le début de notre échange : www.arcanis-conseil.fr\n\nN'hésitez pas à revenir vers moi en cas de question ou d'un besoin supplémentaire d'information.\n\nBien cordialement"
+      body: "Bonjour @titre @nom, merci pour votre temps lors de notre échange téléphonique. \n\nSuite à notre appel, je vous confirme @rdv à @adresse.\n\nPour rappel, notre entretien durera une trentaine de minutes. Le but est de vous présenter plus en détail Arcanis Conseil, d'effectuer ensemble l'état des lieux de votre situation patrimoniale (revenus, patrimoine immobilier, épargne constituée etc.), puis de vous donner un diagnostic de vos leviers. Notre métier est de vous apporter un conseil pertinent et personnalisé sur l'optimisation de votre patrimoine.\n\nJe vous invite à visiter notre site internet pour de plus amples renseignements avant le début de notre échange : www.arcanis-conseil.fr\n\nN'hésitez pas à revenir vers moi en cas de question ou d'un besoin supplémentaire d'information.\n\nBien cordialement"
     }
   };
 
@@ -1303,14 +1303,18 @@ export const generateGmailComposeUrl = (
     }
   }
 
-  // Remplacement des variables dans le template
-  let finalBody = bodyTemplate
-    .replace(/{titre}/g, titre)
-    .replace(/{nom}/g, contactLastName)
-    .replace(/{signature}/g, signature)
-    .replace(/{rdv}/g, rdvDetails)
-    .replace(/{adresse}/g, '[ADRESSE CLIENT]')
-    .replace(/\[DATE ET HEURE\]/g, 'date et heure à déterminer');
+  const replaceVar = (text: string, key: string, replacement: string) =>
+    text
+      .replace(new RegExp(`@${key}\\b`, 'g'), replacement)
+      .replace(new RegExp(`\\{${key}\\}`, 'g'), replacement);
+
+  let finalBody = bodyTemplate;
+  finalBody = replaceVar(finalBody, 'titre', titre);
+  finalBody = replaceVar(finalBody, 'nom', contactLastName);
+  finalBody = replaceVar(finalBody, 'signature', signature);
+  finalBody = replaceVar(finalBody, 'rdv', rdvDetails);
+  finalBody = replaceVar(finalBody, 'adresse', '[ADRESSE CLIENT]');
+  finalBody = finalBody.replace(/\[DATE ET HEURE\]/g, 'date et heure à déterminer');
 
   params.set('su', subject);
   params.set('body', finalBody);
@@ -1329,26 +1333,26 @@ export const generateSmsMessage = (
 
   // Templates par défaut
   const defaultSmsTemplates: Record<SmsType, string> = {
-    [SmsType.PremierContact]: `Bonjour {civilite} {nom},
+    [SmsType.PremierContact]: `Bonjour @civilite @nom,
 
 Pour resituer mon appel, je suis gérant privé au sein du cabinet de gestion de patrimoine Arcanis Conseil. Je vous envoie l'adresse de notre site web que vous puissiez en savoir davantage : https://arcanis-conseil.fr
 
 Le site est avant tout une vitrine. Le mieux est de m'appeler si vous souhaitez davantage d'informations ou de prendre un créneau de 30 minutes dans mon agenda via ce lien : https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true
 
 Bien à vous,`,
-    [SmsType.D0Visio]: `Bonjour {civilite} {nom},
+    [SmsType.D0Visio]: `Bonjour @civilite @nom,
 
-Suite à notre appel, je vous confirme {rdv} en visio. Nous prendrons 30 minutes pour faire un point rapide et vous présenter Arcanis Conseil.
-
-À très bientôt,`,
-    [SmsType.R0Interne]: `Bonjour {civilite} {nom},
-
-Suite à notre appel, je vous confirme {rdv} dans nos locaux (22 rue la Boétie, 75008 Paris). Prévoir 30 minutes pour l'entretien.
+Suite à notre appel, je vous confirme @rdv en visio. Nous prendrons 30 minutes pour faire un point rapide et vous présenter Arcanis Conseil.
 
 À très bientôt,`,
-    [SmsType.R0Externe]: `Bonjour {civilite} {nom},
+    [SmsType.R0Interne]: `Bonjour @civilite @nom,
 
-Suite à notre appel, je vous confirme {rdv} à {adresse}. Prévoir 30 minutes pour l'entretien.
+Suite à notre appel, je vous confirme @rdv dans nos locaux (22 rue la Boétie, 75008 Paris). Prévoir 30 minutes pour l'entretien.
+
+À très bientôt,`,
+    [SmsType.R0Externe]: `Bonjour @civilite @nom,
+
+Suite à notre appel, je vous confirme @rdv à @adresse. Prévoir 30 minutes pour l'entretien.
 
 À très bientôt,`,
   };
@@ -1398,16 +1402,20 @@ Suite à notre appel, je vous confirme {rdv} à {adresse}. Prévoir 30 minutes p
   // Adresse par défaut si non fournie via remplacement manuel ultérieur
   const defaultAdresse = '[ADRESSE CLIENT]';
 
-  // Remplacement des variables
-  const finalBody = bodyTemplate
-    .replace(/{civilite}/g, civilite)
-    .replace(/{titre}/g, civilite)
-    .replace(/{nom}/g, contactLastName)
-    .replace(/{prenom}/g, contactFirstName)
-    .replace(/{nom_complet}/g, fullName || 'client(e)')
-    .replace(/{rdv}/g, rdvDetails)
-    .replace(/{adresse}/g, defaultAdresse)
-    .replace(/\[DATE ET HEURE\]/g, 'date et heure à déterminer');
+  const replaceVar = (text: string, key: string, replacement: string) =>
+    text
+      .replace(new RegExp(`@${key}\\b`, 'g'), replacement)
+      .replace(new RegExp(`\\{${key}\\}`, 'g'), replacement);
+
+  let finalBody = bodyTemplate;
+  finalBody = replaceVar(finalBody, 'civilite', civilite);
+  finalBody = replaceVar(finalBody, 'titre', civilite);
+  finalBody = replaceVar(finalBody, 'nom', contactLastName);
+  finalBody = replaceVar(finalBody, 'prenom', contactFirstName);
+  finalBody = replaceVar(finalBody, 'nom_complet', fullName || 'client(e)');
+  finalBody = replaceVar(finalBody, 'rdv', rdvDetails);
+  finalBody = replaceVar(finalBody, 'adresse', defaultAdresse);
+  finalBody = finalBody.replace(/\[DATE ET HEURE\]/g, 'date et heure à déterminer');
 
   return finalBody;
 };

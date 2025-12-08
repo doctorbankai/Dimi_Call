@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { HelpTutorialButtonProps } from '../types/help';
+import { HelpSection, HelpTutorialButtonProps } from '../types/help';
 import HelpDialog from './HelpDialog';
 
 const HelpTutorialButton: React.FC<HelpTutorialButtonProps> = ({ theme, className }) => {
@@ -34,6 +34,8 @@ const HelpTutorialButton: React.FC<HelpTutorialButtonProps> = ({ theme, classNam
         isOpen={isHelpDialogOpen}
         onClose={handleCloseDialog}
         theme={theme}
+        initialSection={HelpSection.DocOverview}
+        mode="documentation"
       />
     </>
   );

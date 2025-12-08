@@ -1,7 +1,6 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { Theme, Contact, CallStates, ContactStatus } from '../types';
-import { STATUS_COLORS } from '../constants';
+import { Theme, Contact, CallStates, ContactStatus, CallMode } from '../types';
 import { useSupabaseAuth } from '../lib/auth-client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,6 +26,8 @@ import {
   Edit
 } from 'lucide-react';
 import { supabaseService } from '../services/supabaseService';
+import { useCallMode } from '../context/ModeContext';
+import { StatusConfigService } from '../services/statusConfigService';
 
 interface VirtualizedSupabaseTableProps {
   rawData: any[];
@@ -99,6 +100,7 @@ export const VirtualizedSupabaseTable: React.FC<VirtualizedSupabaseTableProps> =
 }) => {
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
+  const { mode } = useCallMode();
   
   // Hook d'authentification pour récupérer l'utilisateur connecté
   const auth = useSupabaseAuth();
@@ -106,6 +108,10 @@ export const VirtualizedSupabaseTable: React.FC<VirtualizedSupabaseTableProps> =
   // État pour l'édition des cellules
   const [editingCell, setEditingCell] = useState<EditingCell | null>(null);
   const [isUpdating, setIsUpdating] = useState(false);
+  const statusOptions = useMemo(
+    () => StatusConfigService.getStatusList(mode, { includeHidden: true }),
+    [mode]
+  );
 
 
 
@@ -724,11 +730,13 @@ export const VirtualizedSupabaseTable: React.FC<VirtualizedSupabaseTableProps> =
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {Object.values(ContactStatus).map(status => (
-                                  <SelectItem key={status} value={status}>
-                                    {status}
-                                  </SelectItem>
-                                ))}
+                                {statusOptions
+                                  .filter((status) => !(status === ContactStatus.A0 && mode !== CallMode.Apporteur))
+                                  .map((status) => (
+                                    <SelectItem key={status} value={status}>
+                                      {StatusConfigService.getLabel(status, mode)}
+                                    </SelectItem>
+                                  ))}
                               </SelectContent>
                             </Select>
                           ) : (
@@ -776,22 +784,18 @@ export const VirtualizedSupabaseTable: React.FC<VirtualizedSupabaseTableProps> =
                         // Mode affichage normal
                         <div className="flex items-center w-full justify-between">
                           <span className="truncate">
-                            {column === 'statut' || column === 'statut_final' ? (
-                              (() => {
-                                const statutValue = cellValue as ContactStatus || ContactStatus.NonDefini;
-                                const colors = STATUS_COLORS[statutValue] || STATUS_COLORS[ContactStatus.NonDefini];
-                                const currentBg = theme === Theme.Dark ? colors.darkBg : colors.bg;
-                                const currentText = theme === Theme.Dark ? colors.darkText : colors.text;
-                                
-                                return (
-                                  <span className={`px-2 py-1 rounded text-xs font-medium ${currentBg} ${currentText}`}>
-                                    {statutValue}
-                                  </span>
-                                );
-                              })()
-                            ) : (
-                              String(cellValue || '')
-                            )}
+                            {column === 'statut' || column === 'statut_final'
+                              ? (() => {
+                                  const statutValue = (cellValue as string) || ContactStatus.NonDefini;
+                                  const colorCfg = StatusConfigService.getColor(statutValue, mode);
+                                  const label = StatusConfigService.getLabel(statutValue, mode);
+                                  return (
+                                    <span className={`px-2 py-1 rounded text-xs font-medium ${colorCfg.color}`}>
+                                      {label}
+                                    </span>
+                                  );
+                                })()
+                              : String(cellValue || '')}
                           </span>
                           
                           {/* Icône d'édition visible au hover */}

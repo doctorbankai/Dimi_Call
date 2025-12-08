@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
-import { Contact, ContactStatus, CallStates } from "../types"
+import { Contact, ContactStatus, CallStates, CallMode } from "../types"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
@@ -29,7 +29,7 @@ import {
   FileSpreadsheet,
   Check,
 } from "lucide-react"
-import { STATUS_COLORS, STATUS_OPTIONS, COLUMN_HEADERS, DEFAULT_COLUMN_ORDER } from "../constants"
+import { COLUMN_HEADERS, DEFAULT_COLUMN_ORDER } from "../constants"
 import CallControl from "./CallControl"
 import { Button } from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
@@ -266,6 +266,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     }
   })
   const { mode } = useCallMode()
+  const statusOptions = useMemo(() => StatusConfigService.getStatusList(mode), [mode])
   const columnHeadersWithProfile = useMemo(() => ['Profil', ...COLUMN_HEADERS], [])
   // Charger la configuration des colonnes essentielles depuis les paramètres
   const getEssentialColumns = (): string[] => {
@@ -697,7 +698,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     [contacts, selectedContactId],
   )
   const [formState, setFormState] = useState<FormState>(getInitialFormState(selectedContact))
-  const [selectedStatus, setSelectedStatus] = useState<ContactStatus>(
+  const [selectedStatus, setSelectedStatus] = useState<string>(
     selectedContact?.statut ?? ContactStatus.NonDefini,
   )
   const [noteDraft, setNoteDraft] = useState("")
@@ -823,7 +824,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       onUpdateContact({
         id: selectedContact.id,
         ...formState,
-        statut: selectedStatus,
+        statut: selectedStatus as ContactStatus | string,
         commentaire: noteDraft,
       })
     } catch (error) {
@@ -1382,7 +1383,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   <CommandGroup heading="Contacts">
                     {displayedContacts.map((contact) => {
                       const isSelected = contact.id === selectedContactId
-                      const statusConfig = STATUS_COLORS[contact.statut ?? ContactStatus.NonDefini]
+                      const statusColor = StatusConfigService.getColor(contact.statut ?? ContactStatus.NonDefini, mode)
+                      const statusLabel = StatusConfigService.getLabel(contact.statut ?? ContactStatus.NonDefini, mode)
                       const isCalling = !!callStates[contact.id]?.isCalling
                       return (
                         <CommandItem
@@ -1476,13 +1478,10 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           className={cn(
                             contactBadgeClass,
                             "capitalize",
-                            statusConfig?.bg,
-                            statusConfig?.text,
-                            statusConfig?.darkBg,
-                            statusConfig?.darkText,
+                            statusColor.color,
                           )}
                         >
-                          {contact.statut ?? ContactStatus.NonDefini}
+                          {statusLabel}
                         </Badge>
                         {isCalling && (
                           <div className="hidden sm:flex items-center gap-1 rounded-md border border-primary/20 bg-primary/10 px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-[11px] text-primary shrink-0">
@@ -1708,17 +1707,19 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                               <Label>Statut</Label>
                               <Select
                                 value={selectedStatus}
-                                onValueChange={(value: ContactStatus) => setSelectedStatus(value)}
+                              onValueChange={(value: string) => setSelectedStatus(value)}
                               >
                                 <SelectTrigger className="justify-between">
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  {STATUS_OPTIONS.map((status) => (
-                                    <SelectItem key={status} value={status}>
-                                      {status}
-                                    </SelectItem>
-                                  ))}
+                                  {statusOptions
+                                    .filter((status) => !(status === ContactStatus.A0 && mode !== CallMode.Apporteur))
+                                    .map((status) => (
+                                      <SelectItem key={status} value={status}>
+                                        {StatusConfigService.getLabel(status, mode)}
+                                      </SelectItem>
+                                    ))}
                                 </SelectContent>
                               </Select>
                             </div>

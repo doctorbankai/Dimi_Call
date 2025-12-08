@@ -4,13 +4,12 @@ import { Contact, ContactStatus, CallStates, Theme } from '../types';
 import { 
     COLUMN_HEADERS as DEFAULT_COLUMN_HEADERS, 
     CONTACT_DATA_KEYS as DEFAULT_CONTACT_DATA_KEYS, 
-    STATUS_OPTIONS, 
-    STATUS_COLORS, 
     QUICK_COMMENTS, 
     IconPhone, IconUser, IconMail, IconComment, IconClock, IconStatus, IconZap, IconCalendar, IconDuration, 
     IconChevronUp, IconChevronDown, IconTrash
 } from '../constants';
 import { Button } from './Common';
+import { StatusConfigService } from '@/services/statusConfigService';
 
 interface VirtualizedContactTableProps {
   contacts: Contact[];
@@ -97,13 +96,12 @@ const VirtualRow: React.FC<VirtualRowProps> = ({
             </Button>
           );
         } else if (key === 'statut') {
-          const colors = STATUS_COLORS[contact.statut] || STATUS_COLORS[ContactStatus.NonDefini];
-          const currentBg = theme === Theme.Dark ? colors.darkBg : colors.bg;
-          const currentText = theme === Theme.Dark ? colors.darkText : colors.text;
+          const colorCfg = StatusConfigService.getColor(contact.statut || ContactStatus.NonDefini);
+          const label = StatusConfigService.getLabel(contact.statut || ContactStatus.NonDefini);
           
           cellContent = (
-            <span className={`px-2 py-1 rounded text-xs font-medium ${currentBg} ${currentText}`}>
-              {contact.statut}
+            <span className={`px-2 py-1 rounded text-xs font-medium ${colorCfg.color}`}>
+              {label}
             </span>
           );
         } else {

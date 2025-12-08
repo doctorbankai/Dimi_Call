@@ -791,28 +791,94 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
     return [...enforcedIds, ...remainingIds];
   }, [dynamicColumns]);
 
-  // Load saved column order
-  useEffect(() => {
-    if (enforcedColumnIds.length === 0) return;
+  const resolveSavedColumnOrder = useCallback(() => {
+    if (dynamicColumns.length === 0) return [];
+
+    const idsByLabel = new Map(dynamicColumns.map((col) => [col.label, col.id]));
+    const availableIds = dynamicColumns.map((col) => col.id);
+
+    let savedOrder: string[] | null = null;
     try {
       const savedVersion = localStorage.getItem(COLUMN_ORDER_VERSION_KEY);
       if (savedVersion !== COLUMN_ORDER_VERSION) {
         localStorage.setItem(COLUMN_ORDER_VERSION_KEY, COLUMN_ORDER_VERSION);
         localStorage.removeItem(COLUMN_ORDER_STORAGE_KEY);
       }
-      localStorage.setItem(COLUMN_ORDER_STORAGE_KEY, JSON.stringify(enforcedColumnIds));
-    } catch {}
-    setColumnOrder(enforcedColumnIds);
-  }, [enforcedColumnIds]);
+
+      const raw = localStorage.getItem(COLUMN_ORDER_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          savedOrder = parsed
+            .map((item) => {
+              if (typeof item !== 'string') return null;
+              if (availableIds.includes(item)) return item;
+              return idsByLabel.get(item) || null;
+            })
+            .filter((id): id is string => Boolean(id));
+        }
+      }
+    } catch {
+      // Ignore storage errors
+    }
+
+    const base = savedOrder && savedOrder.length > 0 ? savedOrder : enforcedColumnIds;
+    const merged = Array.from(new Set([...base, ...availableIds]));
+
+    const profilId = idsByLabel.get('Profil');
+    if (profilId && merged.includes(profilId)) {
+      const withoutProfil = merged.filter((id) => id !== profilId);
+      return [profilId, ...withoutProfil];
+    }
+
+    return merged;
+  }, [dynamicColumns, enforcedColumnIds]);
+
+  // Load saved column order or fallback to default
+  useEffect(() => {
+    const initialOrder = resolveSavedColumnOrder();
+    if (initialOrder.length === 0) return;
+    setColumnOrder(initialOrder);
+    table.setColumnOrder?.(initialOrder);
+    try {
+      const labels = initialOrder
+        .map((id) => dynamicColumns.find((col) => col.id === id)?.label)
+        .filter((label): label is string => Boolean(label));
+      if (labels.length > 0) {
+        localStorage.setItem(COLUMN_ORDER_STORAGE_KEY, JSON.stringify(labels));
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, [resolveSavedColumnOrder, table, dynamicColumns]);
+
+  // Listen for external column-order updates (Settings)
+  useEffect(() => {
+    const handleExternalColumnOrder = () => {
+      const nextOrder = resolveSavedColumnOrder();
+      if (nextOrder.length > 0) {
+        setColumnOrder(nextOrder);
+        table.setColumnOrder?.(nextOrder);
+      }
+    };
+
+    window.addEventListener('dimicall-column-order-changed', handleExternalColumnOrder);
+    return () => window.removeEventListener('dimicall-column-order-changed', handleExternalColumnOrder);
+  }, [resolveSavedColumnOrder, table]);
 
   // Save column order
   useEffect(() => {
     try {
       if (columnOrder.length > 0) {
-        localStorage.setItem(COLUMN_ORDER_STORAGE_KEY, JSON.stringify(columnOrder));
+        const labels = columnOrder
+          .map((id) => dynamicColumns.find((col) => col.id === id)?.label)
+          .filter((label): label is string => Boolean(label));
+        if (labels.length > 0) {
+          localStorage.setItem(COLUMN_ORDER_STORAGE_KEY, JSON.stringify(labels));
+        }
       }
     } catch {}
-  }, [columnOrder]);
+  }, [columnOrder, dynamicColumns]);
 
   // Sort handling
   const handleSort = useCallback((key: keyof Contact) => {

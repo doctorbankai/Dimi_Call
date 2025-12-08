@@ -9,6 +9,7 @@ import { ContactStatus, CallMode } from '../types';
 import { useCallMode } from '../context/ModeContext';
 import { shortcutService, ShortcutConfig } from '../services/shortcutService';
 import { Theme } from '../types';
+import { StatusConfigService } from '../services/statusConfigService';
 
 interface ShortcutConfigDialogProps {
   isOpen: boolean;
@@ -37,11 +38,11 @@ export const ShortcutConfigDialog: React.FC<ShortcutConfigDialogProps> = ({
 
   if (!isOpen) return null;
 
-  // Obtenir tous les statuts disponibles
-  const availableStatuses = Object.values(ContactStatus);
+  // Obtenir tous les statuts disponibles (dynamiques)
+  const availableStatuses = StatusConfigService.getStatusList(mode, { includeHidden: true });
 
   // Gérer le changement de statut pour une touche
-  const handleStatusChange = (key: string, newStatus: ContactStatus) => {
+  const handleStatusChange = (key: string, newStatus: string) => {
     setShortcuts(prev => 
       prev.map(shortcut => 
         shortcut.key === key 
@@ -53,20 +54,8 @@ export const ShortcutConfigDialog: React.FC<ShortcutConfigDialogProps> = ({
   };
 
   // Obtenir le libellé d'un statut
-  const getStatusLabel = (status: ContactStatus): string => {
-    const labelMap: Record<ContactStatus, string> = {
-      [ContactStatus.NonDefini]: 'Non défini',
-      [ContactStatus.Premature]: 'Prématuré',
-      [ContactStatus.MauvaisNum]: 'Mauvais num',
-      [ContactStatus.Repondeur]: 'Répondeur',
-      [ContactStatus.ARappeler]: 'À rappeler',
-      [ContactStatus.PasInteresse]: 'Pas intéressé',
-      [ContactStatus.Argumente]: 'Argumenté',
-      [ContactStatus.D0]: 'D0',
-      [ContactStatus.R0]: 'R0',
-      [ContactStatus.ListeNoire]: 'Liste noire'
-    };
-    return labelMap[status] || status;
+  const getStatusLabel = (status: string): string => {
+    return StatusConfigService.getLabel(status as ContactStatus, mode);
   };
 
   // Sauvegarder les modifications
@@ -100,20 +89,8 @@ export const ShortcutConfigDialog: React.FC<ShortcutConfigDialogProps> = ({
   };
 
   // Obtenir la couleur d'un statut
-  const getStatusColor = (status: ContactStatus) => {
-    const colors: Record<ContactStatus, string> = {
-      [ContactStatus.NonDefini]: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200',
-      [ContactStatus.Premature]: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-200',
-      [ContactStatus.MauvaisNum]: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-200',
-      [ContactStatus.Repondeur]: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-200',
-      [ContactStatus.ARappeler]: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-200',
-      [ContactStatus.PasInteresse]: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-200',
-      [ContactStatus.Argumente]: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-200',
-      [ContactStatus.D0]: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200',
-      [ContactStatus.R0]: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-200',
-      [ContactStatus.ListeNoire]: 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900/30 dark:text-slate-200'
-    };
-    return colors[status] || colors[ContactStatus.NonDefini];
+  const getStatusColor = (status: string) => {
+    return StatusConfigService.getColor(status as ContactStatus, mode).color;
   };
 
   return (

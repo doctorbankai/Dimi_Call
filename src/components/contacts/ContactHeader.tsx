@@ -5,7 +5,7 @@ import { DialogTitle } from '@/components/ui/dialog'
 import { Phone, Mail } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ContactStatus } from '@/types'
-import { STATUS_COLORS } from '@/constants'
+import { StatusConfigService } from '@/services/statusConfigService'
 
 interface DirectoryContact {
   id: string
@@ -53,14 +53,9 @@ const mapStatusToContactStatus = (status?: string): ContactStatus | null => {
 }
 
 const getStatusBadgeClasses = (status?: string): string => {
-  const mapped = mapStatusToContactStatus(status)
-  if (!mapped) {
-    return 'bg-gray-200 text-gray-700 dark:bg-neutral-700 dark:text-neutral-300'
-  }
-  const colors = STATUS_COLORS[mapped]
-  return [colors?.bg, colors?.text, colors?.darkBg, colors?.darkText]
-    .filter(Boolean)
-    .join(' ')
+  const mapped = mapStatusToContactStatus(status) ?? status ?? ContactStatus.NonDefini
+  const { color } = StatusConfigService.getColor(mapped)
+  return color
 }
 
 const getInitials = (name: string): string =>
@@ -106,7 +101,7 @@ export const ContactHeader: React.FC<ContactHeaderProps> = ({ contact }) => {
             badgeClasses
           )}
         >
-          {contact.status}
+          {StatusConfigService.getLabel(contact.status as any)}
         </Badge>
       </div>
     </div>

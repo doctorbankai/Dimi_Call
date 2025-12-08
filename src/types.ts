@@ -33,7 +33,7 @@ export interface Contact {
   telephone: string;
   email: string;
   source: string; // 'source' in Python app (formerly 'ecole')
-  statut: ContactStatus;
+  statut: ContactStatus | string;
   commentaire: string;
   dateRappel: string; // YYYY-MM-DD
   heureRappel: string; // HH:mm

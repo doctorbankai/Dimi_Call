@@ -6,7 +6,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import { ContactStatus } from '@/types'
-import { STATUS_COLORS } from '@/constants'
+import { StatusConfigService } from '@/services/statusConfigService'
 
 interface DirectoryContact {
   id: string
@@ -54,14 +54,9 @@ const mapStatusToContactStatus = (status?: string): ContactStatus | null => {
 }
 
 const getStatusBadgeClasses = (status?: string): string => {
-  const mapped = mapStatusToContactStatus(status)
-  if (!mapped) {
-    return 'bg-gray-200 text-gray-700 dark:bg-neutral-700 dark:text-neutral-300'
-  }
-  const colors = STATUS_COLORS[mapped]
-  return [colors?.bg, colors?.text, colors?.darkBg, colors?.darkText]
-    .filter(Boolean)
-    .join(' ')
+  const mapped = mapStatusToContactStatus(status) ?? status ?? ContactStatus.NonDefini
+  const { color } = StatusConfigService.getColor(mapped)
+  return color
 }
 
 export const ContactInfo: React.FC<ContactInfoProps> = ({ contact }) => {
@@ -101,7 +96,7 @@ export const ContactInfo: React.FC<ContactInfoProps> = ({ contact }) => {
                   badgeClasses
                 )}
               >
-                {contact.status}
+                {StatusConfigService.getLabel((contact.status || ContactStatus.NonDefini) as any)}
               </Badge>
             </div>
           </div>

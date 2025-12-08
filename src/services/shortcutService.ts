@@ -2,7 +2,7 @@ import { ContactStatus } from '../types';
 
 export interface ShortcutConfig {
   key: string;
-  status: ContactStatus;
+  status: string;
   label: string;
 }
 
@@ -78,8 +78,7 @@ class ShortcutService {
       shortcut && 
       typeof shortcut.key === 'string' &&
       typeof shortcut.status === 'string' &&
-      typeof shortcut.label === 'string' &&
-      Object.values(ContactStatus).includes(shortcut.status)
+      typeof shortcut.label === 'string'
     );
   }
 
@@ -93,7 +92,7 @@ class ShortcutService {
   /**
    * Obtenir le statut associé à une touche
    */
-  getStatusForKey(key: string): ContactStatus | null {
+  getStatusForKey(key: string): string | null {
     const shortcut = this.shortcuts.find(s => s.key === key);
     return shortcut ? shortcut.status : null;
   }
@@ -101,7 +100,7 @@ class ShortcutService {
   /**
    * Mettre à jour un raccourci
    */
-  updateShortcut(key: string, status: ContactStatus, label?: string): void {
+  updateShortcut(key: string, status: string, label?: string): void {
     const index = this.shortcuts.findIndex(s => s.key === key);
     if (index !== -1) {
       this.shortcuts[index] = {
@@ -117,12 +116,9 @@ class ShortcutService {
    * Mettre à jour tous les raccourcis
    */
   updateAllShortcuts(newShortcuts: ShortcutConfig[]): void {
-    if (this.validateShortcuts(newShortcuts)) {
-      this.shortcuts = [...newShortcuts];
-      this.saveShortcuts();
-    } else {
-      throw new Error('Configuration de raccourcis invalide');
-    }
+    if (!Array.isArray(newShortcuts)) throw new Error('Configuration de raccourcis invalide');
+    this.shortcuts = [...newShortcuts];
+    this.saveShortcuts();
   }
 
   /**
@@ -137,19 +133,7 @@ class ShortcutService {
    * Obtenir le libellé par défaut d'un statut
    */
   private getStatusLabel(status: ContactStatus): string {
-    const labelMap: Record<ContactStatus, string> = {
-      [ContactStatus.NonDefini]: 'Non défini',
-      [ContactStatus.Premature]: 'Prématuré',
-      [ContactStatus.MauvaisNum]: 'Mauvais num',
-      [ContactStatus.Repondeur]: 'Répondeur',
-      [ContactStatus.ARappeler]: 'À rappeler',
-      [ContactStatus.PasInteresse]: 'Pas intéressé',
-      [ContactStatus.Argumente]: 'Argumenté',
-      [ContactStatus.D0]: 'D0',
-      [ContactStatus.R0]: 'R0',
-      [ContactStatus.ListeNoire]: 'Liste noire'
-    };
-    return labelMap[status] || status;
+    return status;
   }
 
   /**

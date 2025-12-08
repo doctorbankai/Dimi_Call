@@ -8,6 +8,20 @@ import { BetaOptInSettings } from '../../components/BetaOptInSettings';
 import { DevToolsService } from '../../services/devToolsService';
 import { BetaPreferences } from '../../types/update';
 
+jest.mock('@/components/ui/switch', () => ({
+  Switch: ({ checked, onCheckedChange, disabled, id, ...props }: any) => (
+    <input
+      type="checkbox"
+      role="switch"
+      id={id}
+      checked={checked}
+      onChange={(e) => onCheckedChange?.(e.target.checked)}
+      disabled={disabled}
+      {...props}
+    />
+  ),
+}));
+
 // Mock du DevToolsService
 jest.mock('../../services/devToolsService');
 const mockDevToolsService = DevToolsService as jest.Mocked<typeof DevToolsService>;
@@ -48,7 +62,7 @@ describe('DevTools Workflow Integration', () => {
   });
 
   describe('DevTools Toggle Functionality', () => {
-    it('should enable DevTools when checkbox is checked', async () => {
+    it('should enable DevTools when switch is enabled', async () => {
       render(<BetaOptInSettings {...mockProps} />);
       
       const devToolsCheckbox = screen.getByLabelText(/Activer les outils de développement/);
@@ -60,7 +74,7 @@ describe('DevTools Workflow Integration', () => {
       });
     });
 
-    it('should disable DevTools when checkbox is unchecked', async () => {
+    it('should disable DevTools when switch is disabled', async () => {
       const propsWithDevToolsEnabled = {
         ...mockProps,
         devToolsEnabled: true

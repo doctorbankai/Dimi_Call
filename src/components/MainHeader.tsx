@@ -27,6 +27,9 @@ type MainHeaderProps = {
   adbConnectionState?: AdbConnectionState
   adbConnecting?: boolean
   onAdbClick?: (event: React.MouseEvent<HTMLButtonElement>) => void
+  onOpenHelp?: () => void
+  onOpenSupport?: () => void
+  onOpenTroubleshoot?: () => void
 }
 
 export const MainHeader: React.FC<MainHeaderProps> = ({
@@ -47,6 +50,9 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
   adbConnectionState,
   adbConnecting,
   onAdbClick,
+  onOpenHelp,
+  onOpenSupport,
+  onOpenTroubleshoot,
 }) => {
   const [open, setOpen] = React.useState(false)
 
@@ -89,6 +95,9 @@ export const MainHeader: React.FC<MainHeaderProps> = ({
           adbConnectionState={adbConnectionState}
           adbConnecting={adbConnecting}
           onAdbClick={onAdbClick}
+          onOpenHelp={onOpenHelp}
+          onOpenSupport={onOpenSupport}
+          onOpenTroubleshoot={onOpenTroubleshoot}
         />
       </div>
       <GlobalCommand

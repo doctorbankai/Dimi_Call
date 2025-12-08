@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Settings, Mail, X, Save, Undo, ChevronDown, Palette, Calendar, MessageSquare, Sun, Moon, Monitor, Keyboard, RotateCcw, DownloadCloud, Info, CheckCircle, ExternalLink, Columns, FileText, PhoneCall } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Settings, Mail, X, Save, Undo, ChevronDown, Palette, Calendar, MessageSquare, Sun, Moon, Monitor, Keyboard, RotateCcw, DownloadCloud, Info, CheckCircle, ExternalLink, Columns, FileText, PhoneCall, Plus, Trash2, GripVertical } from 'lucide-react';
 import { BetaOptInSettings } from './BetaOptInSettings';
 import { LogsViewer } from './LogsViewer';
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
@@ -15,7 +18,10 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AnimatePresence, motion } from 'framer-motion';
 import { EmailType, SmsType, Civility, Theme, ContactStatus, CallMode } from '../types';
+import { useCallMode } from '../context/ModeContext';
 import { shortcutService, ShortcutConfig } from '../services/shortcutService';
 import { cn } from '../lib/utils';
 import { StatusConfigService, StatusConfigMap } from '../services/statusConfigService';
@@ -49,19 +55,19 @@ interface EmailTemplates {
 const defaultTemplates: EmailTemplates = {
   [EmailType.PremierContact]: {
     subject: "Arcanis Conseil - Premier Contact",
-    body: "Bonjour {titre} {nom},\n\nPour resituer mon appel, je suis gérant privé au sein du cabinet de gestion de patrimoine Arcanis Conseil. Je vous envoie l'adresse de notre site web que vous puissiez en savoir d'avantage : https://arcanis-conseil.fr\n\nLe site est avant tout une vitrine, le mieux est de m'appeler si vous souhaitez davantage d'informations ou de prendre un créneau de 30 minutes dans mon agenda via ce lien : https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true\n\nBien à vous,"
+    body: "Bonjour @titre @nom,\n\nPour resituer mon appel, je suis gérant privé au sein du cabinet de gestion de patrimoine Arcanis Conseil. Je vous envoie l'adresse de notre site web que vous puissiez en savoir d'avantage : https://arcanis-conseil.fr\n\nLe site est avant tout une vitrine, le mieux est de m'appeler si vous souhaitez davantage d'informations ou de prendre un créneau de 30 minutes dans mon agenda via ce lien : https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true\n\nBien à vous,"
   },
   [EmailType.D0Visio]: {
     subject: "Confirmation rendez-vous visio - Arcanis Conseil",
-    body: "Bonjour {titre} {nom}, merci pour votre temps lors de notre échange téléphonique. \n\nSuite à notre appel, je vous confirme {rdv} en visio.\n\nPour rappel, notre entretien durera une trentaine de minutes. Le but est de vous présenter plus en détail Arcanis Conseil, d'effectuer ensemble l'état des lieux de votre situation patrimoniale (revenus, patrimoine immobilier, épargne constituée etc.), puis de vous donner un diagnostic de vos leviers. Notre métier est de vous apporter un conseil pertinent et personnalisé sur l'optimisation de votre patrimoine.\n\nJe vous invite à visiter notre site internet pour de plus amples renseignements avant le début de notre échange : www.arcanis-conseil.fr\n\nN'hésitez pas à revenir vers moi en cas de question ou d'un besoin supplémentaire d'information.\n\nBien cordialement"
+    body: "Bonjour @titre @nom, merci pour votre temps lors de notre échange téléphonique. \n\nSuite à notre appel, je vous confirme @rdv en visio.\n\nPour rappel, notre entretien durera une trentaine de minutes. Le but est de vous présenter plus en détail Arcanis Conseil, d'effectuer ensemble l'état des lieux de votre situation patrimoniale (revenus, patrimoine immobilier, épargne constituée etc.), puis de vous donner un diagnostic de vos leviers. Notre métier est de vous apporter un conseil pertinent et personnalisé sur l'optimisation de votre patrimoine.\n\nJe vous invite à visiter notre site internet pour de plus amples renseignements avant le début de notre échange : www.arcanis-conseil.fr\n\nN'hésitez pas à revenir vers moi en cas de question ou d'un besoin supplémentaire d'information.\n\nBien cordialement"
   },
   [EmailType.R0Interne]: {
     subject: "Confirmation rendez-vous présentiel - Arcanis Conseil",
-    body: "Bonjour {titre} {nom}, merci pour votre temps lors de notre échange téléphonique. \n\nSuite à notre appel, je vous confirme {rdv} dans nos locaux au 22 rue la Boétie, 75008 Paris.\n\nPour rappel, notre entretien durera une trentaine de minutes. Le but est de vous présenter plus en détail Arcanis Conseil, d'effectuer ensemble l'état des lieux de votre situation patrimoniale (revenus, patrimoine immobilier, épargne constituée etc.), puis de vous donner un diagnostic de vos leviers. Notre métier est de vous apporter un conseil pertinent et personnalisé sur l'optimisation de votre patrimoine.\n\nJe vous invite à visiter notre site internet pour de plus amples renseignements avant le début de notre échange : www.arcanis-conseil.fr\n\nN'hésitez pas à revenir vers moi en cas de question ou d'un besoin supplémentaire d'information.\n\nBien cordialement"
+    body: "Bonjour @titre @nom, merci pour votre temps lors de notre échange téléphonique. \n\nSuite à notre appel, je vous confirme @rdv dans nos locaux au 22 rue la Boétie, 75008 Paris.\n\nPour rappel, notre entretien durera une trentaine de minutes. Le but est de vous présenter plus en détail Arcanis Conseil, d'effectuer ensemble l'état des lieux de votre situation patrimoniale (revenus, patrimoine immobilier, épargne constituée etc.), puis de vous donner un diagnostic de vos leviers. Notre métier est de vous apporter un conseil pertinent et personnalisé sur l'optimisation de votre patrimoine.\n\nJe vous invite à visiter notre site internet pour de plus amples renseignements avant le début de notre échange : www.arcanis-conseil.fr\n\nN'hésitez pas à revenir vers moi en cas de question ou d'un besoin supplémentaire d'information.\n\nBien cordialement"
   },
   [EmailType.R0Externe]: {
     subject: "Confirmation rendez-vous présentiel - Arcanis Conseil",
-    body: "Bonjour {titre} {nom}, merci pour votre temps lors de notre échange téléphonique. \n\nSuite à notre appel, je vous confirme {rdv} à {adresse}.\n\nPour rappel, notre entretien durera une trentaine de minutes. Le but est de vous présenter plus en détail Arcanis Conseil, d'effectuer ensemble l'état des lieux de votre situation patrimoniale (revenus, patrimoine immobilier, épargne constituée etc.), puis de vous donner un diagnostic de vos leviers. Notre métier est de vous apporter un conseil pertinent et personnalisé sur l'optimisation de votre patrimoine.\n\nJe vous invite à visiter notre site internet pour de plus amples renseignements avant le début de notre échange : www.arcanis-conseil.fr\n\nN'hésitez pas à revenir vers moi en cas de question ou d'un besoin supplémentaire d'information.\n\nBien cordialement"
+    body: "Bonjour @titre @nom, merci pour votre temps lors de notre échange téléphonique. \n\nSuite à notre appel, je vous confirme @rdv à @adresse.\n\nPour rappel, notre entretien durera une trentaine de minutes. Le but est de vous présenter plus en détail Arcanis Conseil, d'effectuer ensemble l'état des lieux de votre situation patrimoniale (revenus, patrimoine immobilier, épargne constituée etc.), puis de vous donner un diagnostic de vos leviers. Notre métier est de vous apporter un conseil pertinent et personnalisé sur l'optimisation de votre patrimoine.\n\nJe vous invite à visiter notre site internet pour de plus amples renseignements avant le début de notre échange : www.arcanis-conseil.fr\n\nN'hésitez pas à revenir vers moi en cas de question ou d'un besoin supplémentaire d'information.\n\nBien cordialement"
   }
 };
 
@@ -73,26 +79,26 @@ interface SmsTemplates {
 }
 
 const defaultSmsTemplates: SmsTemplates = {
-  [SmsType.PremierContact]: `Bonjour {civilite} {nom},
+  [SmsType.PremierContact]: `Bonjour @civilite @nom,
 
 Pour resituer mon appel, je suis gérant privé au sein du cabinet de gestion de patrimoine Arcanis Conseil. Je vous envoie l'adresse de notre site web que vous puissiez en savoir davantage : https://arcanis-conseil.fr
 
 Le site est avant tout une vitrine. Le mieux est de m'appeler si vous souhaitez davantage d'informations ou de prendre un créneau de 30 minutes dans mon agenda via ce lien : https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true
 
 Bien à vous,`,
-  [SmsType.D0Visio]: `Bonjour {civilite} {nom},
+  [SmsType.D0Visio]: `Bonjour @civilite @nom,
 
-Suite à notre appel, je vous confirme {rdv} en visio. Nous prendrons 30 minutes pour faire un point rapide et vous présenter Arcanis Conseil.
-
-À très bientôt,`,
-  [SmsType.R0Interne]: `Bonjour {civilite} {nom},
-
-Suite à notre appel, je vous confirme {rdv} dans nos locaux (22 rue la Boétie, 75008 Paris). Prévoir 30 minutes pour l'entretien.
+Suite à notre appel, je vous confirme @rdv en visio. Nous prendrons 30 minutes pour faire un point rapide et vous présenter Arcanis Conseil.
 
 À très bientôt,`,
-  [SmsType.R0Externe]: `Bonjour {civilite} {nom},
+  [SmsType.R0Interne]: `Bonjour @civilite @nom,
 
-Suite à notre appel, je vous confirme {rdv} à {adresse}. Prévoir 30 minutes pour l'entretien.
+Suite à notre appel, je vous confirme @rdv dans nos locaux (22 rue la Boétie, 75008 Paris). Prévoir 30 minutes pour l'entretien.
+
+À très bientôt,`,
+  [SmsType.R0Externe]: `Bonjour @civilite @nom,
+
+Suite à notre appel, je vous confirme @rdv à @adresse. Prévoir 30 minutes pour l'entretien.
 
 À très bientôt,`,
 };
@@ -107,7 +113,10 @@ const smsTypeLabels = {
 const STORAGE_KEY = 'dimicall_email_templates';
 const SMS_STORAGE_KEY = 'dimicall_sms_templates';
 const COLUMNS_STORAGE_KEY = 'dimicall_column_config';
+const COLUMN_ORDER_STORAGE_KEY = 'dimicall-column-order';
+const COLUMN_LABELS_STORAGE_KEY = 'dimicall-column-labels';
 const MODE_STORAGE_KEY = 'dimicall-call-mode';
+const CAL_PROVIDER_STORAGE_KEY = 'dimicall-calendar-provider';
 
 // Configuration par défaut des colonnes
 const DEFAULT_COLUMN_CONFIG = {
@@ -115,6 +124,7 @@ const DEFAULT_COLUMN_CONFIG = {
   'Prénom': { isEssential: true, label: 'Prénom du contact' },
   'Nom': { isEssential: true, label: 'Nom du contact' },
   'Commentaire': { isEssential: true, label: 'Commentaire/Qualification' },
+  'Sexe': { isEssential: false, label: 'Sexe du contact' },
   'Téléphone': { isEssential: false, label: 'Numéro de téléphone' },
   'Mail': { isEssential: false, label: 'Adresse email' },
   'Statut': { isEssential: false, label: 'Statut du contact' },
@@ -125,29 +135,33 @@ const DEFAULT_COLUMN_CONFIG = {
   'Date Appel': { isEssential: false, label: 'Date du dernier appel' },
   'Heure Appel': { isEssential: false, label: 'Heure du dernier appel' },
   'Durée Appel': { isEssential: false, label: 'Durée du dernier appel' },
-  'Source': { isEssential: false, label: 'Source du contact' }
+  'Source': { isEssential: false, label: 'Source du contact' },
+  'Type': { isEssential: false, label: 'Type de contact' },
+  'Qualité': { isEssential: false, label: 'Qualité du contact' },
+  'Lien': { isEssential: false, label: 'Lien associé' },
+  'Don': { isEssential: false, label: 'Don' },
+  'Date': { isEssential: false, label: 'Date (import)' },
+  'UID': { isEssential: false, label: 'Identifiant unique (UID)' },
 };
+const DEFAULT_COLUMN_ORDER_LIST = Object.keys(DEFAULT_COLUMN_CONFIG);
+const DEFAULT_COLUMN_LABELS: Record<string, string> = Object.fromEntries(
+  Object.entries(DEFAULT_COLUMN_CONFIG).map(([key, value]) => [key, value.label])
+);
 
-type SettingsCategory = 'email' | 'sms' | 'calcom' | 'appearance' | 'shortcuts' | 'update' | 'columns' | 'statuses' | 'data-sharing' | 'diagnostic' | 'logs';
+type SettingsCategory = 'templates' | 'calcom' | 'appearance' | 'shortcuts' | 'update' | 'columns' | 'statuses' | 'data-sharing' | 'diagnostic' | 'logs';
 
 const getCategories = (devToolsEnabled: boolean, updateEnabled: boolean = true) => [
   { 
-    id: 'email' as SettingsCategory, 
-    label: 'Templates Email', 
+    id: 'templates' as SettingsCategory, 
+    label: 'Templates', 
     icon: Mail, 
-    description: 'Personnalisez vos modèles d\'email'
-  },
-  { 
-    id: 'sms' as SettingsCategory, 
-    label: 'Templates SMS', 
-    icon: MessageSquare, 
-    description: 'Personnalisez vos modèles de SMS pour chaque type'
+    description: 'Emails et SMS'
   },
   { 
     id: 'calcom' as SettingsCategory, 
-    label: 'Cal.com', 
+    label: 'Calendrier', 
     icon: Calendar, 
-    description: 'Configuration de votre calendrier'
+    description: 'Configuration de vos liens de prise de rendez-vous'
   },
   { 
     id: 'appearance' as SettingsCategory, 
@@ -210,7 +224,7 @@ const emailTypeLabels = {
 };
 
 // Template SMS par défaut
-const DEFAULT_SMS_TEMPLATE = `Bonjour {civilite} {nom},
+const DEFAULT_SMS_TEMPLATE = `Bonjour @civilite @nom,
 
 Pour resituer mon appel, je suis gérant privé au sein du cabinet de gestion de patrimoine Arcanis Conseil.
 
@@ -224,6 +238,218 @@ Bien à vous,
 
 Dimitri MOREL - Arcanis Conseil`;
 
+const VARIABLE_REGEX = /(@[a-zA-Z0-9_]+|\{[^}]+\})/g;
+
+const renderHighlightedTemplate = (value: string, allowedKeys: string[]) => {
+  const segments: Array<{ type: 'text' | 'var'; content: string }> = [];
+  let lastIndex = 0;
+
+  for (const match of value.matchAll(VARIABLE_REGEX)) {
+    if (match.index !== undefined && match.index > lastIndex) {
+      segments.push({ type: 'text', content: value.slice(lastIndex, match.index) });
+    }
+    if (match[0]) {
+      segments.push({ type: 'var', content: match[0] });
+      lastIndex = (match.index ?? 0) + match[0].length;
+    }
+  }
+
+  if (lastIndex < value.length) {
+    segments.push({ type: 'text', content: value.slice(lastIndex) });
+  }
+
+  if (!segments.length) {
+    return null;
+  }
+
+  return segments.map((segment, index) => {
+    if (segment.type !== 'var') {
+      return <span key={`text-${index}`}>{segment.content}</span>;
+    }
+    const key = segment.content.startsWith('@')
+      ? segment.content.slice(1)
+      : segment.content.slice(1, -1);
+
+    if (!allowedKeys.includes(key)) {
+      return <span key={`text-${index}`}>{segment.content}</span>;
+    }
+
+    const display = segment.content.startsWith('{') ? `@${key}` : segment.content;
+
+    return (
+      <span
+        key={`var-${index}`}
+        className="bg-amber-100 text-amber-900 dark:bg-amber-500/20 dark:text-amber-50 rounded-sm"
+        style={{ boxDecorationBreak: 'clone', WebkitBoxDecorationBreak: 'clone' }}
+      >
+        {display}
+      </span>
+    );
+  });
+};
+
+interface TemplateTextareaProps {
+  id: string;
+  value: string;
+  rows?: number;
+  placeholder?: string;
+  onChange: (value: string) => void;
+  className?: string;
+  suggestions?: Array<{ label: string; value: string }>;
+  allowedKeys?: string[];
+}
+
+const TemplateTextarea: React.FC<TemplateTextareaProps> = ({
+  id,
+  value,
+  rows = 8,
+  placeholder = 'Corps du message',
+  onChange,
+  className,
+  suggestions = [],
+  allowedKeys = []
+}) => {
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const highlightedContent = renderHighlightedTemplate(value, allowedKeys);
+  const hasValue = Boolean(value);
+  const [pendingCaret, setPendingCaret] = useState<number | null>(null);
+  const [mentionStart, setMentionStart] = useState<number | null>(null);
+  const [mentionQuery, setMentionQuery] = useState('');
+  const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const filteredSuggestions = suggestions
+    .filter((s) => allowedKeys.includes(s.value))
+    .filter((s) => s.value.toLowerCase().includes(mentionQuery.toLowerCase()));
+
+  const handleScroll = (event: React.UIEvent<HTMLTextAreaElement>) => {
+    if (!overlayRef.current) return;
+    overlayRef.current.scrollTop = event.currentTarget.scrollTop;
+    overlayRef.current.scrollLeft = event.currentTarget.scrollLeft;
+  };
+
+  const closeSuggestions = () => {
+    setIsSuggestionOpen(false);
+    setMentionStart(null);
+    setMentionQuery('');
+    setActiveIndex(0);
+  };
+
+  const handleValueChange = (nextValue: string, cursor: number | null) => {
+    const cursorPosition = cursor ?? nextValue.length;
+    const beforeCursor = nextValue.slice(0, cursorPosition);
+    const match = /@([a-zA-Z0-9_]*)$/.exec(beforeCursor);
+
+    if (match && typeof match.index === 'number') {
+      setMentionStart(cursorPosition - match[0].length);
+      setMentionQuery(match[1] || '');
+      setIsSuggestionOpen(true);
+      setActiveIndex(0);
+    } else {
+      closeSuggestions();
+    }
+
+    onChange(nextValue);
+  };
+
+  const handleInputChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    handleValueChange(event.target.value, event.target.selectionStart);
+  };
+
+  const applySuggestion = (suggestionValue: string) => {
+    if (mentionStart === null || !textareaRef.current) return;
+    const cursor = textareaRef.current.selectionStart ?? value.length;
+    const before = value.slice(0, mentionStart);
+    const after = value.slice(cursor);
+    const insertion = `@${suggestionValue}`;
+    const needsSpace = after.length === 0 || /^[^\s]/.test(after);
+    const nextValue = `${before}${insertion}${needsSpace ? ' ' : ''}${after}`;
+    const nextCaret = before.length + insertion.length + (needsSpace ? 1 : 0);
+
+    setPendingCaret(nextCaret);
+    onChange(nextValue);
+    closeSuggestions();
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (!isSuggestionOpen || !filteredSuggestions.length) return;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActiveIndex((prev) => (prev + 1) % filteredSuggestions.length);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActiveIndex((prev) => (prev - 1 + filteredSuggestions.length) % filteredSuggestions.length);
+    } else if (event.key === 'Enter' || event.key === 'Tab') {
+      event.preventDefault();
+      applySuggestion(filteredSuggestions[activeIndex]?.value);
+    } else if (event.key === 'Escape') {
+      event.preventDefault();
+      closeSuggestions();
+    } else if (event.key === 'Backspace' && mentionQuery === '') {
+      closeSuggestions();
+    }
+  };
+
+  useEffect(() => {
+    if (pendingCaret !== null && textareaRef.current) {
+      textareaRef.current.focus();
+      textareaRef.current.setSelectionRange(pendingCaret, pendingCaret);
+      setPendingCaret(null);
+    }
+  }, [value, pendingCaret]);
+
+  return (
+    <div className="relative min-h-16">
+      <div
+        aria-hidden="true"
+        ref={overlayRef}
+        className="pointer-events-none absolute inset-0 px-3 py-2 whitespace-pre-wrap break-words font-mono text-base md:text-sm leading-[1.5] text-foreground overflow-auto"
+      >
+        {hasValue ? highlightedContent : <span className="text-muted-foreground">{placeholder}</span>}
+      </div>
+      <Textarea
+        id={id}
+        ref={textareaRef}
+        value={value}
+        onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        rows={rows}
+        onScroll={handleScroll}
+        className={cn(
+          'font-mono text-base md:text-sm leading-[1.5] relative bg-transparent text-transparent caret-primary selection:bg-primary/20 placeholder:text-transparent px-3 py-2',
+          className
+        )}
+      />
+      {isSuggestionOpen && filteredSuggestions.length > 0 && (
+        <div className="absolute bottom-2 left-2 z-30 w-56 max-h-56 overflow-auto rounded-md border bg-popover text-popover-foreground shadow-md">
+          <ul className="py-1">
+            {filteredSuggestions.map((item, index) => (
+              <li key={item.value}>
+                <button
+                  type="button"
+                  className={cn(
+                    'flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground',
+                    index === activeIndex && 'bg-accent text-accent-foreground'
+                  )}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    applySuggestion(item.value);
+                  }}
+                >
+                  <span className="font-medium">@{item.value}</span>
+                  <span className="text-xs text-muted-foreground">{item.label}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const SettingsDialog: React.FC<SettingsDialogProps> = ({ 
   isOpen, 
   onClose, 
@@ -235,7 +461,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   theme = Theme.Dark,
   onThemeChange
 }) => {
-  const [activeCategory, setActiveCategory] = useState<SettingsCategory>('email');
+  const { mode: currentMode, setMode } = useCallMode();
+  const [activeCategory, setActiveCategory] = useState<SettingsCategory>('templates');
+  const [templateTab, setTemplateTab] = useState<'email' | 'sms'>('email');
   const [templates, setTemplates] = useState<EmailTemplates>(defaultTemplates);
   const [apporteurTemplates, setApporteurTemplates] = useState<EmailTemplates>(defaultTemplates);
   const [signature, setSignature] = useState('');
@@ -244,6 +472,14 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   const [selectedEmailType, setSelectedEmailType] = useState<EmailType>(EmailType.PremierContact);
   const [selectedSmsType, setSelectedSmsType] = useState<SmsType>(SmsType.PremierContact);
   const [localCalcomUrl, setLocalCalcomUrl] = useState<string>(calcomUrl || 'https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true');
+  const [calProvider, setCalProvider] = useState<string>(() => {
+    try {
+      return localStorage.getItem(CAL_PROVIDER_STORAGE_KEY) || 'calcom';
+    } catch {
+      return 'calcom';
+    }
+  });
+  const [shockwaveId, setShockwaveId] = useState(0);
   const [localSmsTemplate, setLocalSmsTemplate] = useState<string>(smsTemplate || DEFAULT_SMS_TEMPLATE);
   const [localSmsTemplateApporteur, setLocalSmsTemplateApporteur] = useState<string>(smsTemplate || DEFAULT_SMS_TEMPLATE);
   const [smsTemplates, setSmsTemplates] = useState<SmsTemplates>(defaultSmsTemplates);
@@ -252,14 +488,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   const [shortcutsChanged, setShortcutsChanged] = useState(false);
   const [appVersion, setAppVersion] = useState<string>('Chargement...');
   const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
-  const [callMode, setCallMode] = useState<CallMode>(() => {
-    try {
-      const saved = localStorage.getItem(MODE_STORAGE_KEY);
-      return saved === CallMode.Apporteur ? CallMode.Apporteur : CallMode.Client;
-    } catch {
-      return CallMode.Client;
-    }
-  });
+  const [callMode, setCallMode] = useState<CallMode>(currentMode);
 
   // État pour le diagnostic
   const [diagnosticInfo, setDiagnosticInfo] = useState<{
@@ -279,8 +508,67 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   // Configuration des colonnes
   const [columnConfig, setColumnConfig] = useState<Record<string, boolean>>({});
   const [columnConfigChanged, setColumnConfigChanged] = useState(false);
+  const [columnSearch, setColumnSearch] = useState('');
+  const [columnLabels, setColumnLabels] = useState<Record<string, string>>(() => {
+    try {
+      const saved = localStorage.getItem(COLUMN_LABELS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return { ...DEFAULT_COLUMN_LABELS, ...parsed };
+        }
+      }
+    } catch {}
+    return { ...DEFAULT_COLUMN_LABELS };
+  });
+  const [columnOrderSettings, setColumnOrderSettings] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(COLUMN_ORDER_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const sanitized = parsed
+            .filter((col): col is string => typeof col === 'string')
+            .filter((col) => DEFAULT_COLUMN_CONFIG[col as keyof typeof DEFAULT_COLUMN_CONFIG]);
+          const merged = Array.from(
+            new Set([
+              ...sanitized,
+              ...DEFAULT_COLUMN_ORDER_LIST.filter((col) => sanitized.indexOf(col) === -1),
+            ])
+          );
+          return merged;
+        }
+      }
+    } catch {
+      // Fallback vers l'ordre par défaut
+    }
+    return DEFAULT_COLUMN_ORDER_LIST;
+  });
+  const [columnOrderChanged, setColumnOrderChanged] = useState(false);
+  const [columnLabelsChanged, setColumnLabelsChanged] = useState(false);
+  const [newColumnName, setNewColumnName] = useState('');
+  const [newColumnLabel, setNewColumnLabel] = useState('');
+  const [columnFormError, setColumnFormError] = useState<string | null>(null);
+
+  // S'assurer que les nouvelles colonnes sont ajoutées à la liste ordonnée même si une config existante est chargée
+  useEffect(() => {
+    const missing = DEFAULT_COLUMN_ORDER_LIST.filter((col) => !columnOrderSettings.includes(col));
+    if (missing.length > 0) {
+      const next = [...columnOrderSettings, ...missing];
+      setColumnOrderSettings(next);
+      setColumnOrderChanged(true);
+      setHasChanges(true);
+    }
+  }, [columnOrderSettings]);
   // Éditeur de statuts: configuration par mode (libellés/couleurs/visibilité)
   const [statusConfig, setStatusConfig] = useState<StatusConfigMap>(() => StatusConfigService.getConfig());
+  const [statusOrder, setStatusOrder] = useState<string[]>(() => StatusConfigService.getStatusList(undefined, { includeHidden: true }));
+  const [newStatusLabel, setNewStatusLabel] = useState('');
+  const [newStatusPreset, setNewStatusPreset] = useState('blue');
+  const [statusFormError, setStatusFormError] = useState<string | null>(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
   
   // Hooks pour les paramètres de mise à jour (déplacés ici pour éviter les erreurs de hooks conditionnels)
   const { betaPreferences, setBetaPreferences, revertToStable, isUpdateEnabled, manualUpdateInfo } = useAutoUpdate();
@@ -360,6 +648,11 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     }
   }, [isOpen]);
 
+  // Synchroniser le mode local avec le mode global
+  useEffect(() => {
+    setCallMode(currentMode);
+  }, [currentMode]);
+
   // Charger la configuration des colonnes
   useEffect(() => {
     const saved = localStorage.getItem(COLUMNS_STORAGE_KEY);
@@ -402,8 +695,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   // Recharger la configuration des statuts lorsque le mode change ou quand on ouvre/va sur la section
   useEffect(() => {
     try {
-      const next = StatusConfigService.getConfig(callMode);
-      setStatusConfig(next);
+      const state = StatusConfigService.getState(callMode);
+      setStatusConfig(state.map);
+      setStatusOrder(state.order);
     } catch {}
   }, [callMode, activeCategory, isOpen]);
 
@@ -413,6 +707,13 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       loadDiagnosticInfo();
     }
   }, [isOpen, activeCategory]);
+
+  // Empêcher l'affichage des sections réservées lorsque les DevTools sont désactivés
+  useEffect(() => {
+    if (!devToolsEnabled && (activeCategory === 'diagnostic' || activeCategory === 'logs')) {
+      setActiveCategory('templates');
+    }
+  }, [devToolsEnabled, activeCategory]);
 
   const handleTemplateChange = (field: 'subject' | 'body', value: string) => {
     if (callMode === CallMode.Apporteur) {
@@ -455,7 +756,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   };
 
   // Gérer le changement de statut pour une touche
-  const handleShortcutChange = (key: string, newStatus: ContactStatus) => {
+  const handleShortcutChange = (key: string, newStatus: string) => {
     setShortcuts(prev => 
       prev.map(shortcut => 
         shortcut.key === key 
@@ -492,8 +793,75 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       defaultConfig[column] = DEFAULT_COLUMN_CONFIG[column as keyof typeof DEFAULT_COLUMN_CONFIG].isEssential;
     });
     setColumnConfig(defaultConfig);
+    setColumnOrderSettings(DEFAULT_COLUMN_ORDER_LIST);
+    setColumnLabels({ ...DEFAULT_COLUMN_LABELS });
     setColumnConfigChanged(true);
+    setColumnOrderChanged(true);
+    setColumnLabelsChanged(true);
     setHasChanges(true);
+  };
+
+  const handleColumnOrderDragEnd = (event: any) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = columnOrderSettings.indexOf(active.id as string);
+    const newIndex = columnOrderSettings.indexOf(over.id as string);
+    if (oldIndex === -1 || newIndex === -1) return;
+
+    const nextOrder = arrayMove(columnOrderSettings, oldIndex, newIndex);
+    setColumnOrderSettings(nextOrder);
+    setColumnOrderChanged(true);
+    setHasChanges(true);
+  };
+
+  const handleRemoveColumn = (columnName: string) => {
+    // Ne pas supprimer les colonnes essentielles par défaut
+    const isDefault = DEFAULT_COLUMN_CONFIG[columnName as keyof typeof DEFAULT_COLUMN_CONFIG];
+    if (isDefault?.isEssential) return;
+
+    setColumnOrderSettings((prev) => prev.filter((c) => c !== columnName));
+    setColumnConfig((prev) => {
+      const next = { ...prev };
+      delete next[columnName];
+      return next;
+    });
+    setColumnLabels((prev) => {
+      const next = { ...prev };
+      delete next[columnName];
+      return next;
+    });
+    setColumnOrderChanged(true);
+    setColumnConfigChanged(true);
+    setColumnLabelsChanged(true);
+    setHasChanges(true);
+  };
+
+  const handleAddColumn = () => {
+    const name = newColumnName.trim();
+    const label = newColumnLabel.trim();
+    if (!name) {
+      setColumnFormError('Ajoutez un nom de colonne.');
+      return;
+    }
+    const exists = columnOrderSettings.some((col) => col.toLowerCase() === name.toLowerCase());
+    if (exists) {
+      setColumnFormError('Cette colonne existe déjà.');
+      return;
+    }
+
+    const finalLabel = label || name;
+    const nextOrder = [...columnOrderSettings, name];
+    setColumnOrderSettings(nextOrder);
+    setColumnConfig((prev) => ({ ...prev, [name]: false }));
+    setColumnLabels((prev) => ({ ...prev, [name]: finalLabel }));
+    setColumnOrderChanged(true);
+    setColumnConfigChanged(true);
+    setColumnLabelsChanged(true);
+    setHasChanges(true);
+    setNewColumnName('');
+    setNewColumnLabel('');
+    setColumnFormError(null);
   };
 
   // Obtenir la couleur d'un statut (dépend du mode)
@@ -530,6 +898,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       if (onCalcomUrlChange && localCalcomUrl !== calcomUrl) {
         onCalcomUrlChange(localCalcomUrl);
       }
+      try { localStorage.setItem(CAL_PROVIDER_STORAGE_KEY, calProvider); } catch {}
       
       // Sauvegarder le template SMS si il a changé
       if (onSmsTemplateChange) {
@@ -547,6 +916,18 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       if (columnConfigChanged) {
         localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(columnConfig));
         setColumnConfigChanged(false);
+      }
+
+      // Sauvegarder l'ordre des colonnes si modifié
+      if (columnOrderChanged) {
+        localStorage.setItem(COLUMN_ORDER_STORAGE_KEY, JSON.stringify(columnOrderSettings));
+        window.dispatchEvent(new CustomEvent('dimicall-column-order-changed', { detail: { order: columnOrderSettings } }));
+        setColumnOrderChanged(false);
+      }
+
+      if (columnLabelsChanged) {
+        localStorage.setItem(COLUMN_LABELS_STORAGE_KEY, JSON.stringify(columnLabels));
+        setColumnLabelsChanged(false);
       }
       
       // NOUVEAU : Sauvegarder les préférences bêta
@@ -572,9 +953,11 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       setTemplates(defaultTemplates);
       setSignature('');
       setLocalCalcomUrl('https://cal.com/dimitri-morel-arcanis-conseil/audit-patrimonial?overlayCalendar=true');
+      setCalProvider('calcom');
       setLocalSmsTemplate(DEFAULT_SMS_TEMPLATE);
       handleShortcutsReset();
       handleColumnConfigReset();
+      setColumnLabels({ ...DEFAULT_COLUMN_LABELS });
       
       // NOUVEAU : Réinitialisation des préférences bêta
       const defaultBetaPrefs = {
@@ -685,10 +1068,10 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         await DevToolsService.enableDevTools();
       } else {
         await DevToolsService.disableDevTools();
-        // Si l'utilisateur désactive les DevTools alors qu'il est sur la section Logs,
-        // le rediriger vers la section Email
-        if (activeCategory === 'logs') {
-          setActiveCategory('email');
+        // Si l'utilisateur désactive les DevTools alors qu'il est sur une section réservée,
+        // le rediriger vers la section Templates
+        if (activeCategory === 'logs' || activeCategory === 'diagnostic') {
+          setActiveCategory('templates');
         }
       }
       setDevToolsEnabled(enabled);
@@ -783,7 +1166,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     // Affichage normal pour les plateformes avec mises à jour automatiques
     return (
       <div className="space-y-6">
-        <Card>
+        <Card className="relative overflow-hidden rounded-xl border bg-card/60 px-6 py-5 shadow-sm flex flex-col gap-4">
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
@@ -811,40 +1194,18 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                 'Vérification des mises à jour disponible uniquement dans l\'application installée.'
               }
             </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="pt-6">
-            <BetaOptInSettings
-              betaPreferences={betaPreferences}
-              onPreferencesChange={handleBetaPreferencesChange}
-              isCurrentVersionBeta={betaPreferences.enabled}
-              onRevertToStable={handleRevertToStable}
-              isRevertingToStable={isRevertingToStable}
-              devToolsEnabled={devToolsEnabled}
-              onDevToolsToggle={handleDevToolsToggle}
-            />
             
-            {/* Afficher un message informatif quand les DevTools sont activés */}
-            {devToolsEnabled && (
-              <div className="space-y-4 pt-4 border-t">
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 w-8 h-8 rounded-md bg-blue-500/10 flex items-center justify-center">
-                    <FileText className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <div className="flex-1 space-y-3">
-                    <div>
-                      <h4 className="font-medium text-sm">Section Logs disponible</h4>
-                      <p className="text-xs text-muted-foreground">
-                        Les DevTools sont activés. Vous pouvez maintenant accéder à la section "Logs" 
-                        pour consulter et analyser les logs système de l'application.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="border-t pt-6 mt-2">
+              <BetaOptInSettings
+                betaPreferences={betaPreferences}
+                onPreferencesChange={handleBetaPreferencesChange}
+                isCurrentVersionBeta={betaPreferences.enabled}
+                onRevertToStable={handleRevertToStable}
+                isRevertingToStable={isRevertingToStable}
+                devToolsEnabled={devToolsEnabled}
+                onDevToolsToggle={handleDevToolsToggle}
+              />
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -854,7 +1215,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   const renderDiagnosticSettings = () => {
     return (
       <div className="space-y-6">
-        <Card>
+        <Card className="relative overflow-hidden rounded-xl border bg-card/60 px-6 py-5 shadow-sm flex flex-col gap-4">
           <CardHeader>
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
@@ -1175,85 +1536,58 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     const templatesByMode = callMode === CallMode.Apporteur ? apporteurTemplates : templates;
     const currentTemplate = templatesByMode[selectedEmailType];
     const emailInfo = emailTypeLabels[selectedEmailType];
+    const emailSuggestions = [
+      { label: 'Titre (Madame/Monsieur)', value: 'titre' },
+      { label: 'Nom de famille', value: 'nom' },
+      { label: 'Signature', value: 'signature' },
+      { label: 'Détails RDV', value: 'rdv' },
+      ...(selectedEmailType === EmailType.R0Externe ? [{ label: 'Adresse', value: 'adresse' }] : []),
+    ];
+    const emailAllowedKeys = emailSuggestions.map((s) => s.value);
 
     return (
       <div className="space-y-6">
-        {/* Signature Section */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
-                <Settings className="w-4 h-4 text-muted-foreground" />
-              </div>
-              <div>
-                <CardTitle className="text-base">Signature par défaut</CardTitle>
-                <CardDescription>Utilisée automatiquement dans tous vos emails</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <Input
-              id="signature-input"
-              value={callMode === CallMode.Apporteur ? apporteurSignature : signature}
-              onChange={(e) => handleSignatureChange(e.target.value)}
-              placeholder="Votre nom et fonction"
-            />
-          </CardContent>
-        </Card>
-
-        <Separator />
-
         {/* Template Selection & Editor */}
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">Templates d'Email</h3>
-              <p className="text-sm text-muted-foreground">
-                Personnalisez vos modèles d'email pour chaque type d'interaction
-              </p>
-            </div>
-            {hasChanges && (
-              <Badge variant="outline" className="text-xs">
-                Non sauvegardé
-              </Badge>
-            )}
-          </div>
-
-          {/* Email Type Selector */}
-          <div className="space-y-3">
-            <Label htmlFor="email-type-selector">Type d'email</Label>
-            <Select 
-              value={selectedEmailType} 
-              onValueChange={(value) => setSelectedEmailType(value as EmailType)}
-            >
-              <SelectTrigger id="email-type-selector">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(emailTypeLabels).map(([type, info]) => (
-                  <SelectItem key={type} value={type}>
-                    <div className="flex items-center gap-2">
-                      <info.icon className="w-4 h-4" />
-                      <span>{info.label}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
           {/* Template Editor (par mode) */}
           <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
-                  <emailInfo.icon className="w-4 h-4 text-muted-foreground" />
-                </div>
-                <div>
-                  <CardTitle className="text-base">{emailInfo.label}</CardTitle>
-                  <CardDescription>Personnalisez le contenu de ce type d'email</CardDescription>
-                </div>
+          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
+                <emailInfo.icon className="w-4 h-4 text-muted-foreground" />
               </div>
+              <div>
+                <CardTitle className="text-base">{emailInfo.label}</CardTitle>
+                <CardDescription>Personnalisez le contenu de ce type d'email</CardDescription>
+              </div>
+            </div>
+            <div className="space-y-1 w-full sm:w-auto">
+              <span className="text-xs text-muted-foreground">Type d'email</span>
+              <Select 
+                value={selectedEmailType} 
+                onValueChange={(value) => setSelectedEmailType(value as EmailType)}
+              >
+                <SelectTrigger
+                  id="email-type-selector"
+                  className="w-full sm:w-fit min-w-[200px] max-w-full justify-between"
+                >
+                  <div className="flex items-center gap-2">
+                    <SelectValue />
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(emailTypeLabels).map(([type, info]) => (
+                    <SelectItem key={type} value={type}>
+                      <div className="flex items-center gap-2">
+                        <info.icon className="w-4 h-4" />
+                        <span>{info.label}</span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Subject Field */}
@@ -1270,13 +1604,14 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               {/* Body Field */}
               <div className="space-y-2">
                 <Label htmlFor={`body-${selectedEmailType}`}>Corps du message</Label>
-                <Textarea
+                <TemplateTextarea
                   id={`body-${selectedEmailType}`}
                   value={currentTemplate.body}
-                  onChange={(e) => handleTemplateChange('body', e.target.value)}
+                  onChange={(value) => handleTemplateChange('body', value)}
                   placeholder="Corps du message"
                   rows={8}
-                  className="font-mono text-sm"
+                  suggestions={emailSuggestions}
+                  allowedKeys={emailAllowedKeys}
                 />
               </div>
 
@@ -1287,13 +1622,28 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                     <Settings className="w-4 h-4 text-muted-foreground" />
                     <p className="text-sm font-medium">Variables disponibles</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <code className="bg-background px-2 py-1 rounded border text-xs">{'{titre}'}</code>
-                    <code className="bg-background px-2 py-1 rounded border text-xs">{'{nom}'}</code>
-                    <code className="bg-background px-2 py-1 rounded border text-xs">{'{signature}'}</code>
-                    <code className="bg-background px-2 py-1 rounded border text-xs">{'{rdv}'}</code>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1">
+                      <code className="bg-background px-2 py-1 rounded border text-xs">@titre</code>
+                      <span className="text-xs text-muted-foreground">(ex: Madame)</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <code className="bg-background px-2 py-1 rounded border text-xs">@nom</code>
+                      <span className="text-xs text-muted-foreground">(ex: Dupont)</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <code className="bg-background px-2 py-1 rounded border text-xs">@signature</code>
+                      <span className="text-xs text-muted-foreground">(ex: Dimitri MOREL)</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <code className="bg-background px-2 py-1 rounded border text-xs">@rdv</code>
+                      <span className="text-xs text-muted-foreground">(ex: lundi 1 janv 2025 à 09:00)</span>
+                    </span>
                     {selectedEmailType === EmailType.R0Externe && (
-                      <code className="bg-background px-2 py-1 rounded border text-xs">{'{adresse}'}</code>
+                      <span className="inline-flex items-center gap-1">
+                        <code className="bg-background px-2 py-1 rounded border text-xs">@adresse</code>
+                        <span className="text-xs text-muted-foreground">(ex: 22 rue la Boétie, Paris)</span>
+                      </span>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -1301,6 +1651,58 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                   </p>
                 </div>
               </div>
+
+              {/* Signature Section (déplacée sous les variables) */}
+              <div className="rounded-lg border bg-card text-card-foreground shadow-none p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
+                    <Settings className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-semibold leading-tight">Signature par défaut</h4>
+                    <p className="text-sm text-muted-foreground">Utilisée automatiquement dans tous vos emails</p>
+                  </div>
+                </div>
+                <div className="w-full sm:w-[320px]">
+                  <Input
+                    id="signature-input"
+                    value={callMode === CallMode.Apporteur ? apporteurSignature : signature}
+                    onChange={(e) => handleSignatureChange(e.target.value)}
+                    placeholder="Votre nom et fonction"
+                  />
+                </div>
+              </div>
+
+              {/* Aperçu avec exemple */}
+              {currentTemplate.body && (
+                <div className="bg-white dark:bg-card rounded-lg p-4 border shadow-none">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Mail className="w-4 h-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Aperçu avec exemple</span>
+                  </div>
+                  <div className="bg-background rounded-lg p-3 border text-xs font-mono whitespace-pre-wrap">
+                    {(() => {
+                      const previewRdv = 'notre entretien du lundi 1 janvier 2025 à 09:00';
+                      const previewAdresse = '22 rue la Boétie, 75008 Paris';
+                      const applyBoth = (text: string, key: string, replacement: string) =>
+                        text
+                          .replace(new RegExp(`@${key}\\b`, 'g'), replacement)
+                          .replace(new RegExp(`\\{${key}\\}`, 'g'), replacement);
+
+                      let preview = currentTemplate.body;
+                      preview = applyBoth(preview, 'titre', 'Madame');
+                      preview = applyBoth(preview, 'nom', 'Dupont');
+                      preview = applyBoth(preview, 'signature', 'Dimitri MOREL');
+                      preview = applyBoth(preview, 'rdv', previewRdv);
+                      preview = applyBoth(preview, 'adresse', previewAdresse);
+                      return preview;
+                    })()}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Exemple avec : Titre "Madame", Nom "Dupont"
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -1317,76 +1719,79 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               <Calendar className="w-4 h-4 text-muted-foreground" />
             </div>
             <div>
-              <CardTitle className="text-base">Configuration Cal.com</CardTitle>
-              <CardDescription>Personnalisez l'URL de votre calendrier de prise de rendez-vous</CardDescription>
+              <CardTitle className="text-base">Configuration Calendrier</CardTitle>
+              <CardDescription>Compatible Cal.com, Calendly et URL directe</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Bandeau mode actif */}
-          <div className="flex items-center justify-between p-3 rounded-md bg-white dark:bg-card border shadow-none">
-            <div className="text-sm">
-              Mode actif : <strong>{callMode === CallMode.Apporteur ? 'Apporteur' : 'Client'}</strong>
-            </div>
-            <div className="flex items-center gap-2">
-              <Badge variant={callMode === CallMode.Client ? 'default' : 'secondary'} className="text-[10px]">Client</Badge>
-              <Switch
-                checked={callMode === CallMode.Apporteur}
-                onCheckedChange={(checked) => {
-                  const newMode = checked ? CallMode.Apporteur : CallMode.Client;
-                  setCallMode(newMode);
-                  try { localStorage.setItem(MODE_STORAGE_KEY, newMode); } catch {}
-                }}
-              />
-              <Badge variant={callMode === CallMode.Apporteur ? 'default' : 'secondary'} className="text-[10px]">Apporteur</Badge>
-            </div>
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">
+              Choisissez votre fournisseur de calendrier puis collez l’URL de prise de rendez-vous.
+            </p>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="calcom-url-input">URL Cal.com</Label>
-            <Input
-              id="calcom-url-input"
-              type="url"
-              value={localCalcomUrl}
-              onChange={(e) => handleCalcomUrlChange(e.target.value)}
-              placeholder="https://cal.com/votre-nom/votre-événement"
-            />
+          <div className="space-y-3">
+            <Label>Fournisseur</Label>
+            <Select
+              value={calProvider}
+              onValueChange={(value) => {
+                setCalProvider(value);
+                try { localStorage.setItem(CAL_PROVIDER_STORAGE_KEY, value); } catch {}
+              }}
+            >
+              <SelectTrigger className="w-fit min-w-[220px] max-w-full justify-between">
+                <SelectValue />
+                <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="calcom">Cal.com</SelectItem>
+                <SelectItem value="calendly">Calendly</SelectItem>
+                <SelectItem value="custom">URL personnalisée</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Informations d'aide */}
-          <div className="bg-white dark:bg-card rounded-lg p-4 border shadow-none">
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Settings className="w-4 h-4 text-muted-foreground" />
-                <p className="text-sm font-medium">Guide de configuration</p>
-              </div>
-              <div className="space-y-2 text-xs text-muted-foreground">
-                <p>• Utilisez l'URL complète de votre événement Cal.com</p>
-                <p>• Format: <code className="bg-background px-2 py-1 rounded border font-mono">https://cal.com/votre-nom/votre-événement</code></p>
-                <p>• Les informations du contact seront automatiquement ajoutées :</p>
-                <div className="grid grid-cols-1 gap-1 ml-4">
-                  <code className="bg-background px-2 py-1 rounded border text-xs font-mono">name (nom du contact)</code>
-                  <code className="bg-background px-2 py-1 rounded border text-xs font-mono">email (email du contact)</code>
-                  <code className="bg-background px-2 py-1 rounded border text-xs font-mono">smsReminderNumber (téléphone)</code>
+          {(() => {
+            const placeholders: Record<string, string> = {
+              calcom: 'https://cal.com/votre-nom/votre-evenement',
+              calendly: 'https://calendly.com/votre-nom/votre-evenement',
+              custom: 'https://votre-outil.com/mon-lien',
+            };
+            const formatByProvider: Record<string, string> = {
+              calcom: 'https://cal.com/votre-nom/votre-evenement',
+              calendly: 'https://calendly.com/votre-nom/votre-evenement',
+              custom: 'https://votre-outil.com/mon-lien',
+            };
+            const labelByProvider: Record<string, string> = {
+              calcom: 'URL Cal.com',
+              calendly: 'URL Calendly',
+              custom: 'URL personnalisée',
+            };
+            const placeholder = placeholders[calProvider] || placeholders.custom;
+            const label = labelByProvider[calProvider] || 'URL du calendrier';
+            const formatExample = formatByProvider[calProvider] || formatByProvider.custom;
+
+            return (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="calcom-url-input">{label}</Label>
+                  <Input
+                    id="calcom-url-input"
+                    type="url"
+                    value={localCalcomUrl}
+                    onChange={(e) => handleCalcomUrlChange(e.target.value)}
+                    placeholder={placeholder}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Format attendu :{' '}
+                    <code className="bg-background px-2 py-1 rounded border font-mono">{formatExample}</code>
+                  </p>
                 </div>
-              </div>
-            </div>
-          </div>
+              </>
+            );
+          })()}
 
-          {/* Aperçu de l'URL finale */}
-          {localCalcomUrl && (
-            <div className="bg-white dark:bg-card rounded-lg p-4 border shadow-none">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-sm font-medium">Aperçu</span>
-              </div>
-              <div className="text-xs font-mono text-muted-foreground break-all">
-                {localCalcomUrl}
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Cette URL sera utilisée lors du clic sur le bouton "Cal.com" du ruban
-              </p>
-            </div>
-          )}
         </CardContent>
       </Card>
     </div>
@@ -1408,53 +1813,24 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     const templatesByMode = callMode === CallMode.Apporteur ? apporteurSmsTemplates : smsTemplates;
     const currentTemplate = templatesByMode[selectedSmsType];
     const smsInfo = smsTypeLabels[selectedSmsType];
+    const smsSuggestions = [
+      { label: 'Civilité', value: 'civilite' },
+      { label: 'Titre', value: 'titre' },
+      { label: 'Nom de famille', value: 'nom' },
+      { label: 'Prénom', value: 'prenom' },
+      { label: 'Nom complet', value: 'nom_complet' },
+      { label: 'Signature', value: 'signature' },
+      { label: 'Détails RDV', value: 'rdv' },
+      ...(selectedSmsType === SmsType.R0Externe ? [{ label: 'Adresse', value: 'adresse' }] : []),
+    ];
+    const smsAllowedKeys = smsSuggestions.map((s) => s.value);
 
     return (
       <div className="space-y-6">
-        <Separator />
-
-        {/* Template Selection & Editor */}
+        {/* Template Editor (par mode) */}
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">Templates SMS</h3>
-              <p className="text-sm text-muted-foreground">
-                Personnalisez vos modèles de SMS pour chaque type d'interaction
-              </p>
-            </div>
-            {hasChanges && (
-              <Badge variant="outline" className="text-xs">
-                Non sauvegardé
-              </Badge>
-            )}
-          </div>
-
-          {/* SMS Type Selector */}
-          <div className="space-y-3">
-            <Label htmlFor="sms-type-selector">Type de SMS</Label>
-            <Select 
-              value={selectedSmsType} 
-              onValueChange={(value) => setSelectedSmsType(value as SmsType)}
-            >
-              <SelectTrigger id="sms-type-selector" className="z-[20001]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="z-[20001]">
-                {Object.entries(smsTypeLabels).map(([type, info]) => (
-                  <SelectItem key={type} value={type}>
-                    <div className="flex items-center gap-2">
-                      <info.icon className="w-4 h-4" />
-                      <span>{info.label}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Template Editor (par mode) */}
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
                   <smsInfo.icon className="w-4 h-4 text-muted-foreground" />
@@ -1464,37 +1840,46 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                   <CardDescription>Personnalisez le contenu de ce type de SMS</CardDescription>
                 </div>
               </div>
+              <div className="space-y-1 w-full sm:w-auto">
+                <span className="text-xs text-muted-foreground">Type de SMS</span>
+                <Select 
+                  value={selectedSmsType} 
+                  onValueChange={(value) => setSelectedSmsType(value as SmsType)}
+                >
+                  <SelectTrigger
+                    id="sms-type-selector"
+                    className="z-[20001] w-full sm:w-fit min-w-[200px] max-w-full justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <SelectValue />
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  </SelectTrigger>
+                  <SelectContent className="z-[20001]">
+                    {Object.entries(smsTypeLabels).map(([type, info]) => (
+                      <SelectItem key={type} value={type}>
+                        <div className="flex items-center gap-2">
+                          <info.icon className="w-4 h-4" />
+                          <span>{info.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Bandeau mode actif */}
-              <div className="flex items-center justify-between p-3 rounded-md bg-white dark:bg-card border shadow-none">
-                <div className="text-sm">
-                  Mode actif : <strong>{callMode === CallMode.Apporteur ? 'Apporteur' : 'Client'}</strong>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={callMode === CallMode.Client ? 'default' : 'secondary'} className="text-[10px]">Client</Badge>
-                  <Switch
-                    checked={callMode === CallMode.Apporteur}
-                    onCheckedChange={(checked) => {
-                      const newMode = checked ? CallMode.Apporteur : CallMode.Client;
-                      setCallMode(newMode);
-                      try { localStorage.setItem(MODE_STORAGE_KEY, newMode); } catch {}
-                    }}
-                  />
-                  <Badge variant={callMode === CallMode.Apporteur ? 'default' : 'secondary'} className="text-[10px]">Apporteur</Badge>
-                </div>
-              </div>
-
               {/* Body Field */}
               <div className="space-y-2">
                 <Label htmlFor={`sms-body-${selectedSmsType}`}>Message SMS</Label>
-                <Textarea
+                <TemplateTextarea
                   id={`sms-body-${selectedSmsType}`}
                   value={currentTemplate}
-                  onChange={(e) => handleSmsTemplateChange(e.target.value)}
+                  onChange={handleSmsTemplateChange}
                   placeholder="Corps du message SMS"
                   rows={10}
-                  className="font-mono text-sm"
+                  suggestions={smsSuggestions}
+                  allowedKeys={smsAllowedKeys}
                 />
                 <div className="text-xs text-muted-foreground">
                   Caractères: {currentTemplate.length} / 1600 (recommandé pour SMS long)
@@ -1508,19 +1893,58 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                     <Settings className="w-4 h-4 text-muted-foreground" />
                     <p className="text-sm font-medium">Variables disponibles</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <code className="bg-background px-2 py-1 rounded border text-xs">{'{civilite}'}</code>
-                    <code className="bg-background px-2 py-1 rounded border text-xs">{'{nom}'}</code>
-                    <code className="bg-background px-2 py-1 rounded border text-xs">{'{prenom}'}</code>
-                    <code className="bg-background px-2 py-1 rounded border text-xs">{'{nom_complet}'}</code>
-                    <code className="bg-background px-2 py-1 rounded border text-xs">{'{rdv}'}</code>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="inline-flex items-center gap-1">
+                        <code className="bg-background px-2 py-1 rounded border text-xs">@civilite</code>
+                        <span className="text-xs text-muted-foreground">(ex: Madame)</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <code className="bg-background px-2 py-1 rounded border text-xs">@nom</code>
+                        <span className="text-xs text-muted-foreground">(ex: Dupont)</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <code className="bg-background px-2 py-1 rounded border text-xs">@prenom</code>
+                        <span className="text-xs text-muted-foreground">(ex: Marie)</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <code className="bg-background px-2 py-1 rounded border text-xs">@nom_complet</code>
+                        <span className="text-xs text-muted-foreground">(ex: Marie Dupont)</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <code className="bg-background px-2 py-1 rounded border text-xs">@rdv</code>
+                        <span className="text-xs text-muted-foreground">(ex: lundi 1 janv 2025 à 09:00)</span>
+                      </span>
                     {selectedSmsType === SmsType.R0Externe && (
-                      <code className="bg-background px-2 py-1 rounded border text-xs">{'{adresse}'}</code>
+                        <span className="inline-flex items-center gap-1">
+                          <code className="bg-background px-2 py-1 rounded border text-xs">@adresse</code>
+                          <span className="text-xs text-muted-foreground">(ex: 22 rue la Boétie, Paris)</span>
+                        </span>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Ces variables seront automatiquement remplacées par les informations du contact
                   </p>
+                </div>
+              </div>
+
+              {/* Signature Section (après les variables, même design que l'email) */}
+              <div className="rounded-lg border bg-card text-card-foreground shadow-none p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
+                    <Settings className="w-4 h-4 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-semibold leading-tight">Signature par défaut</h4>
+                    <p className="text-sm text-muted-foreground">Utilisée automatiquement dans vos SMS</p>
+                  </div>
+                </div>
+                <div className="w-full sm:w-[320px]">
+                  <Input
+                    id="signature-input-sms"
+                    value={callMode === CallMode.Apporteur ? apporteurSignature : signature}
+                    onChange={(e) => handleSignatureChange(e.target.value)}
+                    placeholder="Votre nom et fonction"
+                  />
                 </div>
               </div>
 
@@ -1535,13 +1959,22 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                     {(() => {
                       const previewRdv = 'notre entretien du lundi 1 janvier 2025 à 09:00';
                       const previewAdresse = '22 rue la Boétie, 75008 Paris';
-                      return currentTemplate
-                        .replace(/{civilite}/g, 'Madame')
-                        .replace(/{nom}/g, 'Dupont')
-                        .replace(/{prenom}/g, 'Marie')
-                        .replace(/{nom_complet}/g, 'Marie Dupont')
-                        .replace(/{rdv}/g, previewRdv)
-                        .replace(/{adresse}/g, previewAdresse);
+                      const previewSignature =
+                        (callMode === CallMode.Apporteur ? apporteurSignature : signature) || 'Votre signature';
+                      const applyBoth = (text: string, key: string, replacement: string) =>
+                        text
+                          .replace(new RegExp(`@${key}\\b`, 'g'), replacement)
+                          .replace(new RegExp(`\\{${key}\\}`, 'g'), replacement);
+
+                      let preview = currentTemplate;
+                      preview = applyBoth(preview, 'civilite', 'Madame');
+                      preview = applyBoth(preview, 'nom', 'Dupont');
+                      preview = applyBoth(preview, 'prenom', 'Marie');
+                      preview = applyBoth(preview, 'nom_complet', 'Marie Dupont');
+                      preview = applyBoth(preview, 'rdv', previewRdv);
+                      preview = applyBoth(preview, 'adresse', previewAdresse);
+                      preview = applyBoth(preview, 'signature', previewSignature);
+                      return preview;
                     })()}
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
@@ -1555,6 +1988,28 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       </div>
     );
   };
+
+  const renderTemplatesSettings = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Templates</h3>
+          <p className="text-sm text-muted-foreground">
+            Gérez vos modèles Email et SMS au même endroit
+          </p>
+        </div>
+      </div>
+
+      <Tabs value={templateTab} onValueChange={(value) => setTemplateTab(value as 'email' | 'sms')} className="w-full">
+        <TabsList className="grid grid-cols-2 w-full sm:w-auto">
+          <TabsTrigger value="email">Email</TabsTrigger>
+          <TabsTrigger value="sms">SMS</TabsTrigger>
+        </TabsList>
+        <TabsContent value="email">{renderEmailSettings()}</TabsContent>
+        <TabsContent value="sms">{renderSmsSettings()}</TabsContent>
+      </Tabs>
+    </div>
+  );
 
   const renderAppearanceSettings = () => (
     <Card>
@@ -1598,7 +2053,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   );
 
   const renderShortcutSettings = () => {
-    const availableStatuses = Object.values(ContactStatus);
+    const availableStatuses = StatusConfigService.getStatusList(callMode, { includeHidden: true });
 
     return (
       <Card>
@@ -1637,7 +2092,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                   
                   <Select
                     value={shortcut.status}
-                    onValueChange={(value) => handleShortcutChange(shortcut.key, value as ContactStatus)}
+                    onValueChange={(value) => handleShortcutChange(shortcut.key, value)}
                   >
                     <SelectTrigger className="w-auto md:w-48">
                       <SelectValue>
@@ -1668,110 +2123,191 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     );
   };
 
-  const renderColumnSettings = () => (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Columns className="w-5 h-5" />
-            Configuration des Colonnes
-          </CardTitle>
-          <CardDescription>
-            Définissez quelles colonnes sont essentielles (ne peuvent pas être masquées) ou optionnelles dans le tableau des contacts.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-blue-50/50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <div className="flex items-center gap-3">
-                <Info className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                  Les colonnes essentielles restent toujours visibles
-                </span>
+  const renderColumnSettings = () => {
+    const SortableColumnRow: React.FC<{ columnName: string }> = ({ columnName }) => {
+      const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: columnName });
+      const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.7 : 1,
+      };
+    const config = DEFAULT_COLUMN_CONFIG[columnName as keyof typeof DEFAULT_COLUMN_CONFIG];
+    const isEssential = columnConfig[columnName] ?? config?.isEssential ?? false;
+    const label = columnLabels[columnName] || config?.label || columnName;
+    const canRemove = !config?.isEssential;
+
+      return (
+        <div
+          ref={setNodeRef}
+          style={style}
+          className={cn(
+            "flex items-center justify-between p-4 bg-white dark:bg-slate-900",
+            isDragging && "ring-2 ring-primary/30 shadow-sm"
+          )}
+        >
+          <div className="flex items-center gap-3 flex-1 min-w-0">
+            <button
+              className="p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
+              aria-label="Déplacer"
+              {...attributes}
+              {...listeners}
+            >
+              <span className="sr-only">Déplacer</span>
+              <GripVertical className="w-4 h-4" />
+            </button>
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-2 h-2 rounded-full bg-primary"></div>
+              <div className="min-w-0">
+                <div className="font-medium truncate">{columnName}</div>
+                <div className="text-sm text-muted-foreground truncate">{label}</div>
               </div>
             </div>
-
-            <div className="border rounded-md divide-y">
-              {Object.keys(DEFAULT_COLUMN_CONFIG).map((columnName) => {
-                const config = DEFAULT_COLUMN_CONFIG[columnName as keyof typeof DEFAULT_COLUMN_CONFIG];
-                const isEssential = columnConfig[columnName] ?? config.isEssential;
-                
-                return (
-                  <div key={columnName} className="flex items-center justify-between p-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-primary"></div>
-                        <div>
-                          <div className="font-medium">{columnName}</div>
-                          <div className="text-sm text-muted-foreground">{config.label}</div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center space-x-2">
-                        <Switch
-                          id={`column-${columnName}`}
-                          checked={isEssential}
-                          onCheckedChange={(checked) => handleColumnEssentialChange(columnName, checked)}
-                        />
-                        <Label htmlFor={`column-${columnName}`} className="text-sm">
-                          {isEssential ? (
-                            <Badge variant="default" className="text-xs">Essentielle</Badge>
-                          ) : (
-                            <Badge variant="secondary" className="text-xs">Optionnelle</Badge>
-                          )}
-                        </Label>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id={`column-${columnName}`}
+                checked={isEssential}
+                onCheckedChange={(checked) => handleColumnEssentialChange(columnName, checked)}
+              />
+              <Label htmlFor={`column-${columnName}`} className="text-sm">
+                {isEssential ? (
+                  <Badge variant="default" className="text-xs">Essentielle</Badge>
+                ) : (
+                  <Badge variant="secondary" className="text-xs">Optionnelle</Badge>
+                )}
+              </Label>
             </div>
+            {canRemove && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleRemoveColumn(columnName)}
+                aria-label={`Supprimer ${columnName}`}
+                className="h-8 w-8"
+              >
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            )}
+          </div>
+        </div>
+      );
+    };
 
-            <div className="flex items-center justify-between pt-4 border-t">
-              <div className="text-sm text-muted-foreground">
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Columns className="w-5 h-5" />
+              Configuration des Colonnes
+            </CardTitle>
+            <CardDescription>
+              Définissez quelles colonnes sont essentielles (ne peuvent pas être masquées) ou optionnelles dans le tableau des contacts.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <Input
+                  value={columnSearch}
+                  onChange={(e) => setColumnSearch(e.target.value)}
+                  placeholder="Rechercher une colonne..."
+                  className="max-w-xs bg-white dark:bg-slate-900"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-white dark:bg-slate-900"
+                  onClick={handleColumnConfigReset}
+                >
+                  <RotateCcw className="w-4 h-4 mr-2" />
+                  Remettre par défaut
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-[1.2fr_1.6fr_auto] gap-3 items-end">
+                <div className="space-y-1">
+                  <Label className="text-xs">Nom de colonne</Label>
+                  <Input
+                    value={newColumnName}
+                    onChange={(e) => {
+                      setNewColumnName(e.target.value);
+                      setColumnFormError(null);
+                    }}
+                    placeholder="Ex: Lien perso"
+                    className="bg-white dark:bg-slate-900"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Libellé</Label>
+                  <Input
+                    value={newColumnLabel}
+                    onChange={(e) => {
+                      setNewColumnLabel(e.target.value);
+                      setColumnFormError(null);
+                    }}
+                    placeholder="Ex: Lien personnalisé"
+                    className="bg-white dark:bg-slate-900"
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button onClick={handleAddColumn} className="w-full md:w-auto">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Ajouter
+                  </Button>
+                </div>
+              </div>
+
+              {columnFormError && (
+                <div className="text-xs text-red-600">{columnFormError}</div>
+              )}
+
+              {(() => {
+                const lowered = columnSearch.trim().toLowerCase();
+                const filteredColumns =
+                  lowered.length === 0
+                    ? columnOrderSettings
+                    : columnOrderSettings.filter((name) => {
+                        const label = columnLabels[name] || DEFAULT_COLUMN_CONFIG[name as keyof typeof DEFAULT_COLUMN_CONFIG]?.label || '';
+                        return (
+                          name.toLowerCase().includes(lowered) ||
+                          label.toLowerCase().includes(lowered)
+                        );
+                      });
+
+                if (filteredColumns.length === 0) {
+                  return (
+                    <div className="border rounded-md p-4 text-sm text-muted-foreground bg-muted/30">
+                      Aucune colonne ne correspond à votre recherche.
+                    </div>
+                  );
+                }
+
+                return (
+                  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleColumnOrderDragEnd}>
+                    <SortableContext items={filteredColumns} strategy={verticalListSortingStrategy}>
+                      <div className="border rounded-md divide-y">
+                        {filteredColumns.map((columnName) => (
+                          <SortableColumnRow key={columnName} columnName={columnName} />
+                        ))}
+                      </div>
+                    </SortableContext>
+                  </DndContext>
+                );
+              })()}
+
+              <div className="pt-4 border-t text-sm text-muted-foreground">
                 {Object.values(columnConfig).filter(Boolean).length} colonne(s) essentielle(s) sur {Object.keys(DEFAULT_COLUMN_CONFIG).length}
               </div>
-              <Button variant="outline" size="sm" onClick={handleColumnConfigReset}>
-                <RotateCcw className="w-4 h-4 mr-2" />
-                Remettre par défaut
-              </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Impact des Modifications</CardTitle>
-          <CardDescription>
-            Comment ces paramètres affectent l'interface
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3 text-sm">
-            <div className="flex items-start gap-2">
-              <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
-              <span>Les colonnes <strong>essentielles</strong> ne peuvent pas être masquées via le menu "Colonnes"</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
-              <span>Les colonnes <strong>optionnelles</strong> peuvent être masquées individuellement</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
-              <span>L'option "Masquer les colonnes optionnelles" ne cache que les colonnes non-essentielles</span>
-            </div>
-            <div className="flex items-start gap-2">
-              <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
-              <span>Les paramètres sont sauvegardés automatiquement à la fermeture</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+      </div>
+    );
+  };
 
   const renderStatusEditor = () => {
     // Presets de couleurs (shadcn/tailwind) simplifiés
@@ -1787,7 +2323,12 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       { key: 'green', name: 'Vert', badgeClass: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-200', dotClass: 'bg-green-500' },
     ] as const;
 
-    const getPresetKeyFor = (status: ContactStatus): string => {
+    const isDefaultStatus = (status: string) =>
+      Object.values(ContactStatus).includes(status as ContactStatus);
+
+    const displayedStatuses = statusOrder.filter((status) => statusConfig[status]);
+
+    const getPresetKeyFor = (status: string): string => {
       const current = statusConfig[status]?.color || '';
       for (const preset of COLOR_PRESETS) {
         if (current.includes(`bg-${preset.key}-`)) return preset.key;
@@ -1795,27 +2336,159 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       return 'gray';
     };
 
-    const applyPreset = (status: ContactStatus, presetKey: string) => {
+    const applyPreset = (status: string, presetKey: string) => {
       const preset = COLOR_PRESETS.find((p) => p.key === presetKey);
       if (!preset) return;
       const next = { ...statusConfig, [status]: { ...statusConfig[status], color: preset.badgeClass, dot: preset.dotClass } };
       setStatusConfig(next);
-      StatusConfigService.saveConfig(next, callMode);
+      StatusConfigService.saveConfig(next, callMode, statusOrder);
       setHasChanges(true);
     };
 
-    const handleLabelChange = (status: ContactStatus, newLabel: string) => {
+    const handleLabelChange = (status: string, newLabel: string) => {
       const next = { ...statusConfig, [status]: { ...statusConfig[status], label: newLabel } };
       setStatusConfig(next);
-      StatusConfigService.saveConfig(next, callMode);
+      StatusConfigService.saveConfig(next, callMode, statusOrder);
       setHasChanges(true);
     };
 
-    const handleVisibilityToggle = (status: ContactStatus, visible: boolean) => {
+    const handleVisibilityToggle = (status: string, visible: boolean) => {
       const next = { ...statusConfig, [status]: { ...statusConfig[status], visible } };
       setStatusConfig(next);
-      StatusConfigService.saveConfig(next, callMode);
+      StatusConfigService.saveConfig(next, callMode, statusOrder);
       setHasChanges(true);
+    };
+
+    const handleAddStatus = () => {
+      const label = newStatusLabel.trim();
+      if (!label) {
+        setStatusFormError('Ajoutez un libellé.');
+        return;
+      }
+      const exists = statusOrder.some((status) => status.toLowerCase() === label.toLowerCase());
+      if (exists) {
+        setStatusFormError('Ce statut existe déjà.');
+        return;
+      }
+      const preset = COLOR_PRESETS.find((p) => p.key === newStatusPreset) || COLOR_PRESETS[0];
+      const nextState = StatusConfigService.addStatus(
+        label,
+        { label, color: preset.badgeClass, dot: preset.dotClass, visible: true },
+        callMode
+      );
+      setStatusConfig(nextState.map);
+      setStatusOrder(nextState.order);
+      setHasChanges(true);
+      setNewStatusLabel('');
+      setStatusFormError(null);
+    };
+
+    const handleRemoveStatus = (status: string) => {
+      if (isDefaultStatus(status)) {
+        // Autorisé : suppression même des statuts natifs
+      }
+      const nextState = StatusConfigService.removeStatus(status, callMode);
+      setStatusConfig(nextState.map);
+      setStatusOrder(nextState.order);
+      setHasChanges(true);
+    };
+
+    const handleDragEnd = (event: any) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const oldIndex = displayedStatuses.indexOf(active.id as string);
+      const newIndex = displayedStatuses.indexOf(over.id as string);
+      if (oldIndex === -1 || newIndex === -1) return;
+      const newOrder = arrayMove(displayedStatuses, oldIndex, newIndex);
+      setStatusOrder(newOrder);
+      const next = StatusConfigService.saveConfig(statusConfig, callMode, newOrder);
+      setStatusConfig(next.map);
+      setHasChanges(true);
+    };
+
+    const SortableStatusRow: React.FC<{ status: string }> = ({ status }) => {
+      const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: status });
+      const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.6 : 1,
+      };
+
+      const presetKey = getPresetKeyFor(status);
+      const preset = COLOR_PRESETS.find((p) => p.key === presetKey) || COLOR_PRESETS[0];
+      const label = statusConfig[status]?.label || status;
+      const visible = statusConfig[status]?.visible !== false;
+
+      return (
+        <div
+          ref={setNodeRef}
+          style={style}
+          className="p-3 grid grid-cols-1 md:grid-cols-[1.2fr_1.6fr_1.4fr_auto] gap-3 items-center"
+        >
+          <div className="flex items-center gap-2">
+            <button
+              className="p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
+              aria-label="Déplacer"
+              {...attributes}
+              {...listeners}
+            >
+              <span className="sr-only">Déplacer</span>
+              <GripVertical className="w-4 h-4" />
+            </button>
+            <div>
+              <div className="text-sm font-medium">{status}</div>
+              {isDefaultStatus(status) && (
+                <div className="text-[11px] text-muted-foreground">Statut natif</div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <Label className="text-xs">Libellé</Label>
+            <Input value={label} onChange={(e) => handleLabelChange(status, e.target.value)} />
+          </div>
+
+          <div>
+            <Label className="text-xs">Couleur</Label>
+            <Select value={presetKey} onValueChange={(val) => applyPreset(status, val)}>
+              <SelectTrigger>
+                <SelectValue>
+                  <div className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border', preset.badgeClass)}>
+                    <div className={cn('w-1.5 h-1.5 rounded-full', preset.dotClass)} />
+                    {label}
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {COLOR_PRESETS.map((p) => (
+                  <SelectItem key={p.key} value={p.key}>
+                    <div className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border', p.badgeClass)}>
+                      <div className={cn('w-1.5 h-1.5 rounded-full', p.dotClass)} />
+                      {p.name}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Switch checked={visible} onCheckedChange={(checked) => handleVisibilityToggle(status, checked)} />
+              <span className="text-xs">Visible</span>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleRemoveStatus(status)}
+                aria-label={`Supprimer ${status}`}
+                className="h-8 w-8"
+              >
+                <Trash2 className="w-4 h-4 text-destructive" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      );
     };
 
     return (
@@ -1824,62 +2497,80 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           <CardTitle>Statuts personnalisés</CardTitle>
           <CardDescription>Un libellé, une couleur, une visibilité. Simple.</CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="divide-y border rounded-md">
-            {Object.values(ContactStatus).map((status) => {
-              const presetKey = getPresetKeyFor(status);
-              const preset = COLOR_PRESETS.find(p => p.key === presetKey)!;
-              const label = statusConfig[status]?.label || status;
-              return (
-                <div key={status} className="p-3 grid grid-cols-1 md:grid-cols-4 gap-3 items-center">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                    <div className="text-sm font-medium">{status}</div>
-                  </div>
-
-                  <div>
-                    <Label className="text-xs">Libellé</Label>
-                    <Input value={label} onChange={(e) => handleLabelChange(status, e.target.value)} />
-                  </div>
-
-                  <div>
-                    <Label className="text-xs">Couleur</Label>
-                    <Select value={presetKey} onValueChange={(val) => applyPreset(status, val)}>
-                      <SelectTrigger>
-                        <SelectValue>
-                          <div className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border', preset.badgeClass)}>
-                            <div className={cn('w-1.5 h-1.5 rounded-full', preset.dotClass)} />
-                            {label}
-                          </div>
-                        </SelectValue>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {COLOR_PRESETS.map((p) => (
-                          <SelectItem key={p.key} value={p.key}>
-                            <div className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border', p.badgeClass)}>
-                              <div className={cn('w-1.5 h-1.5 rounded-full', p.dotClass)} />
-                              {p.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                      <Switch checked={statusConfig[status]?.visible !== false} onCheckedChange={(checked) => handleVisibilityToggle(status, checked)} />
-                      <span className="text-xs">Visible</span>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-white dark:bg-slate-900"
+              onClick={() => {
+                const reset = StatusConfigService.resetToDefaults(callMode);
+                setStatusConfig(reset.map);
+                setStatusOrder(reset.order);
+                setHasChanges(true);
+                setStatusFormError(null);
+              }}
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Réinitialiser les statuts
+            </Button>
+            {statusFormError && (
+              <div className="text-xs text-red-600">{statusFormError}</div>
+            )}
           </div>
 
-          <div className="text-xs text-muted-foreground mt-3">
-            Astuce: le libellé est ce qui s'affiche dans le tableau des contacts.
+          <div className="grid grid-cols-1 md:grid-cols-[2fr_1.2fr_auto] gap-3 items-end">
+            <div className="space-y-1">
+              <Label className="text-xs">Nouveau statut</Label>
+              <Input
+                value={newStatusLabel}
+                onChange={(e) => {
+                  setNewStatusLabel(e.target.value);
+                  setStatusFormError(null);
+                }}
+                placeholder="Ex: En attente"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs">Couleur</Label>
+              <Select value={newStatusPreset} onValueChange={(val) => setNewStatusPreset(val)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Couleur" />
+                </SelectTrigger>
+                <SelectContent>
+                  {COLOR_PRESETS.map((p) => (
+                    <SelectItem key={p.key} value={p.key}>
+                      <div className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border', p.badgeClass)}>
+                        <div className={cn('w-1.5 h-1.5 rounded-full', p.dotClass)} />
+                        {p.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end">
+              <Button onClick={handleAddStatus} className="w-full md:w-auto">
+                <Plus className="w-4 h-4 mr-2" />
+                Ajouter
+              </Button>
+            </div>
           </div>
+
+          {statusFormError && (
+            <div className="text-xs text-red-600">{statusFormError}</div>
+          )}
+
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={displayedStatuses} strategy={verticalListSortingStrategy}>
+              <div className="divide-y border rounded-md">
+                {displayedStatuses.map((status) => (
+                  <SortableStatusRow key={status} status={status} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+
         </CardContent>
       </Card>
     );
@@ -1887,10 +2578,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
   const renderCategory = () => {
     switch (activeCategory) {
-      case 'email':
-        return renderEmailSettings();
-      case 'sms':
-        return renderSmsSettings();
+      case 'templates':
+        return renderTemplatesSettings();
       case 'calcom':
         return renderCalcomSettings();
       case 'appearance':
@@ -1900,7 +2589,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       case 'update':
         return renderUpdateSettings();
       case 'diagnostic':
-        return renderDiagnosticSettings();
+        return devToolsEnabled ? renderDiagnosticSettings() : renderTemplatesSettings();
       case 'columns':
         return renderColumnSettings();
       case 'statuses':
@@ -1908,35 +2597,67 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       case 'data-sharing':
         return renderDataSharingSettings();
       case 'logs':
-        return renderLogsSettings();
+        return devToolsEnabled ? renderLogsSettings() : renderTemplatesSettings();
       default:
-        return renderEmailSettings();
+        return renderTemplatesSettings();
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent showCloseButton={false} className="max-w-[95vw] sm:max-w-[90vw] lg:max-w-[1400px] xl:max-w-7xl w-full h-[95vh] sm:h-[90vh] flex flex-col p-0 gap-0">
+        <AnimatePresence>
+          {shockwaveId > 0 && (
+            <motion.div
+              key={shockwaveId}
+              className="pointer-events-none fixed inset-0 z-[99998]"
+              initial={{ scale: 0.2, opacity: 0.35 }}
+              animate={{ scale: 4.2, opacity: 0 }}
+              transition={{ duration: 0.8, ease: 'easeOut' }}
+              style={{
+                background: 'radial-gradient(circle at center, rgba(236,72,153,0.55) 0%, rgba(168,85,247,0.35) 35%, rgba(34,211,238,0.35) 55%, transparent 70%)',
+                transformOrigin: 'center center',
+                willChange: 'transform, opacity'
+              }}
+            />
+          )}
+        </AnimatePresence>
         <DialogHeader className="p-3 sm:p-4 border-b flex-row items-center justify-between gap-2 bg-white dark:bg-background transition-colors">
           <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
             <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="hidden sm:inline">Réglages de l'application</span>
+            <span className="hidden sm:inline">Réglages</span>
             <span className="sm:hidden">Réglages</span>
           </DialogTitle>
           <div className="flex items-center gap-2 sm:gap-4">
-            {/* Toggle mode Client / Apporteur */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <Badge variant={callMode === CallMode.Client ? 'default' : 'secondary'} className="text-[10px] sm:text-xs px-1.5 sm:px-2">Client</Badge>
+            <div
+              className="relative flex items-center gap-2 rounded-full border border-border/70 bg-white px-3 py-1 shadow-sm dark:border-border/60 dark:bg-neutral-900"
+              aria-label={`Mode actuel : ${callMode === CallMode.Apporteur ? 'Apporteur' : 'Client'}`}
+            >
+              <span className="text-xs sm:text-sm text-muted-foreground">Mode :</span>
+              <Badge
+                variant={callMode === CallMode.Apporteur ? "default" : "secondary"}
+                className={
+                  callMode === CallMode.Apporteur
+                    ? "text-[11px] sm:text-xs px-2 bg-gradient-to-r from-fuchsia-500 via-purple-500 to-cyan-400 text-white border-0 shadow-[0_0_12px_rgba(236,72,153,0.35)]"
+                    : "text-[11px] sm:text-xs px-2"
+                }
+              >
+                {callMode === CallMode.Apporteur ? 'Apporteur' : 'Client'}
+              </Badge>
               <Switch
                 checked={callMode === CallMode.Apporteur}
                 onCheckedChange={(checked) => {
                   const newMode = checked ? CallMode.Apporteur : CallMode.Client;
                   setCallMode(newMode);
-                  try { localStorage.setItem(MODE_STORAGE_KEY, newMode); } catch {}
+                  setMode(newMode);
+                  if (checked) setShockwaveId((id) => id + 1);
                 }}
-                className="scale-75 sm:scale-100"
+                className={
+                  callMode === CallMode.Apporteur
+                    ? "scale-75 sm:scale-100 data-[state=checked]:bg-[linear-gradient(90deg,#ec4899,#a855f7,#22d3ee)] data-[state=unchecked]:bg-[linear-gradient(90deg,#e5e7eb,#d1d5db,#e5e7eb)] shadow-[0_0_10px_rgba(168,85,247,0.35)] border-transparent"
+                    : "scale-75 sm:scale-100"
+                }
               />
-              <Badge variant={callMode === CallMode.Apporteur ? 'default' : 'secondary'} className="text-[10px] sm:text-xs px-1.5 sm:px-2 hidden xs:inline-flex">Apporteur</Badge>
             </div>
             <button onClick={onClose} className="p-1 rounded-full hover:bg-muted">
               <X className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -1947,14 +2668,6 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         <div className="flex flex-1 overflow-hidden min-h-0 bg-white dark:bg-background transition-colors">
           {/* Sidebar de navigation */}
           <div className="w-48 sm:w-56 md:w-64 border-r bg-white dark:bg-muted/20 p-2 sm:p-3 md:p-4 flex-shrink-0 h-full overflow-y-auto transition-colors">
-            <div className="pb-3 sm:pb-4 hidden sm:block">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-md bg-foreground/10 flex items-center justify-center">
-                  <Settings className="w-3 h-3 sm:w-4 sm:h-4" />
-                </div>
-                <span className="font-semibold text-sm sm:text-base">Réglages</span>
-              </div>
-            </div>
             <nav className="space-y-0.5 sm:space-y-1">
               {getCategories(devToolsEnabled, isUpdateEnabled).map((category) => (
                 <button

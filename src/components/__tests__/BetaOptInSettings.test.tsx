@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BetaOptInSettings, BetaOptInSettingsProps } from '../BetaOptInSettings';
 import { BetaPreferences } from '../../types/update';
@@ -23,10 +23,12 @@ jest.mock('@/components/ui/badge', () => ({
   ),
 }));
 
-jest.mock('@/components/ui/checkbox', () => ({
-  Checkbox: ({ checked, onCheckedChange, disabled, ...props }: any) => (
+jest.mock('@/components/ui/switch', () => ({
+  Switch: ({ checked, onCheckedChange, disabled, id, ...props }: any) => (
     <input
       type="checkbox"
+      role="switch"
+      id={id}
       checked={checked}
       onChange={(e) => onCheckedChange?.(e.target.checked)}
       disabled={disabled}
@@ -70,10 +72,10 @@ describe('BetaOptInSettings', () => {
   });
 
   describe('Rendering', () => {
-    it('should render the beta opt-in checkbox', () => {
+    it('should render the beta opt-in switch', () => {
       render(<BetaOptInSettings {...defaultProps} />);
       
-      expect(screen.getByRole('checkbox')).toBeInTheDocument();
+      expect(screen.getByRole('switch', { name: 'Recevoir les versions bêta' })).toBeInTheDocument();
       expect(screen.getByText('Recevoir les versions bêta')).toBeInTheDocument();
     });
 
@@ -142,7 +144,7 @@ describe('BetaOptInSettings', () => {
   });
 
   describe('Beta Opt-in Interaction', () => {
-    it('should call onPreferencesChange when checkbox is toggled and user has been warned', async () => {
+    it('should call onPreferencesChange when switch is toggled and user has been warned', async () => {
       const onPreferencesChange = jest.fn();
       const warnedPreferences: BetaPreferences = {
         ...defaultBetaPreferences,
@@ -157,8 +159,8 @@ describe('BetaOptInSettings', () => {
         />
       );
       
-      const checkbox = screen.getByRole('checkbox');
-      await userEvent.click(checkbox);
+      const betaSwitch = screen.getByRole('switch', { name: 'Recevoir les versions bêta' });
+      await userEvent.click(betaSwitch);
       
       expect(onPreferencesChange).toHaveBeenCalledWith({
         ...warnedPreferences,
@@ -170,8 +172,8 @@ describe('BetaOptInSettings', () => {
     it('should show warning dialog when enabling beta for the first time', async () => {
       render(<BetaOptInSettings {...defaultProps} />);
       
-      const checkbox = screen.getByRole('checkbox');
-      await userEvent.click(checkbox);
+      const betaSwitch = screen.getByRole('switch', { name: 'Recevoir les versions bêta' });
+      await userEvent.click(betaSwitch);
       
       expect(screen.getByTestId('dialog')).toBeInTheDocument();
       expect(screen.getByText('Activer les versions bêta')).toBeInTheDocument();
@@ -195,8 +197,8 @@ describe('BetaOptInSettings', () => {
         />
       );
       
-      const checkbox = screen.getByRole('checkbox');
-      await userEvent.click(checkbox);
+      const betaSwitch = screen.getByRole('switch', { name: 'Recevoir les versions bêta' });
+      await userEvent.click(betaSwitch);
       
       expect(screen.queryByTestId('dialog')).not.toBeInTheDocument();
       expect(onPreferencesChange).toHaveBeenCalledWith({
@@ -206,7 +208,7 @@ describe('BetaOptInSettings', () => {
       });
     });
 
-    it('should disable checkbox when reverting to stable', () => {
+    it('should disable switch when reverting to stable', () => {
       render(
         <BetaOptInSettings 
           {...defaultProps} 
@@ -214,8 +216,8 @@ describe('BetaOptInSettings', () => {
         />
       );
       
-      const checkbox = screen.getByRole('checkbox');
-      expect(checkbox).toBeDisabled();
+      const betaSwitch = screen.getByRole('switch', { name: 'Recevoir les versions bêta' });
+      expect(betaSwitch).toBeDisabled();
     });
   });
 
@@ -231,8 +233,8 @@ describe('BetaOptInSettings', () => {
       );
       
       // Ouvrir le dialog d'avertissement
-      const checkbox = screen.getByRole('checkbox');
-      await userEvent.click(checkbox);
+      const betaSwitch = screen.getByRole('switch', { name: 'Recevoir les versions bêta' });
+      await userEvent.click(betaSwitch);
       
       // Confirmer l'activation
       const confirmButton = screen.getByText('J\'accepte, activer les versions bêta');
@@ -257,8 +259,8 @@ describe('BetaOptInSettings', () => {
       );
       
       // Ouvrir le dialog d'avertissement
-      const checkbox = screen.getByRole('checkbox');
-      await userEvent.click(checkbox);
+      const betaSwitch = screen.getByRole('switch', { name: 'Recevoir les versions bêta' });
+      await userEvent.click(betaSwitch);
       
       // Annuler l'activation
       const cancelButton = screen.getByText('Annuler');
@@ -271,8 +273,8 @@ describe('BetaOptInSettings', () => {
     it('should display warning information in the dialog', async () => {
       render(<BetaOptInSettings {...defaultProps} />);
       
-      const checkbox = screen.getByRole('checkbox');
-      await userEvent.click(checkbox);
+      const betaSwitch = screen.getByRole('switch', { name: 'Recevoir les versions bêta' });
+      await userEvent.click(betaSwitch);
       
       expect(screen.getByText(/Les versions bêta peuvent contenir des bugs/)).toBeInTheDocument();
       expect(screen.getByText(/Les outils de débogage.*seront automatiquement activés/)).toBeInTheDocument();
@@ -381,11 +383,11 @@ describe('BetaOptInSettings', () => {
   });
 
   describe('Accessibility', () => {
-    it('should have proper labels for the checkbox', () => {
+    it('should have proper labels for the switch', () => {
       render(<BetaOptInSettings {...defaultProps} />);
       
-      const checkbox = screen.getByRole('checkbox');
-      expect(checkbox).toHaveAccessibleName('Recevoir les versions bêta');
+      const betaSwitch = screen.getByRole('switch', { name: 'Recevoir les versions bêta' });
+      expect(betaSwitch).toHaveAccessibleName('Recevoir les versions bêta');
     });
 
     it('should have proper button labels', () => {
@@ -406,8 +408,8 @@ describe('BetaOptInSettings', () => {
     it('should support keyboard navigation in dialogs', async () => {
       render(<BetaOptInSettings {...defaultProps} />);
       
-      const checkbox = screen.getByRole('checkbox');
-      await userEvent.click(checkbox);
+      const betaSwitch = screen.getByRole('switch', { name: 'Recevoir les versions bêta' });
+      await userEvent.click(betaSwitch);
       
       // Le dialog devrait être focusable
       const dialog = screen.getByTestId('dialog');
@@ -436,7 +438,7 @@ describe('BetaOptInSettings', () => {
       expect(screen.queryByText('Revenir à la version stable')).not.toBeInTheDocument();
     });
 
-    it('should handle rapid checkbox toggling', async () => {
+    it('should handle rapid switch toggling', async () => {
       const onPreferencesChange = jest.fn();
       const warnedPreferences: BetaPreferences = {
         ...defaultBetaPreferences,
@@ -451,12 +453,12 @@ describe('BetaOptInSettings', () => {
         />
       );
       
-      const checkbox = screen.getByRole('checkbox');
+      const betaSwitch = screen.getByRole('switch', { name: 'Recevoir les versions bêta' });
       
       // Cliquer rapidement plusieurs fois
-      await userEvent.click(checkbox);
-      await userEvent.click(checkbox);
-      await userEvent.click(checkbox);
+      await userEvent.click(betaSwitch);
+      await userEvent.click(betaSwitch);
+      await userEvent.click(betaSwitch);
       
       // Seul le dernier état devrait être pris en compte
       expect(onPreferencesChange).toHaveBeenCalledTimes(3);
@@ -483,11 +485,11 @@ describe('BetaOptInSettings', () => {
         />
       );
       
-      const checkbox = screen.getByRole('checkbox');
+      const betaSwitch = screen.getByRole('switch', { name: 'Recevoir les versions bêta' });
       
       // L'erreur ne devrait pas faire planter le composant
       expect(async () => {
-        await userEvent.click(checkbox);
+        await userEvent.click(betaSwitch);
       }).not.toThrow();
 
       consoleSpy.mockRestore();

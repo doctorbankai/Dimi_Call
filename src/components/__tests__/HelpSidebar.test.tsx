@@ -23,9 +23,10 @@ import { describe } from 'node:test';
 
 describe('HelpSidebar', () => {
   const defaultProps = {
-    activeSection: HelpSection.Introduction,
+    activeSection: HelpSection.DocOverview,
     onSectionChange: jest.fn(),
-    theme: Theme.Dark
+    theme: Theme.Dark,
+    mode: 'documentation'
   };
 
   beforeEach(() => {
@@ -35,18 +36,20 @@ describe('HelpSidebar', () => {
   it('renders all help sections', () => {
     render(<HelpSidebar {...defaultProps} />);
     
-    expect(screen.getByText('Introduction')).toBeInTheDocument();
-    expect(screen.getByText('Gestion des contacts')).toBeInTheDocument();
-    expect(screen.getByText('Fonctionnalités d\'appel')).toBeInTheDocument();
-    expect(screen.getByText('Outils et actions')).toBeInTheDocument();
-    expect(screen.getByText('Erreurs fréquentes')).toBeInTheDocument();
+    expect(screen.getByText('Page Appels')).toBeInTheDocument();
+    expect(screen.getByText('Page Contacts & Import')).toBeInTheDocument();
+    expect(screen.getByText('Page Calendrier')).toBeInTheDocument();
+    expect(screen.getByText('Page Pré-qualification')).toBeInTheDocument();
+    expect(screen.getByText('Page Graphiques')).toBeInTheDocument();
+    expect(screen.getByText('Page Annuaire')).toBeInTheDocument();
+    expect(screen.getByText('Page Fichiers')).toBeInTheDocument();
   });
 
   it('highlights the active section', () => {
-    render(<HelpSidebar {...defaultProps} activeSection={HelpSection.ContactManagement} />);
+    render(<HelpSidebar {...defaultProps} activeSection={HelpSection.DocContacts} />);
     
     const activeButton = screen.getByRole('tab', { selected: true });
-    expect(activeButton).toHaveTextContent('Gestion des contacts');
+    expect(activeButton).toHaveTextContent('Page Contacts & Import');
     expect(activeButton).toHaveAttribute('aria-selected', 'true');
   });
 
@@ -54,10 +57,10 @@ describe('HelpSidebar', () => {
     const onSectionChange = jest.fn();
     render(<HelpSidebar {...defaultProps} onSectionChange={onSectionChange} />);
     
-    const contactManagementButton = screen.getByText('Gestion des contacts');
+    const contactManagementButton = screen.getByText('Page Contacts & Import');
     fireEvent.click(contactManagementButton);
     
-    expect(onSectionChange).toHaveBeenCalledWith(HelpSection.ContactManagement);
+    expect(onSectionChange).toHaveBeenCalledWith(HelpSection.DocContacts);
   });
 
   it('handles keyboard navigation with arrow keys', () => {
@@ -70,12 +73,12 @@ describe('HelpSidebar', () => {
     // Arrow down should move to next section
     fireEvent.keyDown(activeButton, { key: 'ArrowDown' });
     
-    expect(onSectionChange).toHaveBeenCalledWith(HelpSection.ContactManagement);
+    expect(onSectionChange).toHaveBeenCalledWith(HelpSection.DocContacts);
   });
 
   it('handles keyboard navigation with arrow up', () => {
     const onSectionChange = jest.fn();
-    render(<HelpSidebar {...defaultProps} activeSection={HelpSection.ContactManagement} onSectionChange={onSectionChange} />);
+    render(<HelpSidebar {...defaultProps} activeSection={HelpSection.DocContacts} onSectionChange={onSectionChange} />);
     
     const activeButton = screen.getByRole('tab', { selected: true });
     activeButton.focus();
@@ -83,7 +86,7 @@ describe('HelpSidebar', () => {
     // Arrow up should move to previous section
     fireEvent.keyDown(activeButton, { key: 'ArrowUp' });
     
-    expect(onSectionChange).toHaveBeenCalledWith(HelpSection.Introduction);
+    expect(onSectionChange).toHaveBeenCalledWith(HelpSection.DocOverview);
   });
 
   it('handles Home key to go to first section', () => {
@@ -95,7 +98,7 @@ describe('HelpSidebar', () => {
     
     fireEvent.keyDown(activeButton, { key: 'Home' });
     
-    expect(onSectionChange).toHaveBeenCalledWith(HelpSection.Introduction);
+    expect(onSectionChange).toHaveBeenCalledWith(HelpSection.DocOverview);
   });
 
   it('handles End key to go to last section', () => {
@@ -107,34 +110,34 @@ describe('HelpSidebar', () => {
     
     fireEvent.keyDown(activeButton, { key: 'End' });
     
-    expect(onSectionChange).toHaveBeenCalledWith(HelpSection.CommonErrors);
+    expect(onSectionChange).toHaveBeenCalledWith(HelpSection.DocFiles);
   });
 
   it('handles Enter key press on sections', () => {
     const onSectionChange = jest.fn();
     render(<HelpSidebar {...defaultProps} onSectionChange={onSectionChange} />);
     
-    const contactManagementButton = screen.getByText('Gestion des contacts');
+    const contactManagementButton = screen.getByText('Page Contacts & Import');
     fireEvent.keyDown(contactManagementButton, { key: 'Enter' });
     
-    expect(onSectionChange).toHaveBeenCalledWith(HelpSection.ContactManagement);
+    expect(onSectionChange).toHaveBeenCalledWith(HelpSection.DocContacts);
   });
 
   it('handles Space key press on sections', () => {
     const onSectionChange = jest.fn();
     render(<HelpSidebar {...defaultProps} onSectionChange={onSectionChange} />);
     
-    const contactManagementButton = screen.getByText('Gestion des contacts');
+    const contactManagementButton = screen.getByText('Page Contacts & Import');
     fireEvent.keyDown(contactManagementButton, { key: ' ' });
     
-    expect(onSectionChange).toHaveBeenCalledWith(HelpSection.ContactManagement);
+    expect(onSectionChange).toHaveBeenCalledWith(HelpSection.DocContacts);
   });
 
   it('displays section descriptions', () => {
     render(<HelpSidebar {...defaultProps} />);
     
-    expect(screen.getByText('Découvrez DimiCall et ses fonctionnalités principales')).toBeInTheDocument();
-    expect(screen.getByText('Import, export et manipulation des contacts')).toBeInTheDocument();
+    expect(screen.getByText('Piloter vos appels et statuts au quotidien')).toBeInTheDocument();
+    expect(screen.getByText('Importer, nettoyer et organiser vos fichiers')).toBeInTheDocument();
   });
 
   it('shows keyboard navigation hint', () => {
@@ -158,7 +161,7 @@ describe('HelpSidebar', () => {
   });
 
   it('sets correct tabIndex for active and inactive sections', () => {
-    render(<HelpSidebar {...defaultProps} activeSection={HelpSection.Introduction} />);
+    render(<HelpSidebar {...defaultProps} activeSection={HelpSection.DocOverview} />);
     
     const activeTab = screen.getByRole('tab', { selected: true });
     expect(activeTab).toHaveAttribute('tabIndex', '0');

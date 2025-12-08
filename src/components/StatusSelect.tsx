@@ -1,11 +1,11 @@
-﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useCallMode } from '../context/ModeContext';
 import { StatusConfigService } from '../services/statusConfigService';
 import { CallMode, ContactStatus } from '../types';
 
-export type StatusValue = ContactStatus;
+export type StatusValue = ContactStatus | string;
 
 interface StatusSelectProps {
   value?: StatusValue | null;
@@ -34,8 +34,7 @@ const StatusSelect = React.memo<StatusSelectProps>(({
   }, [value]);
 
   const statusOptions = useMemo(() => {
-    const baseOptions = Object.values(ContactStatus).filter((status) => {
-      if (!StatusConfigService.isVisible(status, mode)) return false;
+    const baseOptions = StatusConfigService.getStatusList(mode).filter((status) => {
       if (status === ContactStatus.A0 && mode !== CallMode.Apporteur) return false;
       return true;
     });

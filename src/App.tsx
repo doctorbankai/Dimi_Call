@@ -15,8 +15,12 @@ import Calendar2 from './pages/Calendar2';
 import { TitleBar } from './components/TitleBar';
 import { MainHeader } from './components/MainHeader';
 import { AppSidebar } from '@/components/AppSidebar';
+import HelpDialog from './components/HelpDialog';
+import { TicketForm } from './components/TicketForm';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { UpdateConfirmationDialog } from './components/UpdateConfirmationDialog';
+import { HelpCategory, HelpSection } from './types/help';
+import packageJson from '../package.json';
 import {
   loadContacts,
   saveContacts,
@@ -336,6 +340,10 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const [isShortcutConfigOpen, setIsShortcutConfigOpen] = useState(false);
   const [isCalcomConfigOpen, setIsCalcomConfigOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isHeaderHelpOpen, setIsHeaderHelpOpen] = useState(false);
+  const [helpInitialSection, setHelpInitialSection] = useState<HelpSection>(HelpSection.DocOverview);
+  const [helpMode, setHelpMode] = useState<HelpCategory>('documentation');
+  const [isHeaderTicketOpen, setIsHeaderTicketOpen] = useState(false);
   // Densité UI (compact/default)
   const [uiDensity, setUiDensity] = useState<'default' | 'compact'>(() => {
     try { return (localStorage.getItem('ui-density') as 'default' | 'compact') || 'default' } catch { return 'default' }
@@ -782,7 +790,7 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   // tat pour le template SMS personnalis
   const [smsTemplate, setSmsTemplate] = useState<string>(() => {
     const saved = localStorage.getItem('sms-template');
-    return saved || `Bonjour {civilite} {nom},
+    return saved || `Bonjour @civilite @nom,
 
 Pour resituer mon appel, je suis grant priv au sein du cabinet de gestion de patrimoine Arcanis Conseil.
 
@@ -806,7 +814,7 @@ Dimitri MOREL - Arcanis Conseil`;
         if (data.smsApporteur) return data.smsApporteur as string;
       }
     } catch { }
-    return `Bonjour {civilite} {nom},\n\nJe vous contacte dans le cadre de la gestion de votre dossier apporteur. Voici les informations et liens dédiés.\n\nBien à vous,`;
+    return `Bonjour @civilite @nom,\n\nJe vous contacte dans le cadre de la gestion de votre dossier apporteur. Voici les informations et liens dédiés.\n\nBien à vous,`;
   });
 
   // tat intelligent pour les colonnes visibles bas sur les donnes relles
@@ -2949,7 +2957,6 @@ Dimitri MOREL - Arcanis Conseil`;
         onSettingsClick={() => setIsSettingsOpen(true)}
         viewMode={viewMode}
         onChangeViewMode={(mode) => setViewMode(mode)}
-        theme={resolvedTheme}
       />
       <SidebarInset className="min-w-0 flex flex-col min-h-0 transition-all duration-200 ease-linear pt-0 mt-0 basis-full overflow-hidden pl-0 md:peer-data-[variant=inset]:m-0 md:peer-data-[variant=inset]:ml-0 md:peer-data-[variant=inset]:peer-data-[state=collapsed]:ml-0">
         {/* Barre de titre personnalisée pour Electron */}
@@ -3039,6 +3046,17 @@ Dimitri MOREL - Arcanis Conseil`;
               adbConnectionState={adbConnectionState}
               adbConnecting={adbConnecting}
               onAdbClick={handleTitleBarAdbClick}
+              onOpenHelp={() => {
+                setHelpMode('documentation');
+                setHelpInitialSection(HelpSection.DocOverview);
+                setIsHeaderHelpOpen(true);
+              }}
+              onOpenSupport={() => setIsHeaderTicketOpen(true)}
+              onOpenTroubleshoot={() => {
+                setHelpMode('depannage');
+                setHelpInitialSection(HelpSection.TroubleshootAdb);
+                setIsHeaderHelpOpen(true);
+              }}
             />
             <main className={cn(
               "flex-1 flex flex-col pt-2 md:pt-3 pb-3 md:pb-5 px-2 sm:px-3 md:px-5 space-y-2 md:space-y-3 overflow-hidden w-full min-h-0"
@@ -3967,6 +3985,21 @@ Dimitri MOREL - Arcanis Conseil`;
               onThemeChange={setTheme}
             />
           )}
+
+          <HelpDialog
+            isOpen={isHeaderHelpOpen}
+            onClose={() => setIsHeaderHelpOpen(false)}
+            theme={resolvedTheme}
+            initialSection={helpInitialSection}
+            mode={helpMode}
+          />
+
+          <TicketForm
+            isOpen={isHeaderTicketOpen}
+            onOpenChange={setIsHeaderTicketOpen}
+            userEmail={auth.user?.email}
+            appVersion={packageJson.version}
+          />
 
           {/* Indicateur de raccourci */}
           <ShortcutIndicator
