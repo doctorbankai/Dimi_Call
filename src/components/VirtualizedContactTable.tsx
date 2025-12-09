@@ -834,38 +834,6 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
     return merged;
   }, [dynamicColumns, enforcedColumnIds]);
 
-  // Load saved column order or fallback to default
-  useEffect(() => {
-    const initialOrder = resolveSavedColumnOrder();
-    if (initialOrder.length === 0) return;
-    setColumnOrder(initialOrder);
-    table.setColumnOrder?.(initialOrder);
-    try {
-      const labels = initialOrder
-        .map((id) => dynamicColumns.find((col) => col.id === id)?.label)
-        .filter((label): label is string => Boolean(label));
-      if (labels.length > 0) {
-        localStorage.setItem(COLUMN_ORDER_STORAGE_KEY, JSON.stringify(labels));
-      }
-    } catch {
-      // Ignore storage errors
-    }
-  }, [resolveSavedColumnOrder, table, dynamicColumns]);
-
-  // Listen for external column-order updates (Settings)
-  useEffect(() => {
-    const handleExternalColumnOrder = () => {
-      const nextOrder = resolveSavedColumnOrder();
-      if (nextOrder.length > 0) {
-        setColumnOrder(nextOrder);
-        table.setColumnOrder?.(nextOrder);
-      }
-    };
-
-    window.addEventListener('dimicall-column-order-changed', handleExternalColumnOrder);
-    return () => window.removeEventListener('dimicall-column-order-changed', handleExternalColumnOrder);
-  }, [resolveSavedColumnOrder, table]);
-
   // Save column order
   useEffect(() => {
     try {
@@ -1425,6 +1393,38 @@ export const VirtualizedContactTable = forwardRef<ContactTableRef, ContactTableP
     enableRowSelection: false,
     enableSorting: false // On garde notre tri custom
   });
+
+  // Load saved column order ou fallback to default (après init table)
+  useEffect(() => {
+    const initialOrder = resolveSavedColumnOrder();
+    if (initialOrder.length === 0) return;
+    setColumnOrder(initialOrder);
+    table.setColumnOrder?.(initialOrder);
+    try {
+      const labels = initialOrder
+        .map((id) => dynamicColumns.find((col) => col.id === id)?.label)
+        .filter((label): label is string => Boolean(label));
+      if (labels.length > 0) {
+        localStorage.setItem(COLUMN_ORDER_STORAGE_KEY, JSON.stringify(labels));
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, [resolveSavedColumnOrder, table, dynamicColumns]);
+
+  // Listen for external column-order updates (Settings)
+  useEffect(() => {
+    const handleExternalColumnOrder = () => {
+      const nextOrder = resolveSavedColumnOrder();
+      if (nextOrder.length > 0) {
+        setColumnOrder(nextOrder);
+        table.setColumnOrder?.(nextOrder);
+      }
+    };
+
+    window.addEventListener('dimicall-column-order-changed', handleExternalColumnOrder);
+    return () => window.removeEventListener('dimicall-column-order-changed', handleExternalColumnOrder);
+  }, [resolveSavedColumnOrder, table]);
 
   // Synchroniser autoSizes avec columnSizing (seulement si pas de valeur sauvegardée)
   useLayoutEffect(() => {
