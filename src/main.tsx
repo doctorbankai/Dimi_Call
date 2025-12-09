@@ -29,6 +29,14 @@ const AppWithLoadingPage = () => {
   }, []);
 
   useEffect(() => {
+    try {
+      window.electronAPI?.notifyRendererReady?.();
+    } catch (error) {
+      console.error('[renderer] notifyRendererReady failed', error);
+    }
+  }, []);
+
+  useEffect(() => {
     if (!isLoading) {
       // Attendre un peu avant de masquer la page de chargement pour une transition fluide
       setTimeout(() => {

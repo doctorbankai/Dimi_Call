@@ -11,6 +11,7 @@ interface ElectronAPI {
   
   // APIs système
   platform: string
+  notifyRendererReady: () => void
   
   // APIs de notification
   showNotification: (payload: DesktopNotificationPayload) => Promise<boolean>
@@ -103,6 +104,7 @@ const electronAPI: ElectronAPI = {
   
   // APIs système
   platform: process.platform,
+  notifyRendererReady: () => ipcRenderer.send('renderer:ready'),
   
   // APIs de notification
   showNotification: async (payload: DesktopNotificationPayload) => {

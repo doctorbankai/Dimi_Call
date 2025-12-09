@@ -42,6 +42,11 @@ const execFileAsync = promisify(execFile)
 let updateInfo: any = null
 let updateDownloaded = false
 let mainWindow: BrowserWindow | null = null
+let rendererReady = false
+let rendererReadyTimeout: NodeJS.Timeout | null = null
+let recoveryWindow: BrowserWindow | null = null
+const RENDERER_READY_TIMEOUT_MS = Number(process.env.RENDERER_READY_TIMEOUT_MS ?? 8000)
+let lastKnownInstallerPath: string | null = null
 
 // État des DevTools
 let devToolsEnabled = false
@@ -98,6 +103,100 @@ const enableDevToolsBasedOnPreferences = async (): Promise<void> => {
   } catch (error) {
     console.error('🔧 [NUCLEAR] ❌ Erreur configuration DevTools:', error)
   }
+}
+
+const closeRecoveryWindow = () => {
+  if (recoveryWindow && !recoveryWindow.isDestroyed()) {
+    recoveryWindow.close()
+  }
+  recoveryWindow = null
+}
+
+const openRecoveryWindow = (reason: string) => {
+  try {
+    if (recoveryWindow && !recoveryWindow.isDestroyed()) {
+      return
+    }
+
+    const cacheAvailable = Boolean(lastKnownInstallerPath && fs.existsSync(lastKnownInstallerPath))
+
+    recoveryWindow = new BrowserWindow({
+      width: 440,
+      height: 360,
+      resizable: false,
+      minimizable: false,
+      maximizable: false,
+      autoHideMenuBar: true,
+      title: 'Récupération DimiCall',
+      parent: mainWindow ?? undefined,
+      modal: true,
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false
+      }
+    })
+
+    const html = `<!DOCTYPE html>
+    <html lang="fr">
+      <head>
+        <meta charset="UTF-8" />
+        <style>
+          body { font-family: sans-serif; margin: 0; padding: 20px; background:#0b1220; color:#f6f7fb; }
+          h1 { font-size: 18px; margin: 0 0 8px 0; }
+          p { margin: 6px 0; color:#c8d1e1; }
+          .card { background:#11182a; border:1px solid #1f2a44; border-radius:10px; padding:14px; margin-top:10px; }
+          button { width: 100%; margin-top:10px; padding:10px; border-radius:8px; border:1px solid #2b3a5c; background:#1b2540; color:#f6f7fb; cursor:pointer; font-weight:600; }
+          button:hover { background:#24345c; }
+          button:disabled { opacity:0.5; cursor:not-allowed; }
+          .warn { color:#f4c430; font-weight:600; }
+          .muted { color:#9fb0cc; font-size: 12px; }
+        </style>
+      </head>
+      <body>
+        <h1>Mode secours</h1>
+        <p class="warn">Le renderer ne répond pas. Vous pouvez tenter :</p>
+        <div class="card">
+          <button onclick="act('restart')">Relancer l'application</button>
+          <button onclick="act('update')">Installer la dernière version stable</button>
+          <button id="reinstall" ${cacheAvailable ? '' : 'disabled'} onclick="act('reinstall-last')">
+            ${cacheAvailable ? 'Réinstaller la version précédente (cache)' : 'Réinstaller (cache indisponible)'}
+          </button>
+          <p class="muted">Raison : ${reason}</p>
+        </div>
+        <script>
+          const { ipcRenderer } = require('electron');
+          function act(type){ ipcRenderer.send('recovery:action', type); }
+        </script>
+      </body>
+    </html>`
+
+    recoveryWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+    recoveryWindow.on('closed', () => { recoveryWindow = null })
+  } catch (error) {
+    log.error('[RECOVERY] Impossible d\'ouvrir la fenêtre de secours', error)
+  }
+}
+
+const scheduleRendererWatchdog = () => {
+  rendererReady = false
+  if (rendererReadyTimeout) {
+    clearTimeout(rendererReadyTimeout)
+    rendererReadyTimeout = null
+  }
+
+  rendererReadyTimeout = setTimeout(() => {
+    if (!rendererReady) {
+      log.warn(`[RECOVERY] Renderer non prêt après ${RENDERER_READY_TIMEOUT_MS}ms, ouverture du mode secours`)
+      openRecoveryWindow('Le renderer ne répond pas')
+      if (updateConfig.enabled) {
+        try {
+          autoUpdater.checkForUpdates()
+        } catch (error) {
+          log.error('[RECOVERY] checkForUpdates a échoué', error)
+        }
+      }
+    }
+  }, RENDERER_READY_TIMEOUT_MS)
 }
 
 // Configuration de l'auto-updater (only if updates are enabled)
@@ -508,6 +607,7 @@ function createWindow(): BrowserWindow {
       errorDescription,
       url: validatedURL
     })
+    openRecoveryWindow(`Échec de chargement (${errorCode}): ${errorDescription}`)
   })
 
   // Logger les erreurs de la console du renderer
@@ -518,6 +618,7 @@ function createWindow(): BrowserWindow {
   // Logger les erreurs non gérées du renderer
   mainWindow.webContents.on('render-process-gone', (event, details) => {
     console.error('💥 Le processus renderer a disparu!', details)
+    openRecoveryWindow(`Renderer stoppé (${details.reason || 'inconnu'})`)
   })
 
   // S'assurer que la fenêtre s'affiche même en cas de problème
@@ -1171,10 +1272,65 @@ app.whenReady().then(async () => {
 
   // Créer la fenêtre après l'enregistrement des handlers
   mainWindow = createWindow()
+  scheduleRendererWatchdog()
 
   // IPC handlers basiques pour l'interface utilisateur
   ipcMain.handle('get-app-version', () => {
     return app.getVersion()
+  })
+
+  ipcMain.on('renderer:ready', () => {
+    rendererReady = true
+    if (rendererReadyTimeout) {
+      clearTimeout(rendererReadyTimeout)
+      rendererReadyTimeout = null
+    }
+    closeRecoveryWindow()
+  })
+
+  ipcMain.on('recovery:action', async (_event, action: 'restart' | 'update' | 'reinstall-last') => {
+    log.info(`[RECOVERY] Action demandée: ${action}`)
+    if (action === 'restart') {
+      app.relaunch()
+      app.exit(0)
+      return
+    }
+
+    if (action === 'update') {
+      if (!updateConfig.enabled) {
+        dialog.showMessageBox({
+          type: 'info',
+          message: 'Les mises à jour automatiques sont désactivées sur cette plateforme.'
+        })
+        return
+      }
+      try {
+        if (updateDownloaded && updateInfo) {
+          autoUpdater.quitAndInstall()
+        } else {
+          await autoUpdater.checkForUpdates()
+        }
+      } catch (error) {
+        log.error('[RECOVERY] Échec checkForUpdates', error)
+        dialog.showMessageBox({
+          type: 'error',
+          message: 'Impossible de lancer la mise à jour automatique',
+          detail: error instanceof Error ? error.message : String(error)
+        })
+      }
+      return
+    }
+
+    if (action === 'reinstall-last') {
+      if (lastKnownInstallerPath && fs.existsSync(lastKnownInstallerPath)) {
+        shell.openPath(lastKnownInstallerPath)
+      } else {
+        dialog.showMessageBox({
+          type: 'info',
+          message: 'Aucune version précédente en cache pour réinstallation rapide.'
+        })
+      }
+    }
   })
 
   // Vérification manuelle des mises à jour avec retour d'état
@@ -1396,6 +1552,23 @@ app.whenReady().then(async () => {
     
     updateDownloaded = true
     updateInfo = info
+
+    // Mise en cache de l'installeur pour un éventuel rollback silencieux
+    const downloadedFile = (info as any)?.downloadedFile as string | undefined
+    try {
+      const candidatePath = downloadedFile && fs.existsSync(downloadedFile) ? downloadedFile : null
+      if (candidatePath) {
+        const ext = path.extname(candidatePath) || '.bin'
+        const target = path.join(app.getPath('userData'), `cached-installer-${info.version}${ext}`)
+        fs.copyFileSync(candidatePath, target)
+        lastKnownInstallerPath = target
+        log.info(`[RECOVERY] Installeur mis en cache pour rollback: ${target}`)
+      } else {
+        log.warn('[RECOVERY] Aucun installeur à mettre en cache (downloadedFile manquant)')
+      }
+    } catch (error) {
+      log.error('[RECOVERY] Échec de la mise en cache de l\'installeur', error)
+    }
     
     if (mainWindow) {
       mainWindow.webContents.send('update-downloaded', info)
