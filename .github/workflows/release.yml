@@ -29,6 +29,8 @@ jobs:
     env:
       VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
       VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+      ENABLE_OBFUSCATION: "false" # Désactive l'obfuscation par défaut pour éviter les erreurs de runtime
+      ENABLE_SOURCEMAP: "false"   # Peut être activé dans les étapes de debug uniquement
 
     steps:
       - name: Checkout
@@ -79,6 +81,12 @@ jobs:
 
       - name: Exécuter postinstall Electron (rebuild des modules natifs)
         run: npx electron-builder install-app-deps
+
+      - name: Vérifications pré-build (build debug + cycles)
+        run: npm run ci:verify
+        env:
+          ENABLE_OBFUSCATION: "false"
+          ENABLE_SOURCEMAP: "true"
 
       - name: Vérifier l'image source pour les icônes
         shell: bash

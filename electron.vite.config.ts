@@ -8,6 +8,9 @@ import { config } from 'dotenv'
 // Charger les variables d'environnement depuis .env
 config()
 
+const enableObfuscation = process.env.ENABLE_OBFUSCATION === 'true'
+const enableRendererSourcemap = process.env.ENABLE_SOURCEMAP === 'true'
+
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
@@ -15,7 +18,8 @@ export default defineConfig({
       lib: {
         entry: resolve(__dirname, 'electron/main.ts')
       },
-      outDir: 'dist/main'
+      outDir: 'dist/main',
+      sourcemap: enableRendererSourcemap
     }
   },
   preload: {
@@ -24,13 +28,15 @@ export default defineConfig({
       lib: {
         entry: resolve(__dirname, 'electron/preload.ts')
       },
-      outDir: 'dist/preload'
+      outDir: 'dist/preload',
+      sourcemap: enableRendererSourcemap
     }
   },
   renderer: {
     root: 'src',
     build: {
       outDir: resolve(__dirname, 'dist/renderer'),
+      sourcemap: enableRendererSourcemap,
       rollupOptions: {
         input: resolve(__dirname, 'src/index.html'),
         output: {
@@ -48,63 +54,67 @@ export default defineConfig({
     plugins: [
       react(), 
       tailwindcss(),
-      obfuscatorPlugin({
-        include: ['src/**/*.{js,jsx,ts,tsx}'],
-        exclude: [/node_modules/, /\.d\.ts$/],
-        apply: 'build',
-        debugger: false,
-        options: {
-          // Options conservatrices pour éviter de casser l'application
-          compact: true,
-          controlFlowFlattening: false, // Peut causer des problèmes de performance
-          controlFlowFlatteningThreshold: 0,
-          deadCodeInjection: false, // Peut augmenter la taille du bundle
-          debugProtection: false, // Peut interférer avec le développement
-          debugProtectionInterval: 0,
-          disableConsoleOutput: false, // Garde les console.log pour le debug
-          domainLock: [],
-          domainLockRedirectUrl: 'about:blank',
-          forceTransformStrings: [],
-          identifierNamesGenerator: 'hexadecimal',
-          identifiersDictionary: [],
-          identifiersPrefix: '',
-          ignoreImports: false,
-          inputFileName: '',
-          log: false,
-          numbersToExpressions: false, // Peut causer des problèmes avec React
-          optionsPreset: 'default',
-          renameGlobals: false, // Important: ne pas renommer les globales
-          renameProperties: false, // Important: ne pas renommer les propriétés React
-          renamePropertiesMode: 'safe',
-          reservedNames: [],
-          reservedStrings: [],
-          seed: 0,
-          selfDefending: false, // Peut causer des problèmes en production
-          simplify: true,
-          sourceMap: false,
-          sourceMapBaseUrl: '',
-          sourceMapFileName: '',
-          sourceMapMode: 'separate',
-          sourceMapSourcesMode: 'sources-content',
-          splitStrings: false, // Peut causer des problèmes avec les strings React
-          splitStringsChunkLength: 10,
-          stringArray: true,
-          stringArrayCallsTransform: false, // Conservateur pour éviter les problèmes
-          stringArrayCallsTransformThreshold: 0.5,
-          stringArrayEncoding: [],
-          stringArrayIndexShift: true,
-          stringArrayRotate: true,
-          stringArrayShuffle: true,
-          stringArrayWrappersCount: 1,
-          stringArrayWrappersChainedCalls: true,
-          stringArrayWrappersParametersMaxCount: 2,
-          stringArrayWrappersType: 'variable',
-          stringArrayThreshold: 0.75,
-          target: 'browser',
-          transformObjectKeys: false, // Important: ne pas transformer les clés d'objets React
-          unicodeEscapeSequence: false
-        }
-      })
+      ...(enableObfuscation
+        ? [
+            obfuscatorPlugin({
+              include: ['src/**/*.{js,jsx,ts,tsx}'],
+              exclude: [/node_modules/, /\.d\.ts$/],
+              apply: 'build',
+              debugger: false,
+              options: {
+                // Options conservatrices pour éviter de casser l'application
+                compact: true,
+                controlFlowFlattening: false, // Peut causer des problèmes de performance
+                controlFlowFlatteningThreshold: 0,
+                deadCodeInjection: false, // Peut augmenter la taille du bundle
+                debugProtection: false, // Peut interférer avec le développement
+                debugProtectionInterval: 0,
+                disableConsoleOutput: false, // Garde les console.log pour le debug
+                domainLock: [],
+                domainLockRedirectUrl: 'about:blank',
+                forceTransformStrings: [],
+                identifierNamesGenerator: 'hexadecimal',
+                identifiersDictionary: [],
+                identifiersPrefix: '',
+                ignoreImports: false,
+                inputFileName: '',
+                log: false,
+                numbersToExpressions: false, // Peut causer des problèmes avec React
+                optionsPreset: 'default',
+                renameGlobals: false, // Important: ne pas renommer les globales
+                renameProperties: false, // Important: ne pas renommer les propriétés React
+                renamePropertiesMode: 'safe',
+                reservedNames: [],
+                reservedStrings: [],
+                seed: 0,
+                selfDefending: false, // Peut causer des problèmes en production
+                simplify: true,
+                sourceMap: enableRendererSourcemap,
+                sourceMapBaseUrl: '',
+                sourceMapFileName: '',
+                sourceMapMode: 'separate',
+                sourceMapSourcesMode: 'sources-content',
+                splitStrings: false, // Peut causer des problèmes avec les strings React
+                splitStringsChunkLength: 10,
+                stringArray: true,
+                stringArrayCallsTransform: false, // Conservateur pour éviter les problèmes
+                stringArrayCallsTransformThreshold: 0.5,
+                stringArrayEncoding: [],
+                stringArrayIndexShift: true,
+                stringArrayRotate: true,
+                stringArrayShuffle: true,
+                stringArrayWrappersCount: 1,
+                stringArrayWrappersChainedCalls: true,
+                stringArrayWrappersParametersMaxCount: 2,
+                stringArrayWrappersType: 'variable',
+                stringArrayThreshold: 0.75,
+                target: 'browser',
+                transformObjectKeys: false, // Important: ne pas transformer les clés d'objets React
+                unicodeEscapeSequence: false
+              }
+            })
+          ]
+        : [])
     ],
     define: {
       'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL),

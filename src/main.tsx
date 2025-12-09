@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { AnimatePresence } from 'framer-motion'
 import App from './App'
 import { LoadingPage } from './components/LoadingPage'
+import { RootErrorBoundary } from './components/RootErrorBoundary'
 import { useSupabaseAuth } from './lib/auth-client'
 import './index.css'
 import './styles/table-interactions.css'
@@ -51,7 +52,9 @@ const AppWithLoadingPage = () => {
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <ModeProvider>
-      <AppWithLoadingPage />
+      <RootErrorBoundary>
+        <AppWithLoadingPage />
+      </RootErrorBoundary>
     </ModeProvider>
   </React.StrictMode>
 )
