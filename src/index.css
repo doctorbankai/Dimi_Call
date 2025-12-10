@@ -737,6 +737,28 @@ body {
   border: 1px solid hsl(var(--border)) !important;
 }
 
+/* Dialogs: fond blanc explicite (compatible dark mode) */
+[data-slot="dialog-content"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.dark [data-slot="dialog-content"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Boutons qui ouvrent les popovers : fond blanc partout */
+[data-slot="popover-trigger"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.dark [data-slot="popover-trigger"] {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
 [data-slot="calendar"] {
   background-color: hsl(var(--background)) !important;
 }

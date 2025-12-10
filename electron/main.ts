@@ -1609,7 +1609,11 @@ app.whenReady().then(async () => {
     })
     
     // Surveillance continue pour fermer les DevTools si ouverts sans autorisation
-    setInterval(async () => {
+    const devtoolsInterval = setInterval(async () => {
+      if (window.isDestroyed() || window.webContents.isDestroyed()) {
+        clearInterval(devtoolsInterval)
+        return
+      }
       if (window.webContents.isDevToolsOpened()) {
         const devToolsEnabled = await getDevToolsPreferences()
         if (!devToolsEnabled) {
@@ -1618,6 +1622,10 @@ app.whenReady().then(async () => {
         }
       }
     }, 1000) // Vérifier toutes les secondes
+
+    window.on('closed', () => {
+      clearInterval(devtoolsInterval)
+    })
   })
 
   // Gestionnaires IPC

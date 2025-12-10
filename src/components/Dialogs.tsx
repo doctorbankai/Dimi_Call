@@ -29,7 +29,6 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ReminderDialog } from './ReminderDialog';
 import { TimePicker } from '@/components/ui/time-picker';
-import { TimePickerSimple } from '@/components/ui/time-picker-simple';
 import { CalendarIcon, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -544,7 +543,7 @@ const RendezVousDialog: React.FC<RendezVousDialogProps> = ({ isOpen, onClose, co
               </PopoverContent>
             </Popover>
           </div>
-          <TimePickerSimple
+          <TimePicker
             value={time}
             onChange={setTime}
             placeholder="HH:mm"

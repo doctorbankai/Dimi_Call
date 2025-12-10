@@ -7,6 +7,7 @@ import { useFormStatus } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import type { VariantProps } from 'class-variance-authority';
 import { buttonVariants } from "@/components/ui/button";
+import { TimePicker } from "@/components/ui/time-picker";
 import { 
   Phone, Mail, UploadCloud, DownloadCloud, Loader2, Trash2, CalendarDays,
   BellRing, /* PhoneOff, */ Linkedin, /* Search, */ Globe, ServerCrash,
@@ -1085,10 +1086,11 @@ Dimitri MOREL - Arcanis Conseil`;
               value={rappelDateInput}
               onChange={handleRappelDateChange}
             />
-            <Input 
-              placeholder="HH:MM" 
+            <TimePicker
               value={rappelTimeInput}
-              onChange={handleRappelTimeChange}
+              onChange={setRappelTimeInput}
+              placeholder="HH:mm"
+              stepMinutes={5}
             />
             <Button onClick={handleRappelSave} className="w-full">Enregistrer</Button>
           </PopoverContent>

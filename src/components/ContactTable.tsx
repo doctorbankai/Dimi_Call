@@ -1,14 +1,22 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Contact, ContactStatus, CallStates, Theme, CallMode } from '../types';
 import { QUICK_COMMENTS, TABLE_HEADER_ICONS, DEFAULT_COLUMN_ORDER } from '../constants';
 import { cn } from '../lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { TimePicker } from '@/components/ui/time-picker';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { 
@@ -22,7 +30,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Phone, User, Mail, MessageCircle, Clock, Calendar as CalendarIcon, FileText, ArrowUpDown,
-  ArrowUp, ArrowDown, Zap, Timer, Hourglass, Upload, FileSpreadsheet, Users, CloudUpload, Hash, FolderOpen, X, Bell
+  ArrowUp, ArrowDown, Timer, Hourglass, Upload, FileSpreadsheet, Users, CloudUpload, Hash, FolderOpen, X, Bell
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ReminderDialog } from './ReminderDialog';
@@ -63,11 +71,89 @@ interface CommentWidgetProps {
 
 const CommentWidget: React.FC<CommentWidgetProps> = ({ value, onChange, theme }) => {
   const [comment, setComment] = useState(value);
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const triggerIndexRef = useRef<number | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  const filteredComments = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return QUICK_COMMENTS;
+    return QUICK_COMMENTS.filter((c) => c.toLowerCase().includes(q));
+  }, [query]);
+
+  useEffect(() => {
+    if (!open) {
+      setMenuPosition(null);
+      return;
+    }
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const position = { top: rect.bottom + 6, left: rect.left, width: rect.width };
+    setMenuPosition(position);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    requestAnimationFrame(() => {
+      const menu = menuRef.current;
+      const container = containerRef.current;
+      const rect = menu ? menu.getBoundingClientRect() : null;
+      const chain: any[] = [];
+      let node: HTMLElement | null = container;
+      for (let i = 0; i < 4 && node; i += 1) {
+        const style = getComputedStyle(node);
+        chain.push({
+          tag: node.tagName,
+          className: node.className,
+          overflow: style.overflow,
+          overflowX: style.overflowX,
+          overflowY: style.overflowY,
+          position: style.position,
+          zIndex: style.zIndex,
+        });
+        node = node.parentElement;
+      }
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/b35723d7-fcec-4234-941b-eac4c07ef36a', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: 'debug-session',
+          runId: 'run1',
+          hypothesisId: 'H4',
+          location: 'ContactTable/CommentWidget:layout',
+          message: 'Menu layout snapshot',
+          data: { rect, chain },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
+    });
+  }, [open]);
 
   // Synchroniser l'état local avec la prop value quand elle change (ex: qualification)
   useEffect(() => {
     setComment(value);
   }, [value]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!containerRef.current) return;
+      if (!containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+        setQuery('');
+        triggerIndexRef.current = null;
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleBlur = () => {
     if (comment !== value) {
@@ -75,34 +161,118 @@ const CommentWidget: React.FC<CommentWidgetProps> = ({ value, onChange, theme })
     }
   };
 
-  const insertQuickComment = (quickComment: string) => {
-    const newComment = (comment ? comment + " " : "") + quickComment;
-    setComment(newComment);
-    onChange(newComment);
+  const insertComment = (quickComment: string) => {
+    const inputEl = inputRef.current;
+    const insertionPoint = triggerIndexRef.current ?? comment.length;
+    const before = comment.slice(0, insertionPoint);
+    const after = comment.slice(insertionPoint);
+    const needsSpaceBefore = before && !before.endsWith(' ');
+    const spacer = needsSpaceBefore ? ' ' : '';
+    const newValue = `${before}${spacer}${quickComment}${after ? ' ' : ''}`.trimEnd();
+
+    setComment(newValue);
+    onChange(newValue);
+    setOpen(false);
+    setQuery('');
+    triggerIndexRef.current = null;
+
+    requestAnimationFrame(() => {
+      if (inputEl) {
+        const pos = `${before}${spacer}${quickComment}`.length;
+        inputEl.focus();
+        inputEl.setSelectionRange(pos, pos);
+      }
+    });
   };
 
   return (
-    <div className="flex items-center space-x-1 w-full">
+    <div
+      className="relative flex items-center w-full"
+      ref={containerRef}
+      onMouseDown={(e) => e.stopPropagation()}
+    >
       <Input
+        ref={inputRef}
         type="text"
         value={comment}
-        onChange={(e) => setComment(e.target.value)}
-        onBlur={handleBlur}
-        placeholder="Commentaire..."
+        onChange={(e) => {
+          e.stopPropagation();
+          const next = e.target.value;
+          setComment(next);
+
+          const caret = e.target.selectionStart ?? next.length;
+          const charBefore = next.charAt(caret - 1);
+          const slashIndex = next.lastIndexOf('/', Math.max(0, caret - 1));
+
+          if (!open && (charBefore === '/' || slashIndex !== -1)) {
+            triggerIndexRef.current = slashIndex !== -1 ? slashIndex : caret - 1;
+            setOpen(true);
+            setQuery('');
+          }
+        }}
+        onFocus={(e) => e.stopPropagation()}
+        onBlur={(e) => {
+          e.stopPropagation();
+          handleBlur();
+        }}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+          if (e.key === '/' && !e.shiftKey && !open) {
+            e.preventDefault();
+            triggerIndexRef.current = e.currentTarget.selectionStart ?? null;
+            setOpen(true);
+            setQuery('');
+            return;
+          }
+          if (e.key === 'Escape') {
+            setOpen(false);
+            setQuery('');
+            triggerIndexRef.current = null;
+          }
+        }}
+        placeholder="Tape “/” pour insérer un message rapide"
         className={`${INPUT_BASE_CLASS} flex-1 min-w-0`}
       />
-      <Select onValueChange={insertQuickComment}>
-        <SelectTrigger className="h-6 w-6 p-0 border-none bg-transparent hover:bg-muted/50 rounded-sm flex-shrink-0">
-          <Zap className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
-        </SelectTrigger>
-        <SelectContent className="bg-popover border shadow-lg">
-          {QUICK_COMMENTS.map(qc => (
-            <SelectItem key={qc} value={qc} className="text-xs">
-              {qc}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      {open && menuPosition &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{
+              position: 'fixed',
+              top: menuPosition.top,
+              left: menuPosition.left,
+              width: menuPosition.width,
+              zIndex: 4000,
+            }}
+            className="max-w-sm rounded-md border bg-popover text-popover-foreground shadow-lg pointer-events-auto"
+          >
+            <Command>
+              <CommandInput
+                autoFocus
+                placeholder="Choisir un message…"
+                value={query}
+                onValueChange={setQuery}
+                className="focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none focus-visible:border-none border-0 shadow-none"
+              />
+              <CommandList>
+                <CommandEmpty>Aucun message</CommandEmpty>
+                <CommandGroup>
+                  {filteredComments.map((qc) => (
+                    <CommandItem
+                      key={qc}
+                      value={qc}
+                      onSelect={() => insertComment(qc)}
+                      className="cursor-pointer"
+                    >
+                      {qc}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
@@ -210,87 +380,21 @@ const DateTimeCell: React.FC<DateTimeCellProps> = ({ value, type, onChange, them
   }
 
   if (type === 'time') {
-    
-    const handleTimeSelect = (type: 'hour' | 'minute', timeValue: number) => {
-      const parts = currentValue.split(':');
-      const hours = type === 'hour' ? timeValue.toString().padStart(2, '0') : (parts[0] || '00');
-      const minutes = type === 'minute' ? timeValue.toString().padStart(2, '0') : (parts[1] || '00');
-      const newTime = `${hours}:${minutes}`;
-      setCurrentValue(newTime);
-      onChange(newTime);
-    };
-
-    const hours = Array.from({ length: 24 }, (_, i) => i);
-    const minutes = Array.from({ length: 60 }, (_, i) => i);
-
     return (
-      <div className="flex items-center gap-1">
-        <Popover open={isTimeOpen} onOpenChange={setIsTimeOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              className={cn(
-                "h-8 px-2 text-xs justify-start text-left font-normal flex-1",
-                !value && "text-muted-foreground",
-                INPUT_BASE_CLASS
-              )}
-            >
-              <Clock className="mr-2 h-3 w-3" />
-              {currentValue || "Heure"}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-4" align="start">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <div className="text-sm font-medium mb-2">Heures</div>
-                <ScrollArea className="h-40">
-                  <div className="grid gap-1">
-                    {hours.map(hour => (
-                      <Button
-                        key={hour}
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-xs justify-start"
-                        onClick={() => handleTimeSelect('hour', hour)}
-                      >
-                        {hour.toString().padStart(2, '0')}
-                      </Button>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
-              <div>
-                <div className="text-sm font-medium mb-2">Minutes</div>
-                <ScrollArea className="h-40">
-                  <div className="grid gap-1">
-                    {minutes.filter((_, i) => i % 5 === 0).map(minute => (
-                      <Button
-                        key={minute}
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-xs justify-start"
-                        onClick={() => handleTimeSelect('minute', minute)}
-                      >
-                        {minute.toString().padStart(2, '0')}
-                      </Button>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-        {value && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive"
-            onClick={handleClear}
-            title="Supprimer l'heure"
-          >
-            <X className="h-3 w-3" />
-          </Button>
-        )}
+      <div className="flex items-center gap-1 w-full">
+        <TimePicker
+          value={currentValue}
+          onChange={(newTime) => {
+            setCurrentValue(newTime);
+            onChange(newTime);
+          }}
+          placeholder="Heure"
+          stepMinutes={5}
+          className={cn(
+            "h-8 px-2 text-xs justify-start text-left font-normal flex-1",
+            INPUT_BASE_CLASS
+          )}
+        />
       </div>
     );
   }
