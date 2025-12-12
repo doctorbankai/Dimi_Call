@@ -135,6 +135,14 @@ Pour plus d'informations, consultez:
 - [SUPABASE_SECURITY_IMPLEMENTATION.md](../SUPABASE_SECURITY_IMPLEMENTATION.md)
 - [TEST_ANTI_PARTAGE_COMPTE.md](../TEST_ANTI_PARTAGE_COMPTE.md)
 
+### 004_dimicall_status_events_mirror.sql
+**Miroir des événements locaux pour stats**
+
+Cette migration crée:
+- ✅ Table `dimicall_status_events` (miroir de la table locale SQLite `status_events`)
+- ✅ Index/unique key `(user_uid, local_event_id)` pour upsert idempotent
+- ✅ RLS: accès limité au propriétaire `user_uid`
+
 ---
 
 **Cette migration est CRITIQUE pour la sécurité de votre application!**

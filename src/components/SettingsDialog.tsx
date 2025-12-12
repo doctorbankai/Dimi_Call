@@ -1525,6 +1525,38 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                   </Badge>
                 </div>
               </div>
+
+              <div className="rounded-md border px-4 py-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <div className="font-medium flex items-center gap-2">
+                      Miroir Graphique (status_events)
+                      {renderStatusBadge(supabaseState.statusEvents.status)}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Synchronise l’historique de la page Graphique (table locale <code className="px-1 py-0.5 bg-muted rounded text-[10px] border border-border">status_events</code>)
+                      vers Supabase (<code className="px-1 py-0.5 bg-muted rounded text-[10px] border border-border">dimicall_status_events</code>).
+                    </p>
+                    {renderStats(supabaseState.statusEvents.stats)}
+                    {renderError(supabaseState.statusEvents.lastError)}
+                  </div>
+                  <Switch
+                    checked={supabaseState.statusEvents.enabled}
+                    onCheckedChange={(checked) => setSupabaseEnabled('statusEvents', !!checked)}
+                  />
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!supabaseState.statusEvents.enabled || supabaseState.statusEvents.status === 'syncing'}
+                    onClick={() => triggerSupabaseSync('statusEvents', 'manual')}
+                    className="h-7"
+                  >
+                    <RotateCcw className="w-3 h-3 mr-1" /> Relancer la synchro
+                  </Button>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>

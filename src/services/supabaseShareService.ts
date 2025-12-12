@@ -5,8 +5,8 @@ import { loadContacts } from '@/services/dataService'
 import type { Contact } from '@/types'
 import { normalizeDurationMmSs, normalizeIsoDate, normalizeIsoDateTime, normalizeTime24hValue } from '@/utils/datetimeNormalization'
 
-type SyncTarget = 'phone' | 'blacklist' | 'calls'
-const SYNC_TARGETS: SyncTarget[] = ['phone', 'blacklist', 'calls']
+type SyncTarget = 'phone' | 'blacklist' | 'calls' | 'statusEvents'
+const SYNC_TARGETS: SyncTarget[] = ['phone', 'blacklist', 'calls', 'statusEvents']
 
 export type ShareStatus = 'idle' | 'syncing' | 'success' | 'error'
 
@@ -33,6 +33,7 @@ export interface SupabaseShareState {
   phone: ShareTargetState
   blacklist: ShareTargetState
   calls: ShareTargetState
+  statusEvents: ShareTargetState
 }
 
 type Listener = (state: SupabaseShareState) => void
@@ -55,12 +56,14 @@ const state: SupabaseShareState = {
   phone: { ...defaultTargetState },
   blacklist: { ...defaultTargetState },
   calls: { ...defaultTargetState },
+  statusEvents: { ...defaultTargetState },
 }
 
 const runtimeState: Record<SyncTarget, RuntimeTargetState> = {
   phone: { inFlight: false, pendingResync: false },
   blacklist: { inFlight: false, pendingResync: false },
   calls: { inFlight: false, pendingResync: false },
+  statusEvents: { inFlight: false, pendingResync: false },
 }
 
 const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -105,6 +108,7 @@ function loadPreferences() {
     if (typeof parsed.phone === 'boolean') state.phone.enabled = parsed.phone
     if (typeof parsed.blacklist === 'boolean') state.blacklist.enabled = parsed.blacklist
     if (typeof parsed.calls === 'boolean') state.calls.enabled = parsed.calls
+    if (typeof parsed.statusEvents === 'boolean') state.statusEvents.enabled = parsed.statusEvents
   } catch (error) {
     supabaseLogger.warn('[share] Lecture préférences Supabase échouée', error)
   }
@@ -117,6 +121,7 @@ function savePreferences() {
       phone: state.phone.enabled,
       blacklist: state.blacklist.enabled,
       calls: state.calls.enabled,
+      statusEvents: state.statusEvents.enabled,
     }
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
   } catch (error) {
@@ -140,6 +145,7 @@ function getSnapshot(): SupabaseShareState {
     phone: { ...state.phone, stats: state.phone.stats ? { ...state.phone.stats } : undefined },
     blacklist: { ...state.blacklist, stats: state.blacklist.stats ? { ...state.blacklist.stats } : undefined },
     calls: { ...state.calls, stats: state.calls.stats ? { ...state.calls.stats } : undefined },
+    statusEvents: { ...state.statusEvents, stats: state.statusEvents.stats ? { ...state.statusEvents.stats } : undefined },
   }
 }
 
@@ -267,6 +273,9 @@ async function performSync(target: SyncTarget): Promise<{ processed: number; sha
   }
   if (target === 'blacklist') {
     return syncSharedBlacklistNumbers(events)
+  }
+  if (target === 'statusEvents') {
+    return syncStatusEventsMirror(events)
   }
   return syncCallEvents(events)
 }
@@ -495,6 +504,130 @@ async function syncCallEvents(events: any[]): Promise<{ processed: number; share
     shared: payload.length,
     filtered,
     withMetadata: enriched,
+  }
+}
+
+async function syncStatusEventsMirror(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number }> {
+  const client = supabaseService.getClient()
+  const authIdentity = await getCurrentAuthIdentity()
+  if (!authIdentity.id || !authIdentity.email) {
+    throw new Error('Session Supabase requise pour synchroniser l’historique Graphique (status_events).')
+  }
+
+  const payload: Array<Record<string, any>> = []
+  let filtered = 0
+
+  for (const row of events) {
+    const record = buildStatusEventMirrorRecord(row, authIdentity)
+    if (!record) {
+      filtered += 1
+      continue
+    }
+    payload.push(record)
+  }
+
+  if (payload.length === 0) {
+    return {
+      processed: events.length,
+      shared: 0,
+      filtered: events.length,
+      withMetadata: 0,
+    }
+  }
+
+  await chunkedUpsert(client, 'dimicall_status_events', payload, 'user_uid,local_event_id')
+
+  return {
+    processed: events.length,
+    shared: payload.length,
+    filtered,
+    withMetadata: 0,
+  }
+}
+
+function buildStatusEventMirrorRecord(row: any, auth: AuthIdentity): Record<string, any> | null {
+  const localEventId =
+    normalizeNumericId(row?.id) ?? normalizeNumericId(row?.local_event_id) ?? normalizeNumericId(row?.localEventId)
+  const contactId = extractString(row, ['contact_id', 'contactId', 'id'])
+
+  if (!localEventId || !contactId) {
+    return null
+  }
+
+  // applied_at est NOT NULL côté Supabase.
+  // Certains événements locaux ont un format non ISO (ex: "YYYY-MM-DD HH:mm:ss") ou une valeur manquante.
+  // Pour éviter l'envoi de NULL (qui casse l'insert), on force un fallback fiable.
+  const normalizedAppliedAt =
+    normalizeIsoDateTime(row.applied_at ?? row.appliedAt) ?? new Date().toISOString()
+  const normalizedDateRappel = normalizeIsoDate(row.dateRappel ?? row.date_rappel)
+  const normalizedHeureRappel = normalizeTime24hValue(row.heureRappel ?? row.heure_rappel)
+  const normalizedDateRdv = normalizeIsoDate(row.dateRDV ?? row.date_rdv)
+  const normalizedHeureRdv = normalizeTime24hValue(row.heureRDV ?? row.heure_rdv)
+  const normalizedDateAppel = normalizeIsoDate(row.dateAppel ?? row.date_appel)
+  const normalizedHeureAppel = normalizeTime24hValue(row.heureAppel ?? row.heure_appel)
+  const normalizedDateEntree = normalizeIsoDate(row.dateEntree ?? row.date_entree)
+  const normalizedHeureEntree = normalizeTime24hValue(row.heureEntree ?? row.heure_entree)
+  const normalizedDuration = normalizeDurationMmSs(row.dureeAppel ?? row.duree_appel)
+
+  const raw_event = sanitizeJson(row)
+
+  return {
+    user_uid: auth.id,
+    user_email: auth.email,
+    local_event_id: localEventId,
+    contact_id: contactId,
+    old_status: extractString(row, ['old_status', 'oldStatus']),
+    new_status: extractString(row, ['new_status', 'newStatus', 'statut', 'status', 'statut_final']),
+    applied_at: normalizedAppliedAt,
+
+    prenom: extractString(row, ['prenom', 'firstName']) ?? null,
+    nom: extractString(row, ['nom', 'lastName']) ?? null,
+    telephone: extractString(row, ['telephone', 'phone', 'numero']) ?? null,
+    email: extractString(row, ['email', 'mail']) ?? null,
+    commentaire: (row?.commentaire ?? row?.comment ?? null) || null,
+
+    date_rappel: normalizedDateRappel,
+    heure_rappel: normalizedHeureRappel,
+    date_rdv: normalizedDateRdv,
+    heure_rdv: normalizedHeureRdv,
+    date_appel: normalizedDateAppel,
+    heure_appel: normalizedHeureAppel,
+    duree_appel: normalizedDuration,
+    date_entree: normalizedDateEntree,
+    heure_entree: normalizedHeureEntree,
+
+    numero_ligne:
+      typeof row?.numeroLigne === 'number'
+        ? row.numeroLigne
+        : typeof row?.numero_ligne === 'number'
+        ? row.numero_ligne
+        : null,
+
+    source: extractString(row, ['source', 'origine', 'provenance']) ?? null,
+    statut: extractString(row, ['statut']) ?? null,
+    lien: extractString(row, ['lien', 'link', 'url']) ?? null,
+    sexe: extractString(row, ['sexe', 'genre', 'civilite']) ?? null,
+    don: extractString(row, ['don', 'donation', 'montant']) ?? null,
+    qualite: extractString(row, ['qualite', 'quality']) ?? null,
+    type_contact: extractString(row, ['type_contact', 'type', 'typeContact']) ?? null,
+    date_contact: normalizeIsoDate(row.date_contact ?? row.dateContact ?? row.date ?? null),
+    uid: extractString(row, ['uid']) ?? null,
+    uid_supabase: extractString(row, ['uid_supabase', 'uidSupabase']) ?? null,
+    utilisateur: extractString(row, ['utilisateur', 'user', 'owner']) ?? null,
+    actions: extractString(row, ['actions', 'action']) ?? null,
+    statut_appel: extractString(row, ['statut_appel', 'statutAppel']) ?? null,
+    statut_rdv: extractString(row, ['statut_rdv', 'statutRDV']) ?? null,
+    commentaire_rdv: (row?.commentaire_rdv ?? row?.commentaireRDV ?? null) || null,
+
+    raw_event,
+  }
+}
+
+function sanitizeJson(value: unknown): unknown | null {
+  try {
+    return JSON.parse(JSON.stringify(value ?? null))
+  } catch {
+    return null
   }
 }
 

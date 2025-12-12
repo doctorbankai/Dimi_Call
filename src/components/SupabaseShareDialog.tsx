@@ -210,6 +210,38 @@ export const SupabaseShareDialog: React.FC<SupabaseShareDialogProps> = ({ open, 
               </Button>
             </div>
           </div>
+
+          <div className="rounded-md border px-4 py-3">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="font-medium flex items-center gap-2">
+                  Miroir Graphique (status_events)
+                  {renderStatusBadge(state.statusEvents.status)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Synchronise l’historique de la page Graphique (table locale SQLite <code className="px-1 py-0.5 bg-muted rounded text-[10px] border border-border">status_events</code>)
+                  vers Supabase (<code className="px-1 py-0.5 bg-muted rounded text-[10px] border border-border">dimicall_status_events</code>).
+                </p>
+                {renderStats(state.statusEvents.stats)}
+                {renderError(state.statusEvents.lastError)}
+              </div>
+              <Switch
+                checked={state.statusEvents.enabled}
+                onCheckedChange={(checked) => setEnabled('statusEvents', !!checked)}
+              />
+            </div>
+            <div className="flex gap-2 mt-3">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={!state.statusEvents.enabled || state.statusEvents.status === 'syncing'}
+                onClick={() => triggerSync('statusEvents', 'manual')}
+                className="h-7"
+              >
+                <RefreshCw className="w-3 h-3 mr-1" /> Relancer la synchro
+              </Button>
+            </div>
+          </div>
         </div>
 
         <DialogFooter className="sm:justify-end">
