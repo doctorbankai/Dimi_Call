@@ -112,6 +112,34 @@ export enum QualificationSituationPro {
   Etudiant = "Étudiant",
 }
 
+export enum QualificationRevenuType {
+  Salaire = "Salaire",
+  Dividendes = "Dividendes",
+  Rente = "Rente",
+  Autre = "Autre",
+}
+
+export enum QualificationChargeType {
+  Credit = "Crédit",
+  Loyer = "Loyer",
+  Pension = "Pension",
+  Autre = "Autre",
+}
+
+export enum QualificationLiquiditeType {
+  LivretA = "Livret A",
+  CTO = "CTO",
+  Immo = "Immo",
+  Autre = "Autre",
+}
+
+export enum QualificationFrequence {
+  Hebdo = "Hebdomadaire",
+  Mensuel = "Mensuel",
+  Trimestriel = "Trimestriel",
+  Annuel = "Annuel",
+}
+
 export interface ElectronAPI {
   // APIs de fenêtre
   closeApp: () => Promise<void>;
