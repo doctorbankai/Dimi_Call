@@ -1994,6 +1994,16 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           className="pl-8 h-8 text-sm"
                         />
                       </div>
+                      <div className="flex flex-col justify-center min-w-[140px] px-2 gap-1 hidden sm:flex">
+                        <div className="flex items-center justify-between text-[10px] leading-none">
+                          <span className="text-muted-foreground">Statut des appels</span>
+                          <span className="font-medium text-foreground">{Math.max(0, Math.min(100, Math.round(completionPercent)))}%</span>
+                        </div>
+                        <Progress
+                          value={Math.max(0, Math.min(100, Math.round(completionPercent)))}
+                          className="h-1.5 w-full"
+                        />
+                      </div>
                     </div>
                     {/* Groupe droite : actions contextuelles */}
                     <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap shrink-0">
