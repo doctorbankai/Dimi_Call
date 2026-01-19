@@ -391,11 +391,18 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   });
   const [annuaireFocusContact, setAnnuaireFocusContact] = useState<{ id?: string; name?: string } | null>(null);
   // Filtres globaux par vue pour uniformit
-  const [graphRange, setGraphRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
+  const [graphRange, setGraphRange] = useState<{ start: string; end: string }>(() => {
+    const now = new Date();
+    const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const end = fmt(now);
+    const start = new Date(now);
+    start.setDate(start.getDate() - 6);
+    return { start: fmt(start), end };
+  })
   const [dbRange, setDbRange] = useState<{ start: string; end: string }>({ start: '', end: '' })
   const [calendarDate, setCalendarDate] = useState<Date | undefined>(new Date())
   const [filterMenuOpen, setFilterMenuOpen] = useState(false)
-  const [filterQuick, setFilterQuick] = useState<QuickRangeKey>('all')
+  const [filterQuick, setFilterQuick] = useState<QuickRangeKey>('last7')
   const [dbSelectedCount, setDbSelectedCount] = useState<number>(0)
 
   // Throttled persistence to avoid blocking on every keystroke
@@ -3024,7 +3031,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
 
           {/* Main content card (includes header) */}
-           <div className="group-data-[variant=floating]:border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm bg-card text-foreground border border-border rounded-lg shadow-sm mr-[2px] sm:mr-[4px] mt-[2px] sm:mt-[4px] mb-[2px] sm:mb-[4px] flex-1 flex flex-col min-h-0 overflow-hidden min-w-0">
+          <div className="group-data-[variant=floating]:border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm bg-card text-foreground border border-border rounded-lg shadow-sm mr-[2px] sm:mr-[4px] mt-[2px] sm:mt-[4px] mb-[2px] sm:mb-[4px] flex-1 flex flex-col min-h-0 overflow-hidden min-w-0">
             {/* Header inside the white container */}
             <MainHeader
               theme={resolvedTheme}
@@ -3298,7 +3305,7 @@ Dimitri MOREL - Arcanis Conseil`;
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                  className="h-9 px-2 shrink-0 bg-white text-foreground dark:text-slate-900 dark:bg-white hover:bg-slate-50 dark:hover:bg-slate-100 border border-border"
+                                    className="h-9 px-2 shrink-0 bg-white text-foreground dark:text-slate-900 dark:bg-white hover:bg-slate-50 dark:hover:bg-slate-100 border border-border"
                                     title="Gestion des colonnes"
                                   >
                                     <Settings2 className="h-4 w-4" />
@@ -3800,7 +3807,11 @@ Dimitri MOREL - Arcanis Conseil`;
                 ) : viewMode === 'graph' ? (
                   <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0 w-full">
                     <div className="flex-1 w-full overflow-auto min-w-0">
-                      <ChartDashboard contacts={filteredContacts} />
+                      <ChartDashboard
+                        contacts={filteredContacts}
+                        initialStartDate={graphRange.start}
+                        initialEndDate={graphRange.end}
+                      />
                     </div>
                   </div>
                 ) : viewMode === 'calendar-2' ? (

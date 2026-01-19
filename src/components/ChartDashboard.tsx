@@ -7,14 +7,17 @@ import { localDbService } from '@/services/localDbService';
 import { ContactListDialog } from './ContactListDialog';
 
 
+
 type ChartDashboardProps = {
   contacts: Contact[];
+  initialStartDate?: string;
+  initialEndDate?: string;
 };
 
-export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts }) => {
+export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initialStartDate, initialEndDate }) => {
   // Filtres de dates pour les événements locaux (status_events)
-  const [startDate, setStartDate] = useState<string>(''); // ISO yyyy-mm-dd
-  const [endDate, setEndDate] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>(initialStartDate || ''); // ISO yyyy-mm-dd
+  const [endDate, setEndDate] = useState<string>(initialEndDate || '');
   const [localEvents, setLocalEvents] = useState<any[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
