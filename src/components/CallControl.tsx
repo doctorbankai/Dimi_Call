@@ -4,10 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Phone, PhoneOff, Mail, MessageSquare, Bell, Calendar, CalendarSearch, FileCheck, MoreHorizontal } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
 import { formatPhoneNumber } from '../services/dataService';
 import StatusSelect from './StatusSelect';
 import { cn } from '@/lib/utils';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuLabel,
+  ContextMenuRadioGroup,
+  ContextMenuRadioItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { useCallSystem } from '../hooks/useCallSystem';
 
 interface CallControlProps {
   contact: Contact | null;
@@ -111,9 +122,27 @@ const CallControl: React.FC<CallControlProps> = ({
     return contact.email;
   }, [contact]);
 
-  const canCall = !!contact && !isCalling && adbConnected;
+  const { callMode, setMode, performCall, isMac } = useCallSystem();
+
+  const canCall = !!contact && !isCalling && (callMode === 'max' ? true : adbConnected);
   const canHangUp = isCalling;
   const isDetailed = displayMode === 'full' && variant === 'detailed';
+
+  const handleCallClick = async () => {
+    // Si le numéro est vide, on laisse onCall gérer (probablement une erreur ou défaut)
+    if (!phone) {
+      onCall();
+      return;
+    }
+
+    // Tenter l'appel via le système (Mode Max)
+    // Si performCall renvoie true, c'est géré.
+    // Sinon, fallback sur le onCall standard.
+    const handled = await performCall(phone);
+    if (!handled) {
+      await onCall();
+    }
+  };
 
   const iconBaseClasses =
     "size-10 rounded-full transition-all duration-200 shrink-0 hover:scale-[1.02] focus-visible:ring-2 focus-visible:ring-primary/30 focus-visible:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed";
@@ -124,100 +153,140 @@ const CallControl: React.FC<CallControlProps> = ({
     "dark:bg-muted/70 dark:text-muted-foreground dark:hover:bg-muted dark:border-transparent"
   );
 
-  const renderPrimaryButtons = () => (
-    <>
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            {isCalling ? (
-              <Button
-                variant="destructive"
-                size="icon"
-                aria-label="Raccrocher l'appel"
-                title="Raccrocher l'appel"
-                onClick={() => onHangUp()}
-                disabled={!canHangUp}
-                className={cn(
-                  iconBaseClasses,
-                  "bg-red-500 hover:bg-red-600 text-white shadow-none hover:shadow-none"
-                )}
-              >
-                <PhoneOff className="h-4 w-4" />
-              </Button>
-            ) : (
-              <Button
-                variant="default"
-                size="icon"
-                aria-label="Appeler"
-                title={contact ? "Appeler" : "Sélectionnez un contact"}
-                onClick={() => onCall()}
-                disabled={!canCall}
-                className={cn(
-                  iconBaseClasses,
-                  "bg-green-500 hover:bg-green-600 text-white shadow-none hover:shadow-none"
-                )}
-              >
-                <Phone className="h-4 w-4" />
-              </Button>
-            )}
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>
-              {isCalling
-                ? "Raccrocher"
-                : contact
-                ? adbConnected
-                  ? "Appeler ce contact"
-                  : "Connectez l'appareil ADB pour appeler"
-                : "Aucun contact sélectionné"}
-            </p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+  const renderPrimaryButtons = () => {
+    // Le contenu du bouton d'appel (avec Tooltip)
+    const callButtonContent = (
+      <div> {/* Wrapper div pour éviter les conflits de ref/events avec TooltipProvider si asChild est utilisé partout */}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              {isCalling ? (
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  aria-label="Raccrocher l'appel"
+                  title="Raccrocher l'appel"
+                  onClick={async () => await onHangUp()}
+                  disabled={!canHangUp}
+                  className={cn(
+                    iconBaseClasses,
+                    "bg-red-500 hover:bg-red-600 text-white shadow-none hover:shadow-none"
+                  )}
+                >
+                  <PhoneOff className="h-4 w-4" />
+                </Button>
+              ) : (
+                <Button
+                  variant="default"
+                  size="icon"
+                  aria-label="Appeler"
+                  title={contact ? `Appeler (${callMode === 'max' ? 'Système' : 'Standard'})` : "Sélectionnez un contact"}
+                  onClick={handleCallClick}
+                  disabled={!canCall}
+                  className={cn(
+                    iconBaseClasses,
+                    "bg-green-500 hover:bg-green-600 text-white shadow-none hover:shadow-none"
+                  )}
+                >
+                  <Phone className="h-4 w-4" />
+                </Button>
+              )}
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>
+                {isCalling
+                  ? "Raccrocher"
+                  : contact
+                    ? (callMode === 'max' || adbConnected)
+                      ? `Appeler ce contact${isMac ? ` (Mode ${callMode === 'max' ? 'Max' : 'Standard'})` : ''}`
+                      : "Connectez l'appareil ADB pour appeler"
+                    : "Aucun contact sélectionné"}
+              </p>
+              {isMac && <p className="text-[10px] opacity-70 mt-1">Clic droit pour changer de mode</p>}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+    );
 
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="SMS"
-              title="SMS"
-              onClick={() => onSms && onSms()}
-              disabled={!contact}
-              className={subtleIconClasses}
-            >
-              <MessageSquare className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Envoyer un SMS</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
+    return (
+      <>
+        {isMac ? (
+          <ContextMenu>
+            <ContextMenuTrigger asChild>
+              {callButtonContent}
+            </ContextMenuTrigger>
+            <ContextMenuContent className="w-64">
+              <ContextMenuLabel>Paramètres d'appel</ContextMenuLabel>
+              <ContextMenuSeparator />
+              <ContextMenuRadioGroup value={callMode} onValueChange={(v) => {
+                if (v === 'standard' || v === 'max') {
+                  setMode(v);
+                }
+              }}>
+                <ContextMenuRadioItem value="standard">
+                  <div className="flex flex-col gap-1">
+                    <span>Mode Standard (DimiCall)</span>
+                    <span className="text-xs text-muted-foreground">Appelle via le téléphone connecté (ADB)</span>
+                  </div>
+                </ContextMenuRadioItem>
+                <ContextMenuRadioItem value="max">
+                  <div className="flex flex-col gap-1">
+                    <span>Mode Max (iPhone/Système)</span>
+                    <span className="text-xs text-muted-foreground">Ouvre l'app par défaut (FaceTime, etc)</span>
+                  </div>
+                </ContextMenuRadioItem>
+              </ContextMenuRadioGroup>
+            </ContextMenuContent>
+          </ContextMenu>
+        ) : (
+          callButtonContent
+        )}
 
-      <TooltipProvider>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="Email"
-              title="Email"
-              onClick={() => onEmail && onEmail()}
-              disabled={!contact || !contact.email}
-              className={subtleIconClasses}
-            >
-              <Mail className="h-4 w-4" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            <p>Ouvrir l'email</p>
-          </TooltipContent>
-        </Tooltip>
-      </TooltipProvider>
-    </>
-  );
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="SMS"
+                title="SMS"
+                onClick={() => onSms && onSms()}
+                disabled={!contact}
+                className={subtleIconClasses}
+              >
+                <MessageSquare className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Envoyer un SMS</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Email"
+                title="Email"
+                onClick={() => onEmail && onEmail()}
+                disabled={!contact || !contact.email}
+                className={subtleIconClasses}
+              >
+                <Mail className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Ouvrir l'email</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </>
+    );
+  };
 
   const renderOverflowMenu = () => (
     <DropdownMenu>
@@ -438,7 +507,7 @@ const CallControl: React.FC<CallControlProps> = ({
                     <span className="text-xs text-muted-foreground whitespace-nowrap">Statut:</span>
                     <StatusSelect
                       value={contact.statut}
-                      onChange={(newStatus) => onStatusChange?.(newStatus)}
+                      onChange={(newStatus) => onStatusChange?.(newStatus as ContactStatus)}
                       triggerClassName="w-[140px]"
                       contentClassName="text-xs"
                       size="sm"
@@ -456,103 +525,103 @@ const CallControl: React.FC<CallControlProps> = ({
             </span>
           )}
 
-        <div className="flex items-center gap-2 flex-nowrap">
-          {renderPrimaryButtons()}
-          {/* Menu overflow visible uniquement sur petits écrans */}
-          <div className="lg:hidden">
-            {renderOverflowMenu()}
-          </div>
-          {/* Boutons secondaires visibles uniquement sur grands écrans */}
-          <div className="hidden lg:flex items-center gap-2">
-            {onQualification && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Qualification"
-                      title="Qualifier le contact"
-                      onClick={() => onQualification()}
-                      disabled={!contact}
-                      className={subtleIconClasses}
-                    >
-                      <FileCheck className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Qualifier le contact</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            {onRappel && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Rappel"
-                      title="Programmer un rappel"
-                      onClick={() => onRappel()}
-                      disabled={!contact}
-                      className={subtleIconClasses}
-                    >
-                      <Bell className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Programmer un rappel</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            {onRendezVous && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Rendez-vous"
-                      title="Programmer un rendez-vous"
-                      onClick={() => onRendezVous()}
-                      disabled={!contact}
-                      className={subtleIconClasses}
-                    >
-                      <Calendar className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Programmer un rendez-vous</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-            {onCalCom && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      aria-label="Cal.com"
-                      title="Ouvrir Cal.com"
-                      onClick={() => onCalCom()}
-                      disabled={!contact}
-                      className={subtleIconClasses}
-                    >
-                      <CalendarSearch className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Ouvrir Cal.com</p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            )}
-          </div>
+          <div className="flex items-center gap-2 flex-nowrap">
+            {renderPrimaryButtons()}
+            {/* Menu overflow visible uniquement sur petits écrans */}
+            <div className="lg:hidden">
+              {renderOverflowMenu()}
+            </div>
+            {/* Boutons secondaires visibles uniquement sur grands écrans */}
+            <div className="hidden lg:flex items-center gap-2">
+              {onQualification && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Qualification"
+                        title="Qualifier le contact"
+                        onClick={() => onQualification()}
+                        disabled={!contact}
+                        className={subtleIconClasses}
+                      >
+                        <FileCheck className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Qualifier le contact</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {onRappel && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Rappel"
+                        title="Programmer un rappel"
+                        onClick={() => onRappel()}
+                        disabled={!contact}
+                        className={subtleIconClasses}
+                      >
+                        <Bell className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Programmer un rappel</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {onRendezVous && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Rendez-vous"
+                        title="Programmer un rendez-vous"
+                        onClick={() => onRendezVous()}
+                        disabled={!contact}
+                        className={subtleIconClasses}
+                      >
+                        <Calendar className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Programmer un rendez-vous</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              {onCalCom && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        aria-label="Cal.com"
+                        title="Ouvrir Cal.com"
+                        onClick={() => onCalCom()}
+                        disabled={!contact}
+                        className={subtleIconClasses}
+                      >
+                        <CalendarSearch className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Ouvrir Cal.com</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           </div>
         </div>
       </div>

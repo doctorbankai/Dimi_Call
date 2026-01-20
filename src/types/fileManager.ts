@@ -154,6 +154,11 @@ export interface GetFileInfoResponse {
 declare global {
   interface Window {
     electronAPI: {
+      platform: string;
+      system: {
+        callTel: (phoneNumber: string) => Promise<{ success: boolean; error?: string }>;
+      };
+
       // File operations
       listDirectory: (path: string) => Promise<ListDirectoryResponse>;
       createFolder: (path: string, name: string) => Promise<CreateFolderResponse>;

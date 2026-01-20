@@ -86,10 +86,10 @@ const enableDevToolsBasedOnPreferences = async (): Promise<void> => {
       console.log('🔧 [NUCLEAR] ⚠️ Fenêtre principale non disponible')
       return
     }
-    
+
     const devToolsEnabled = await getDevToolsPreferences()
     console.log(`🔧 [NUCLEAR] Configuration DevTools: ${devToolsEnabled ? 'ACTIVÉS' : 'DÉSACTIVÉS'}`)
-    
+
     if (devToolsEnabled) {
       console.log('🔧 [NUCLEAR] ✅ DevTools autorisés - Ctrl+Shift+I disponible')
     } else {
@@ -215,14 +215,14 @@ const getBetaPreferences = () => {
   try {
     const userDataPath = app.getPath('userData')
     const prefsPath = path.join(userDataPath, 'beta-preferences.json')
-    
+
     log.info(`🔧 [PREFS] Lecture des préférences depuis: ${prefsPath}`)
-    
+
     if (fs.existsSync(prefsPath)) {
       const data = fs.readFileSync(prefsPath, 'utf8')
       const prefs = JSON.parse(data)
       log.info(`🔧 [PREFS] Préférences trouvées: ${JSON.stringify(prefs)}`)
-      
+
       // Validation des données
       if (typeof prefs.enabled === 'boolean') {
         return prefs
@@ -245,15 +245,15 @@ const saveBetaPreferences = (preferences) => {
   try {
     const userDataPath = app.getPath('userData')
     const prefsPath = path.join(userDataPath, 'beta-preferences.json')
-    
+
     const toSave = {
       ...preferences,
       lastModified: Date.now()
     }
-    
+
     fs.writeFileSync(prefsPath, JSON.stringify(toSave, null, 2), 'utf8')
     log.info(`🔧 [PREFS] Préférences sauvegardées: ${JSON.stringify(toSave)}`)
-    
+
     return true
   } catch (error) {
     log.error(`🔧 [PREFS] Erreur lors de la sauvegarde: ${error.message}`)
@@ -267,7 +267,7 @@ const syncBetaPreferences = async () => {
     log.warn(`🔧 [PREFS] Impossible de synchroniser: fenêtre non disponible`)
     return null
   }
-  
+
   try {
     // Lire depuis localStorage du renderer
     const localStoragePrefs = await mainWindow.webContents.executeJavaScript(`
@@ -279,16 +279,16 @@ const syncBetaPreferences = async () => {
         null;
       }
     `)
-    
+
     // Lire depuis le fichier
     const filePrefs = getBetaPreferences()
-    
+
     log.info(`🔧 [PREFS] localStorage: ${JSON.stringify(localStoragePrefs)}`)
     log.info(`🔧 [PREFS] fichier: ${JSON.stringify(filePrefs)}`)
-    
+
     // Déterminer quelle source est la plus récente
     let finalPrefs = filePrefs
-    
+
     if (localStoragePrefs && localStoragePrefs.lastModified) {
       if (!filePrefs.lastModified || localStoragePrefs.lastModified > filePrefs.lastModified) {
         finalPrefs = localStoragePrefs
@@ -307,7 +307,7 @@ const syncBetaPreferences = async () => {
         log.info(`🔧 [PREFS] Fichier plus récent, synchronisation vers localStorage`)
       }
     }
-    
+
     return finalPrefs
   } catch (error) {
     log.error(`🔧 [PREFS] Erreur lors de la synchronisation: ${error.message}`)
@@ -319,9 +319,9 @@ if (!is.dev && updateConfig.enabled) {
   // Configuration initiale des préférences
   const initialPrefs = getBetaPreferences()
   autoUpdater.allowPrerelease = initialPrefs.enabled
-  
+
   log.info(`🚀 [STARTUP] Configuration initiale autoUpdater.allowPrerelease: ${autoUpdater.allowPrerelease}`)
-  
+
   // Attendre que la fenêtre soit prête avant la première vérification
   setTimeout(async () => {
     // Synchroniser les préférences une fois la fenêtre prête
@@ -330,12 +330,12 @@ if (!is.dev && updateConfig.enabled) {
       autoUpdater.allowPrerelease = syncedPrefs.enabled
       log.info(`🔄 [STARTUP] allowPrerelease mis à jour après sync: ${autoUpdater.allowPrerelease}`)
     }
-    
+
     // Première vérification des mises à jour
     log.info(`🔍 [STARTUP] Première vérification des mises à jour avec allowPrerelease: ${autoUpdater.allowPrerelease}`)
     autoUpdater.checkForUpdates()
   }, 3000) // Attendre 3 secondes que la fenêtre soit complètement chargée
-  
+
   // Vérifier les mises à jour toutes les 10 minutes
   setInterval(async () => {
     // Re-synchroniser les préférences avant chaque vérification automatique
@@ -344,7 +344,7 @@ if (!is.dev && updateConfig.enabled) {
       autoUpdater.allowPrerelease = syncedPrefs.enabled
       log.info(`🔄 [AUTO] allowPrerelease mis à jour: ${autoUpdater.allowPrerelease}`)
     }
-    
+
     log.info(`🔍 [AUTO] Vérification automatique avec allowPrerelease: ${autoUpdater.allowPrerelease}`)
     autoUpdater.checkForUpdates()
   }, 10 * 60 * 1000)
@@ -424,11 +424,11 @@ function getAdbPath(): string {
 async function getValidatedAdbPath(): Promise<string> {
   const adbPath = getAdbPath()
   const now = Date.now()
-  
+
   // Utiliser le cache si disponible et récent (sauf sur macOS où on vérifie plus souvent)
-  if (adbPathCache === adbPath && 
-      (now - lastPermissionCheck) < PERMISSION_CHECK_INTERVAL &&
-      process.platform !== 'darwin') {
+  if (adbPathCache === adbPath &&
+    (now - lastPermissionCheck) < PERMISSION_CHECK_INTERVAL &&
+    process.platform !== 'darwin') {
     return adbPath
   }
 
@@ -438,19 +438,19 @@ async function getValidatedAdbPath(): Promise<string> {
     // Sur macOS, vérifier et corriger les permissions si nécessaire
     if (process.platform === 'darwin') {
       const permissionResult = await AdbPermissionChecker.checkAndFixPermissions(adbPath)
-      
+
       if (!permissionResult.success) {
         console.error(`❌ Impossible de valider/corriger les permissions ADB: ${permissionResult.error}`)
-        
+
         // Générer des instructions pour l'utilisateur
         const instructions = PlatformToolsValidator.generateManualFixInstructions(
           path.dirname(adbPath),
           [adbPath]
         )
-        
+
         console.log('📋 Instructions de correction manuelle:')
         instructions.forEach(instruction => console.log(`   ${instruction}`))
-        
+
         // Retourner le chemin même si les permissions sont incorrectes
         // L'erreur sera gérée lors de l'exécution
         return adbPath
@@ -483,29 +483,29 @@ async function validatePlatformToolsOnStartup(): Promise<void> {
   try {
     const adbPath = getAdbPath()
     const platformToolsPath = path.dirname(adbPath)
-    
+
     console.log(`🚀 Validation complète des platform-tools au démarrage: ${platformToolsPath}`)
-    
+
     const result = await PlatformToolsValidator.validateAndFixPlatformTools(platformToolsPath)
-    
+
     if (result.readyForUse) {
       console.log('✅ Platform-tools validé et prêt à l\'utilisation')
     } else {
       console.log('⚠️ Platform-tools nécessite une attention')
-      
+
       if (result.fixSummary && !result.fixSummary.allFixesSuccessful) {
         const failedBinaries = result.fixSummary.fixResults
           .filter(r => !r.success)
           .map(r => r.filePath)
-        
+
         const instructions = PlatformToolsValidator.generateManualFixInstructions(
           platformToolsPath,
           failedBinaries
         )
-        
+
         console.log('📋 Instructions de correction manuelle nécessaires:')
         instructions.forEach(instruction => console.log(`   ${instruction}`))
-        
+
         // Optionnel: Envoyer une notification à l'interface utilisateur
         if (mainWindow) {
           mainWindow.webContents.send('adb-permission-warning', {
@@ -515,7 +515,7 @@ async function validatePlatformToolsOnStartup(): Promise<void> {
         }
       }
     }
-    
+
   } catch (error) {
     console.error('❌ Erreur lors de la validation des platform-tools au démarrage:', error)
   }
@@ -523,11 +523,11 @@ async function validatePlatformToolsOnStartup(): Promise<void> {
 
 function createWindow(): BrowserWindow {
   console.log('🚀 Création de la fenêtre principale...')
-  
+
   // Configuration spécifique selon la plateforme
   const isMacOS = process.platform === 'darwin'
   const HEADER_HEIGHT = 32 // Hauteur de la barre de titre personnalisée
-  
+
   // Créer la fenêtre de navigateur principale
   const mainWindow = new BrowserWindow({
     width: 1400,
@@ -574,11 +574,11 @@ function createWindow(): BrowserWindow {
   mainWindow.once('ready-to-show', () => {
     console.log('🎪 ready-to-show événement déclenché')
     mainWindow.show()
-    
+
     // Les DevTools ne s'ouvrent plus automatiquement, même en développement
     // L'utilisateur doit explicitement les activer via les paramètres
     console.log('🔧 DevTools disponibles via Ctrl+Shift+I (si activés dans les paramètres)')
-    
+
     // Optionnel : fade in pour une transition plus douce
     if (mainWindow.isVisible()) {
       mainWindow.focus()
@@ -643,14 +643,14 @@ function createWindow(): BrowserWindow {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     // En mode production, les fichiers renderer sont extraits de l'asar dans app.asar.unpacked
-    const htmlPath = is.dev 
+    const htmlPath = is.dev
       ? join(__dirname, '../renderer/index.html')
       : join(__dirname, '../renderer/index.html')
-    
+
     console.log('📁 Mode production - chargement du fichier:', htmlPath)
     console.log('📂 __dirname:', __dirname)
     console.log('📂 process.resourcesPath:', process.resourcesPath)
-    
+
     // Essayer différents chemins possibles
     const possiblePaths = [
       htmlPath,
@@ -661,7 +661,7 @@ function createWindow(): BrowserWindow {
       join(process.resourcesPath, 'app', 'dist', 'renderer', 'index.html'),
       join(__dirname, '../../renderer/index.html')
     ]
-    
+
     let validPath: string | null = null
     for (const path of possiblePaths) {
       console.log('🔍 Test du chemin:', path)
@@ -673,7 +673,7 @@ function createWindow(): BrowserWindow {
         console.log('❌ Chemin invalide')
       }
     }
-    
+
     if (validPath) {
       mainWindow.loadFile(validPath)
     } else {
@@ -682,7 +682,7 @@ function createWindow(): BrowserWindow {
       mainWindow.loadURL('data:text/html,<h1>Erreur: Impossible de charger l\'application</h1><p>Fichier HTML non trouvé</p>')
     }
   }
-  
+
   console.log('✨ Configuration de la fenêtre terminée')
   return mainWindow
 }
@@ -692,7 +692,7 @@ function createWindow(): BrowserWindow {
 // Certaines APIs peuvent seulement être utilisées après que cet événement se produit.
 app.whenReady().then(async () => {
   console.log('🚀 Electron est prêt, initialisation de l\'application...')
-  
+
   // Définir l'id de l'app pour les notifications Windows 10+
   electronApp.setAppUserModelId('com.dimultra.dimicall')
   console.log('🏷️ App ID défini: com.dimultra.dimicall')
@@ -799,6 +799,45 @@ app.whenReady().then(async () => {
     } catch (error) {
       console.error('[notifications] Échec affichage notification', error)
       return { success: false, error: error instanceof Error ? error.message : 'unknown-error' }
+    }
+  })
+
+  // Handler pour les appels systèmes (tel protocol)
+  ipcMain.handle('system:call-tel', async (_event, phoneNumber: string) => {
+    try {
+      console.log(`📞 [SYSTEM] Demande d'appel système pour: ${phoneNumber}`)
+
+      if (!phoneNumber || typeof phoneNumber !== 'string') {
+        throw new Error('Numéro de téléphone invalide')
+      }
+
+      // 1. Nettoyage : ne garder que +, et chiffres
+      // On garde le '+' initial s'il existe, et tous les chiffres.
+      // On supprime espaces, points, tirets, parenthèses.
+      let cleaned = phoneNumber.replace(/[^0-9+]/g, '')
+
+      // S'assurer que le + est seulement au début
+      if (cleaned.indexOf('+') > 0) {
+        // Garder le + du début s'il y est, supprimer les autres
+        const hasLeadingPlus = cleaned.startsWith('+')
+        cleaned = cleaned.replace(/\+/g, '')
+        if (hasLeadingPlus) cleaned = '+' + cleaned
+      }
+
+      // 2. Validation minimale (au moins 2 chiffres)
+      const digitsOnly = cleaned.replace(/\D/g, '')
+      if (digitsOnly.length < 2) {
+        throw new Error('Numéro trop court')
+      }
+
+      const telUrl = `tel:${cleaned}`
+      console.log(`📞 [SYSTEM] Ouverture URL: ${telUrl}`)
+
+      await shell.openExternal(telUrl)
+      return { success: true }
+    } catch (error) {
+      console.error('❌ [SYSTEM] Erreur lors de l\'appel système:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Erreur inconnue' }
     }
   })
 
@@ -965,9 +1004,9 @@ app.whenReady().then(async () => {
 
       // Utiliser le fallback CSV writer pour garantir un CSV correct
       const headers = [
-        'id','contact_id','old_status','new_status','applied_at','prenom','nom','telephone',
-        'email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree',
-        'numeroLigne','source','statut','lien','sexe','don','qualite','type','date','uid','uid_supabase','utilisateur','actions','statutAppel','statutRDV','commentaireRDV'
+        'id', 'contact_id', 'old_status', 'new_status', 'applied_at', 'prenom', 'nom', 'telephone',
+        'email', 'commentaire', 'dateRappel', 'heureRappel', 'dateRDV', 'heureRDV', 'dateAppel', 'heureAppel', 'dureeAppel', 'dateEntree', 'heureEntree',
+        'numeroLigne', 'source', 'statut', 'lien', 'sexe', 'don', 'qualite', 'type', 'date', 'uid', 'uid_supabase', 'utilisateur', 'actions', 'statutAppel', 'statutRDV', 'commentaireRDV'
       ]
       const { replaceAllStatusEvents: _unused, ...jsonModule } = localDbJsonStatic as any
       const csvEscape = (v: any) => {
@@ -1027,7 +1066,7 @@ app.whenReady().then(async () => {
         const headers = splitLine(lines[0])
         const idx = (name: string) => headers.findIndex(h => h === name)
         const mapIdx: any = {}
-        const wanted = ['id','contact_id','old_status','new_status','applied_at','prenom','nom','telephone','email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree','numeroLigne','source','statut','lien','sexe','don','qualite','type','date','uid','uid_supabase','utilisateur','actions','statutAppel','statutRDV','commentaireRDV']
+        const wanted = ['id', 'contact_id', 'old_status', 'new_status', 'applied_at', 'prenom', 'nom', 'telephone', 'email', 'commentaire', 'dateRappel', 'heureRappel', 'dateRDV', 'heureRDV', 'dateAppel', 'heureAppel', 'dureeAppel', 'dateEntree', 'heureEntree', 'numeroLigne', 'source', 'statut', 'lien', 'sexe', 'don', 'qualite', 'type', 'date', 'uid', 'uid_supabase', 'utilisateur', 'actions', 'statutAppel', 'statutRDV', 'commentaireRDV']
         wanted.forEach(h => { mapIdx[h] = idx(h) })
         const rows: any[] = []
         for (let i = 1; i < lines.length; i++) {
@@ -1095,9 +1134,9 @@ app.whenReady().then(async () => {
       if (canceled || !filePath) return { success: false, error: 'Annulé' }
 
       const headers = [
-        'id','contact_id','old_status','new_status','applied_at','prenom','nom','telephone',
-        'email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree',
-        'numeroLigne','source','statut','lien','sexe','don','qualite','type','date','uid','uid_supabase','utilisateur','actions','statutAppel','statutRDV','commentaireRDV'
+        'id', 'contact_id', 'old_status', 'new_status', 'applied_at', 'prenom', 'nom', 'telephone',
+        'email', 'commentaire', 'dateRappel', 'heureRappel', 'dateRDV', 'heureRDV', 'dateAppel', 'heureAppel', 'dureeAppel', 'dateEntree', 'heureEntree',
+        'numeroLigne', 'source', 'statut', 'lien', 'sexe', 'don', 'qualite', 'type', 'date', 'uid', 'uid_supabase', 'utilisateur', 'actions', 'statutAppel', 'statutRDV', 'commentaireRDV'
       ]
       // Normaliser l'ordre des colonnes
       const data = rows.map(r => {
@@ -1108,13 +1147,13 @@ app.whenReady().then(async () => {
       const ws = XLSX.utils.json_to_sheet(data, { header: headers })
       // Ajuster la largeur des colonnes de façon simple
       const colWidths = headers.map(h => ({ wch: Math.max(h.length, 12) }))
-      ;(ws as any)['!cols'] = colWidths
+        ; (ws as any)['!cols'] = colWidths
       const wb = XLSX.utils.book_new()
       XLSX.utils.book_append_sheet(wb, ws, 'Events')
       // Écrire via buffer pour éviter write_dl (environnement navigateur)
       const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' }) as Buffer
       const dir = path.dirname(filePath)
-      try { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }) } catch {}
+      try { if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true }) } catch { }
       fs.writeFileSync(filePath, wbout)
       return { success: true, path: filePath }
     } catch (e: any) {
@@ -1129,14 +1168,14 @@ app.whenReady().then(async () => {
       await ensureLocalDbInitialized()
       const { canceled, filePaths } = await dialog.showOpenDialog({
         title: 'Importer events',
-        filters: [{ name: 'Excel/CSV', extensions: ['xlsx','xls','csv'] }],
+        filters: [{ name: 'Excel/CSV', extensions: ['xlsx', 'xls', 'csv'] }],
         properties: ['openFile']
       })
       if (canceled || !filePaths?.[0]) return { success: false, error: 'Annulé' }
 
       const filePath = filePaths[0]
       const ext = (filePath.split('.').pop() || '').toLowerCase()
-      const wanted = ['id','contact_id','old_status','new_status','applied_at','prenom','nom','telephone','email','commentaire','dateRappel','heureRappel','dateRDV','heureRDV','dateAppel','heureAppel','dureeAppel','dateEntree','heureEntree','numeroLigne','source','statut','lien','sexe','don','qualite','type','date','uid','uid_supabase','utilisateur','actions','statutAppel','statutRDV','commentaireRDV']
+      const wanted = ['id', 'contact_id', 'old_status', 'new_status', 'applied_at', 'prenom', 'nom', 'telephone', 'email', 'commentaire', 'dateRappel', 'heureRappel', 'dateRDV', 'heureRDV', 'dateAppel', 'heureAppel', 'dureeAppel', 'dateEntree', 'heureEntree', 'numeroLigne', 'source', 'statut', 'lien', 'sexe', 'don', 'qualite', 'type', 'date', 'uid', 'uid_supabase', 'utilisateur', 'actions', 'statutAppel', 'statutRDV', 'commentaireRDV']
 
       let rows: any[] = []
       if (ext === 'csv') {
@@ -1262,7 +1301,7 @@ app.whenReady().then(async () => {
   })
 
   // Démarrer l'init en arrière-plan (non bloquant)
-  ensureLocalDbInitialized().catch(() => {})
+  ensureLocalDbInitialized().catch(() => { })
 
   console.log('[LOCALDB] Handlers enregistrés')
 
@@ -1343,7 +1382,7 @@ app.whenReady().then(async () => {
           message: 'La vérification des mises à jour est désactivée en mode développement.'
         }
       }
-      
+
       if (!updateConfig.enabled) {
         console.log('🔧 [UPDATE-CONFIG] Manual update check blocked (updates disabled for this platform)')
         return {
@@ -1351,22 +1390,22 @@ app.whenReady().then(async () => {
           message: 'Les mises à jour automatiques sont désactivées sur cette plateforme.'
         }
       }
-      
+
       // Configurer les pre-releases selon les préférences utilisateur
       const previousAllowPrerelease = autoUpdater.allowPrerelease
       autoUpdater.allowPrerelease = betaEnabled
-      
+
       log.info(`🔄 [UPDATE] Vérification manuelle initiée par l'utilisateur`)
       log.info(`🔄 [UPDATE] betaEnabled paramètre: ${betaEnabled}`)
       log.info(`🔄 [UPDATE] forceRefresh paramètre: ${forceRefresh}`)
       log.info(`🔄 [UPDATE] allowPrerelease avant: ${previousAllowPrerelease}`)
       log.info(`🔄 [UPDATE] allowPrerelease après: ${autoUpdater.allowPrerelease}`)
       log.info(`🔄 [UPDATE] Version actuelle: ${app.getVersion()}`)
-      
+
       // Cache-busting: forcer une nouvelle configuration si nécessaire
       if (forceRefresh || previousAllowPrerelease !== betaEnabled) {
         log.info(`🔄 [UPDATE] Cache-busting: reconfiguration d'electron-updater`)
-        
+
         // Réinitialiser la configuration feed
         autoUpdater.setFeedURL({
           provider: 'github',
@@ -1379,13 +1418,13 @@ app.whenReady().then(async () => {
             'X-Timestamp': Date.now().toString()
           }
         })
-        
+
         log.info(`🔄 [UPDATE] Feed URL reconfigurée avec cache-busting`)
       }
-      
+
       const result = await autoUpdater.checkForUpdatesAndNotify()
       log.info(`🔄 [UPDATE] Résultat checkForUpdatesAndNotify: ${JSON.stringify(result)}`)
-      
+
       return { status: 'checking', message: 'Vérification des mises à jour lancée.' }
     } catch (error) {
       log.error("Erreur lors de l'initiation de la vérification manuelle des mises à jour:", error)
@@ -1413,7 +1452,7 @@ app.whenReady().then(async () => {
       console.log('🔧 [UPDATE-CONFIG] Install update blocked (updates disabled for this platform)')
       return { success: false, message: 'Les mises à jour automatiques sont désactivées sur cette plateforme.' }
     }
-    
+
     if (updateDownloaded) {
       console.log('🔄 Installation de la mise à jour et redémarrage...')
       autoUpdater.quitAndInstall()
@@ -1428,17 +1467,17 @@ app.whenReady().then(async () => {
   ipcMain.handle('sync-beta-preferences', async (event, preferences) => {
     try {
       log.info(`🔄 [IPC] Synchronisation des préférences reçue: ${JSON.stringify(preferences)}`)
-      
+
       // Sauvegarder dans le fichier
       const saved = saveBetaPreferences(preferences)
-      
+
       if (saved) {
         // Mettre à jour autoUpdater immédiatement
         const previousAllowPrerelease = autoUpdater.allowPrerelease
         autoUpdater.allowPrerelease = preferences.enabled
-        
+
         log.info(`🔄 [IPC] allowPrerelease mis à jour: ${previousAllowPrerelease} -> ${autoUpdater.allowPrerelease}`)
-        
+
         return { success: true, message: 'Préférences synchronisées' }
       } else {
         return { success: false, message: 'Erreur lors de la sauvegarde' }
@@ -1459,20 +1498,20 @@ app.whenReady().then(async () => {
           message: 'Le retour à la version stable est désactivé en mode développement.'
         }
       }
-      
+
       // Désactiver les pre-releases
       const previousAllowPrerelease = autoUpdater.allowPrerelease
       autoUpdater.allowPrerelease = false
-      
+
       log.info(`🔄 [UPDATE] Retour à la version stable initié par l'utilisateur`)
       log.info(`🔄 [UPDATE] allowPrerelease avant: ${previousAllowPrerelease}`)
       log.info(`🔄 [UPDATE] allowPrerelease après: ${autoUpdater.allowPrerelease}`)
       log.info(`🔄 [UPDATE] Version actuelle: ${app.getVersion()}`)
-      
+
       // Vérifier s'il y a une version stable disponible
       const result = await autoUpdater.checkForUpdatesAndNotify()
       log.info(`🔄 [UPDATE] Résultat checkForUpdatesAndNotify: ${JSON.stringify(result)}`)
-      
+
       return { success: true, message: 'Recherche de version stable lancée.' }
     } catch (error) {
       log.error("Erreur lors du retour à la version stable:", error)
@@ -1486,94 +1525,94 @@ app.whenReady().then(async () => {
   // Événements de l'auto-updater (only if updates are enabled)
   if (updateConfig.enabled) {
     autoUpdater.on('checking-for-update', () => {
-    const allowPrerelease = autoUpdater.allowPrerelease
-    console.log('🔍 Vérification des mises à jour...')
-    log.info(`🔍 [UPDATE] Vérification des mises à jour démarrée`)
-    log.info(`🔍 [UPDATE] allowPrerelease: ${allowPrerelease}`)
-    log.info(`🔍 [UPDATE] Version actuelle: ${app.getVersion()}`)
-    log.info(`🔍 [UPDATE] Repository: doctorbankai/Dimi_Call`)
-    
-    if (mainWindow) {
-      mainWindow.webContents.send('update-checking')
-    }
-  })
+      const allowPrerelease = autoUpdater.allowPrerelease
+      console.log('🔍 Vérification des mises à jour...')
+      log.info(`🔍 [UPDATE] Vérification des mises à jour démarrée`)
+      log.info(`🔍 [UPDATE] allowPrerelease: ${allowPrerelease}`)
+      log.info(`🔍 [UPDATE] Version actuelle: ${app.getVersion()}`)
+      log.info(`🔍 [UPDATE] Repository: doctorbankai/Dimi_Call`)
 
-  autoUpdater.on('update-available', (info) => {
-    console.log('📦 Mise à jour disponible:', info.version)
-    log.info(`📦 [UPDATE] Mise à jour disponible: ${info.version}`)
-    log.info(`📦 [UPDATE] Release date: ${info.releaseDate || 'non définie'}`)
-    log.info(`📦 [UPDATE] Pre-release: ${info.prerelease || 'non défini'}`)
-    log.info(`📦 [UPDATE] Release notes: ${info.releaseNotes ? 'présentes' : 'absentes'}`)
-    log.info(`📦 [UPDATE] Files: ${info.files ? info.files.length : 0} fichiers`)
-    log.info(`📦 [UPDATE] allowPrerelease était: ${autoUpdater.allowPrerelease}`)
-    
-    updateInfo = info
-    if (mainWindow) {
-      mainWindow.webContents.send('update-available', info)
-    }
-  })
-
-  autoUpdater.on('update-not-available', (info) => {
-    console.log('✅ Application à jour:', info.version)
-    log.info(`✅ [UPDATE] Aucune mise à jour disponible`)
-    log.info(`✅ [UPDATE] Version actuelle: ${app.getVersion()}`)
-    log.info(`✅ [UPDATE] Dernière version vérifiée: ${info.version}`)
-    log.info(`✅ [UPDATE] allowPrerelease était: ${autoUpdater.allowPrerelease}`)
-    log.info(`✅ [UPDATE] Si pre-release activé, vérifiez que GitHub a bien des pre-releases plus récentes`)
-    
-    if (mainWindow) {
-      mainWindow.webContents.send('update-not-available', info)
-    }
-  })
-
-  autoUpdater.on('error', (err) => {
-    console.error('❌ Erreur lors de la mise à jour:', err)
-    log.error(`❌ [UPDATE] Erreur lors de la mise à jour: ${err.message}`)
-    log.error(`❌ [UPDATE] Stack trace: ${err.stack}`)
-    log.error(`❌ [UPDATE] allowPrerelease était: ${autoUpdater.allowPrerelease}`)
-    log.error(`❌ [UPDATE] Version actuelle: ${app.getVersion()}`)
-    
-    if (mainWindow) {
-      mainWindow.webContents.send('update-error', err.message)
-    }
-  })
-
-  autoUpdater.on('download-progress', (progressObj) => {
-    const percent = Math.round(progressObj.percent)
-    console.log(`⬇️ Téléchargement en cours: ${percent}%`)
-    if (mainWindow) {
-      mainWindow.webContents.send('update-download-progress', progressObj)
-    }
-  })
-
-  autoUpdater.on('update-downloaded', (info) => {
-    console.log('🎉 Mise à jour téléchargée:', info.version)
-    console.log('🔄 Mise à jour prête à être installée - en attente du clic utilisateur')
-    
-    updateDownloaded = true
-    updateInfo = info
-
-    // Mise en cache de l'installeur pour un éventuel rollback silencieux
-    const downloadedFile = (info as any)?.downloadedFile as string | undefined
-    try {
-      const candidatePath = downloadedFile && fs.existsSync(downloadedFile) ? downloadedFile : null
-      if (candidatePath) {
-        const ext = path.extname(candidatePath) || '.bin'
-        const target = path.join(app.getPath('userData'), `cached-installer-${info.version}${ext}`)
-        fs.copyFileSync(candidatePath, target)
-        lastKnownInstallerPath = target
-        log.info(`[RECOVERY] Installeur mis en cache pour rollback: ${target}`)
-      } else {
-        log.warn('[RECOVERY] Aucun installeur à mettre en cache (downloadedFile manquant)')
+      if (mainWindow) {
+        mainWindow.webContents.send('update-checking')
       }
-    } catch (error) {
-      log.error('[RECOVERY] Échec de la mise en cache de l\'installeur', error)
-    }
-    
-    if (mainWindow) {
-      mainWindow.webContents.send('update-downloaded', info)
-    }
-  })
+    })
+
+    autoUpdater.on('update-available', (info) => {
+      console.log('📦 Mise à jour disponible:', info.version)
+      log.info(`📦 [UPDATE] Mise à jour disponible: ${info.version}`)
+      log.info(`📦 [UPDATE] Release date: ${info.releaseDate || 'non définie'}`)
+      log.info(`📦 [UPDATE] Pre-release: ${info.prerelease || 'non défini'}`)
+      log.info(`📦 [UPDATE] Release notes: ${info.releaseNotes ? 'présentes' : 'absentes'}`)
+      log.info(`📦 [UPDATE] Files: ${info.files ? info.files.length : 0} fichiers`)
+      log.info(`📦 [UPDATE] allowPrerelease était: ${autoUpdater.allowPrerelease}`)
+
+      updateInfo = info
+      if (mainWindow) {
+        mainWindow.webContents.send('update-available', info)
+      }
+    })
+
+    autoUpdater.on('update-not-available', (info) => {
+      console.log('✅ Application à jour:', info.version)
+      log.info(`✅ [UPDATE] Aucune mise à jour disponible`)
+      log.info(`✅ [UPDATE] Version actuelle: ${app.getVersion()}`)
+      log.info(`✅ [UPDATE] Dernière version vérifiée: ${info.version}`)
+      log.info(`✅ [UPDATE] allowPrerelease était: ${autoUpdater.allowPrerelease}`)
+      log.info(`✅ [UPDATE] Si pre-release activé, vérifiez que GitHub a bien des pre-releases plus récentes`)
+
+      if (mainWindow) {
+        mainWindow.webContents.send('update-not-available', info)
+      }
+    })
+
+    autoUpdater.on('error', (err) => {
+      console.error('❌ Erreur lors de la mise à jour:', err)
+      log.error(`❌ [UPDATE] Erreur lors de la mise à jour: ${err.message}`)
+      log.error(`❌ [UPDATE] Stack trace: ${err.stack}`)
+      log.error(`❌ [UPDATE] allowPrerelease était: ${autoUpdater.allowPrerelease}`)
+      log.error(`❌ [UPDATE] Version actuelle: ${app.getVersion()}`)
+
+      if (mainWindow) {
+        mainWindow.webContents.send('update-error', err.message)
+      }
+    })
+
+    autoUpdater.on('download-progress', (progressObj) => {
+      const percent = Math.round(progressObj.percent)
+      console.log(`⬇️ Téléchargement en cours: ${percent}%`)
+      if (mainWindow) {
+        mainWindow.webContents.send('update-download-progress', progressObj)
+      }
+    })
+
+    autoUpdater.on('update-downloaded', (info) => {
+      console.log('🎉 Mise à jour téléchargée:', info.version)
+      console.log('🔄 Mise à jour prête à être installée - en attente du clic utilisateur')
+
+      updateDownloaded = true
+      updateInfo = info
+
+      // Mise en cache de l'installeur pour un éventuel rollback silencieux
+      const downloadedFile = (info as any)?.downloadedFile as string | undefined
+      try {
+        const candidatePath = downloadedFile && fs.existsSync(downloadedFile) ? downloadedFile : null
+        if (candidatePath) {
+          const ext = path.extname(candidatePath) || '.bin'
+          const target = path.join(app.getPath('userData'), `cached-installer-${info.version}${ext}`)
+          fs.copyFileSync(candidatePath, target)
+          lastKnownInstallerPath = target
+          log.info(`[RECOVERY] Installeur mis en cache pour rollback: ${target}`)
+        } else {
+          log.warn('[RECOVERY] Aucun installeur à mettre en cache (downloadedFile manquant)')
+        }
+      } catch (error) {
+        log.error('[RECOVERY] Échec de la mise en cache de l\'installeur', error)
+      }
+
+      if (mainWindow) {
+        mainWindow.webContents.send('update-downloaded', info)
+      }
+    })
 
     console.log('🚀 electron-updater configuré pour les mises à jour automatiques')
   } else {
@@ -1587,16 +1626,16 @@ app.whenReady().then(async () => {
     // ☢️ NUCLEAR ULTIME: NE PAS utiliser optimizer.watchWindowShortcuts
     // car il active les raccourcis par défaut d'Electron qui interfèrent
     console.log('🔧 [NUCLEAR] ⚠️ optimizer.watchWindowShortcuts DÉSACTIVÉ pour contrôler les DevTools')
-    
+
     // Gestionnaire d'événements PRIORITAIRE
     window.webContents.on('before-input-event', async (event, input) => {
       // Intercepter Ctrl+Shift+I et F12
       if ((input.control && input.shift && input.key.toLowerCase() === 'i') || input.key === 'F12') {
         console.log('🔧 [NUCLEAR] 🚨 Raccourci DevTools intercepté')
-        
+
         const devToolsEnabled = await getDevToolsPreferences()
         console.log(`🔧 [NUCLEAR] État des préférences: ${devToolsEnabled}`)
-        
+
         if (!devToolsEnabled) {
           console.log('🔧 [NUCLEAR] ❌ BLOCAGE TOTAL du raccourci - DevTools désactivés')
           event.preventDefault() // Bloquer l'événement
@@ -1607,7 +1646,7 @@ app.whenReady().then(async () => {
         }
       }
     })
-    
+
     // Surveillance continue pour fermer les DevTools si ouverts sans autorisation
     const devtoolsInterval = setInterval(async () => {
       if (window.isDestroyed() || window.webContents.isDestroyed()) {
@@ -1713,7 +1752,7 @@ app.whenReady().then(async () => {
       if (stderr && !stderr.includes('daemon not running')) {
         throw new Error(stderr)
       }
-      
+
       // Parser la sortie d'adb devices
       const lines = stdout.split('\n').filter(line => line.trim() && !line.includes('List of devices'))
       const devices = lines.map(line => {
@@ -1727,12 +1766,12 @@ app.whenReady().then(async () => {
         }
         return null
       }).filter(Boolean)
-      
+
       return { success: true, devices }
     } catch (error) {
       const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:devices')
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: adbError.message,
         errorCode: adbError.code,
         suggestions: adbError.suggestions
@@ -1751,8 +1790,8 @@ app.whenReady().then(async () => {
       return { success: true, output: stdout.trim() }
     } catch (error) {
       const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:shell')
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: adbError.message,
         errorCode: adbError.code,
         suggestions: adbError.suggestions
@@ -1771,8 +1810,8 @@ app.whenReady().then(async () => {
       return { success: true, message: `Appel initié vers ${phoneNumber}` }
     } catch (error) {
       const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:call')
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: adbError.message,
         errorCode: adbError.code,
         suggestions: adbError.suggestions
@@ -1791,7 +1830,7 @@ app.whenReady().then(async () => {
         .replace(/\u201C/g, '"')           // " → "
         .replace(/\u201D/g, '"')           // " → "
         .trim()
-      
+
       // Échapper les guillemets dans le message
       const escapedMessage = normalizedMessage.replace(/"/g, '\\"')
       const adbCommand = `"${adbPath}" shell am start -a android.intent.action.SENDTO -d sms:${phoneNumber} --es sms_body "${escapedMessage}"`
@@ -1802,8 +1841,8 @@ app.whenReady().then(async () => {
       return { success: true, message: `SMS préparé pour ${phoneNumber}` }
     } catch (error) {
       const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:sms')
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: adbError.message,
         errorCode: adbError.code,
         suggestions: adbError.suggestions
@@ -1819,12 +1858,12 @@ app.whenReady().then(async () => {
       if (stderr) {
         throw new Error(stderr)
       }
-      
+
       // Parser les informations de batterie
       const lines = stdout.split('\n')
       let level = 0
       let isCharging = false
-      
+
       for (const line of lines) {
         if (line.includes('level:')) {
           level = parseInt(line.split(':')[1].trim())
@@ -1836,12 +1875,12 @@ app.whenReady().then(async () => {
           isCharging = true
         }
       }
-      
+
       return { success: true, level, isCharging }
     } catch (error) {
       const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:battery')
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: adbError.message,
         errorCode: adbError.code,
         suggestions: adbError.suggestions
@@ -1858,8 +1897,8 @@ app.whenReady().then(async () => {
       return { success: true, message: 'Serveur ADB redémarré' }
     } catch (error) {
       const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:restart-server')
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: adbError.message,
         errorCode: adbError.code,
         suggestions: adbError.suggestions
@@ -1876,8 +1915,8 @@ app.whenReady().then(async () => {
       return { success: true, message: 'Serveur ADB arrêté' }
     } catch (error) {
       const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:kill-server')
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: adbError.message,
         errorCode: adbError.code,
         suggestions: adbError.suggestions
@@ -1894,8 +1933,8 @@ app.whenReady().then(async () => {
       return { success: true, message: 'Serveur ADB démarré' }
     } catch (error) {
       const adbError = AdbErrorHandler.handleError(error, mainWindow, await getValidatedAdbPath(), 'adb:start-server')
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: adbError.message,
         errorCode: adbError.code,
         suggestions: adbError.suggestions
@@ -1907,23 +1946,23 @@ app.whenReady().then(async () => {
   ipcMain.handle('adb:clean-auth-keys', async () => {
     try {
       console.log('🧹 Nettoyage des clés d\'autorisation ADB...')
-      
+
       // Chemin vers le dossier .android de l'utilisateur
       const os = require('os')
       const path = require('path')
       const fs = require('fs')
-      
+
       const androidFolder = path.join(os.homedir(), '.android')
       const adbKeyPath = path.join(androidFolder, 'adbkey')
       const adbKeyPubPath = path.join(androidFolder, 'adbkey.pub')
-      
+
       console.log('🔍 Vérification des clés ADB...')
       console.log('  - Dossier .android:', androidFolder)
       console.log('  - Clé privée:', adbKeyPath)
       console.log('  - Clé publique:', adbKeyPubPath)
-      
+
       let deletedFiles = []
-      
+
       // Supprimer adbkey si il existe
       if (fs.existsSync(adbKeyPath)) {
         fs.unlinkSync(adbKeyPath)
@@ -1932,7 +1971,7 @@ app.whenReady().then(async () => {
       } else {
         console.log('ℹ️ Clé privée ADB n\'existe pas')
       }
-      
+
       // Supprimer adbkey.pub si il existe
       if (fs.existsSync(adbKeyPubPath)) {
         fs.unlinkSync(adbKeyPubPath)
@@ -1941,25 +1980,25 @@ app.whenReady().then(async () => {
       } else {
         console.log('ℹ️ Clé publique ADB n\'existe pas')
       }
-      
+
       if (deletedFiles.length > 0) {
-        return { 
-          success: true, 
+        return {
+          success: true,
           message: `Clés supprimées: ${deletedFiles.join(', ')}`,
-          deletedFiles 
+          deletedFiles
         }
       } else {
-        return { 
-          success: true, 
+        return {
+          success: true,
           message: 'Aucune clé à supprimer (déjà propre)',
-          deletedFiles: [] 
+          deletedFiles: []
         }
       }
-      
+
     } catch (error) {
       const adbError = AdbErrorHandler.handleError(error, mainWindow, undefined, 'adb:clean-auth-keys')
-      return { 
-        success: false, 
+      return {
+        success: false,
         error: adbError.message,
         errorCode: adbError.code,
         suggestions: adbError.suggestions
@@ -1972,11 +2011,11 @@ app.whenReady().then(async () => {
     try {
       const adbPath = getAdbPath()
       const platformToolsPath = path.dirname(adbPath)
-      
+
       console.log('🔍 Vérification des permissions ADB demandée par l\'interface utilisateur')
-      
+
       const result = await PlatformToolsValidator.validateAndFixPlatformTools(platformToolsPath)
-      
+
       return {
         success: true,
         isValid: result.isValid,
@@ -2001,11 +2040,11 @@ app.whenReady().then(async () => {
     try {
       const adbPath = getAdbPath()
       const platformToolsPath = path.dirname(adbPath)
-      
+
       console.log('🔧 Correction forcée des permissions ADB demandée par l\'interface utilisateur')
-      
+
       const result = await PlatformToolsValidator.validateAndFixPlatformTools(platformToolsPath)
-      
+
       if (result.readyForUse) {
         return {
           success: true,
@@ -2016,12 +2055,12 @@ app.whenReady().then(async () => {
         const failedBinaries = result.fixSummary?.fixResults
           .filter(r => !r.success)
           .map(r => r.filePath) || []
-        
+
         const instructions = PlatformToolsValidator.generateManualFixInstructions(
           platformToolsPath,
           failedBinaries
         )
-        
+
         return {
           success: false,
           message: 'Correction automatique échouée, intervention manuelle requise',
@@ -2045,22 +2084,22 @@ app.whenReady().then(async () => {
     try {
       const adbPath = getAdbPath()
       const platformToolsPath = path.dirname(adbPath)
-      
+
       console.log('📋 Génération du rapport de diagnostic ADB...')
-      
+
       // Générer le rapport de base
       let report = AdbErrorHandler.generateDiagnosticReport(adbPath, platformToolsPath)
-      
+
       // Ajouter les informations de validation
       const validationResult = await PlatformToolsValidator.validateAndFixPlatformTools(platformToolsPath)
-      
+
       report += '\n\n--- Validation des binaires ---\n'
       report += `Dossier valide: ${validationResult.isValid}\n`
       report += `Prêt à l'utilisation: ${validationResult.readyForUse}\n`
       report += `Total binaires: ${validationResult.validationSummary.totalBinaries}\n`
       report += `Binaires exécutables: ${validationResult.validationSummary.executableBinaries}\n`
       report += `Binaires critiques manquants: ${validationResult.validationSummary.criticalBinariesMissing.join(', ') || 'Aucun'}\n`
-      
+
       if (validationResult.validationSummary.validationDetails.length > 0) {
         report += '\n--- Détails des binaires ---\n'
         validationResult.validationSummary.validationDetails.forEach(binary => {
@@ -2069,13 +2108,13 @@ app.whenReady().then(async () => {
           report += `Permissions: ${binary.permissions}\n`
         })
       }
-      
+
       if (validationResult.fixSummary) {
         report += '\n--- Résultats des corrections ---\n'
         report += `Corrections tentées: ${validationResult.fixSummary.totalAttempted}\n`
         report += `Corrections réussies: ${validationResult.fixSummary.successfulFixes}\n`
         report += `Corrections échouées: ${validationResult.fixSummary.failedFixes}\n`
-        
+
         if (validationResult.fixSummary.fixResults.length > 0) {
           report += '\n--- Détails des corrections ---\n'
           validationResult.fixSummary.fixResults.forEach(fix => {
@@ -2087,7 +2126,7 @@ app.whenReady().then(async () => {
           })
         }
       }
-      
+
       // Test de connectivité ADB
       report += '\n--- Test de connectivité ADB ---\n'
       try {
@@ -2097,13 +2136,13 @@ app.whenReady().then(async () => {
       } catch (error) {
         report += `Test de connectivité: Échec (${error instanceof Error ? error.message : String(error)})\n`
       }
-      
+
       return {
         success: true,
         report: report,
         timestamp: new Date().toISOString()
       }
-      
+
     } catch (error) {
       const adbError = AdbErrorHandler.handleError(error, mainWindow, getAdbPath(), 'adb:get-diagnostic-report')
       return {
@@ -2163,18 +2202,18 @@ app.whenReady().then(async () => {
   ipcMain.handle('adb:send-sms', async (event, phoneNumber, messageBody) => {
     logToRenderer(`[ADB-SEND-SMS] 🚀 Début de l'envoi SMS vers ${phoneNumber}`)
     logToRenderer(`[ADB-SEND-SMS] 📝 Message original (${messageBody.length} caractères): ${messageBody.substring(0, 100)}...`)
-    
+
     try {
       const adbPath = await getValidatedAdbPath()
       logToRenderer(`[ADB-SEND-SMS] 📱 Chemin ADB: ${adbPath}`)
-      
+
       // Normaliser le numéro de téléphone pour plus de compatibilité
       let internationalNumber = phoneNumber
       if (phoneNumber.startsWith('0') && phoneNumber.length === 10) {
         internationalNumber = "+33" + phoneNumber.substring(1)
       }
       logToRenderer(`[ADB-SEND-SMS] 📞 Numéro normalisé: ${internationalNumber}`)
-      
+
       // Normaliser le message : apostrophes typographiques et sauts de ligne (conserver les retours à la ligne)
       const normalizedMessage = String(messageBody)
         .replace(/\u2019/g, "'")         // ' → '
@@ -2183,16 +2222,16 @@ app.whenReady().then(async () => {
         .replace(/\u201D/g, '"')         // " → "
         .replace(/\r?\n/g, '\n')         // normaliser CRLF/CR en LF et conserver
         .trim()
-      
+
       logToRenderer(`[ADB-SEND-SMS] 📝 Message normalisé (${normalizedMessage.length} caractères): ${normalizedMessage.substring(0, 100)}...`)
-      
+
       // Échapper pour --es sms_body (guillemets doubles et backslashes)
       const escapedMessage = normalizedMessage
         .replace(/\\/g, '\\\\')
         .replace(/"/g, '\\"')
-      
+
       logToRenderer(`[ADB-SEND-SMS] 🔐 Message échappé (${escapedMessage.length} caractères): ${escapedMessage.substring(0, 100)}...`)
-      
+
       // Essayer plusieurs approches dans l'ordre (spawn + logs temps réel)
       // IMPORTANT : --es sms_body en premier car il gère mieux les URLs
       // NB: on passe la valeur de sms_body avec des guillemets dans le token
@@ -2207,10 +2246,10 @@ app.whenReady().then(async () => {
         // 4. Intent VIEW avec sms: et extra sms_body
         ['shell', 'am', 'start', '-a', 'android.intent.action.VIEW', '-d', `sms:${internationalNumber}`, '--es', 'sms_body', `"${escapedMessage}"`]
       ]
-      
+
       let lastError = ""
       logToRenderer(`[ADB-SEND-SMS] 🔄 Tentative de ${approachesArgs.length} méthodes...`)
-      
+
       for (const [index, args] of approachesArgs.entries()) {
         try {
           const asCommand = `adb ${['shell', ...args.slice(1)].join(' ')}`
@@ -2225,9 +2264,9 @@ app.whenReady().then(async () => {
           const ok = code === 0 && !stderrLower.includes('no closing quote')
           if (ok) {
             logToRenderer(`[ADB-SEND-SMS] ✅ Méthode ${index + 1} RÉUSSIE - App ouverte`)
-            return { 
-              success: true, 
-              message: `SMS préparé avec succès (méthode ${index + 1})` 
+            return {
+              success: true,
+              message: `SMS préparé avec succès (méthode ${index + 1})`
             }
           }
           lastError = stderr || `exit ${code}`
@@ -2237,16 +2276,16 @@ app.whenReady().then(async () => {
           logToRenderer(`[ADB-SEND-SMS] ❌ Méthode ${index + 1} ÉCHOUÉE: ${lastError}`, 'error')
         }
       }
-      
+
       logToRenderer(`[ADB-SEND-SMS] ⚠️ Toutes les méthodes ont échoué, fallback...`, 'warn')
-      
+
       // Fallback 5: Ouvrir l'app SMS sans message (l'utilisateur devra taper manuellement)
       try {
         logToRenderer('[ADB-SEND-SMS] 🆘 Fallback final: ouverture SMS sans message pré-rempli', 'warn')
         await spawnAdbWithLogging(adbPath, ['shell', 'am', 'start', '-a', 'android.intent.action.SENDTO', '-d', `smsto:${internationalNumber}`], 'FB')
-        
-        return { 
-          success: true, 
+
+        return {
+          success: true,
           message: 'Application SMS ouverte. Veuillez saisir le message manuellement.',
           warning: 'Le message n\'a pas pu être pré-rempli automatiquement'
         }
@@ -2258,7 +2297,7 @@ app.whenReady().then(async () => {
       // Si toutes les approches ont échoué
       logToRenderer(`[ADB-SEND-SMS] 💥 ÉCHEC TOTAL - Dernière erreur: ${lastError}`, 'error')
       throw new Error(`Toutes les méthodes ont échoué. Dernière erreur: ${lastError}`)
-      
+
     } catch (error) {
       logToRenderer(`[ADB-SEND-SMS] 🔴 Exception capturée: ${error}`, 'error')
       return { success: false, error: error instanceof Error ? error.message : String(error) }
@@ -2305,10 +2344,10 @@ app.whenReady().then(async () => {
   const reopenPhoneApp = async (): Promise<void> => {
     try {
       console.log(`📱 [REOPEN_PHONE] Réouverture de l'application Téléphone...`)
-      
+
       // Pause de 200ms pour laisser le temps au raccrochage de s'effectuer
       await new Promise(resolve => setTimeout(resolve, 200))
-      
+
       // Méthode 1: Ouvrir via l'intent dialer (le plus rapide)
       try {
         await execAsync(`"${getAdbPath()}" shell am start -a android.intent.action.CALL_BUTTON`)
@@ -2317,7 +2356,7 @@ app.whenReady().then(async () => {
       } catch (error1) {
         console.log(`⚠️ [REOPEN_PHONE] CALL_BUTTON échoué: ${error1}`)
       }
-      
+
       // Méthode 2: Ouvrir via le package dialer standard
       try {
         await execAsync(`"${getAdbPath()}" shell am start -n com.android.dialer/.DialtactsActivity`)
@@ -2326,7 +2365,7 @@ app.whenReady().then(async () => {
       } catch (error2) {
         console.log(`⚠️ [REOPEN_PHONE] Package dialer échoué: ${error2}`)
       }
-      
+
       // Méthode 3: Intent téléphone générique
       try {
         await execAsync(`"${getAdbPath()}" shell am start -a android.intent.action.DIAL`)
@@ -2335,9 +2374,9 @@ app.whenReady().then(async () => {
       } catch (error3) {
         console.log(`⚠️ [REOPEN_PHONE] DIAL intent échoué: ${error3}`)
       }
-      
+
       console.log(`❌ [REOPEN_PHONE] Impossible de rouvrir l'app Téléphone`)
-      
+
     } catch (error) {
       console.error(`❌ [REOPEN_PHONE] Erreur critique:`, error)
     }
@@ -2352,87 +2391,87 @@ app.whenReady().then(async () => {
   ipcMain.handle('adb:end-call', async () => {
     try {
       console.log(`📞 [ADB_ENDCALL] Début raccrochage ultra-robuste...`)
-      
+
       // Méthode 1: KEYCODE_ENDCALL (recommandée officiellement)
       console.log(`🔧 [ADB_ENDCALL] Tentative 1: KEYCODE_ENDCALL`)
       try {
         const { stdout: stdout1, stderr: stderr1 } = await execAsync(`"${getAdbPath()}" shell input keyevent KEYCODE_ENDCALL`)
         if (!stderr1 || stderr1.includes('Warning')) {
           console.log(`✅ [ADB_ENDCALL] KEYCODE_ENDCALL réussi`)
-          
+
           // Rouvrir immédiatement l'application Téléphone
           await reopenPhoneApp()
-          
+
           return { success: true, message: 'Appel raccroché via KEYCODE_ENDCALL' }
         }
         console.log(`⚠️ [ADB_ENDCALL] KEYCODE_ENDCALL stderr: ${stderr1}`)
       } catch (error1) {
         console.log(`❌ [ADB_ENDCALL] KEYCODE_ENDCALL échoué: ${error1}`)
       }
-      
+
       // Méthode 2: Code numérique 6 (KEYCODE_ENDCALL)
       console.log(`🔧 [ADB_ENDCALL] Tentative 2: Code numérique 6`)
       try {
         const { stdout: stdout2, stderr: stderr2 } = await execAsync(`"${getAdbPath()}" shell input keyevent 6`)
         if (!stderr2 || stderr2.includes('Warning')) {
           console.log(`✅ [ADB_ENDCALL] Code numérique 6 réussi`)
-          
+
           // Rouvrir immédiatement l'application Téléphone
           await reopenPhoneApp()
-          
+
           return { success: true, message: 'Appel raccroché via code numérique 6' }
         }
         console.log(`⚠️ [ADB_ENDCALL] Code numérique 6 stderr: ${stderr2}`)
       } catch (error2) {
         console.log(`❌ [ADB_ENDCALL] Code numérique 6 échoué: ${error2}`)
       }
-      
+
       // Méthode 3: Service telephony (méthode système)
       console.log(`🔧 [ADB_ENDCALL] Tentative 3: Service telephony`)
       try {
         const { stdout: stdout3, stderr: stderr3 } = await execAsync(`"${getAdbPath()}" shell service call phone 5`)
         if (!stderr3 || stderr3.includes('Warning')) {
           console.log(`✅ [ADB_ENDCALL] Service telephony réussi`)
-          
+
           // Rouvrir immédiatement l'application Téléphone
           await reopenPhoneApp()
-          
+
           return { success: true, message: 'Appel raccroché via service telephony' }
         }
         console.log(`⚠️ [ADB_ENDCALL] Service telephony stderr: ${stderr3}`)
       } catch (error3) {
         console.log(`❌ [ADB_ENDCALL] Service telephony échoué: ${error3}`)
       }
-      
+
       // Méthode 4: Simulation appui double bouton Power (dernier recours)
       console.log(`🔧 [ADB_ENDCALL] Tentative 4: Double Power Button`)
       try {
         await execAsync(`"${getAdbPath()}" shell input keyevent KEYCODE_POWER`)
         await new Promise(resolve => setTimeout(resolve, 500)) // Pause 0.5 sec
         await execAsync(`"${getAdbPath()}" shell input keyevent KEYCODE_POWER`)
-        
+
         console.log(`✅ [ADB_ENDCALL] Double Power Button exécuté`)
-        
+
         // Rouvrir immédiatement l'application Téléphone
         await reopenPhoneApp()
-        
+
         return { success: true, message: 'Tentative raccrochage via double Power button' }
       } catch (error4) {
         console.log(`❌ [ADB_ENDCALL] Double Power Button échoué: ${error4}`)
       }
-      
+
       // Si toutes les méthodes échouent
       console.log(`❌ [ADB_ENDCALL] Toutes les méthodes de raccrochage ont échoué`)
-      return { 
-        success: false, 
-        error: 'Impossible de raccrocher: toutes les méthodes ADB ont échoué' 
+      return {
+        success: false,
+        error: 'Impossible de raccrocher: toutes les méthodes ADB ont échoué'
       }
-      
+
     } catch (error) {
       console.error(`❌ [ADB_ENDCALL] Erreur critique:`, error)
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : String(error) 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error)
       }
     }
   })
@@ -2442,13 +2481,13 @@ app.whenReady().then(async () => {
   const registerFnKeys = () => {
     try {
       console.log('🔧 [ELECTRON_FN] Début enregistrement des raccourcis globaux...')
-      
+
       // Nettoyer les raccourcis existants au cas où
       globalShortcut.unregisterAll()
-      
+
       const registeredKeys: string[] = []
       const failedKeys: string[] = []
-      
+
       for (let i = 1; i <= 10; i++) {
         const keyName = `F${i}`
         try {
@@ -2467,7 +2506,7 @@ app.whenReady().then(async () => {
           failedKeys.push(keyName)
         }
       }
-      
+
       if (registeredKeys.length > 0) {
         console.log(`🎉 Raccourcis enregistrés: ${registeredKeys.join(', ')}`)
       }

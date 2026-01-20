@@ -8,21 +8,24 @@ interface ElectronAPI {
   minimizeApp: () => Promise<void>
   maximizeApp: () => Promise<void>
   isMaximized: () => Promise<boolean>
-  
+
   // APIs système
   platform: string
+  system?: {
+    callTel: (phoneNumber: string) => Promise<{ success: boolean; error?: string }>
+  }
   notifyRendererReady: () => void
-  
+
   // APIs de notification
   showNotification: (payload: DesktopNotificationPayload) => Promise<boolean>
-  
+
   // APIs IPC pour les événements entrants
   ipcRenderer: {
     on: (channel: string, listener: (...args: any[]) => void) => void
     removeListener: (channel: string, listener: (...args: any[]) => void) => void
     removeAllListeners: (channel: string) => void
   }
-  
+
   // APIs ADB
   adb: {
     getDevices: () => Promise<{ success: boolean; devices?: any[]; error?: string }>
@@ -36,27 +39,27 @@ interface ElectronAPI {
     startServer: () => Promise<{ success: boolean; message?: string; error?: string }>
     cleanAuthKeys: () => Promise<{ success: boolean; message?: string; error?: string; deletedFiles?: string[] }>
   }
-  
+
   // APIs DevTools
   devTools: {
     enable: () => Promise<{ success: boolean; error?: string }>
     disable: () => Promise<{ success: boolean; error?: string }>
     isEnabled: () => Promise<{ enabled: boolean }>
   }
-  
+
   // API pour obtenir la version de l'app
   getAppVersion: () => Promise<string>
   // API pour forcer la vérification manuelle des mises à jour
   checkForUpdates: (betaEnabled?: boolean, forceRefresh?: boolean) => Promise<{ status: string; message: string }>
-  
+
   // APIs pour la gestion des mises à jour
   getUpdateStatus: () => Promise<{ updateAvailable: boolean; updateDownloaded: boolean; updateInfo: any }>
   installUpdate: () => Promise<{ success: boolean; message?: string }>
   revertToStable: () => Promise<{ success: boolean; message?: string }>
-  
+
   // API pour synchroniser les préférences beta
   syncBetaPreferences: (preferences: any) => Promise<{ success: boolean; message?: string }>
-  
+
   // Écouter les événements de mise à jour
   onUpdateChecking: (callback: () => void) => void
   onUpdateAvailable: (callback: (updateInfo: any) => void) => void
@@ -86,7 +89,7 @@ interface ElectronAPI {
   openLocation: (path: string) => Promise<{ success: boolean; error?: string }>
   getFileInfo: (path: string) => Promise<any>
   getFileById: (fileId: string) => Promise<{ success: boolean; file?: any; error?: any }>
-  
+
   // File operations
   files: {
     openFile: (path: string) => Promise<{ success: boolean; error?: string }>
@@ -101,11 +104,14 @@ const electronAPI: ElectronAPI = {
   minimizeApp: () => ipcRenderer.invoke('app:minimize'),
   maximizeApp: () => ipcRenderer.invoke('app:maximize'),
   isMaximized: () => ipcRenderer.invoke('app:is-maximized'),
-  
+
   // APIs système
   platform: process.platform,
+  system: {
+    callTel: (phoneNumber: string) => ipcRenderer.invoke('system:call-tel', phoneNumber)
+  },
   notifyRendererReady: () => ipcRenderer.send('renderer:ready'),
-  
+
   // APIs de notification
   showNotification: async (payload: DesktopNotificationPayload) => {
     try {
@@ -143,7 +149,7 @@ const electronAPI: ElectronAPI = {
 
     return false;
   },
-  
+
   // APIs IPC pour les événements entrants (exposer seulement les canaux sécurisés)
   ipcRenderer: {
     on: (channel: string, listener: (...args: any[]) => void) => {
@@ -166,7 +172,7 @@ const electronAPI: ElectronAPI = {
       }
     }
   },
-  
+
   // APIs ADB
   adb: {
     getDevices: () => ipcRenderer.invoke('adb:devices'),
@@ -180,19 +186,19 @@ const electronAPI: ElectronAPI = {
     startServer: () => ipcRenderer.invoke('adb:start-server'),
     cleanAuthKeys: () => ipcRenderer.invoke('adb:clean-auth-keys')
   },
-  
+
   // APIs DevTools
   devTools: {
     enable: () => ipcRenderer.invoke('devtools:enable'),
     disable: () => ipcRenderer.invoke('devtools:disable'),
     isEnabled: () => ipcRenderer.invoke('devtools:is-enabled')
   },
-  
+
   // API pour obtenir la version de l'app
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
   // Vérification manuelle
   checkForUpdates: (betaEnabled?: boolean, forceRefresh?: boolean) => ipcRenderer.invoke('check-for-updates', betaEnabled, forceRefresh),
-  
+
   // APIs pour la gestion des mises à jour
   getUpdateStatus: () => ipcRenderer.invoke('get-update-status'),
   installUpdate: () => ipcRenderer.invoke('install-update'),
@@ -201,10 +207,10 @@ const electronAPI: ElectronAPI = {
   showItemInFolder: (targetPath: string) => ipcRenderer.invoke('os:show-item-in-folder', targetPath),
   getDownloadsPath: () => ipcRenderer.invoke('os:get-downloads-path'),
   openDownloadsFolder: () => ipcRenderer.invoke('os:open-downloads-folder'),
-  
+
   // API pour synchroniser les préférences beta
   syncBetaPreferences: (preferences: any) => ipcRenderer.invoke('sync-beta-preferences', preferences),
-  
+
   // Écouter les événements de mise à jour
   onUpdateChecking: (callback: () => void) => {
     ipcRenderer.on('update-checking', callback)
@@ -253,7 +259,7 @@ const electronAPI: ElectronAPI = {
   openLocation: (path: string) => ipcRenderer.invoke('file:open-location', path),
   getFileInfo: (path: string) => ipcRenderer.invoke('file:get-file-info', path),
   getFileById: (fileId: string) => ipcRenderer.invoke('file:get-file-by-id', fileId),
-  
+
   // File operations
   files: {
     openFile: (path: string) => ipcRenderer.invoke('file:open-file', path),
