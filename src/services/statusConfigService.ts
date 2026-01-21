@@ -92,9 +92,23 @@ export class StatusConfigService {
     const existingOrder = (state && 'order' in (state as any) && Array.isArray((state as any).order))
       ? ((state as any).order as string[])
       : [];
+    // Migration forcée des status DO/RO vers D0/R0
+    if (mergedMap['DO']) {
+      mergedMap[ContactStatus.D0] = { ...mergedMap['DO'], label: 'D0' };
+      delete mergedMap['DO'];
+    }
+    if (mergedMap['RO']) {
+      mergedMap[ContactStatus.R0] = { ...mergedMap['RO'], label: 'R0' };
+      delete mergedMap['RO'];
+    }
+
+    const cleanedOrder = this.mergeOrder(existingOrder, Object.keys(mergedMap))
+      .map(s => s === 'DO' ? ContactStatus.D0 : s === 'RO' ? ContactStatus.R0 : s)
+      .filter((s, i, arr) => arr.indexOf(s) === i); // Dedupe
+
     return {
       map: mergedMap,
-      order: this.mergeOrder(existingOrder, keys),
+      order: cleanedOrder,
     };
   }
 
@@ -139,7 +153,7 @@ export class StatusConfigService {
   private static saveAll(all: StatusConfigPerMode) {
     try {
       localStorage.setItem(STORAGE_KEY_V2, JSON.stringify(all));
-    } catch {}
+    } catch { }
   }
 
   static getState(mode?: CallMode): StatusConfigState {

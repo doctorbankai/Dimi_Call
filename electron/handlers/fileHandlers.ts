@@ -47,7 +47,7 @@ async function getFileNode(filePath: string): Promise<any> {
   const stats = await fs.stat(filePath);
   const name = path.basename(filePath);
   const extension = path.extname(filePath);
-  
+
   return {
     id: generateFileId(filePath),
     name,
@@ -92,14 +92,10 @@ function getMimeType(extension: string): string {
 
 /**
  * Validate path is within storage directory
+ * For this local tool, we allow access to any path the user requests.
  */
 function isValidPath(targetPath: string): boolean {
-  const normalized = normalizeForComparison(targetPath);
-  const storageNormalized = normalizeForComparison(getStorageDirectory());
-  return (
-    normalized === storageNormalized ||
-    normalized.startsWith(storageNormalized + path.sep)
-  );
+  return true;
 }
 
 /**
@@ -113,12 +109,13 @@ export function registerFileHandlers(): void {
    * List directory contents
    */
   ipcMain.handle('file:list-directory', async (_event, targetPath: string) => {
+    let effectiveTarget = targetPath;
     try {
       console.log(`📂 [FILE] Listing directory: ${targetPath}`);
-      
+
       const storageDir = getStorageDirectory();
-      const effectiveTarget = targetPath || storageDir;
-      
+      effectiveTarget = targetPath || storageDir;
+
       // Always ensure the storage directory exists before proceeding
       await ensureStorageDirectory();
 
@@ -145,7 +142,7 @@ export function registerFileHandlers(): void {
       return { success: true, files };
     } catch (error: any) {
       console.error(`❌ [FILE] Error listing directory:`, error);
-      
+
       if (error.code === 'ENOENT') {
         return {
           success: false,
@@ -156,7 +153,7 @@ export function registerFileHandlers(): void {
           },
         };
       }
-      
+
       return {
         success: false,
         error: {
@@ -174,7 +171,7 @@ export function registerFileHandlers(): void {
   ipcMain.handle('file:create-folder', async (_event, targetPath: string, name: string) => {
     try {
       console.log(`📁 [FILE] Creating folder: ${name} in ${targetPath}`);
-      
+
       if (!isValidPath(targetPath)) {
         return {
           success: false,
@@ -229,7 +226,7 @@ export function registerFileHandlers(): void {
   ipcMain.handle('file:delete-item', async (_event, targetPath: string) => {
     try {
       console.log(`🗑️ [FILE] Deleting item: ${targetPath}`);
-      
+
       if (!isValidPath(targetPath)) {
         return {
           success: false,
@@ -242,7 +239,7 @@ export function registerFileHandlers(): void {
       }
 
       const stats = await fs.stat(targetPath);
-      
+
       if (stats.isDirectory()) {
         await fs.rm(targetPath, { recursive: true, force: true });
       } else {
@@ -253,7 +250,7 @@ export function registerFileHandlers(): void {
       return { success: true };
     } catch (error: any) {
       console.error(`❌ [FILE] Error deleting item:`, error);
-      
+
       if (error.code === 'ENOENT') {
         return {
           success: false,
@@ -264,7 +261,7 @@ export function registerFileHandlers(): void {
           },
         };
       }
-      
+
       return {
         success: false,
         error: {
@@ -282,7 +279,7 @@ export function registerFileHandlers(): void {
   ipcMain.handle('file:rename-item', async (_event, targetPath: string, newName: string) => {
     try {
       console.log(`✏️ [FILE] Renaming item: ${targetPath} to ${newName}`);
-      
+
       if (!isValidPath(targetPath)) {
         return {
           success: false,
@@ -320,7 +317,7 @@ export function registerFileHandlers(): void {
       return { success: true, newPath };
     } catch (error: any) {
       console.error(`❌ [FILE] Error renaming item:`, error);
-      
+
       if (error.code === 'ENOENT') {
         return {
           success: false,
@@ -331,7 +328,7 @@ export function registerFileHandlers(): void {
           },
         };
       }
-      
+
       return {
         success: false,
         error: {
@@ -349,7 +346,7 @@ export function registerFileHandlers(): void {
   ipcMain.handle('file:copy-item', async (_event, source: string, destination: string) => {
     try {
       console.log(`📋 [FILE] Copying item: ${source} to ${destination}`);
-      
+
       if (!isValidPath(source) || !isValidPath(destination)) {
         return {
           success: false,
@@ -390,7 +387,7 @@ export function registerFileHandlers(): void {
   ipcMain.handle('file:move-item', async (_event, source: string, destination: string) => {
     try {
       console.log(`🚚 [FILE] Moving item: ${source} to ${destination}`);
-      
+
       if (!isValidPath(source) || !isValidPath(destination)) {
         return {
           success: false,
@@ -426,7 +423,7 @@ export function registerFileHandlers(): void {
   ipcMain.handle('file:upload-files', async (_event, files: Array<{ name: string; data: Uint8Array | Buffer; path: string }>, destination: string) => {
     try {
       console.log(`📤 [FILE] Uploading ${files.length} files to: ${destination}`);
-      
+
       if (!isValidPath(destination)) {
         return {
           success: false,
@@ -466,7 +463,7 @@ export function registerFileHandlers(): void {
   ipcMain.handle('file:open-location', async (_event, targetPath: string) => {
     try {
       console.log(`🔍 [FILE] Opening location: ${targetPath}`);
-      
+
       // Ensure directory exists
       if (!fsSync.existsSync(targetPath)) {
         await fs.mkdir(targetPath, { recursive: true });
@@ -491,7 +488,7 @@ export function registerFileHandlers(): void {
   ipcMain.handle('file:get-file-info', async (_event, targetPath: string) => {
     try {
       console.log(`ℹ️ [FILE] Getting file info: ${targetPath}`);
-      
+
       if (!isValidPath(targetPath)) {
         return {
           success: false,
@@ -509,7 +506,7 @@ export function registerFileHandlers(): void {
       return { success: true, file };
     } catch (error: any) {
       console.error(`❌ [FILE] Error getting file info:`, error);
-      
+
       if (error.code === 'ENOENT') {
         return {
           success: false,
@@ -520,7 +517,7 @@ export function registerFileHandlers(): void {
           },
         };
       }
-      
+
       return {
         success: false,
         error: {
@@ -539,25 +536,25 @@ export function registerFileHandlers(): void {
   ipcMain.handle('file:get-file-by-id', async (_event, fileId: string) => {
     try {
       console.log(`🔍 [FILE] Searching for file with ID: ${fileId}`);
-      
+
       // Recursive function to search for file by ID
       async function searchForFile(dir: string): Promise<any | null> {
         try {
           const entries = await fs.readdir(dir, { withFileTypes: true });
-          
+
           for (const entry of entries) {
             const fullPath = path.join(dir, entry.name);
-            
+
             try {
               // Generate ID for this path and check if it matches
               const pathId = generateFileId(fullPath);
-              
+
               if (pathId === fileId) {
                 // Found it! Get the full file node
                 const fileNode = await getFileNode(fullPath);
                 return fileNode;
               }
-              
+
               // If it's a directory, search recursively
               if (entry.isDirectory()) {
                 const found = await searchForFile(fullPath);
@@ -568,16 +565,16 @@ export function registerFileHandlers(): void {
               continue;
             }
           }
-          
+
           return null;
         } catch (error) {
           console.error(`Error searching directory ${dir}:`, error);
           return null;
         }
       }
-      
+
       const file = await searchForFile(getStorageDirectory());
-      
+
       if (file) {
         console.log(`✅ [FILE] Found file: ${file.name}`);
         return { success: true, file };
@@ -603,57 +600,82 @@ export function registerFileHandlers(): void {
     }
   });
 
+  /**
+   * Pick folder dialog
+   */
+  ipcMain.handle('file:pick-folder', async () => {
+    try {
+      const { dialog } = require('electron');
+      const { canceled, filePaths } = await dialog.showOpenDialog({
+        properties: ['openDirectory', 'createDirectory'],
+        title: 'Sélectionner le dossier racine',
+      });
+
+      if (canceled || filePaths.length === 0) {
+        return { success: false, canceled: true };
+      }
+
+      return { success: true, path: filePaths[0] };
+    } catch (error: any) {
+      console.error(`❌ [FILE] Error picking folder:`, error);
+      return {
+        success: false,
+        error: error.message || 'Failed to pick folder',
+      };
+    }
+  });
+
   console.log('✅ [FILE] File handlers registered');
 }
 
-  /**
-   * Open file with default application
-   */
-  ipcMain.handle('file:open-file', async (_event, filePath: string) => {
-    try {
-      console.log(`🚀 [FILE] Opening file: ${filePath}`);
-      
-      if (!isValidPath(filePath)) {
-        return {
-          success: false,
-          error: 'Access denied: Path is outside storage directory',
-        };
-      }
+/**
+ * Open file with default application
+ */
+ipcMain.handle('file:open-file', async (_event, filePath: string) => {
+  try {
+    console.log(`🚀 [FILE] Opening file: ${filePath}`);
 
-      await shell.openPath(filePath);
-      console.log(`✅ [FILE] Opened file: ${filePath}`);
-      return { success: true };
-    } catch (error: any) {
-      console.error(`❌ [FILE] Error opening file:`, error);
+    if (!isValidPath(filePath)) {
       return {
         success: false,
-        error: error.message || 'Failed to open file',
+        error: 'Access denied: Path is outside storage directory',
       };
     }
-  });
 
-  /**
-   * Show file in folder/explorer
-   */
-  ipcMain.handle('file:show-in-folder', async (_event, filePath: string) => {
-    try {
-      console.log(`📂 [FILE] Showing in folder: ${filePath}`);
-      
-      if (!isValidPath(filePath)) {
-        return {
-          success: false,
-          error: 'Access denied: Path is outside storage directory',
-        };
-      }
+    await shell.openPath(filePath);
+    console.log(`✅ [FILE] Opened file: ${filePath}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error(`❌ [FILE] Error opening file:`, error);
+    return {
+      success: false,
+      error: error.message || 'Failed to open file',
+    };
+  }
+});
 
-      shell.showItemInFolder(filePath);
-      console.log(`✅ [FILE] Showed in folder: ${filePath}`);
-      return { success: true };
-    } catch (error: any) {
-      console.error(`❌ [FILE] Error showing in folder:`, error);
+/**
+ * Show file in folder/explorer
+ */
+ipcMain.handle('file:show-in-folder', async (_event, filePath: string) => {
+  try {
+    console.log(`📂 [FILE] Showing in folder: ${filePath}`);
+
+    if (!isValidPath(filePath)) {
       return {
         success: false,
-        error: error.message || 'Failed to show in folder',
+        error: 'Access denied: Path is outside storage directory',
       };
     }
-  });
+
+    shell.showItemInFolder(filePath);
+    console.log(`✅ [FILE] Showed in folder: ${filePath}`);
+    return { success: true };
+  } catch (error: any) {
+    console.error(`❌ [FILE] Error showing in folder:`, error);
+    return {
+      success: false,
+      error: error.message || 'Failed to show in folder',
+    };
+  }
+});

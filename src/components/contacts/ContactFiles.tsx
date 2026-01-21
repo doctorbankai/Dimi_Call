@@ -1,273 +1,434 @@
-// Contact Files Component - Display files attached to a contact
 
-import React, { useState, useEffect, useRef } from 'react';
-import { getContactAttachments } from '@/services/fileAttachmentService';
-import { getFileById } from '@/services/fileManagerService';
-import { FileNode } from '@/types/fileManager';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  FileIcon,
+  Folder,
+  FolderPlus,
+  Link as LinkIcon,
+  Loader2,
+  ExternalLink,
+  FileText,
+  Image as ImageIcon,
+  FileSpreadsheet,
+  Trash2,
+  Unlink,
+  MoreVertical,
+  RefreshCw
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  File,
-  Folder,
-  Image,
-  FileText,
-  FileSpreadsheet,
-  Video,
-  Music,
-  Archive,
-  Code,
-  ExternalLink,
-  Trash2,
-} from 'lucide-react';
-import { formatFileSize } from '@/services/fileManagerService';
-import { removeContactAttachment } from '@/services/fileAttachmentService';
+import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface ContactFilesProps {
   contactId: string;
-  contact?: {
-    prenom?: string;
-    nom?: string;
+  contact: {
+    prenom: string;
+    nom: string;
     telephone: string;
   };
 }
 
+interface FileItem {
+  name: string;
+  path: string;
+  type: 'file' | 'folder';
+  size?: number;
+  updatedAt?: Date;
+}
+
 export const ContactFiles: React.FC<ContactFilesProps> = ({ contactId, contact }) => {
-  const [files, setFiles] = useState<FileNode[]>([]);
-  const [loading, setLoading] = useState(true);
-  const loadedRef = useRef<string | null>(null);
-  const isLoadingRef = useRef(false);
+  const [loading, setLoading] = useState(false);
+  const [files, setFiles] = useState<FileItem[]>([]);
+  const [currentPath, setCurrentPath] = useState<string | null>(null);
+  const [isManuallyLinked, setIsManuallyLinked] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
-  const loadAttachedFiles = async () => {
-    // Prevent multiple simultaneous calls
-    if (isLoadingRef.current) {
-      console.log('🔄 [ContactFiles] Already loading, skipping...');
+  // Use a ref to track the last checked identifier to prevent loops
+  const lastCheckedId = useRef<string>('');
+
+  const checkFolder = useCallback(async (force = false) => {
+    // Unique identifier for this check
+    const checkId = `${contactId}-${contact.nom}-${contact.prenom}-${contact.telephone}`;
+
+    // Skip if we already checked this ID and not forced
+    if (!force && lastCheckedId.current === checkId) {
       return;
     }
 
-    // Check if already loaded for this contact
-    if (loadedRef.current === contactId) {
-      console.log('🔄 [ContactFiles] Already loaded for this contact, skipping...');
-      return;
-    }
-
-    isLoadingRef.current = true;
+    lastCheckedId.current = checkId;
     setLoading(true);
+
     try {
-      console.log(`🔄 [ContactFiles] Loading files for contact: ${contactId}`);
-      
-      // If we have contact info, try to load files from the contact's folder
-      if (contact) {
-        const { listDirectory } = await import('@/services/fileManagerService');
-        
-        console.log(`📂 [ContactFiles] Searching for folder by phone:`, contact.telephone);
-        
-        // Normalize the phone number for matching
-        const normalizedPhone = contact.telephone.replace(/[\s\-\.\(\)\+]/g, '');
-        console.log(`📋 [ContactFiles] Normalized phone:`, normalizedPhone);
-        
-        // List all folders in DimiCall
-        const dimiCallResult = await listDirectory('C:\\DimiCall');
-        
-        if (dimiCallResult.success && dimiCallResult.files) {
-          // Find folder that contains the normalized phone number
-          const matchingFolder = dimiCallResult.files.find(file => {
-            if (file.type !== 'folder') return false;
-            
-            // Extract phone from folder name (remove all non-digits)
-            const folderPhone = file.name.replace(/[\s\-\.\(\)\+]/g, '').replace(/[^\d]/g, '');
-            
-            console.log(`🔍 [ContactFiles] Checking folder "${file.name}" → phone: ${folderPhone}`);
-            
-            return folderPhone === normalizedPhone;
-          });
-          
-          if (matchingFolder) {
-            console.log(`✅ [ContactFiles] Found matching folder: ${matchingFolder.name}`);
-            
-            // Load files from the matching folder
-            const folderResult = await listDirectory(matchingFolder.path);
-            
-            if (folderResult.success && folderResult.files) {
-              console.log(`📁 [ContactFiles] Found ${folderResult.files.length} files`);
-              console.log(`📄 [ContactFiles] Files:`, folderResult.files.map(f => f.name));
-              setFiles(folderResult.files);
-              setLoading(false);
-              return;
-            }
-          } else {
-            console.log(`⚠️ [ContactFiles] No folder found for phone: ${normalizedPhone}`);
-            console.log(`📋 [ContactFiles] Available folders:`, dimiCallResult.files.filter(f => f.type === 'folder').map(f => f.name));
-          }
+      // Check if there's a manually linked folder
+      const linkedPath = localStorage.getItem(`contact_folder_${contactId}`);
+
+      if (linkedPath) {
+        // @ts-ignore
+        const result = await window.electronAPI.listDirectory(linkedPath);
+        if (result && result.success) {
+          setCurrentPath(linkedPath);
+          setFiles(result.files || []);
+          setIsManuallyLinked(true);
+          setLoading(false);
+          return;
         }
+        // Linked folder no longer exists, clean up
+        localStorage.removeItem(`contact_folder_${contactId}`);
       }
-      
-      // Fallback: use the old attachment system
-      console.log(`📋 [ContactFiles] Falling back to attachment system`);
-      const fileIds = getContactAttachments(contactId);
-      console.log(`📋 [ContactFiles] Found ${fileIds.length} file IDs:`, fileIds);
-      
-      const filePromises = fileIds.map(id => getFileById(id));
-      const loadedFiles = await Promise.all(filePromises);
-      const validFiles = loadedFiles.filter((f): f is FileNode => f !== null);
-      
-      console.log(`✅ [ContactFiles] Loaded ${validFiles.length} valid files`);
-      setFiles(validFiles);
-      loadedRef.current = contactId;
-    } catch (error) {
-      console.error('❌ [ContactFiles] Error loading attached files:', error);
+
+      // No linked folder found or invalid, check default location
+      const rootPath = localStorage.getItem('dimicall_root_path') || 'C:\\DimiCall';
+      const safeName = `${contact.nom || ''} ${contact.prenom || ''} - ${contact.telephone || ''}`
+        .replace(/[<>:"/\\|?*]/g, '')
+        .trim();
+      const defaultPath = `${rootPath}\\${safeName}`;
+
+      // @ts-ignore
+      const result = await window.electronAPI.listDirectory(defaultPath);
+
+      if (result && result.success) {
+        setCurrentPath(defaultPath);
+        setFiles(result.files || []);
+        setIsManuallyLinked(false);
+      } else {
+        // No folder found anywhere
+        setCurrentPath(null);
+        setFiles([]);
+        setIsManuallyLinked(false);
+      }
+    } catch (err) {
+      console.error("Error checking folder:", err);
+      setCurrentPath(null);
+      setFiles([]);
     } finally {
       setLoading(false);
-      isLoadingRef.current = false;
     }
-  };
+  }, [contactId, contact.nom, contact.prenom, contact.telephone]);
 
+  // Effect to trigger check ONLY when contact identity changes
   useEffect(() => {
-    // Only load if not already loaded for this contact
-    if (loadedRef.current !== contactId) {
-      loadAttachedFiles();
-    }
-  }, [contactId]);
+    checkFolder();
+  }, [checkFolder]);
 
-  const handleRemoveAttachment = (fileId: string, fileName: string) => {
-    removeContactAttachment(fileId, contactId);
-    setFiles(prev => prev.filter(f => f.id !== fileId));
-    toast.success(`Removed "${fileName}" from contact`);
-  };
-
-  const handleOpenFile = async (file: FileNode) => {
+  const handleCreateFolder = async () => {
     try {
-      const electronAPI = (window as any).electronAPI;
-      if (electronAPI?.files?.openFile) {
-        const result = await electronAPI.files.openFile(file.path);
-        if (!result.success) {
-          toast.error(result.error || 'Failed to open file');
-        }
+      // Let user pick a parent directory
+      // @ts-ignore
+      const pickResult = await window.electronAPI.pickFolder();
+      if (!pickResult.success || !pickResult.path) {
+        return; // User cancelled
       }
-    } catch (error) {
-      console.error('Error opening file:', error);
-      toast.error('Failed to open file');
+
+      setLoading(true);
+      const parentPath = pickResult.path;
+      const safeName = `${contact.nom || ''} ${contact.prenom || ''} - ${contact.telephone || ''}`
+        .replace(/[<>:"/\\|?*]/g, '')
+        .trim();
+
+      // @ts-ignore
+      const result = await window.electronAPI.createFolder(parentPath, safeName);
+
+      if (result && result.success) {
+        toast.success(`Dossier créé : ${safeName}`);
+        const newPath = `${parentPath}\\${safeName}`;
+        // Save as linked folder for this contact
+        localStorage.setItem(`contact_folder_${contactId}`, newPath);
+        setCurrentPath(newPath);
+        setIsManuallyLinked(true);
+        // Force refresh
+        lastCheckedId.current = '';
+        await checkFolder(true);
+      } else {
+        const errorMsg = result?.error?.message || result?.error || 'Erreur inconnue';
+        toast.error(`Erreur création dossier: ${errorMsg}`);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur inattendue lors de la création");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleShowInFolder = async (file: FileNode) => {
+  const handleLinkFolder = async () => {
     try {
-      const electronAPI = (window as any).electronAPI;
-      if (electronAPI?.files?.showInFolder) {
-        const result = await electronAPI.files.showInFolder(file.path);
-        if (!result.success) {
-          toast.error(result.error || 'Failed to show in folder');
-        }
+      // @ts-ignore
+      const result = await window.electronAPI.pickFolder();
+      if (result.success && result.path) {
+        localStorage.setItem(`contact_folder_${contactId}`, result.path);
+        // Reset check guard and force refresh
+        lastCheckedId.current = '';
+        setIsManuallyLinked(true);
+        await checkFolder(true);
+        toast.success("Dossier lié avec succès");
       }
-    } catch (error) {
-      console.error('Error showing in folder:', error);
-      toast.error('Failed to show in folder');
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur lors de la sélection du dossier");
     }
   };
 
-  const renderFileIcon = (file: FileNode) => {
-    if (file.type === 'folder') {
-      return <Folder className="h-5 w-5 text-blue-500" />;
-    }
-
-    const ext = file.extension.toLowerCase();
-
-    if (['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp'].includes(ext)) {
-      return <Image className="h-5 w-5 text-green-500" />;
-    }
-    if (['.pdf', '.doc', '.docx', '.txt', '.rtf', '.odt'].includes(ext)) {
-      return <FileText className="h-5 w-5 text-red-500" />;
-    }
-    if (['.xls', '.xlsx', '.csv', '.ods'].includes(ext)) {
-      return <FileSpreadsheet className="h-5 w-5 text-emerald-500" />;
-    }
-    if (['.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.webm'].includes(ext)) {
-      return <Video className="h-5 w-5 text-purple-500" />;
-    }
-    if (['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac'].includes(ext)) {
-      return <Music className="h-5 w-5 text-pink-500" />;
-    }
-    if (['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2'].includes(ext)) {
-      return <Archive className="h-5 w-5 text-orange-500" />;
-    }
-    if (['.js', '.ts', '.jsx', '.tsx', '.py', '.java', '.cpp', '.c', '.html', '.css', '.json', '.xml'].includes(ext)) {
-      return <Code className="h-5 w-5 text-cyan-500" />;
-    }
-
-    return <File className="h-5 w-5 text-gray-500" />;
+  const handleUnlinkFolder = async () => {
+    // Remove the manual link
+    localStorage.removeItem(`contact_folder_${contactId}`);
+    toast.success("Dossier délié — le lien a été supprimé");
+    // Reset check guard to force re-evaluation
+    lastCheckedId.current = '';
+    setCurrentPath(null);
+    setFiles([]);
+    setIsManuallyLinked(false);
+    // Re-check to see if the default folder exists
+    await checkFolder(true);
   };
 
-  if (loading) {
+  const handleDeleteFolder = async () => {
+    if (!currentPath) return;
+
+    setLoading(true);
+    try {
+      // @ts-ignore
+      const result = await window.electronAPI.deleteItem(currentPath);
+      if (result.success) {
+        toast.success("Dossier supprimé définitivement");
+        // Also remove the link if it was custom linked
+        localStorage.removeItem(`contact_folder_${contactId}`);
+        setCurrentPath(null);
+        setFiles([]);
+        setIsDeleteDialogOpen(false);
+        setIsManuallyLinked(false);
+        // Refresh state
+        lastCheckedId.current = '';
+        await checkFolder(true);
+      } else {
+        const errorMsg = result.error?.message || result.error || 'Erreur inconnue';
+        toast.error(`Erreur suppression: ${errorMsg}`);
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur lors de la suppression");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    lastCheckedId.current = '';
+    await checkFolder(true);
+    toast.success("Liste actualisée");
+  };
+
+  const handleOpenFolder = async () => {
+    if (currentPath) {
+      // @ts-ignore
+      await window.electronAPI.openLocation(currentPath);
+    }
+  };
+
+  const handleOpenFile = async (file: FileItem) => {
+    const fullPath = file.path;
+    // @ts-ignore
+    await window.electronAPI.openLocation(fullPath);
+  };
+
+  const getFileIcon = (fileName: string) => {
+    const ext = fileName.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'].includes(ext || '')) return <ImageIcon className="w-5 h-5 text-purple-500" />;
+    if (['pdf'].includes(ext || '')) return <FileText className="w-5 h-5 text-red-500" />;
+    if (['xls', 'xlsx', 'csv'].includes(ext || '')) return <FileSpreadsheet className="w-5 h-5 text-green-500" />;
+    if (['doc', 'docx'].includes(ext || '')) return <FileText className="w-5 h-5 text-blue-500" />;
+    return <FileIcon className="w-5 h-5 text-gray-500" />;
+  };
+
+  if (loading && !currentPath) {
     return (
-      <div className="flex items-center justify-center h-60">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex flex-col items-center justify-center py-10 h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+        <p className="text-sm text-muted-foreground">Recherche du dossier...</p>
       </div>
     );
   }
 
-  if (files.length === 0) {
+  // View: No folder associated or found
+  if (!currentPath) {
     return (
-      <div className="flex h-60 flex-col items-center justify-center text-muted-foreground">
-        <File className="mb-2 h-8 w-8 opacity-50" />
-        <p>Aucun fichier lié à ce contact.</p>
-        <p className="mt-2 text-xs">
-          Utilisez le gestionnaire de fichiers pour attacher des documents
-        </p>
-      </div>
-    );
-  }
+      <div className="flex flex-col items-center justify-center py-10 px-4 h-full space-y-4">
+        <div className="bg-muted rounded-full p-4 mb-2">
+          <Folder className="h-10 w-10 text-muted-foreground" />
+        </div>
+        <div className="text-center">
+          <h3 className="text-lg font-semibold">Aucun dossier associé</h3>
+          <p className="text-sm text-muted-foreground max-w-xs mx-auto mt-1">
+            Créez un nouveau dossier ou liez un dossier existant pour ce contact.
+          </p>
+        </div>
 
-  return (
-    <ScrollArea className="h-full">
-      <div className="space-y-2">
-        {files.map((file) => (
-          <div
-            key={file.id}
-            className="flex items-center gap-3 p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-          >
-            {renderFileIcon(file)}
-            
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{file.name}</p>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>{file.type === 'file' ? formatFileSize(file.size) : 'Folder'}</span>
-                <span>•</span>
-                <span>{new Date(file.modifiedAt).toLocaleDateString('fr-FR')}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleOpenFile(file)}
-                title="Ouvrir le fichier"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-              
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleShowInFolder(file)}
-                title="Afficher dans le dossier"
-              >
-                <Folder className="h-4 w-4" />
-              </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => handleRemoveAttachment(file.id, file.name)}
-                title="Détacher du contact"
-                className="text-destructive hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+        <div className="flex flex-col gap-2 w-full max-w-xs mt-4">
+          <Button onClick={handleCreateFolder} className="w-full" disabled={loading}>
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FolderPlus className="mr-2 h-4 w-4" />}
+            Nouveau dossier...
+          </Button>
+          <div className="relative flex items-center py-2">
+            <Separator className="flex-1" />
+            <span className="mx-2 text-xs text-muted-foreground uppercase">Ou</span>
+            <Separator className="flex-1" />
           </div>
-        ))}
+          <Button variant="outline" onClick={handleLinkFolder} className="w-full" disabled={loading}>
+            <LinkIcon className="mr-2 h-4 w-4" />
+            Lier un dossier existant
+          </Button>
+        </div>
       </div>
-    </ScrollArea>
+    );
+  }
+
+  // View: Folder found and active
+  return (
+    <div className="flex flex-col h-full bg-background rounded-md border">
+      <div className="p-3 border-b flex items-center justify-between bg-muted/30">
+        <div className="flex items-center gap-2 overflow-hidden flex-1 min-w-0">
+          <Folder className="h-4 w-4 text-blue-500 shrink-0" />
+          <span className="text-xs font-mono truncate max-w-full" title={currentPath}>
+            {currentPath}
+          </span>
+          {isManuallyLinked && (
+            <span className="text-[10px] bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 px-1.5 py-0.5 rounded shrink-0">
+              Lié
+            </span>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1 shrink-0 ml-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            onClick={handleRefresh}
+            title="Actualiser"
+            disabled={loading}
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            onClick={handleOpenFolder}
+            title="Ouvrir dans l'explorateur"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleLinkFolder}>
+                <LinkIcon className="mr-2 h-4 w-4" />
+                Changer le dossier lié...
+              </DropdownMenuItem>
+              {isManuallyLinked && (
+                <DropdownMenuItem onClick={handleUnlinkFolder}>
+                  <Unlink className="mr-2 h-4 w-4" />
+                  Délier le dossier
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => setIsDeleteDialogOpen(true)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Supprimer le dossier
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      <ScrollArea className="flex-1 p-2">
+        {files.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 opacity-50">
+            <Folder className="h-12 w-12 mb-2 text-gray-300" />
+            <p className="text-sm">Le dossier est vide</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {files.map((file, idx) => (
+              <div
+                key={idx}
+                className="flex items-center gap-3 p-3 rounded-md border bg-card hover:bg-accent/50 cursor-pointer transition-colors group"
+                onDoubleClick={() => handleOpenFile(file)}
+              >
+                {file.type === 'folder' ? (
+                  <Folder className="w-5 h-5 text-yellow-500" />
+                ) : (
+                  getFileIcon(file.name)
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate" title={file.name}>{file.name}</p>
+                  {file.size !== undefined && file.size > 0 && (
+                    <p className="text-[10px] text-muted-foreground">
+                      {file.size < 1024
+                        ? `${file.size} B`
+                        : file.size < 1024 * 1024
+                          ? `${(file.size / 1024).toFixed(1)} KB`
+                          : `${(file.size / (1024 * 1024)).toFixed(1)} MB`}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+
+      <div className="p-2 border-t bg-muted/10 text-xs text-center text-muted-foreground">
+        {files.length} élément(s) • Double-cliquez pour ouvrir
+      </div>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Supprimer le dossier ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est <strong>irréversible</strong>. Le dossier et tous ses fichiers seront définitivement supprimés de votre disque dur.
+              <br /><br />
+              <code className="text-xs bg-muted px-2 py-1 rounded block overflow-auto">{currentPath}</code>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={handleDeleteFolder}
+            >
+              Supprimer définitivement
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 };

@@ -100,7 +100,7 @@ import LocalDBViewer from './components/LocalDBViewer';
 import PaginatedEventTable from './components/PaginatedEventTable';
 import { FullPageCalendar } from './components/FullPageCalendar';
 import { AnnuairePage } from './components/AnnuairePage';
-import { FilesPage } from './pages/FilesPage';
+
 import { PreQualificationPage } from './features/prequalification/PreQualificationPage';
 import {
   ContextMenu,
@@ -242,7 +242,7 @@ const contactsEqualById = (a: Contact[], b: Contact[]) => {
 };
 
 
-type ViewMode = 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar-2' | 'annuaire' | 'files' | 'prequalification';
+type ViewMode = 'table' | 'appels-cards' | 'graph' | 'db' | 'calendar-2' | 'annuaire' | 'prequalification';
 
 const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
   const { mode } = useCallMode();
@@ -379,7 +379,7 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
         saved === 'db' ||
         saved === 'calendar-2' ||
         saved === 'annuaire' ||
-        saved === 'files' ||
+        saved === 'annuaire' ||
         saved === 'prequalification'
       ) {
         return saved
@@ -3833,8 +3833,7 @@ Dimitri MOREL - Arcanis Conseil`;
                     focusContact={annuaireFocusContact}
                     onContactFocusConsumed={() => setAnnuaireFocusContact(null)}
                   />
-                ) : viewMode === 'files' ? (
-                  <FilesPage contacts={contacts} />
+
                 ) : viewMode === 'prequalification' ? (
                   <div className="flex-1 flex flex-col overflow-hidden min-h-0">
                     <PreQualificationPage />

@@ -1,8 +1,8 @@
 // File Manager Service - Placeholder for file system operations
 
-import { 
-  FileNode, 
-  FileError, 
+import {
+  FileNode,
+  FileError,
   FileErrorType,
   ListDirectoryResponse,
   CreateFolderResponse,
@@ -200,6 +200,23 @@ export async function openStorageLocation(): Promise<{ success: boolean; error?:
 }
 
 /**
+ * Open a specific location
+ */
+export async function openLocation(path: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!window.electronAPI?.openLocation) {
+      throw new Error('Electron API not available');
+    }
+    return await window.electronAPI.openLocation(path);
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to open location',
+    };
+  }
+}
+
+/**
  * Ensure the storage directory exists
  */
 export async function ensureStorageDirectory(): Promise<{ success: boolean; error?: string }> {
@@ -222,47 +239,65 @@ export async function ensureStorageDirectory(): Promise<{ success: boolean; erro
   }
 }
 
+
+/**
+ * Pick a folder using system dialog
+ */
+export async function pickFolder(): Promise<{ success: boolean; path?: string; canceled?: boolean; error?: string }> {
+  try {
+    if (!window.electronAPI?.pickFolder) {
+      throw new Error('Electron API not available');
+    }
+    return await window.electronAPI.pickFolder();
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to pick folder',
+    };
+  }
+}
+
 /**
  * Get the appropriate icon for a file extension
  */
 export function getFileIcon(extension: string): string {
   const ext = extension.toLowerCase();
-  
+
   // Images
   if (['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp', '.ico'].includes(ext)) {
     return 'Image';
   }
-  
+
   // Documents
   if (['.pdf', '.doc', '.docx', '.txt', '.rtf', '.odt'].includes(ext)) {
     return 'FileText';
   }
-  
+
   // Spreadsheets
   if (['.xls', '.xlsx', '.csv', '.ods'].includes(ext)) {
     return 'FileSpreadsheet';
   }
-  
+
   // Videos
   if (['.mp4', '.avi', '.mov', '.wmv', '.flv', '.mkv', '.webm'].includes(ext)) {
     return 'Video';
   }
-  
+
   // Audio
   if (['.mp3', '.wav', '.ogg', '.m4a', '.flac', '.aac'].includes(ext)) {
     return 'Music';
   }
-  
+
   // Archives
   if (['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2'].includes(ext)) {
     return 'Archive';
   }
-  
+
   // Code
   if (['.js', '.ts', '.jsx', '.tsx', '.py', '.java', '.cpp', '.c', '.html', '.css', '.json', '.xml'].includes(ext)) {
     return 'Code';
   }
-  
+
   // Default
   return 'File';
 }
@@ -304,11 +339,11 @@ export function isDangerousFile(filename: string): boolean {
  */
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 B';
-  
+
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 }
 
@@ -317,7 +352,7 @@ export function formatFileSize(bytes: number): string {
  */
 export function getMimeType(extension: string): string {
   const ext = extension.toLowerCase();
-  
+
   const mimeTypes: Record<string, string> = {
     // Images
     '.jpg': 'image/jpeg',
@@ -328,7 +363,7 @@ export function getMimeType(extension: string): string {
     '.webp': 'image/webp',
     '.bmp': 'image/bmp',
     '.ico': 'image/x-icon',
-    
+
     // Documents
     '.pdf': 'application/pdf',
     '.doc': 'application/msword',
@@ -336,13 +371,13 @@ export function getMimeType(extension: string): string {
     '.txt': 'text/plain',
     '.rtf': 'application/rtf',
     '.odt': 'application/vnd.oasis.opendocument.text',
-    
+
     // Spreadsheets
     '.xls': 'application/vnd.ms-excel',
     '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     '.csv': 'text/csv',
     '.ods': 'application/vnd.oasis.opendocument.spreadsheet',
-    
+
     // Videos
     '.mp4': 'video/mp4',
     '.avi': 'video/x-msvideo',
@@ -351,7 +386,7 @@ export function getMimeType(extension: string): string {
     '.flv': 'video/x-flv',
     '.mkv': 'video/x-matroska',
     '.webm': 'video/webm',
-    
+
     // Audio
     '.mp3': 'audio/mpeg',
     '.wav': 'audio/wav',
@@ -359,7 +394,7 @@ export function getMimeType(extension: string): string {
     '.m4a': 'audio/mp4',
     '.flac': 'audio/flac',
     '.aac': 'audio/aac',
-    
+
     // Archives
     '.zip': 'application/zip',
     '.rar': 'application/x-rar-compressed',
@@ -367,7 +402,7 @@ export function getMimeType(extension: string): string {
     '.tar': 'application/x-tar',
     '.gz': 'application/gzip',
     '.bz2': 'application/x-bzip2',
-    
+
     // Code
     '.js': 'text/javascript',
     '.ts': 'text/typescript',
@@ -382,7 +417,7 @@ export function getMimeType(extension: string): string {
     '.json': 'application/json',
     '.xml': 'application/xml',
   };
-  
+
   return mimeTypes[ext] || 'application/octet-stream';
 }
 
@@ -401,14 +436,14 @@ export async function getFileById(fileId: string): Promise<FileNode | null> {
       }
       return null;
     }
-    
+
     const result = await electronAPI.getFileById(fileId);
     if (result.success && result.file) {
       // Cache the file info
       localStorage.setItem(`file-cache-${fileId}`, JSON.stringify(result.file));
       return result.file;
     }
-    
+
     return null;
   } catch (error) {
     console.error('Error getting file by ID:', error);
@@ -429,9 +464,9 @@ export function generateContactFolderName(contact: {
   const prenom = contact.prenom?.trim() || '';
   const nom = contact.nom?.trim() || '';
   const telephone = contact.telephone?.trim() || '';
-  
+
   console.log(`[generateContactFolderName] Input:`, { prenom, nom, telephone });
-  
+
   // Build human-readable folder name
   let folderName = '';
   if (prenom || nom) {
@@ -440,7 +475,7 @@ export function generateContactFolderName(contact: {
   } else {
     folderName = telephone;
   }
-  
+
   // Sanitize the folder name (remove invalid characters for file systems)
   const sanitized = sanitizeFilename(folderName);
   console.log(`[generateContactFolderName] Output:`, sanitized);
@@ -460,9 +495,9 @@ export async function ensureContactFolder(contact: {
   try {
     const folderName = generateContactFolderName(contact);
     const folderPath = `C:\\DimiCall\\${folderName}`;
-    
+
     console.log(`[FileManager] Vérification dossier: ${folderPath}`);
-    
+
     // Check if folder already exists
     const checkResult = await listDirectory(folderPath);
     if (checkResult.success) {
@@ -470,12 +505,12 @@ export async function ensureContactFolder(contact: {
       console.log(`[FileManager] Dossier existe déjà: ${folderPath}`);
       return { success: true, path: folderPath };
     }
-    
+
     console.log(`[FileManager] Création du dossier: ${folderPath}`);
-    
+
     // Create the folder
     const createResult = await createFolder('C:\\DimiCall', folderName);
-    
+
     // If creation succeeded OR folder already exists, it's a success
     if (createResult.success) {
       console.log(`[FileManager] Dossier créé avec succès: ${folderPath}`);
@@ -485,7 +520,7 @@ export async function ensureContactFolder(contact: {
       console.log(`[FileManager] Dossier existe déjà (race condition): ${folderPath}`);
       return { success: true, path: folderPath };
     }
-    
+
     console.error(`[FileManager] Échec création dossier:`, createResult.error);
     return {
       success: false,
@@ -513,17 +548,17 @@ export async function ensureContactFolders(contacts: Array<{
   console.log(`[FileManager] ensureContactFolders appelé avec ${contacts.length} contacts`);
   let created = 0;
   let errors = 0;
-  
+
   // Process contacts in parallel (but limit concurrency to avoid overwhelming the system)
   const BATCH_SIZE = 10;
   for (let i = 0; i < contacts.length; i += BATCH_SIZE) {
     const batch = contacts.slice(i, i + BATCH_SIZE);
     console.log(`[FileManager] Traitement batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(contacts.length / BATCH_SIZE)} (${batch.length} contacts)`);
-    
+
     const results = await Promise.all(
       batch.map(contact => ensureContactFolder(contact))
     );
-    
+
     results.forEach((result, index) => {
       if (result.success) {
         created++;
@@ -534,7 +569,7 @@ export async function ensureContactFolders(contacts: Array<{
       }
     });
   }
-  
+
   console.log(`[FileManager] Résultat final: ${created} créés, ${errors} erreurs`);
   return {
     success: errors === 0,

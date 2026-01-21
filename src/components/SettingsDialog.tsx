@@ -2,13 +2,27 @@ import React, { useState, useEffect, useRef } from 'react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Settings, Mail, X, Save, Undo, ChevronDown, Palette, Calendar, MessageSquare, Sun, Moon, Monitor, Keyboard, RotateCcw, DownloadCloud, Info, CheckCircle, ExternalLink, Columns, FileText, PhoneCall, Plus, Trash2, GripVertical } from 'lucide-react';
+import { Settings, Mail, X, Save, Undo, ChevronDown, ChevronRight, Palette, Calendar, MessageSquare, Sun, Moon, Monitor, Keyboard, RotateCcw, DownloadCloud, Info, CheckCircle, ExternalLink, Columns, FileText, PhoneCall, Plus, Trash2, GripVertical, Folder } from 'lucide-react';
 import { BetaOptInSettings } from './BetaOptInSettings';
 import { LogsViewer } from './LogsViewer';
 import { useAutoUpdate } from '../hooks/useAutoUpdate';
 import { DevToolsService } from '../services/devToolsService';
 import { BetaPreferencesService, BetaPreferences } from '../services/betaPreferencesService';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
+} from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -148,31 +162,31 @@ const DEFAULT_COLUMN_LABELS: Record<string, string> = Object.fromEntries(
   Object.entries(DEFAULT_COLUMN_CONFIG).map(([key, value]) => [key, value.label])
 );
 
-type SettingsCategory = 'templates' | 'calcom' | 'appearance' | 'shortcuts' | 'update' | 'columns' | 'statuses' | 'data-sharing' | 'diagnostic' | 'logs';
+type SettingsCategory = 'templates' | 'calcom' | 'appearance' | 'shortcuts' | 'update' | 'columns' | 'statuses' | 'data-sharing' | 'diagnostic' | 'logs' | 'storage';
 
 const getCategories = (devToolsEnabled: boolean, updateEnabled: boolean = true) => [
-  { 
-    id: 'templates' as SettingsCategory, 
-    label: 'Templates', 
-    icon: Mail, 
+  {
+    id: 'templates' as SettingsCategory,
+    label: 'Templates',
+    icon: Mail,
     description: 'Emails et SMS'
   },
-  { 
-    id: 'calcom' as SettingsCategory, 
-    label: 'Calendrier', 
-    icon: Calendar, 
+  {
+    id: 'calcom' as SettingsCategory,
+    label: 'Calendrier',
+    icon: Calendar,
     description: 'Configuration de vos liens de prise de rendez-vous'
   },
-  { 
-    id: 'appearance' as SettingsCategory, 
-    label: 'Apparence', 
-    icon: Palette, 
+  {
+    id: 'appearance' as SettingsCategory,
+    label: 'Apparence',
+    icon: Palette,
     description: 'Thème et interface'
   },
-  { 
-    id: 'shortcuts' as SettingsCategory, 
-    label: 'Raccourcis', 
-    icon: Keyboard, 
+  {
+    id: 'shortcuts' as SettingsCategory,
+    label: 'Raccourcis',
+    icon: Keyboard,
     description: 'Touches de fonction'
   },
   {
@@ -213,7 +227,13 @@ const getCategories = (devToolsEnabled: boolean, updateEnabled: boolean = true) 
     label: 'Logs',
     icon: FileText,
     description: 'Consulter et copier les logs système'
-  }] : [])
+  }] : []),
+  {
+    id: 'storage' as SettingsCategory,
+    label: 'Stockage',
+    icon: Folder,
+    description: 'Gestion de l\'espace de stockage'
+  }
 ] as const;
 
 const emailTypeLabels = {
@@ -450,11 +470,11 @@ const TemplateTextarea: React.FC<TemplateTextareaProps> = ({
   );
 };
 
-export const SettingsDialog: React.FC<SettingsDialogProps> = ({ 
-  isOpen, 
-  onClose, 
-  onSave, 
-  calcomUrl, 
+export const SettingsDialog: React.FC<SettingsDialogProps> = ({
+  isOpen,
+  onClose,
+  onSave,
+  calcomUrl,
   onCalcomUrlChange,
   smsTemplate,
   onSmsTemplateChange,
@@ -504,7 +524,22 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     betaPreferences: null,
     updateStatus: null
   });
-  
+
+  // State pour les menus dépliants
+  const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
+  const [isDevToolsOpen, setIsDevToolsOpen] = useState(false);
+
+  // Ouvrir automatiquement les menus si une sous-catégorie est active
+  useEffect(() => {
+    if (['columns', 'statuses', 'data-sharing'].includes(activeCategory)) {
+      setIsAdvancedOpen(true);
+    }
+    if (['update', 'diagnostic', 'logs'].includes(activeCategory)) {
+      setIsAdvancedOpen(true);
+      setIsDevToolsOpen(true);
+    }
+  }, [activeCategory]);
+
   // Configuration des colonnes
   const [columnConfig, setColumnConfig] = useState<Record<string, boolean>>({});
   const [columnConfigChanged, setColumnConfigChanged] = useState(false);
@@ -518,7 +553,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           return { ...DEFAULT_COLUMN_LABELS, ...parsed };
         }
       }
-    } catch {}
+    } catch { }
     return { ...DEFAULT_COLUMN_LABELS };
   });
   const [columnOrderSettings, setColumnOrderSettings] = useState<string[]>(() => {
@@ -569,10 +604,10 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
-  
+
   // Hooks pour les paramètres de mise à jour (déplacés ici pour éviter les erreurs de hooks conditionnels)
   const { betaPreferences, setBetaPreferences, revertToStable, isUpdateEnabled, manualUpdateInfo } = useAutoUpdate();
-  
+
   // Hook pour le partage Supabase
   const { state: supabaseState, setEnabled: setSupabaseEnabled, triggerSync: triggerSupabaseSync, refreshSupabaseStatus, downloadLogs } = useSupabaseShare();
 
@@ -616,7 +651,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         console.error('Erreur lors du chargement des templates:', error);
       }
     }
-    
+
     // Charger les templates SMS
     const savedSms = localStorage.getItem(SMS_STORAGE_KEY);
     if (savedSms) {
@@ -698,7 +733,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       const state = StatusConfigService.getState(callMode);
       setStatusConfig(state.map);
       setStatusOrder(state.order);
-    } catch {}
+    } catch { }
   }, [callMode, activeCategory, isOpen]);
 
   // Charger les informations de diagnostic quand la section diagnostic est ouverte
@@ -757,9 +792,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
   // Gérer le changement de statut pour une touche
   const handleShortcutChange = (key: string, newStatus: string) => {
-    setShortcuts(prev => 
-      prev.map(shortcut => 
-        shortcut.key === key 
+    setShortcuts(prev =>
+      prev.map(shortcut =>
+        shortcut.key === key
           ? { ...shortcut, status: newStatus, label: getStatusLabel(newStatus) }
           : shortcut
       )
@@ -882,7 +917,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         lastModified: new Date().toISOString()
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      
+
       // Sauvegarde des templates SMS structurés
       const smsData = {
         smsTemplates,
@@ -890,28 +925,28 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         lastModified: new Date().toISOString()
       };
       localStorage.setItem(SMS_STORAGE_KEY, JSON.stringify(smsData));
-      
+
       // Sauvegarder le mode
       localStorage.setItem(MODE_STORAGE_KEY, callMode);
-      
+
       // Sauvegarder l'URL Cal.com si elle a changé
       if (onCalcomUrlChange && localCalcomUrl !== calcomUrl) {
         onCalcomUrlChange(localCalcomUrl);
       }
-      try { localStorage.setItem(CAL_PROVIDER_STORAGE_KEY, calProvider); } catch {}
-      
+      try { localStorage.setItem(CAL_PROVIDER_STORAGE_KEY, calProvider); } catch { }
+
       // Sauvegarder le template SMS si il a changé
       if (onSmsTemplateChange) {
         const toSave = callMode === CallMode.Apporteur ? localSmsTemplateApporteur : localSmsTemplate;
         if (toSave !== smsTemplate) onSmsTemplateChange(toSave);
       }
-      
+
       // Sauvegarder les raccourcis si ils ont changé
       if (shortcutsChanged) {
         shortcutService.updateAllShortcuts(shortcuts);
         setShortcutsChanged(false);
       }
-      
+
       // Sauvegarder la configuration des colonnes si elle a changé
       if (columnConfigChanged) {
         localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(columnConfig));
@@ -929,15 +964,15 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         localStorage.setItem(COLUMN_LABELS_STORAGE_KEY, JSON.stringify(columnLabels));
         setColumnLabelsChanged(false);
       }
-      
+
       // NOUVEAU : Sauvegarder les préférences bêta
       console.log('💾 Sauvegarde des préférences bêta:', betaPreferences);
       BetaPreferencesService.setBetaPreferences(betaPreferences);
-      
+
       // NOUVEAU : Sauvegarder l'état des DevTools
       console.log('💾 Sauvegarde de l\'état DevTools:', devToolsEnabled);
       DevToolsService.setEnabled(devToolsEnabled);
-      
+
       console.log('✅ Sauvegarde des paramètres réussie');
       setHasChanges(false);
       onSave();
@@ -958,7 +993,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       handleShortcutsReset();
       handleColumnConfigReset();
       setColumnLabels({ ...DEFAULT_COLUMN_LABELS });
-      
+
       // NOUVEAU : Réinitialisation des préférences bêta
       const defaultBetaPrefs = {
         enabled: false,
@@ -968,12 +1003,12 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       console.log('🔄 Réinitialisation des préférences bêta:', defaultBetaPrefs);
       setBetaPreferences(defaultBetaPrefs);
       BetaPreferencesService.setBetaPreferences(defaultBetaPrefs);
-      
+
       // NOUVEAU : Réinitialisation des DevTools
       console.log('🔄 Réinitialisation des DevTools: false');
       setDevToolsEnabled(false);
       DevToolsService.disableDevTools();
-      
+
       console.log('✅ Réinitialisation des paramètres réussie');
       setHasChanges(true);
     } catch (error) {
@@ -985,13 +1020,13 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   const handleCheckForUpdates = async () => {
     setIsCheckingUpdates(true);
     console.log('UI: 🔍 Demande de vérification des mises à jour...');
-    
+
     try {
       if (window.electronAPI?.checkForUpdates) {
         const result = await window.electronAPI.checkForUpdates();
-        
+
         console.log(`UI: 📦 Réponse reçue du processus principal:`, result);
-        
+
         if (result.status === 'checking') {
           console.log('UI: ✅ La vérification des mises à jour a été lancée avec succès.');
           // On peut ajouter un toast ici si besoin
@@ -1137,9 +1172,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                   </div>
                 </div>
               </div>
-              
-              <Button 
-                variant="outline" 
+
+              <Button
+                variant="outline"
                 onClick={() => {
                   if (typeof window !== 'undefined' && window.electronAPI?.openExternal) {
                     window.electronAPI.openExternal(manualUpdateInfo.url);
@@ -1152,7 +1187,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                 <ExternalLink className="w-4 h-4" />
                 Télécharger la dernière version
               </Button>
-              
+
               <p className="text-xs text-muted-foreground">
                 Les mises à jour automatiques ne sont pas disponibles sur cette plateforme.
                 Visitez la page GitHub pour télécharger manuellement les nouvelles versions.
@@ -1179,22 +1214,22 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             </div>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button 
-              onClick={handleCheckForUpdates} 
-              className="gap-1.5" 
+            <Button
+              onClick={handleCheckForUpdates}
+              className="gap-1.5"
               disabled={isCheckingUpdates}
             >
               <DownloadCloud className={`w-4 h-4 ${isCheckingUpdates ? 'animate-spin' : ''}`} />
               {isCheckingUpdates ? 'Vérification en cours...' : 'Rechercher une mise à jour'}
             </Button>
-            
+
             <p className="text-xs text-muted-foreground">
-              {typeof window !== 'undefined' && window.electronAPI ? 
+              {typeof window !== 'undefined' && window.electronAPI ?
                 'Les mises à jour se font automatiquement au démarrage et toutes les 10 minutes.' :
                 'Vérification des mises à jour disponible uniquement dans l\'application installée.'
               }
             </p>
-            
+
             <div className="border-t pt-6 mt-2">
               <BetaOptInSettings
                 betaPreferences={betaPreferences}
@@ -1235,7 +1270,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                   {diagnosticInfo.currentVersion || 'Chargement...'}
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Pre-releases activées</Label>
                 <div className="flex items-center gap-2">
@@ -1244,14 +1279,14 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                   </Badge>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Dernière vérification</Label>
                 <div className="text-sm text-muted-foreground">
                   {diagnosticInfo.lastCheck || 'Jamais'}
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label className="text-sm font-medium">État des mises à jour</Label>
                 <div className="text-sm text-muted-foreground">
@@ -1263,9 +1298,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                 </div>
               </div>
             </div>
-            
+
             <Separator />
-            
+
             <div className="space-y-3">
               <Label className="text-sm font-medium">Préférences Beta</Label>
               {diagnosticInfo.betaPreferences && (
@@ -1274,7 +1309,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                 </div>
               )}
             </div>
-            
+
             <div className="space-y-3">
               <Label className="text-sm font-medium">État des mises à jour</Label>
               {diagnosticInfo.updateStatus && (
@@ -1283,10 +1318,10 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                 </div>
               )}
             </div>
-            
+
             <div className="flex gap-2">
-              <Button 
-                onClick={loadDiagnosticInfo} 
+              <Button
+                onClick={loadDiagnosticInfo}
                 variant="outline"
                 size="sm"
                 className="gap-1.5"
@@ -1294,9 +1329,9 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                 <RotateCcw className="w-4 h-4" />
                 Actualiser
               </Button>
-              
-              <Button 
-                onClick={handleForceCheck} 
+
+              <Button
+                onClick={handleForceCheck}
                 variant="outline"
                 size="sm"
                 className="gap-1.5"
@@ -1306,7 +1341,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                 {isCheckingUpdates ? 'Vérification...' : 'Forcer la vérification'}
               </Button>
             </div>
-            
+
             <div className="text-xs text-muted-foreground space-y-1">
               <p>• La vérification forcée ignore le cache et refait une requête à GitHub</p>
               <p>• Les logs détaillés sont disponibles dans la console Electron (F12)</p>
@@ -1583,43 +1618,43 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         <div className="space-y-6">
           {/* Template Editor (par mode) */}
           <Card>
-          <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
-                <emailInfo.icon className="w-4 h-4 text-muted-foreground" />
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-md bg-muted flex items-center justify-center">
+                  <emailInfo.icon className="w-4 h-4 text-muted-foreground" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">{emailInfo.label}</CardTitle>
+                  <CardDescription>Personnalisez le contenu de ce type d'email</CardDescription>
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-base">{emailInfo.label}</CardTitle>
-                <CardDescription>Personnalisez le contenu de ce type d'email</CardDescription>
-              </div>
-            </div>
-            <div className="space-y-1 w-full sm:w-auto">
-              <span className="text-xs text-muted-foreground">Type d'email</span>
-              <Select 
-                value={selectedEmailType} 
-                onValueChange={(value) => setSelectedEmailType(value as EmailType)}
-              >
-                <SelectTrigger
-                  id="email-type-selector"
-                  className="w-full sm:w-fit min-w-[200px] max-w-full justify-between"
+              <div className="space-y-1 w-full sm:w-auto">
+                <span className="text-xs text-muted-foreground">Type d'email</span>
+                <Select
+                  value={selectedEmailType}
+                  onValueChange={(value) => setSelectedEmailType(value as EmailType)}
                 >
-                  <div className="flex items-center gap-2">
-                    <SelectValue />
-                  </div>
-                  <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(emailTypeLabels).map(([type, info]) => (
-                    <SelectItem key={type} value={type}>
-                      <div className="flex items-center gap-2">
-                        <info.icon className="w-4 h-4" />
-                        <span>{info.label}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                  <SelectTrigger
+                    id="email-type-selector"
+                    className="w-full sm:w-fit min-w-[200px] max-w-full justify-between"
+                  >
+                    <div className="flex items-center gap-2">
+                      <SelectValue />
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(emailTypeLabels).map(([type, info]) => (
+                      <SelectItem key={type} value={type}>
+                        <div className="flex items-center gap-2">
+                          <info.icon className="w-4 h-4" />
+                          <span>{info.label}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Subject Field */}
@@ -1769,7 +1804,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               value={calProvider}
               onValueChange={(value) => {
                 setCalProvider(value);
-                try { localStorage.setItem(CAL_PROVIDER_STORAGE_KEY, value); } catch {}
+                try { localStorage.setItem(CAL_PROVIDER_STORAGE_KEY, value); } catch { }
               }}
             >
               <SelectTrigger className="w-fit min-w-[220px] max-w-full justify-between">
@@ -1832,7 +1867,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   const handleSmsTemplateChange = (value: string) => {
     const templatesByMode = callMode === CallMode.Apporteur ? apporteurSmsTemplates : smsTemplates;
     const updatedTemplates = { ...templatesByMode, [selectedSmsType]: value };
-    
+
     if (callMode === CallMode.Apporteur) {
       setApporteurSmsTemplates(updatedTemplates);
     } else {
@@ -1874,8 +1909,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               </div>
               <div className="space-y-1 w-full sm:w-auto">
                 <span className="text-xs text-muted-foreground">Type de SMS</span>
-                <Select 
-                  value={selectedSmsType} 
+                <Select
+                  value={selectedSmsType}
                   onValueChange={(value) => setSelectedSmsType(value as SmsType)}
                 >
                   <SelectTrigger
@@ -1925,32 +1960,32 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                     <Settings className="w-4 h-4 text-muted-foreground" />
                     <p className="text-sm font-medium">Variables disponibles</p>
                   </div>
-                    <div className="flex flex-wrap gap-2">
-                      <span className="inline-flex items-center gap-1">
-                        <code className="bg-background px-2 py-1 rounded border text-xs">@civilite</code>
-                        <span className="text-xs text-muted-foreground">(ex: Madame)</span>
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <code className="bg-background px-2 py-1 rounded border text-xs">@nom</code>
-                        <span className="text-xs text-muted-foreground">(ex: Dupont)</span>
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <code className="bg-background px-2 py-1 rounded border text-xs">@prenom</code>
-                        <span className="text-xs text-muted-foreground">(ex: Marie)</span>
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <code className="bg-background px-2 py-1 rounded border text-xs">@nom_complet</code>
-                        <span className="text-xs text-muted-foreground">(ex: Marie Dupont)</span>
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <code className="bg-background px-2 py-1 rounded border text-xs">@rdv</code>
-                        <span className="text-xs text-muted-foreground">(ex: lundi 1 janv 2025 à 09:00)</span>
-                      </span>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1">
+                      <code className="bg-background px-2 py-1 rounded border text-xs">@civilite</code>
+                      <span className="text-xs text-muted-foreground">(ex: Madame)</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <code className="bg-background px-2 py-1 rounded border text-xs">@nom</code>
+                      <span className="text-xs text-muted-foreground">(ex: Dupont)</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <code className="bg-background px-2 py-1 rounded border text-xs">@prenom</code>
+                      <span className="text-xs text-muted-foreground">(ex: Marie)</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <code className="bg-background px-2 py-1 rounded border text-xs">@nom_complet</code>
+                      <span className="text-xs text-muted-foreground">(ex: Marie Dupont)</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <code className="bg-background px-2 py-1 rounded border text-xs">@rdv</code>
+                      <span className="text-xs text-muted-foreground">(ex: lundi 1 janv 2025 à 09:00)</span>
+                    </span>
                     {selectedSmsType === SmsType.R0Externe && (
-                        <span className="inline-flex items-center gap-1">
-                          <code className="bg-background px-2 py-1 rounded border text-xs">@adresse</code>
-                          <span className="text-xs text-muted-foreground">(ex: 22 rue la Boétie, Paris)</span>
-                        </span>
+                      <span className="inline-flex items-center gap-1">
+                        <code className="bg-background px-2 py-1 rounded border text-xs">@adresse</code>
+                        <span className="text-xs text-muted-foreground">(ex: 22 rue la Boétie, Paris)</span>
+                      </span>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -2107,12 +2142,12 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                   </div>
                   <span className="font-medium">📞 Appeler le contact sélectionné</span>
                 </div>
-                
+
                 <Badge variant="outline" className="text-xs text-blue-600 border-blue-300 dark:text-blue-400 dark:border-blue-600">
                   Fonction fixe
                 </Badge>
               </div>
-              
+
               {shortcuts.map((shortcut) => (
                 <div key={shortcut.key} className="flex items-center justify-between p-3">
                   <div className="flex items-center gap-3">
@@ -2121,7 +2156,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                     </div>
                     <span>{shortcut.label}</span>
                   </div>
-                  
+
                   <Select
                     value={shortcut.status}
                     onValueChange={(value) => handleShortcutChange(shortcut.key, value)}
@@ -2163,10 +2198,10 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         transition,
         opacity: isDragging ? 0.7 : 1,
       };
-    const config = DEFAULT_COLUMN_CONFIG[columnName as keyof typeof DEFAULT_COLUMN_CONFIG];
-    const isEssential = columnConfig[columnName] ?? config?.isEssential ?? false;
-    const label = columnLabels[columnName] || config?.label || columnName;
-    const canRemove = !config?.isEssential;
+      const config = DEFAULT_COLUMN_CONFIG[columnName as keyof typeof DEFAULT_COLUMN_CONFIG];
+      const isEssential = columnConfig[columnName] ?? config?.isEssential ?? false;
+      const label = columnLabels[columnName] || config?.label || columnName;
+      const canRemove = !config?.isEssential;
 
       return (
         <div
@@ -2195,7 +2230,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               </div>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <div className="flex items-center space-x-2">
               <Switch
@@ -2302,12 +2337,12 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                   lowered.length === 0
                     ? columnOrderSettings
                     : columnOrderSettings.filter((name) => {
-                        const label = columnLabels[name] || DEFAULT_COLUMN_CONFIG[name as keyof typeof DEFAULT_COLUMN_CONFIG]?.label || '';
-                        return (
-                          name.toLowerCase().includes(lowered) ||
-                          label.toLowerCase().includes(lowered)
-                        );
-                      });
+                      const label = columnLabels[name] || DEFAULT_COLUMN_CONFIG[name as keyof typeof DEFAULT_COLUMN_CONFIG]?.label || '';
+                      return (
+                        name.toLowerCase().includes(lowered) ||
+                        label.toLowerCase().includes(lowered)
+                      );
+                    });
 
                 if (filteredColumns.length === 0) {
                   return (
@@ -2397,6 +2432,17 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         setStatusFormError('Ajoutez un libellé.');
         return;
       }
+
+      // Interdire DO/RO explicitement
+      if (label.toUpperCase() === 'DO') {
+        setStatusFormError("Utilisez 'D0' (zéro) au lieu de 'DO'.");
+        return;
+      }
+      if (label.toUpperCase() === 'RO') {
+        setStatusFormError("Utilisez 'R0' (zéro) au lieu de 'RO'.");
+        return;
+      }
+
       const exists = statusOrder.some((status) => status.toLowerCase() === label.toLowerCase());
       if (exists) {
         setStatusFormError('Ce statut existe déjà.');
@@ -2608,6 +2654,79 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
     );
   };
 
+
+
+  const renderStorageSettings = () => (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-semibold">Stockage des fichiers</h3>
+          <p className="text-sm text-muted-foreground">
+            Configurez l'emplacement racine où seront stockés les dossiers des contacts.
+          </p>
+        </div>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Dossier Racine</CardTitle>
+          <CardDescription>
+            Tous les dossiers de contacts seront créés dans ce répertoire par défaut.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Chemin actuel</Label>
+              <div className="flex gap-2">
+                <Input
+                  readOnly
+                  value={localStorage.getItem('dimicall_root_path') || 'C:\\DimiCall'}
+                  className="font-mono text-sm"
+                />
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      // @ts-ignore
+                      const result = await window.electronAPI.pickFolder();
+                      if (result.success && result.path) {
+                        localStorage.setItem('dimicall_root_path', result.path);
+                        setHasChanges(true);
+                        window.dispatchEvent(new Event('storage'));
+                        // Force re-render
+                        setTemplateTab(prev => prev);
+                      }
+                    } catch (error) {
+                      console.error('Error picking folder:', error);
+                    }
+                  }}
+                >
+                  <Folder className="mr-2 h-4 w-4" />
+                  Changer...
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-md p-4 flex gap-3">
+        <Info className="h-5 w-5 text-blue-500 shrink-0 mt-0.5" />
+        <div className="text-sm text-blue-700 dark:text-blue-300">
+          <p className="font-semibold mb-1">Comment ça marche ?</p>
+          <p>
+            DimiCall crée automatiquement un dossier pour chaque contact au format : <br />
+            <code className="bg-blue-100 dark:bg-blue-900/30 px-1 py-0.5 rounded text-xs">NOM Prénom - 0612345678</code>
+          </p>
+          <p className="mt-2 text-xs opacity-80">
+            Vous pouvez également lier manuellement un dossier existant à un contact depuis sa fiche.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderCategory = () => {
     switch (activeCategory) {
       case 'templates':
@@ -2630,6 +2749,8 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         return renderDataSharingSettings();
       case 'logs':
         return devToolsEnabled ? renderLogsSettings() : renderTemplatesSettings();
+      case 'storage':
+        return renderStorageSettings();
       default:
         return renderTemplatesSettings();
     }
@@ -2698,40 +2819,126 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
         </DialogHeader>
 
         <div className="flex flex-1 overflow-hidden min-h-0 bg-white dark:bg-background transition-colors">
-          {/* Sidebar de navigation */}
-          <div className="w-48 sm:w-56 md:w-64 border-r bg-white dark:bg-muted/20 p-2 sm:p-3 md:p-4 flex-shrink-0 h-full overflow-y-auto transition-colors">
-            <nav className="space-y-0.5 sm:space-y-1">
-              {getCategories(devToolsEnabled, isUpdateEnabled).map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => setActiveCategory(category.id)}
-                  className={cn(
-                    "w-full text-left rounded-md transition-colors",
-                    activeCategory === category.id
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "hover:bg-accent hover:text-accent-foreground"
-                  )}
-                >
-                  <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3">
-                    <category.icon className={cn("w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0", activeCategory !== category.id && "text-muted-foreground")} aria-hidden="true" />
-                    <div className="min-w-0">
-                      <div className="text-xs sm:text-sm font-medium truncate">{category.label}</div>
-                      <div className={cn("text-[10px] sm:text-xs truncate hidden sm:block", activeCategory === category.id ? "text-primary-foreground/80" : "text-muted-foreground")}>
-                        {category.description}
-                      </div>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </nav>
-          </div>
+          <SidebarProvider className="w-full h-full min-h-0">
+            <Sidebar collapsible="none" className="w-[--sidebar-width] border-r bg-white dark:bg-muted/20">
+              <SidebarContent>
+                <SidebarGroup>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {(() => {
+                        const allCategories = getCategories(devToolsEnabled, isUpdateEnabled);
+                        const getCat = (id: string) => allCategories.find(c => c.id === id);
 
-          {/* Contenu principal */}
-          <div className="flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto">
-            {renderCategory()}
-          </div>
+                        const renderNavItem = (id: string) => {
+                          const category = getCat(id);
+                          if (!category) return null;
+                          return (
+                            <SidebarMenuItem key={category.id}>
+                              <SidebarMenuButton
+                                isActive={activeCategory === category.id}
+                                onClick={() => setActiveCategory(category.id)}
+                                tooltip={category.description}
+                                className="h-auto py-2"
+                              >
+                                <category.icon className="w-4 h-4 shrink-0" />
+                                <div className="flex flex-col gap-1 items-start text-left min-w-0">
+                                  <span className="font-medium line-clamp-1">{category.label}</span>
+                                  {activeCategory === category.id && (
+                                    <span className="text-[10px] text-muted-foreground line-clamp-1 font-normal opacity-80">
+                                      {category.description}
+                                    </span>
+                                  )}
+                                </div>
+                              </SidebarMenuButton>
+                            </SidebarMenuItem>
+                          );
+                        };
+
+                        return (
+                          <>
+                            {/* Menu Principal */}
+                            {['templates', 'calcom', 'appearance', 'shortcuts'].map(id => renderNavItem(id))}
+
+                            {/* Paramètres avancés */}
+                            <Collapsible open={isAdvancedOpen} onOpenChange={setIsAdvancedOpen} className="group/collapsible">
+                              <SidebarMenuItem>
+                                <CollapsibleTrigger asChild>
+                                  <SidebarMenuButton className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground font-semibold text-pink-500 dark:text-pink-400">
+                                    <Settings className="w-4 h-4" />
+                                    <span>Paramètres avancés</span>
+                                    <ChevronRight className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-90" />
+                                  </SidebarMenuButton>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent>
+                                  <SidebarMenuSub>
+                                    {['columns', 'statuses', 'data-sharing'].map(id => {
+                                      const category = getCat(id);
+                                      if (!category) return null;
+                                      return (
+                                        <SidebarMenuSubItem key={id}>
+                                          <SidebarMenuSubButton
+                                            isActive={activeCategory === category.id}
+                                            onClick={() => setActiveCategory(category.id)}
+                                            className="h-auto py-1.5"
+                                          >
+                                            <div className="flex flex-col gap-0.5 items-start text-left min-w-0">
+                                              <span className="font-medium line-clamp-1">{category.label}</span>
+                                            </div>
+                                          </SidebarMenuSubButton>
+                                        </SidebarMenuSubItem>
+                                      );
+                                    })}
+
+                                    {/* Outils de développement */}
+                                    <Collapsible open={isDevToolsOpen} onOpenChange={setIsDevToolsOpen} className="group/devtools">
+                                      <SidebarMenuSubItem>
+                                        <CollapsibleTrigger asChild>
+                                          <SidebarMenuSubButton className="font-semibold text-emerald-600 dark:text-emerald-500">
+                                            <span>Outils Dev</span>
+                                            <ChevronRight className="ml-auto transition-transform group-data-[state=open]/devtools:rotate-90" />
+                                          </SidebarMenuSubButton>
+                                        </CollapsibleTrigger>
+                                        <CollapsibleContent>
+                                          <SidebarMenuSub>
+                                            {['update', 'diagnostic', 'logs'].map(id => {
+                                              const category = getCat(id);
+                                              if (!category) return null;
+                                              return (
+                                                <SidebarMenuSubItem key={id}>
+                                                  <SidebarMenuSubButton
+                                                    isActive={activeCategory === category.id}
+                                                    onClick={() => setActiveCategory(category.id)}
+                                                    className="h-auto py-1.5"
+                                                  >
+                                                    <span className="font-medium line-clamp-1">{category.label}</span>
+                                                  </SidebarMenuSubButton>
+                                                </SidebarMenuSubItem>
+                                              );
+                                            })}
+                                          </SidebarMenuSub>
+                                        </CollapsibleContent>
+                                      </SidebarMenuSubItem>
+                                    </Collapsible>
+                                  </SidebarMenuSub>
+                                </CollapsibleContent>
+                              </SidebarMenuItem>
+                            </Collapsible>
+                          </>
+                        );
+                      })()}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </SidebarGroup>
+              </SidebarContent>
+            </Sidebar>
+
+            {/* Contenu principal */}
+            <main className="flex-1 p-3 sm:p-4 md:p-6 overflow-y-auto w-full min-w-0">
+              {renderCategory()}
+            </main>
+          </SidebarProvider>
         </div>
-        
+
         {/* Pied de page avec boutons */}
         <div className="p-3 sm:p-4 border-t flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 bg-white dark:bg-background transition-colors">
           <Button variant="ghost" onClick={handleReset} className="text-xs sm:text-sm h-8 sm:h-9">Réinitialiser</Button>
@@ -2775,7 +2982,7 @@ export const getSavedColumnConfig = (): Record<string, boolean> => {
       console.error('Erreur lors du chargement de la config des colonnes:', error);
     }
   }
-  
+
   // Retourner la config par défaut
   const defaultConfig: Record<string, boolean> = {};
   Object.keys(DEFAULT_COLUMN_CONFIG).forEach(column => {

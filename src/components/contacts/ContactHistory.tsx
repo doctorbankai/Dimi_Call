@@ -1,7 +1,7 @@
 import React from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { History } from 'lucide-react'
+import { History, Calendar, Bell, Phone, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface ContactHistoryItem {
@@ -44,6 +44,19 @@ const getStatusBadgeClasses = (status: string): string => {
   return 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-900 dark:text-gray-300 dark:border-gray-700'
 }
 
+const getEventIcon = (type: ContactHistoryItem['type']) => {
+  switch (type) {
+    case 'rdv':
+      return { icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' }
+    case 'rappel':
+      return { icon: Bell, color: 'text-yellow-500', bg: 'bg-yellow-50 dark:bg-yellow-900/20' }
+    case 'appel':
+      return { icon: Phone, color: 'text-green-500', bg: 'bg-green-50 dark:bg-green-900/20' }
+    default:
+      return { icon: History, color: 'text-gray-500', bg: 'bg-gray-50 dark:bg-gray-900/20' }
+  }
+}
+
 export const ContactHistory: React.FC<ContactHistoryProps> = ({ history }) => {
   if (history.length === 0) {
     return (
@@ -59,12 +72,23 @@ export const ContactHistory: React.FC<ContactHistoryProps> = ({ history }) => {
 
   return (
     <div className="space-y-3">
-        {history.map(item => (
-          <Card key={item.id} className="p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <History className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span className="text-sm font-medium">{item.displayDate}</span>
+      {history.map(item => {
+        const { icon: Icon, color, bg } = getEventIcon(item.type)
+
+        return (
+          <Card key={item.id} className="p-4 overflow-hidden relative">
+            {/* Vertical accent line */}
+            <div className={cn("absolute left-0 top-0 bottom-0 w-1", color.replace('text-', 'bg-'))} />
+
+            <div className="flex items-start justify-between gap-4 pl-2">
+              <div className="flex items-center gap-3">
+                <div className={cn("p-2 rounded-full shrink-0", bg)}>
+                  <Icon className={cn("h-4 w-4", color)} />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium">{item.displayDate}</span>
+                  <span className="text-xs text-muted-foreground capitalize">{item.type}</span>
+                </div>
               </div>
               <Badge
                 variant="outline"
@@ -74,28 +98,35 @@ export const ContactHistory: React.FC<ContactHistoryProps> = ({ history }) => {
               </Badge>
             </div>
 
-            {item.previousStatus && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Depuis {item.previousStatus} ({item.type})
-              </p>
-            )}
+            <div className="pl-14 mt-3 space-y-3">
+              {item.previousStatus && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span>{item.previousStatus}</span>
+                  <ArrowRight className="h-3 w-3" />
+                  <span className="font-medium text-foreground">{item.status}</span>
+                </div>
+              )}
 
-            {item.notes && (
-              <p className="text-sm mt-2 text-foreground">{item.notes}</p>
-            )}
+              {item.notes && (
+                <div className="bg-muted/50 p-3 rounded-md text-sm text-foreground italic border border-muted">
+                  "{item.notes}"
+                </div>
+              )}
 
-            {item.meta.length > 0 && (
-              <div className="grid gap-2 sm:grid-cols-2 mt-3">
-                {item.meta.map((meta, idx) => (
-                  <div key={idx} className="text-xs">
-                    <span className="font-medium text-foreground">{meta.label}:</span>{' '}
-                    <span className="text-muted-foreground">{meta.value}</span>
-                  </div>
-                ))}
-              </div>
-            )}
+              {item.meta.length > 0 && (
+                <div className="grid gap-2 mt-2">
+                  {item.meta.map((meta, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-xs">
+                      <span className="font-medium text-muted-foreground w-20 shrink-0">{meta.label}:</span>
+                      <span className="text-foreground font-medium">{meta.value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </Card>
-        ))}
+        )
+      })}
     </div>
   )
 }

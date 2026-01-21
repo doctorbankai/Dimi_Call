@@ -59,11 +59,17 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
     window.addEventListener('dimicall-date-filter', handler as any);
     return () => window.removeEventListener('dimicall-date-filter', handler as any);
   }, []);
+  // Filtrer les événements pour ne garder que ceux des contacts présents
+  const filteredLocalEvents = useMemo(() => {
+    const contactIds = new Set(contacts.map(c => String(c.id)));
+    return localEvents.filter(ev => contactIds.has(String(ev.contact_id)));
+  }, [localEvents, contacts]);
+
   // Répartition des statuts basée sur la base locale
   const radialData = useMemo(() => {
     // Grouper par contact_id et garder seulement le dernier événement
     const latestByContact = new Map<string, any>();
-    for (const ev of localEvents) {
+    for (const ev of filteredLocalEvents) {
       const contactId = String(ev.contact_id || '');
       if (!contactId) continue;
 
@@ -142,7 +148,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
       }));
 
     return [...orderedData, ...unlisted];
-  }, [localEvents]);
+  }, [filteredLocalEvents]);
 
   const radialConfig = useMemo(() => {
     const base: any = { value: { label: 'Contacts' } };
@@ -156,7 +162,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
   const funnelData = useMemo(() => {
     // Grouper par contact_id et garder seulement le dernier événement
     const latestByContact = new Map<string, any>();
-    for (const ev of localEvents) {
+    for (const ev of filteredLocalEvents) {
       const contactId = String(ev.contact_id || '');
       if (!contactId) continue;
 
@@ -176,17 +182,24 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
       'Pris': ['D0', 'R0']
     };
 
-    // Initialisation des compteurs
+    // Initialisation des compteurs et des listes de contacts
     const counts = {
       'Contacté': 0,
       'Décroché': 0,
       'Argumenté': 0,
       'Pris': 0
     };
+    const contactIdsByFunnel = {
+      'Contacté': new Set<string>(),
+      'Décroché': new Set<string>(),
+      'Argumenté': new Set<string>(),
+      'Pris': new Set<string>()
+    };
 
     // Parcours des derniers statuts par contact
     latestByContact.forEach((event) => {
       let status = String(event.new_status || event.newStatus || '');
+      const contactId = String(event.contact_id || '');
 
       // Normaliser les anciens statuts DO/RO vers D0/R0
       if (status === 'DO') status = 'D0';
@@ -195,19 +208,21 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
       // Comptage pour chaque catégorie applicable
       Object.entries(statusMapping).forEach(([category, statuses]) => {
         if (statuses.includes(status)) {
-          counts[category as keyof typeof counts]++;
+          const cat = category as keyof typeof counts;
+          counts[cat]++;
+          contactIdsByFunnel[cat].add(contactId);
         }
       });
     });
 
     // Transformation en format pour Recharts avec couleurs correspondantes
     return [
-      { category: 'Contacté', value: counts['Contacté'], fill: 'hsl(24.6 95% 53.1%)' }, // orange (Répondeur)
-      { category: 'Décroché', value: counts['Décroché'], fill: 'hsl(47.9 95.8% 53.1%)' }, // yellow (À rappeler)
-      { category: 'Argumenté', value: counts['Argumenté'], fill: 'hsl(221.2 83.2% 53.3%)' }, // blue (Argumenté)
-      { category: 'Pris', value: counts['Pris'], fill: 'hsl(142.1 76.2% 36.3%)' } // emerald (D0)
+      { category: 'Contacté', value: counts['Contacté'], fill: 'hsl(24.6 95% 53.1%)', contactIds: Array.from(contactIdsByFunnel['Contacté']) }, // orange (Répondeur)
+      { category: 'Décroché', value: counts['Décroché'], fill: 'hsl(47.9 95.8% 53.1%)', contactIds: Array.from(contactIdsByFunnel['Décroché']) }, // yellow (À rappeler)
+      { category: 'Argumenté', value: counts['Argumenté'], fill: 'hsl(221.2 83.2% 53.3%)', contactIds: Array.from(contactIdsByFunnel['Argumenté']) }, // blue (Argumenté)
+      { category: 'Pris', value: counts['Pris'], fill: 'hsl(142.1 76.2% 36.3%)', contactIds: Array.from(contactIdsByFunnel['Pris']) } // emerald (D0)
     ];
-  }, [localEvents]);
+  }, [filteredLocalEvents]);
 
   // Configuration du graphique d'entonnoir
   const funnelConfig = {
@@ -221,7 +236,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
   // KPIs globaux basés sur la base locale (derniers événements par contact)
   const totalRDV = useMemo(() => {
     const latestByContact = new Map<string, any>();
-    for (const ev of localEvents) {
+    for (const ev of filteredLocalEvents) {
       const contactId = String(ev.contact_id || '');
       if (!contactId) continue;
 
@@ -233,11 +248,11 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
       }
     }
     return Array.from(latestByContact.values()).filter((e) => !!e.dateRDV).length;
-  }, [localEvents]);
+  }, [filteredLocalEvents]);
 
   const totalRappels = useMemo(() => {
     const latestByContact = new Map<string, any>();
-    for (const ev of localEvents) {
+    for (const ev of filteredLocalEvents) {
       const contactId = String(ev.contact_id || '');
       if (!contactId) continue;
 
@@ -249,7 +264,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
       }
     }
     return Array.from(latestByContact.values()).filter((e) => !!e.dateRappel).length;
-  }, [localEvents]);
+  }, [filteredLocalEvents]);
 
   // Durée d'appel utilitaire (supporte mm:ss ou hh:mm:ss)
   const parseDuration = (value?: string) => {
@@ -264,7 +279,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
   const averageDurationSeconds = useMemo(() => {
     let sum = 0;
     let count = 0;
-    localEvents.forEach((ev: any) => {
+    filteredLocalEvents.forEach((ev: any) => {
       if (ev.dureeAppel) {
         const secs = parseDuration(String(ev.dureeAppel));
         if (secs > 0) {
@@ -274,13 +289,13 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
       }
     });
     return count > 0 ? Math.round(sum / count) : 0;
-  }, [localEvents]);
+  }, [filteredLocalEvents]);
 
   // Durée moyenne des appels décrochés uniquement (exclure certains statuts)
   const averageAnsweredDurationSeconds = useMemo(() => {
     // Grouper par contact_id et garder seulement le dernier événement
     const latestByContact = new Map<string, any>();
-    for (const ev of localEvents) {
+    for (const ev of filteredLocalEvents) {
       const contactId = String(ev.contact_id || '');
       if (!contactId) continue;
 
@@ -318,7 +333,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
       }
     });
     return count > 0 ? Math.round(sum / count) : 0;
-  }, [localEvents]);
+  }, [filteredLocalEvents]);
 
   // Plus de periodMode: agrégation par jour sur la base locale uniquement
 
@@ -335,7 +350,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
       return `${yyyy}-${mm}-${dd}`;
     };
     const map = new Map<string, number>();
-    for (const ev of localEvents) {
+    for (const ev of filteredLocalEvents) {
       const day = ev.applied_at ? fmt(String(ev.applied_at)) : null;
       if (!day) continue;
       map.set(day, (map.get(day) || 0) + 1);
@@ -343,29 +358,113 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
     return Array.from(map.entries())
       .map(([label, count]) => ({ label, count }))
       .sort((a, b) => (a.label < b.label ? -1 : a.label > b.label ? 1 : 0));
-  }, [localEvents]);
+  }, [filteredLocalEvents]);
 
   const handleBarClick = (data: any) => {
-    if (data && data.label) {
-      setSelectedStatus(data.label);
+    // Supporte à la fois 'label' (Radial) et 'category' (Funnel)
+    const statusLabel = data?.label || data?.category;
+    if (statusLabel) {
+      setSelectedStatus(statusLabel);
       setIsDialogOpen(true);
     }
   };
 
   const selectedContacts = useMemo(() => {
     if (!selectedStatus) return [];
-    const statusData = radialData.find(d => d.label === selectedStatus);
-    if (!statusData || !statusData.contactIds) return [];
 
-    // Create a Set of IDs for O(1) lookup
-    const idSet = new Set(statusData.contactIds);
-    return contacts.filter(c => idSet.has(String(c.id)));
-  }, [selectedStatus, radialData, contacts]);
+    // Cherche d'abord dans radialData
+    const radialMatch = radialData.find(d => d.label === selectedStatus);
+    if (radialMatch && radialMatch.contactIds) {
+      const idSet = new Set(radialMatch.contactIds);
+      return contacts.filter(c => idSet.has(String(c.id)));
+    }
+
+    // Sinon cherche dans funnelData
+    const funnelMatch = funnelData.find(d => d.category === selectedStatus);
+    if (funnelMatch && funnelMatch.contactIds) {
+      const idSet = new Set(funnelMatch.contactIds);
+      return contacts.filter(c => idSet.has(String(c.id)));
+    }
+
+    return [];
+  }, [selectedStatus, radialData, funnelData, contacts]);
+
+  const handleDownloadLogs = () => {
+    if (!selectedStatus) return;
+
+    const timestamp = new Date().toISOString();
+    const contactIds = new Set(contacts.map(c => String(c.id)));
+
+    // Collecter les événements bruts pour ce statut (sans filtre)
+    const rawEventsForStatus = localEvents.filter(ev => {
+      let status = String(ev.new_status || ev.newStatus || '');
+      // Normaliser les anciens statuts DO/RO vers D0/R0
+      if (status === 'DO') status = 'D0';
+      if (status === 'RO') status = 'R0';
+      return status === selectedStatus;
+    });
+
+    // Collecter les événements filtrés
+    const filteredEventsForStatus = filteredLocalEvents.filter(ev => {
+      let status = String(ev.new_status || ev.newStatus || '');
+      // Normaliser les anciens statuts DO/RO vers D0/R0
+      if (status === 'DO') status = 'D0';
+      if (status === 'RO') status = 'R0';
+      return status === selectedStatus;
+    });
+
+    const logs = [
+      `DEBUG LOGS - CHART DATA VS CONTACT LIST`,
+      `Timestamp: ${timestamp}`,
+      `Selected Status: ${selectedStatus}`,
+      `----------------------------------------`,
+      `GLOBAL COUNTS:`,
+      `- Total Contacts (Props): ${contacts.length}`,
+      `- Total Raw Events (DB): ${localEvents.length}`,
+      `- Total Filtered Events (DB matching Contacts): ${filteredLocalEvents.length}`,
+      ``,
+      `STATUS SPECIFIC (${selectedStatus}):`,
+      `- Raw Events Count: ${rawEventsForStatus.length}`,
+      `- Filtered Events Count: ${filteredEventsForStatus.length}`,
+      `- Selected Contacts Found: ${selectedContacts.length}`,
+      ``,
+      `ANALYSIS:`,
+      rawEventsForStatus.length > filteredEventsForStatus.length
+        ? `⚠️ Mismatch detected! ${rawEventsForStatus.length - filteredEventsForStatus.length} events exist for contacts NOT in the current list.`
+        : `✅ Raw and Filtered counts match (or filtered is subset).`,
+      ``,
+      `RAW EVENT SAMPLE (First 10 for status ${selectedStatus}):`,
+      ...rawEventsForStatus.slice(0, 10).map(ev =>
+        `  - ContactID: ${ev.contact_id}, Status: ${ev.new_status || ev.newStatus}, Date: ${ev.applied_at} ${contactIds.has(String(ev.contact_id)) ? '[VALID]' : '[ORPHANED]'}`
+      ),
+      ``,
+      `CONTACT IDS IN CURRENT LIST (First 10):`,
+      ...contacts.slice(0, 10).map(c => `  - ${c.id} (${c.prenom} ${c.nom})`)
+    ].join('\n');
+
+    const blob = new Blob([logs], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `debug_chart_${selectedStatus}_${timestamp.replace(/[:.]/g, '-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   const total = contacts.length || 1;
 
   return (
     <div className="w-full max-w-none" style={{ width: '100%', margin: 0, padding: 0 }}>
+      {/* Dialog liste contacts */}
+      <ContactListDialog
+        isOpen={isDialogOpen}
+        onClose={() => setIsDialogOpen(false)}
+        status={selectedStatus || ''}
+        contacts={selectedContacts}
+        onDownloadLogs={handleDownloadLogs}
+      />
       <Card className="flex flex-col w-full" style={{ width: '100%' }}>
         <CardHeader className="items-center pb-0">
           <CardTitle>Répartition des statuts</CardTitle>
@@ -451,9 +550,15 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
                 />
                 <YAxis allowDecimals={false} />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="value" radius={[8, 8, 0, 0]} isAnimationActive={false}>
+                <Bar
+                  dataKey="value"
+                  radius={[8, 8, 0, 0]}
+                  isAnimationActive={false}
+                  onClick={handleBarClick}
+                  className="cursor-pointer"
+                >
                   {funnelData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                    <Cell key={`cell-${index}`} fill={entry.fill} className="hover:opacity-80 transition-opacity cursor-pointer" />
                   ))}
                   <LabelList
                     dataKey="value"

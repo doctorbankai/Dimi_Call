@@ -8,17 +8,19 @@ import {
 } from "@/components/ui/dialog";
 import { Contact } from "@/types";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Phone, Mail, Calendar, User } from "lucide-react";
+import { Phone, Mail, Calendar, User, Download } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 interface ContactListDialogProps {
     isOpen: boolean;
     onClose: () => void;
     status: string;
     contacts: Contact[];
+    onDownloadLogs?: () => void;
 }
 
-export function ContactListDialog({ isOpen, onClose, status, contacts }: ContactListDialogProps) {
+export function ContactListDialog({ isOpen, onClose, status, contacts, onDownloadLogs }: ContactListDialogProps) {
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="sm:max-w-2xl max-h-[80vh] flex flex-col">
@@ -32,8 +34,19 @@ export function ContactListDialog({ isOpen, onClose, status, contacts }: Contact
                 <ScrollArea className="flex-1 pr-4 -mr-4">
                     <div className="space-y-4 py-4">
                         {contacts.length === 0 ? (
-                            <div className="text-center text-muted-foreground py-8">
-                                Aucun contact trouvé pour ce statut.
+                            <div className="flex flex-col items-center justify-center py-8 text-center">
+                                <p className="text-muted-foreground mb-4">Aucun contact trouvé pour ce statut.</p>
+                                {onDownloadLogs && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={onDownloadLogs}
+                                        className="gap-2"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                        Télécharger les logs de debug
+                                    </Button>
+                                )}
                             </div>
                         ) : (
                             contacts.map((contact) => (

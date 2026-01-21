@@ -9,6 +9,8 @@ interface LocalDbApi {
   importCsv?: () => Promise<{ success?: boolean; error?: unknown }>;
   importXlsx?: () => Promise<{ success?: boolean; error?: unknown }>;
   repair?: () => Promise<{ success?: boolean; updated?: number; scanned?: number; error?: unknown }>;
+  insertStatus?: (payload: any) => Promise<{ success?: boolean; data?: unknown; error?: unknown }>;
+  clear?: () => Promise<{ success?: boolean; error?: unknown }>;
 }
 
 const getLocalDbApi = (): LocalDbApi | null => {
@@ -319,7 +321,7 @@ export const localDbService = {
       if (res?.success) {
         try {
           window.dispatchEvent(new CustomEvent('dimicall-toast', { detail: { type: 'success', title: 'Base locale réinitialisée' } }));
-        } catch {}
+        } catch { }
         return true;
       }
     } catch (error) {
@@ -346,5 +348,70 @@ export const localDbService = {
       console.error('[localDbService] repair failed', error);
     }
     return { success: false, updated: 0, scanned: 0 };
+  },
+
+  async saveContacts(contacts: any[]): Promise<{ success: boolean; count: number }> {
+    const api = getLocalDbApi();
+    if (!api?.insertStatus) {
+      return { success: false, count: 0 };
+    }
+
+    let savedCount = 0;
+    try {
+      // Pour éviter de bloquer l'UI, on peut faire des lots si nécessaire,
+      // mais ici on itère simplement.
+      for (const contact of contacts) {
+        const payload = {
+          contact_id: contact.id || contact.contactId || crypto.randomUUID(),
+          new_status: contact.statut || 'Non défini',
+          applied_at: new Date().toISOString(), // Date d'import = maintenant
+          prenom: contact.prenom,
+          nom: contact.nom,
+          telephone: contact.telephone,
+          email: contact.email,
+          commentaire: contact.commentaire,
+          source: contact.source,
+          dateRappel: contact.dateRappel,
+          heureRappel: contact.heureRappel,
+          dateRDV: contact.dateRDV,
+          heureRDV: contact.heureRDV,
+          dateAppel: contact.dateAppel,
+          heureAppel: contact.heureAppel,
+          dureeAppel: contact.dureeAppel,
+          numeroLigne: contact.numeroLigne,
+          // Mapping des champs étendus
+          lien: contact.lien,
+          sexe: contact.sexe,
+          don: contact.don,
+          qualite: contact.qualite,
+          type: contact.type,
+          date: contact.date,
+          uid: contact.uid,
+          uid_supabase: contact.uid_supabase,
+          utilisateur: contact.utilisateur,
+          actions: contact.actions,
+          statutAppel: contact.statutAppel,
+          statutRDV: contact.statutRDV,
+          commentaireRDV: contact.commentaireRDV,
+        };
+
+        const res = await api.insertStatus(payload);
+        if (res && res.success) {
+          savedCount++;
+        }
+      }
+
+      // Après avoir tout sauvegardé, on notifie que la DB a changé
+      // pour déclencher la synchro Supabase et le rechargement UI
+      if (savedCount > 0) {
+        window.dispatchEvent(new CustomEvent('localdb-updated'));
+        window.dispatchEvent(new CustomEvent('dimicall-db-selection', { detail: { count: 0 } })); // Reset sélection si besoin
+      }
+
+      return { success: true, count: savedCount };
+    } catch (error) {
+      console.error('[localDbService] saveContacts failed', error);
+      return { success: false, count: savedCount };
+    }
   },
 };

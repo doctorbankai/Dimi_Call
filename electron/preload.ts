@@ -89,6 +89,7 @@ interface ElectronAPI {
   openLocation: (path: string) => Promise<{ success: boolean; error?: string }>
   getFileInfo: (path: string) => Promise<any>
   getFileById: (fileId: string) => Promise<{ success: boolean; file?: any; error?: any }>
+  pickFolder: () => Promise<{ success: boolean; path?: string; canceled?: boolean; error?: string }>
 
   // File operations
   files: {
@@ -259,6 +260,7 @@ const electronAPI: ElectronAPI = {
   openLocation: (path: string) => ipcRenderer.invoke('file:open-location', path),
   getFileInfo: (path: string) => ipcRenderer.invoke('file:get-file-info', path),
   getFileById: (fileId: string) => ipcRenderer.invoke('file:get-file-by-id', fileId),
+  pickFolder: () => ipcRenderer.invoke('file:pick-folder'),
 
   // File operations
   files: {

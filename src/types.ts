@@ -112,24 +112,58 @@ export enum QualificationSituationPro {
   Etudiant = "Étudiant",
 }
 
+export enum QualificationStructureJuridique {
+  SARL = "SARL",
+  SAS = "SAS",
+  SA = "SA",
+  SCA = "SCA",
+  SCS = "SCS",
+  SNC = "SNC",
+  SCI = "SCI",
+  SC = "SC",
+  SCP = "SCP",
+  SCM = "SCM",
+  SELARL = "SELARL",
+  SELAS = "SELAS",
+  SELAFA = "SELAFA",
+  SELCA = "SELCA",
+  SCOP = "SCOP",
+  GAEC = "GAEC",
+  SCEA = "SCEA",
+  GFA = "GFA",
+  GIE = "GIE",
+  GE = "GE",
+  SEP = "SEP",
+}
+
 export enum QualificationRevenuType {
   Salaire = "Salaire",
   Dividendes = "Dividendes",
   Rente = "Rente",
-  Autre = "Autre",
+}
+
+export enum QualificationFiscalite {
+  Brut = "Brut",
+  Net = "Net",
 }
 
 export enum QualificationChargeType {
   Credit = "Crédit",
   Loyer = "Loyer",
   Pension = "Pension",
+  Travaux = "Travaux",
   Autre = "Autre",
 }
 
 export enum QualificationLiquiditeType {
-  LivretA = "Livret A",
+  CompteCourant = "Compte courant",
+  Livret = "Livret",
+  CompteATerme = "Compte à terme",
+  AssuranceVie = "Assurance vie",
   CTO = "CTO",
-  Immo = "Immo",
+  PEE = "PEE",
+  PER = "PER",
+  PERCO = "PERCO",
   Autre = "Autre",
 }
 
@@ -149,6 +183,9 @@ export interface ElectronAPI {
 
   // APIs système
   platform: string;
+  system: {
+    callTel: (phoneNumber: string) => Promise<{ success: boolean; error?: string }>;
+  };
 
   // APIs de notification
   showNotification: (payload: DesktopNotificationPayload) => Promise<boolean>;
@@ -225,9 +262,20 @@ export interface ElectronAPI {
   };
 
   // File operations
+  // File operations
   listDirectory?: (path: string) => Promise<any>;
   createFolder?: (path: string, name: string) => Promise<any>;
+  deleteItem?: (path: string) => Promise<any>;
+  renameItem?: (oldPath: string, newName: string) => Promise<any>;
+  copyItem?: (sourcePath: string, destPath: string) => Promise<any>;
+  moveItem?: (sourcePath: string, destPath: string) => Promise<any>;
+  uploadFiles?: (targetPath: string) => Promise<any>;
   getFileById?: (fileId: string) => Promise<{ success: boolean; file?: any; error?: any }>;
+
+  // New File Operations
+  openStorageLocation?: () => Promise<{ success: boolean; error?: string }>;
+  openLocation?: (path: string) => Promise<{ success: boolean; error?: string }>;
+  pickFolder?: () => Promise<{ success: boolean; path?: string; canceled?: boolean; error?: string }>;
 }
 
 // Type pour le mode de recherche automatique
@@ -237,5 +285,6 @@ export type AutoSearchMode = 'disabled' | 'linkedin' | 'linkedin-name' | 'linked
 declare global {
   interface Window {
     electron: ElectronAPI;
+    electronAPI: ElectronAPI;
   }
 }

@@ -405,7 +405,7 @@ const buildDirectoryContact = (events: StatusEventRecord[]): DirectoryContact | 
   const prenom = safeTrim(latest.prenom);
   const nom = safeTrim(latest.nom);
   const telephone = safeTrim(latest.telephone) || pickFirstNonEmpty(sorted, 'telephone');
-  
+
   // Generate stable contact ID based on phone number (normalized)
   const normalizedPhone = telephone.replace(/[\s\-\.]/g, '');
   const contactId = normalizedPhone ? `contact-phone-${normalizedPhone}` : `contact-${latest.id ?? Math.random().toString(36).slice(2)}`;
@@ -443,13 +443,13 @@ const buildDirectoryContact = (events: StatusEventRecord[]): DirectoryContact | 
   const lastCall =
     lastCallDate || lastCallTime || lastCallDuration
       ? {
-          date: lastCallDate,
-          time: lastCallTime,
-          duration: lastCallDuration,
-          label:
-            formatDateAndTime(lastCallDate, lastCallTime) ||
-            (lastCallDuration ? `Durée ${lastCallDuration}` : 'Non renseigné'),
-        }
+        date: lastCallDate,
+        time: lastCallTime,
+        duration: lastCallDuration,
+        label:
+          formatDateAndTime(lastCallDate, lastCallTime) ||
+          (lastCallDuration ? `Durée ${lastCallDuration}` : 'Non renseigné'),
+      }
       : undefined;
 
   return {
@@ -479,15 +479,15 @@ const buildDirectoryContact = (events: StatusEventRecord[]): DirectoryContact | 
 const transformEventsToContacts = (events: StatusEventRecord[]): DirectoryContact[] => {
   // Group by phone number to avoid duplicates
   const grouped = new Map<string, StatusEventRecord[]>();
-  
+
   for (const event of events) {
     // Use phone number as the unique key instead of contact_id
     const telephone = safeTrim(event.telephone);
     if (!telephone) continue;
-    
+
     // Normalize phone number (remove spaces, dashes, etc.)
     const normalizedPhone = telephone.replace(/[\s\-\.]/g, '');
-    
+
     if (!grouped.has(normalizedPhone)) {
       grouped.set(normalizedPhone, []);
     }
@@ -516,7 +516,7 @@ const loadEventsFromSQLite = async (start?: string, end?: string): Promise<Statu
     console.error('[Annuaire] Erreur lors du chargement SQLite', error)
     return []
   }
-};const EVENT_FIELD_MAP: Record<AnnuaireEditableField, keyof StatusEventRecord | 'new_status'> = {
+}; const EVENT_FIELD_MAP: Record<AnnuaireEditableField, keyof StatusEventRecord | 'new_status'> = {
   prenom: 'prenom',
   nom: 'nom',
   email: 'email',
@@ -533,7 +533,7 @@ const loadEventsFromSQLite = async (start?: string, end?: string): Promise<Statu
 
 
 
-export function AnnuairePage({ 
+export function AnnuairePage({
   theme = 'dark',
   onCall,
   onSms,
@@ -699,10 +699,10 @@ export function AnnuairePage({
             next.reminder =
               dateValue || timeValue
                 ? {
-                    date: dateValue,
-                    time: timeValue,
-                    label: formatDateAndTime(dateValue, timeValue) || 'Non renseigné',
-                  }
+                  date: dateValue,
+                  time: timeValue,
+                  label: formatDateAndTime(dateValue, timeValue) || 'Non renseigné',
+                }
                 : undefined;
             break;
           }
@@ -713,10 +713,10 @@ export function AnnuairePage({
             next.rdv =
               dateValue || timeValue
                 ? {
-                    date: dateValue,
-                    time: timeValue,
-                    label: formatDateAndTime(dateValue, timeValue) || 'Non renseigné',
-                  }
+                  date: dateValue,
+                  time: timeValue,
+                  label: formatDateAndTime(dateValue, timeValue) || 'Non renseigné',
+                }
                 : undefined;
             break;
           }
@@ -729,13 +729,13 @@ export function AnnuairePage({
             next.lastCall =
               dateValue || timeValue || durationValue
                 ? {
-                    date: dateValue,
-                    time: timeValue,
-                    duration: durationValue,
-                    label:
-                      formatDateAndTime(dateValue, timeValue) ||
-                      (durationValue ? `Durée ${durationValue}` : 'Non renseigné'),
-                  }
+                  date: dateValue,
+                  time: timeValue,
+                  duration: durationValue,
+                  label:
+                    formatDateAndTime(dateValue, timeValue) ||
+                    (durationValue ? `Durée ${durationValue}` : 'Non renseigné'),
+                }
                 : undefined;
             break;
           }
@@ -757,7 +757,7 @@ export function AnnuairePage({
   const analyzeAndOpenMappingDialog = useCallback(async (file: File) => {
     try {
       const reader = new FileReader();
-      
+
       reader.onload = (e) => {
         try {
           const data = e.target?.result;
@@ -774,7 +774,7 @@ export function AnnuairePage({
             // Retirer le BOM UTF-8 si présent
             const textNoBom = text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text;
             const lines = textNoBom.split(/\r?\n/).filter(line => line.trim());
-            
+
             if (lines.length > 0) {
               // Détection automatique du délimiteur (priorité au point-virgule pour CSV FR)
               const firstLine = lines[0];
@@ -786,7 +786,7 @@ export function AnnuairePage({
               } else if (firstLine.includes(',')) {
                 delimiter = ',';
               }
-              
+
               // Split CSV-safe (gère les guillemets)
               function splitCSVLine(line: string, delim: string): string[] {
                 const out: string[] = [];
@@ -795,10 +795,10 @@ export function AnnuairePage({
                 for (let i = 0; i < line.length; i++) {
                   const ch = line[i];
                   if (ch === '"') {
-                    if (inQuotes && line[i + 1] === '"') { 
+                    if (inQuotes && line[i + 1] === '"') {
                       cur += '"';
                       i++;
-                    } else { 
+                    } else {
                       inQuotes = !inQuotes;
                     }
                   } else if (ch === delim && !inQuotes) {
@@ -811,12 +811,12 @@ export function AnnuairePage({
                 out.push(cur);
                 return out;
               }
-              
+
               headers = splitCSVLine(lines[0], delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
-              preview = lines.slice(1, 6).map(line => 
+              preview = lines.slice(1, 6).map(line =>
                 splitCSVLine(line, delimiter).map(cell => cell.trim().replace(/^"|"$/g, ''))
               );
-              
+
               console.log('🔍 [CSV] Délimiteur détecté:', delimiter === '\t' ? 'TAB' : delimiter, '- Colonnes:', headers.length);
             }
           } else {
@@ -824,7 +824,7 @@ export function AnnuairePage({
             const workbook = XLSX.read(data, { type: 'binary' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as string[][];
-            
+
             if (jsonData.length > 0) {
               headers = jsonData[0].map(h => String(h || '').trim());
               preview = jsonData.slice(1, 6);
@@ -912,7 +912,7 @@ export function AnnuairePage({
         link.href = URL.createObjectURL(blob);
         link.download = `annuaire_${new Date().toISOString().split('T')[0]}.csv`;
         link.click();
-        
+
         toast.success('Export réussi', {
           description: `${dataToExport.length} contacts exportés`
         });
@@ -937,11 +937,11 @@ export function AnnuairePage({
           'Date RDV': contact.rdv?.date || '',
           'Heure RDV': contact.rdv?.time || ''
         })));
-        
+
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, 'Annuaire');
         XLSX.writeFile(workbook, `annuaire_${new Date().toISOString().split('T')[0]}.xlsx`);
-        
+
         toast.success('Export réussi', {
           description: `${dataToExport.length} contacts exportés`
         });
@@ -987,7 +987,7 @@ export function AnnuairePage({
         }
         return prev;
       });
-      
+
       // Créer automatiquement les dossiers pour tous les contacts
       // On le fait en arrière-plan sans bloquer l'interface
       if (contactsFromEvents.length > 0) {
@@ -1036,23 +1036,34 @@ export function AnnuairePage({
         console.log('❌ [MAPPING] Aucun fichier dans le dialogue');
         return;
       }
-      
+
       console.log('🔄 [MAPPING] Début de l\'importation avec mapping:', mapping);
-      
+
       // Import réel des contacts via localDbService
       // import statique (déplacé en haut) pour compatibilité production
       const imported = await importContactsFromFile(mappingDialog.file, mapping, options);
       console.log(`📥 [MAPPING] ${imported.length} contacts importés (après exclusion éventuelle)`);
-      
+
+      // Sauvegarde des contacts en base locale
+      console.log('💾 [MAPPING] Sauvegarde des contacts en base...');
+      const saveResult = await localDbService.saveContacts(imported);
+
+      if (!saveResult.success) {
+        throw new Error('La sauvegarde des contacts a échoué');
+      }
+
+      console.log(`✅ [MAPPING] ${saveResult.count} contacts sauvegardés`);
+
+
       // Recharger les contacts
       if (fetchContactsRef.current) {
         await fetchContactsRef.current(dateRange);
       }
-      
+
       // Fermer le dialogue
       setMappingDialog({ open: false, file: null, headers: [], preview: [] });
       console.log('🔒 [MAPPING] Dialogue fermé');
-      
+
       toast.success('Import réussi', {
         description: `${imported.length} contacts importés avec succès`
       });
@@ -1270,7 +1281,7 @@ export function AnnuairePage({
       const allEventIds = allEvents
         .map((event) => event.id)
         .filter((id): id is number => typeof id === 'number');
-      
+
       if (allEventIds.length === 0) {
         toast.info('Aucun contact à supprimer');
         return;
@@ -1278,15 +1289,15 @@ export function AnnuairePage({
 
       // Supprimer tous les événements
       await localDbService.deleteByIds(allEventIds);
-      
+
       // Réinitialiser l'état
       clearSelection();
       setContacts([]);
       setFilteredContacts([]);
-      
+
       // Recharger les données
       await fetchContacts(dateRange);
-      
+
       toast.success('Base de données réinitialisée', {
         description: `${allEventIds.length} contact${allEventIds.length > 1 ? 's' : ''} supprimé${allEventIds.length > 1 ? 's' : ''}`
       });
@@ -1627,9 +1638,9 @@ export function AnnuairePage({
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button 
+                <Button
                   variant="outline"
-                  size="sm" 
+                  size="sm"
                   disabled={contacts.length === 0}
                   className="h-8 px-2 shrink-0 shadow-none bg-white dark:bg-card border-border/70"
                   title="Exporter les données"
@@ -1884,113 +1895,113 @@ export function AnnuairePage({
           <div className="animate-in fade-in duration-200">
             {loading ? (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, index) => (
-              <Card key={index} className="border-dashed">
-                <CardContent className="space-y-4 p-6">
-                  <div className="flex items-start gap-4">
-                    <Skeleton className="h-12 w-12 rounded-full" />
-                    <div className="flex-1 space-y-3">
-                      <Skeleton className="h-4 w-2/3" />
-                      <Skeleton className="h-3 w-1/2" />
-                      <Skeleton className="h-3 w-1/3" />
-                    </div>
-                  </div>
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-3 w-3/4" />
-                </CardContent>
-              </Card>
-            ))}
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <Card key={index} className="border-dashed">
+                    <CardContent className="space-y-4 p-6">
+                      <div className="flex items-start gap-4">
+                        <Skeleton className="h-12 w-12 rounded-full" />
+                        <div className="flex-1 space-y-3">
+                          <Skeleton className="h-4 w-2/3" />
+                          <Skeleton className="h-3 w-1/2" />
+                          <Skeleton className="h-3 w-1/3" />
+                        </div>
+                      </div>
+                      <Skeleton className="h-3 w-full" />
+                      <Skeleton className="h-3 w-3/4" />
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             ) : filteredContacts.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 py-12 text-center text-muted-foreground border rounded-lg">
-                  <History className="h-8 w-8" />
-                  <p>Aucun contact trouvé dans la base locale.</p>
+                <History className="h-8 w-8" />
+                <p>Aucun contact trouvé dans la base locale.</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredContacts.map((contact) => {
-            const isSelected = selectedContactIds.has(contact.id);
-            return (
-              <Card
-                key={contact.id}
-                className={`cursor-pointer transition-colors hover:bg-muted/40 ${isSelected ? 'bg-primary/5 ring-1 ring-primary/20' : ''}`}
-                onClick={() => handleContactClick(contact)}
-              >
-                <CardContent className="space-y-4 p-6">
-                  <div className="flex items-start gap-4">
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={(value) => toggleContactSelection(contact.id, value)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src="" alt={contact.fullName} />
-                      <AvatarFallback className="bg-primary text-primary-foreground">
-                        {getInitials(contact)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="truncate text-lg font-semibold">{contact.fullName}</h3>
-                      <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                        {contact.telephone && (
-                          <div className="flex items-center gap-2">
-                            <Phone className="h-4 w-4" />
-                            <span className="truncate">{formatPhoneNumber(contact.telephone)}</span>
+                {filteredContacts.map((contact) => {
+                  const isSelected = selectedContactIds.has(contact.id);
+                  return (
+                    <Card
+                      key={contact.id}
+                      className={`cursor-pointer transition-colors hover:bg-muted/40 ${isSelected ? 'bg-primary/5 ring-1 ring-primary/20' : ''}`}
+                      onClick={() => handleContactClick(contact)}
+                    >
+                      <CardContent className="space-y-4 p-6">
+                        <div className="flex items-start gap-4">
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(value) => toggleContactSelection(contact.id, value)}
+                              className="mt-1"
+                            />
                           </div>
-                        )}
-                        {contact.email && (
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-4 w-4" />
-                            <span className="truncate">{contact.email}</span>
+                          <Avatar className="h-12 w-12">
+                            <AvatarImage src="" alt={contact.fullName} />
+                            <AvatarFallback className="bg-primary text-primary-foreground">
+                              {getInitials(contact)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0 flex-1">
+                            <h3 className="truncate text-lg font-semibold">{contact.fullName}</h3>
+                            <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                              {contact.telephone && (
+                                <div className="flex items-center gap-2">
+                                  <Phone className="h-4 w-4" />
+                                  <span className="truncate">{formatPhoneNumber(contact.telephone)}</span>
+                                </div>
+                              )}
+                              {contact.email && (
+                                <div className="flex items-center gap-2">
+                                  <Mail className="h-4 w-4" />
+                                  <span className="truncate">{contact.email}</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="mt-3 flex flex-wrap items-center gap-2">
+                              <Badge className={getStatusColor(contact.status)}>{contact.status}</Badge>
+                              {contact.lastUpdatedLabel && (
+                                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <Clock className="h-3 w-3" />
+                                  {contact.lastUpdatedLabel}
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                <History className="h-3 w-3" />
+                                {contact.totalEvents} événement{contact.totalEvents > 1 ? 's' : ''}
+                              </span>
+                            </div>
                           </div>
-                        )}
-                      </div>
-                      <div className="mt-3 flex flex-wrap items-center gap-2">
-                        <Badge className={getStatusColor(contact.status)}>{contact.status}</Badge>
-                        {contact.lastUpdatedLabel && (
-                          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            {contact.lastUpdatedLabel}
-                          </span>
-                        )}
-                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <History className="h-3 w-3" />
-                          {contact.totalEvents} événement{contact.totalEvents > 1 ? 's' : ''}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+                        </div>
 
-                  {contact.commentaire && (
-                    <p className="text-xs text-muted-foreground line-clamp-2">{contact.commentaire}</p>
-                  )}
+                        {contact.commentaire && (
+                          <p className="text-xs text-muted-foreground line-clamp-2">{contact.commentaire}</p>
+                        )}
 
-                  <div className="space-y-1 text-xs text-muted-foreground">
-                    {contact.reminder?.label && (
-                      <div className="flex items-center gap-1">
-                        <Bell className="h-3 w-3" />
-                        <span>Rappel : {contact.reminder.label}</span>
-                      </div>
-                    )}
-                    {contact.rdv?.label && (
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>RDV : {contact.rdv.label}</span>
-                      </div>
-                    )}
-                    {contact.lastCall?.label && (
-                      <div className="flex items-center gap-1">
-                        <Phone className="h-3 w-3" />
-                        <span>Dernier appel : {contact.lastCall.label}</span>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                        <div className="space-y-1 text-xs text-muted-foreground">
+                          {contact.reminder?.label && (
+                            <div className="flex items-center gap-1">
+                              <Bell className="h-3 w-3" />
+                              <span>Rappel : {contact.reminder.label}</span>
+                            </div>
+                          )}
+                          {contact.rdv?.label && (
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              <span>RDV : {contact.rdv.label}</span>
+                            </div>
+                          )}
+                          {contact.lastCall?.label && (
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              <span>Dernier appel : {contact.lastCall.label}</span>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             )}
           </div>

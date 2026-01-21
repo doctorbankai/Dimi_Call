@@ -70,11 +70,17 @@ const StatusSelect = React.memo<StatusSelectProps>(({
     onChange(next);
   };
 
-  const currentValue = internalValue || undefined;
+  // Normalize display value (DO -> D0, RO -> R0)
+  const currentValue = useMemo(() => {
+    let v = internalValue || undefined;
+    if (v === 'DO') v = ContactStatus.D0;
+    if (v === 'RO') v = ContactStatus.R0;
+    return v;
+  }, [internalValue]);
 
   return (
-    <Select 
-      value={currentValue} 
+    <Select
+      value={currentValue}
       onValueChange={handleChange}
       onOpenChange={(open) => {
         if (open) {
@@ -84,8 +90,8 @@ const StatusSelect = React.memo<StatusSelectProps>(({
         }
       }}
     >
-      <SelectTrigger 
-        size={size} 
+      <SelectTrigger
+        size={size}
         className={cn(
           'w-fit text-xs flex items-center justify-center',
           '!border-0 !bg-transparent !shadow-none !p-0 !h-auto !min-h-0',

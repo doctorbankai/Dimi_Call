@@ -36,6 +36,7 @@ interface FileManagerToolbarProps {
   filterType: FileFilterType;
   onFilterChange: (type: FileFilterType) => void;
   onOpenLocation: () => void;
+  onChangeRoot: () => void;
   onCreateFolder: () => void;
   onUploadFiles: () => void;
 }
@@ -48,6 +49,7 @@ export const FileManagerToolbar: React.FC<FileManagerToolbarProps> = ({
   filterType,
   onFilterChange,
   onOpenLocation,
+  onChangeRoot,
   onCreateFolder,
   onUploadFiles,
 }) => {
@@ -161,6 +163,17 @@ export const FileManagerToolbar: React.FC<FileManagerToolbarProps> = ({
         {/* Action Buttons */}
         <div className="flex items-center gap-2">
           <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="outline" size="sm" onClick={onChangeRoot} className="h-9 gap-2 bg-white dark:bg-card border-border/70 shadow-none">
+                  <FolderPlus className="h-4 w-4" />
+                  <span className="hidden lg:inline">Changer racine</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Changer le dossier racine</p>
+              </TooltipContent>
+            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="sm" onClick={onCreateFolder} className="h-9 gap-2 bg-white dark:bg-card border-border/70 shadow-none">
