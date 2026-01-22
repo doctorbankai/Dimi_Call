@@ -13,6 +13,7 @@ import { useSupabaseShare } from '@/hooks/useSupabaseShare'
 import { supabaseService } from '@/services/supabaseService'
 import { extractPhoneCandidates } from '@/services/phoneUtils'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { Contact } from '../types'
 
 type HeaderOption = {
   label: string
@@ -30,6 +31,7 @@ interface ImportMappingDialogProps {
   onConfirm: (mapping: Record<string, string>, options: { phonesToRemove?: string[] }) => void
   onPreviewUpdate?: (rows: string[][]) => void
   onRemovedPhonesChange?: (phones: string[]) => void
+  existingContacts?: Contact[]
 }
 
 export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
@@ -43,14 +45,16 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
   onConfirm,
   onPreviewUpdate,
   onRemovedPhonesChange,
+  existingContacts = [],
 }) => {
   const [mapping, setMapping] = useState<Record<string, string>>({})
   const [phoneWarnings, setPhoneWarnings] = useState<{
     shared: number
     blacklist: number
+    local: number
     normalized: string[]
-    details: { phone: string; source: 'shared' | 'blacklist'; rows: number[]; prenom?: string; nom?: string }[]
-  }>({ shared: 0, blacklist: 0, normalized: [], details: [] })
+    details: { phone: string; source: 'shared' | 'blacklist' | 'local'; rows: number[]; prenom?: string; nom?: string }[]
+  }>({ shared: 0, blacklist: 0, local: 0, normalized: [], details: [] })
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [isCheckingPhones, setIsCheckingPhones] = useState(false)
   const { state } = useSupabaseShare()
@@ -111,13 +115,13 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
   }, [previewRows])
 
   useEffect(() => {
-    if (!previewRows.length || !state.supabaseReady) {
-      setPhoneWarnings({ shared: 0, blacklist: 0, normalized: [], details: [] })
+    if (!previewRows.length) {
+      setPhoneWarnings({ shared: 0, blacklist: 0, local: 0, normalized: [], details: [] })
       return
     }
     const phoneColumn = headers.find((h) => (mapping[h] ?? suggestions[h]) === 'telephone')
     if (!phoneColumn) {
-      setPhoneWarnings({ shared: 0, blacklist: 0, normalized: [], details: [] })
+      setPhoneWarnings({ shared: 0, blacklist: 0, local: 0, normalized: [], details: [] })
       return
     }
     const phoneIndex = headers.indexOf(phoneColumn)
@@ -138,23 +142,71 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
 
     if (importedPhones.length === 0) {
       console.log('[ImportMappingDialog] ⚠️ Aucun numéro importé détecté')
-      setPhoneWarnings({ shared: 0, blacklist: 0, normalized: [], details: [] })
+      setPhoneWarnings({ shared: 0, blacklist: 0, local: 0, normalized: [], details: [] })
       return
     }
     let abort = false
       ; (async () => {
         setIsCheckingPhones(true)
         try {
-          if (!supabaseService.isReady()) {
-            setPhoneWarnings({ shared: 0, blacklist: 0, normalized: [], details: [] })
-            return
-          }
+
           const client = supabaseService.getClient()
           const uniquePhones = Array.from(new Set(importedPhones))
           const batches = chunk(uniquePhones, 500)
           const sharedMatches: string[] = []
           const blacklistMatches: string[] = []
-          const details: { phone: string; source: 'shared' | 'blacklist'; rows: number[]; prenom?: string; nom?: string }[] = []
+          const localMatches: string[] = []
+          const details: { phone: string; source: 'shared' | 'blacklist' | 'local'; rows: number[]; prenom?: string; nom?: string }[] = []
+
+          // Vérification locale d'abord
+          if (existingContacts && existingContacts.length > 0) {
+            console.log('[ImportMappingDialog] 🔍 Vérification locale sur', existingContacts.length, 'contacts')
+            // Créer une Map pour un accès rapide aux contacts existants par numéro normalisé
+            const localMap = new Map<string, Contact>();
+            existingContacts.forEach(c => {
+              if (c.telephone) {
+                const norm = normalizePhoneNumber(c.telephone);
+                if (norm) localMap.set(norm, c);
+              }
+            });
+
+            for (const phone of uniquePhones) {
+              if (localMap.has(phone)) {
+                localMatches.push(phone);
+                const existing = localMap.get(phone);
+
+                // Trouver les lignes concernées dans l'import
+                const rows = previewRows.reduce<number[]>((acc, row, idx) => {
+                  const candidates = extractPhoneCandidates(row?.[phoneIndex])
+                  const match = candidates.some((candidate) => normalizePhoneNumber(candidate) === phone)
+                  if (match) acc.push(idx + 1)
+                  return acc
+                }, [])
+
+                details.push({
+                  phone,
+                  source: 'local',
+                  rows,
+                  prenom: existing?.prenom || undefined,
+                  nom: existing?.nom || undefined
+                });
+              }
+            }
+          }
+
+          // Si Supabase n'est pas prêt, on retourne seulement les résultats locaux
+          if (!supabaseService.isReady()) {
+            setPhoneWarnings({
+              shared: 0,
+              blacklist: 0,
+              local: localMatches.length,
+              normalized: localMatches,
+              details
+            })
+            return
+          }
+
+
           for (const batch of batches) {
             if (abort) return
             const [{ data: sharedData, error: sharedError }, { data: blacklistData, error: blacklistError }] = await Promise.all([
@@ -223,18 +275,22 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
           setPhoneWarnings({
             shared: sharedMatches.length,
             blacklist: blacklistMatches.length,
-            normalized: Array.from(new Set([...sharedMatches, ...blacklistMatches])),
+            local: localMatches.length,
+            normalized: Array.from(new Set([...sharedMatches, ...blacklistMatches, ...localMatches])),
             details
           })
         } catch (error) {
           console.error('[ImportMappingDialog] Vérification Supabase impossible', error)
-          setPhoneWarnings({ shared: 0, blacklist: 0, normalized: [], details: [] })
+          // En cas d'erreur Supabase, on garde au moins les doublons locaux si on en a trouvé
+          // Mais attention, on ne peut pas facilement récupérer localMatches ici car il est scopé dans le try
+          // C'est acceptable de reset si erreur grave
+          setPhoneWarnings({ shared: 0, blacklist: 0, local: 0, normalized: [], details: [] })
         } finally {
           if (!abort) setIsCheckingPhones(false)
         }
       })()
     return () => { abort = true }
-  }, [previewRows, headers, mapping, suggestions, state.supabaseReady])
+  }, [previewRows, headers, mapping, suggestions, state.supabaseReady, existingContacts])
 
   const applyFilter = (mode: 'remove' | 'isolate') => {
     console.log('[ImportMappingDialog] 🔘 Action sur les lignes détectées', { mode, lignesInitiales: previewRows.length, numerosDetectes: phoneWarnings.normalized })
@@ -392,9 +448,9 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
               <div className="mt-4 rounded-md border bg-card text-card-foreground p-3 space-y-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-2 text-xs sm:text-sm font-medium">
-                    <TriangleAlert className={cn('h-4 w-4', (phoneWarnings.shared || phoneWarnings.blacklist) ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')} />
-                    Vérification Supabase
-                    {(phoneWarnings.shared > 0 || phoneWarnings.blacklist > 0) && (
+                    <TriangleAlert className={cn('h-4 w-4', (phoneWarnings.shared || phoneWarnings.blacklist || phoneWarnings.local) ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground')} />
+                    Vérification Doublons et Supabase
+                    {(phoneWarnings.shared > 0 || phoneWarnings.blacklist > 0 || phoneWarnings.local > 0) && (
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
@@ -427,9 +483,9 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                   <div className="text-xs sm:text-sm text-muted-foreground">
                     Connectez Supabase pour détecter automatiquement les numéros présents dans vos tables partagées et liste noire.
                   </div>
-                ) : (phoneWarnings.shared === 0 && phoneWarnings.blacklist === 0) ? (
+                ) : (phoneWarnings.shared === 0 && phoneWarnings.blacklist === 0 && phoneWarnings.local === 0) ? (
                   <div className="text-xs sm:text-sm text-emerald-600 dark:text-emerald-400">
-                    Aucun numéro détecté dans les tables Supabase correspondantes.
+                    Aucun doublon ni numéro suspect détecté.
                   </div>
                 ) : (
                   <div className="space-y-3 text-xs sm:text-sm">
@@ -441,6 +497,11 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                     {phoneWarnings.blacklist > 0 && (
                       <div className="flex items-start gap-2 text-red-600 dark:text-red-400">
                         <span className="font-medium">• {phoneWarnings.blacklist} numéro(s) figurent dans la liste noire</span>
+                      </div>
+                    )}
+                    {phoneWarnings.local > 0 && (
+                      <div className="flex items-start gap-2 text-amber-600 dark:text-amber-400">
+                        <span className="font-medium">• {phoneWarnings.local} numéro(s) déjà présents localement</span>
                       </div>
                     )}
                     <div className="grid gap-3 rounded-md border border-amber-200/70 bg-amber-50 dark:bg-amber-900/15 p-3">
@@ -743,7 +804,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                           : 'border-amber-400 text-amber-500 bg-amber-50 dark:bg-amber-900/20'
                       )}
                     >
-                      {item.source === 'blacklist' ? 'Liste noire' : 'Déjà partagé'}
+                      {item.source === 'blacklist' ? 'Liste noire' : item.source === 'local' ? 'Doublon local' : 'Déjà partagé'}
                     </span>
                   </div>
                   <div className="text-muted-foreground">

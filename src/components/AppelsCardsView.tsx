@@ -2170,6 +2170,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
         expectedTargets={EXPECTED_TARGETS}
         requiredTargets={REQUIRED_TARGETS}
         onConfirm={handleImportConfirm}
+        existingContacts={contacts}
       />
 
       {/* Import Progress Bar */}

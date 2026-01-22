@@ -59,7 +59,7 @@ const EXPECTED_TARGETS = [
 
 const REQUIRED_TARGETS = ['telephone'];
 
-export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContactTableProps>(({ 
+export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContactTableProps>(({
   contacts,
   callStates,
   onSelectContact,
@@ -77,9 +77,9 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
   initialItemsPerPage = 25,
   pageSizeOptions = [25, 50, 100],
   className = '',
-  onLinkedInSearch = () => {},
-  onGoogleSearch = () => {},
-  onDirectLink = () => {},
+  onLinkedInSearch = () => { },
+  onGoogleSearch = () => { },
+  onDirectLink = () => { },
 }, ref) => {
   // États pour le drag & drop
   const [isDragOver, setIsDragOver] = useState(false);
@@ -149,7 +149,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX;
     const y = e.clientY;
-    
+
     if (
       x <= rect.left ||
       x >= rect.right ||
@@ -189,7 +189,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
   const analyzeAndOpenMappingDialog = async (file: File) => {
     try {
       const reader = new FileReader();
-      
+
       reader.onload = (e) => {
         try {
           const data = e.target?.result;
@@ -206,7 +206,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
             // Retirer le BOM UTF-8 si présent
             const textNoBom = text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text;
             const lines = textNoBom.split(/\r?\n/).filter(line => line.trim());
-            
+
             if (lines.length > 0) {
               // Détection automatique du délimiteur (priorité au point-virgule pour CSV FR)
               const firstLine = lines[0];
@@ -218,7 +218,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
               } else if (firstLine.includes(',')) {
                 delimiter = ',';
               }
-              
+
               // Split CSV-safe (gère les guillemets)
               function splitCSVLine(line: string, delim: string): string[] {
                 const out: string[] = [];
@@ -227,14 +227,14 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
                 for (let i = 0; i < line.length; i++) {
                   const ch = line[i];
                   if (ch === '"') {
-                    if (inQuotes && line[i + 1] === '"') { 
-                      cur += '"'; 
-                      i++; 
-                    } else { 
-                      inQuotes = !inQuotes; 
+                    if (inQuotes && line[i + 1] === '"') {
+                      cur += '"';
+                      i++;
+                    } else {
+                      inQuotes = !inQuotes;
                     }
                   } else if (ch === delim && !inQuotes) {
-                    out.push(cur); 
+                    out.push(cur);
                     cur = '';
                   } else {
                     cur += ch;
@@ -243,12 +243,12 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
                 out.push(cur);
                 return out;
               }
-              
+
               headers = splitCSVLine(lines[0], delimiter).map(h => h.trim().replace(/^"|"$/g, ''));
-              preview = lines.slice(1, 6).map(line => 
+              preview = lines.slice(1, 6).map(line =>
                 splitCSVLine(line, delimiter).map(cell => cell.trim().replace(/^"|"$/g, ''))
               );
-              
+
               console.log('🔍 [CSV] Délimiteur détecté:', delimiter === '\t' ? 'TAB' : delimiter, '- Colonnes:', headers.length);
             }
           } else {
@@ -256,7 +256,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
             const workbook = XLSX.read(data, { type: 'binary' });
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 }) as string[][];
-            
+
             if (jsonData.length > 0) {
               headers = jsonData[0].map(h => String(h || '').trim());
               preview = jsonData.slice(1, 6);
@@ -297,18 +297,18 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
         console.log('❌ [MAPPING] Aucun fichier dans le dialogue');
         return;
       }
-      
+
       console.log('🔄 [MAPPING] Début de l\'importation avec mapping:', mapping);
-      
+
       // Si onFileImport est fourni, l'utiliser
       if (onFileImport) {
         await onFileImport(mappingDialog.file);
       }
-      
+
       // Fermer le dialogue
       setMappingDialog({ open: false, file: null, headers: [], preview: [] });
       console.log('🔒 [MAPPING] Dialogue fermé');
-      
+
       toast.success('Import réussi', {
         description: 'Fichier importé avec succès'
       });
@@ -329,7 +329,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
 
   // Gérer les changements de pagination
   const handlePageChange = (page: number) => {
-    try { localStorage.setItem('dimicall-current-page', String(page)); } catch {}
+    try { localStorage.setItem('dimicall-current-page', String(page)); } catch { }
     goToPage(page);
     // Optionnel: scroll vers le haut de la table
     if (ref && 'current' in ref && ref.current) {
@@ -366,7 +366,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
   );
 
   return (
-    <div 
+    <div
       className={`flex flex-col h-full ${className}`}
       onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
@@ -374,7 +374,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
       onDrop={handleDrop}
     >
       <DropZoneOverlay isVisible={isDragOver} isDragActive={isDragActive} />
-      
+
       {/* Table avec données paginées */}
       <div className="flex-1 flex items-center justify-center w-full max-w-none min-w-0" style={{ minHeight: 0 }}>
         {useVirtualizedTable ? (
@@ -433,6 +433,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
         expectedTargets={EXPECTED_TARGETS}
         requiredTargets={REQUIRED_TARGETS}
         onConfirm={handleImportConfirm}
+        existingContacts={contacts}
       />
     </div>
   );
