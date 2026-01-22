@@ -12,6 +12,7 @@ import {
   SidebarRail,
 } from '@/components/ui/sidebar';
 import { Settings, Calendar, Phone, BarChart3, Database, BookOpen, Sparkles, HelpCircle } from 'lucide-react';
+import { DimicallLogo } from '@/components/dimicall-logo';
 
 interface AppSidebarProps {
   activeTab: 'dimicall';
@@ -70,11 +71,8 @@ export function AppSidebar({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <div
-                className="flex aspect-square size-8 items-center justify-center rounded-lg"
-                style={{ backgroundColor: 'var(--chart-1)', color: '#ffffff' }}
-              >
-                <span className="font-extrabold text-[16px] leading-none" style={{ color: 'inherit' }}>D</span>
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-black text-white dark:bg-white dark:text-black">
+                <DimicallLogo className="size-5" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">DimiCall</span>

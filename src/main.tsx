@@ -5,6 +5,7 @@ import App from './App'
 import { LoadingPage } from './components/LoadingPage'
 import { RootErrorBoundary } from './components/RootErrorBoundary'
 import { useSupabaseAuth } from './lib/auth-client'
+import { supabase } from './lib/supabase'
 import './index.css'
 import './styles/table-interactions.css'
 import { ModeProvider } from './context/ModeContext'
@@ -35,6 +36,20 @@ const AppWithLoadingPage = () => {
     } catch (error) {
       console.error('[renderer] notifyRendererReady failed', error);
     }
+  }, []);
+
+  // Check for "Remember Me" preference
+  useEffect(() => {
+    const checkRememberMe = async () => {
+      const rememberMePref = localStorage.getItem('dimicall_remember_me_pref');
+      // If preferrence is explicitly "false", we sign out.
+      // Default (null) is considered "true" (keep session).
+      if (rememberMePref === 'false') {
+        console.log('[main] "Se souvenir de moi" est désactivé. Déconnexion...');
+        await supabase.auth.signOut();
+      }
+    };
+    checkRememberMe();
   }, []);
 
   useEffect(() => {

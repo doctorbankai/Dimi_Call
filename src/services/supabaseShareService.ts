@@ -87,6 +87,29 @@ const debounceTimers: Partial<Record<SyncTarget, number>> = {}
 loadPreferences()
 
 if (hasWindow) {
+  try {
+    // Écouter le rétablissement de l'authentification pour reprendre la synchro
+    if (supabaseService.isReady()) {
+      supabaseService.getClient().auth.onAuthStateChange((event) => {
+        if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+          // Si on était bloqué par une erreur 401, on réessaie
+          let resumed = false;
+          for (const target of SYNC_TARGETS) {
+            if (state[target].lastError && (state[target].lastError!.includes('401') || state[target].lastError!.includes('JWT'))) {
+              console.log(`[share] Auth restaurée (${event}), reprise de la synchro pour ${target}`);
+              state[target].lastError = undefined;
+              scheduleSync(target, 'auth-restored');
+              resumed = true;
+            }
+          }
+          if (resumed) notify();
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('[share] Impossible d\'attacher le listener auth', e);
+  }
+
   autoResumeEnabledTargets()
 }
 
@@ -220,6 +243,17 @@ async function ensureSupabaseReady(): Promise<boolean> {
 
 async function runSync(target: SyncTarget, reason: string) {
   if (!state[target].enabled) return
+
+  // Si nous sommes en erreur d'authentification (401), ne pas réessayer tant qu'on n'est pas reconnecté
+  if (state[target].lastError?.includes('401') || state[target].lastError?.includes('JWT expired')) {
+    // On vérifie si on a une session valide maintenant
+    const session = await supabaseService.getClient().auth.getSession();
+    if (!session.data.session) {
+      supabaseLogger.warn(`[share] Sync ${target} ignoré: authentification requise`);
+      return;
+    }
+  }
+
   if (!state.supabaseReady) {
     const readyLater = await ensureSupabaseReady()
     if (!readyLater) {
@@ -251,8 +285,19 @@ async function runSync(target: SyncTarget, reason: string) {
     supabaseLogger.log(`[share] Synchronisation ${target} réussie`, { reason, stats })
   } catch (error: any) {
     state[target].status = 'error'
-    state[target].lastError = error?.message || 'Erreur inconnue'
+    const message = error?.message || 'Erreur inconnue';
+    state[target].lastError = message
     state[target].stats = undefined
+
+    // Détection spécifique des erreurs 401/403
+    const isAuthError = message.includes('401') || message.includes('403') || message.includes('JWT');
+
+    if (isAuthError) {
+      console.warn(`[share] Erreur d'authentification détectée (${message}). Pause de la synchronisation.`);
+      // On ne set pas pendingResync pour éviter la boucle immédiate
+      runtime.pendingResync = false;
+    }
+
     supabaseLogger.error(`[share] Synchronisation ${target} échouée`, error)
   } finally {
     runtime.inFlight = false
@@ -295,6 +340,10 @@ async function fetchLocalEvents(): Promise<any[]> {
 
 async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number }> {
   const client = supabaseService.getClient()
+  const authIdentity = await getCurrentAuthIdentity()
+  if (!authIdentity.id || !authIdentity.email) {
+    throw new Error('Session Supabase requise pour synchroniser les numéros partagés.')
+  }
   const aggregate = new Map<string, {
     phoneNumber: string
     normalized: string
@@ -371,6 +420,10 @@ async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: numbe
 
 async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number }> {
   const client = supabaseService.getClient()
+  const authIdentity = await getCurrentAuthIdentity()
+  if (!authIdentity.id || !authIdentity.email) {
+    throw new Error('Session Supabase requise pour synchroniser la liste noire partagée.')
+  }
 
   const aggregate = new Map<string, {
     phoneNumber: string
@@ -600,8 +653,8 @@ function buildStatusEventMirrorRecord(row: any, auth: AuthIdentity): Record<stri
       typeof row?.numeroLigne === 'number'
         ? row.numeroLigne
         : typeof row?.numero_ligne === 'number'
-        ? row.numero_ligne
-        : null,
+          ? row.numero_ligne
+          : null,
 
     source: extractString(row, ['source', 'origine', 'provenance']) ?? null,
     statut: extractString(row, ['statut']) ?? null,
@@ -648,8 +701,8 @@ function buildCallRecord(
     typeof row.numeroLigne === 'number'
       ? row.numeroLigne
       : typeof row.numero_ligne === 'number'
-      ? row.numero_ligne
-      : contact?.numeroLigne ?? null
+        ? row.numero_ligne
+        : contact?.numeroLigne ?? null
 
   if (!contact && !phone && !firstName && !lastName) {
     return null
@@ -809,8 +862,11 @@ function normalizeNumericId(value: unknown): number | null {
   return null
 }
 
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
 async function chunkedUpsert(client: any, table: string, records: any[], conflictTarget: string) {
-  const chunkSize = 500
+  const chunkSize = 50
   for (let i = 0; i < records.length; i += chunkSize) {
     const chunk = records.slice(i, i + chunkSize)
     if (chunk.length === 0) continue
@@ -819,6 +875,10 @@ async function chunkedUpsert(client: any, table: string, records: any[], conflic
     })
     if (error) {
       throw new Error(error.message || `Erreur Supabase (${table})`)
+    }
+    // Petite pause pour laisser respirer la base
+    if (i + chunkSize < records.length) {
+      await delay(50)
     }
   }
 }

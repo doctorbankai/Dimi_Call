@@ -13,7 +13,7 @@ import {
   Eye,
   EyeOff,
   Globe,
-  History,
+
   Linkedin,
   Phone,
   PhoneCall,
@@ -89,7 +89,13 @@ import { PaginatedContactTable } from '@/components/PaginatedContactTable'
 import type { ContactTableRef } from '@/components/ContactTable'
 import { useCallMode } from "../context/ModeContext"
 import { StatusConfigService } from "../services/statusConfigService"
+import { ContactFiles } from "@/components/contacts/ContactFiles"
 // Retire le radial chart dans la barre de recherche
+
+import { ContactHistory } from "@/components/contacts/ContactHistory"
+import { localDbService } from "@/services/localDbService"
+import { buildContactHistory, safeTrim } from "@/services/contactHistoryService"
+import type { ContactHistoryItem } from "@/services/contactHistoryService"
 
 export type TableTab = {
   id: string
@@ -385,6 +391,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     contacts: false,
     agenda: false
   })
+
+
 
   // Calcul du nombre de contacts filtrés pour Google Contacts
   const googleContactsCount = useMemo(() => {
@@ -726,19 +734,36 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
     }
   }, [viewMode]);
 
-  const callHistory = useMemo(() => {
-    if (!selectedContact) return [] as Array<{ numero: number; date?: string; statut?: string; commentaire?: string }>
-    const history: Array<{ numero: number; date?: string; statut?: string; commentaire?: string }> = []
-    for (let index = 1; index <= 4; index++) {
-      const date = (selectedContact as any)[`date_appel_${index}`]
-      const statut = (selectedContact as any)[`statut_appel_${index}`]
-      const commentaire = (selectedContact as any)[`commentaires_appel_${index}`]
-      if (date || statut || commentaire) {
-        history.push({ numero: index, date, statut, commentaire })
+  // State pour l'historique réel synchronisé
+  const [realContactHistory, setRealContactHistory] = useState<ContactHistoryItem[]>([])
+
+  // Charger l'historique réel quand le contact change
+  useEffect(() => {
+    const loadHistory = async () => {
+      if (!selectedContact || !selectedContact.telephone) {
+        setRealContactHistory([])
+        return
+      }
+
+      try {
+        const result = await localDbService.getAll()
+
+        if (result && Array.isArray(result)) {
+          const targetPhone = selectedContact.telephone.replace(/[\s\-\.]/g, '')
+          const relevantEvents = result.filter((event: any) => {
+            const eventPhone = safeTrim(event.telephone).replace(/[\s\-\.]/g, '')
+            return eventPhone === targetPhone
+          })
+          const history = buildContactHistory(relevantEvents)
+          setRealContactHistory(history)
+        }
+      } catch (error) {
+        setRealContactHistory([])
       }
     }
-    return history
-  }, [selectedContact])
+
+    loadHistory()
+  }, [selectedContact?.id, selectedContact?.telephone])
 
   // Filtrer les contacts selon le filtre actif
   const filteredContacts = useMemo(() => {
@@ -1650,6 +1675,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         <TabsList className="w-full justify-start">
                           <TabsTrigger value="informations">Informations principales</TabsTrigger>
                           <TabsTrigger value="historique">Historique</TabsTrigger>
+                          <TabsTrigger value="fichiers">Fichiers</TabsTrigger>
                         </TabsList>
                         <TabsContent value="informations" className="mt-4 sm:mt-6 space-y-4 sm:space-y-6">
                           <div className="section-card p-3 sm:p-4 space-y-3 sm:space-y-4">
@@ -1809,43 +1835,16 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                         </TabsContent>
                         <TabsContent value="historique" className="mt-6">
                           <div className="section-card p-4 space-y-4">
-                            {callHistory.length > 0 ? (
-                              <div className="space-y-3">
-                                {callHistory.map((call) => (
-                                  <div
-                                    key={call.numero}
-                                    className="rounded-lg border bg-muted/40 p-3 text-xs"
-                                  >
-                                    <div className="flex items-center justify-between gap-4">
-                                      <div className="flex items-center gap-2 font-medium text-foreground">
-                                        <History className="h-3.5 w-3.5 text-muted-foreground" />
-                                        <span>Appel {call.numero}</span>
-                                      </div>
-                                      {call.statut && (
-                                        <Badge variant="outline" className="text-[10px]">
-                                          {call.statut}
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <div className="mt-1 flex items-center gap-2 text-muted-foreground">
-                                      {call.date && (
-                                        <span>{call.date}</span>
-                                      )}
-                                    </div>
-                                    {call.commentaire && (
-                                      <p className="mt-2 text-muted-foreground/80">
-                                        {call.commentaire}
-                                      </p>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-start rounded-md border bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-                                <span>Aucun historique enregistré.</span>
-                              </div>
-                            )}
+                            <ContactHistory history={realContactHistory} />
                           </div>
+                        </TabsContent>
+                        <TabsContent value="fichiers" className="mt-6">
+                          {selectedContact && (
+                            <ContactFiles
+                              contactId={selectedContact.id}
+                              contact={selectedContact}
+                            />
+                          )}
                         </TabsContent>
                       </Tabs>
                     </div>

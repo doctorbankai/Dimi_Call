@@ -15,7 +15,7 @@ export const SearchInput: React.FC<SearchInputProps> = ({ placeholder = 'Search.
       <Input
         type="search"
         placeholder={placeholder}
-        className="pl-10 pr-16 bg-background/60 h-9"
+        className="pl-10 pr-16 bg-white dark:bg-neutral-900 h-9"
         onFocus={onFocus}
         onClick={onOpenCommand}
         readOnly

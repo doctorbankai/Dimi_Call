@@ -15,14 +15,16 @@ import {
 } from '@/components/ui/field';
 import { useSupabaseAuth } from '../lib/auth-client';
 import { Eye, EyeOff, Lock, Mail, Loader2, X } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { signInWithPassword } = useSupabaseAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,7 +37,7 @@ export const LoginPage: React.FC = () => {
       console.log('[LoginPage] Validation échouée: email ou mot de passe vide.');
       return;
     }
-    
+
     setIsLoading(true);
     console.log(`[LoginPage] Tentative de connexion pour : ${email}`);
 
@@ -43,15 +45,18 @@ export const LoginPage: React.FC = () => {
     const finalPassword = password.trim();
 
     try {
+      // Sauvegarder la préférence "Se souvenir de moi"
+      localStorage.setItem('dimicall_remember_me_pref', String(rememberMe));
+
       const result = await signInWithPassword(finalEmail, finalPassword);
-      
+
       // signInWithPassword peut retourner soit une fonction de nettoyage, soit { data, error }
       if (result && typeof result === 'object' && 'error' in result) {
         const { error: signInError } = result;
-        
+
         if (signInError) {
           console.error('[LoginPage] Erreur de connexion Supabase:', signInError);
-          
+
           let errorMessage = 'Une erreur est survenue.';
           if (signInError && 'code' in signInError && (signInError as any).code) {
             errorMessage = `Erreur: ${signInError.message} (Code: ${(signInError as any).code})`;
@@ -167,6 +172,22 @@ export const LoginPage: React.FC = () => {
                     </button>
                   </div>
                 </Field>
+
+                {/* Remember Me Checkbox */}
+                <div className="flex items-center space-x-2 my-2">
+                  <Checkbox
+                    id="rememberMe"
+                    checked={rememberMe}
+                    onCheckedChange={(checked) => setRememberMe(checked === true)}
+                    disabled={isLoading}
+                  />
+                  <label
+                    htmlFor="rememberMe"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    Se souvenir de moi
+                  </label>
+                </div>
 
                 {/* Error Message */}
                 {error && (

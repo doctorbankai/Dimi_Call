@@ -1,7 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  FileIcon,
   Folder,
   FolderPlus,
   Link as LinkIcon,
@@ -17,7 +16,6 @@ import {
   Upload,
   Plus,
   Pencil,
-  Copy,
   FolderOpen,
   ChevronRight,
   Home,
@@ -145,7 +143,9 @@ export const ContactFiles: React.FC<ContactFilesProps> = ({ contactId, contact }
   }, []);
 
   const checkFolder = useCallback(async (force = false) => {
-    const checkId = `${contactId}-${contact.nom}-${contact.prenom}-${contact.telephone}`;
+    // Normalisation du numéro de téléphone - supprimer tous les caractères non numériques sauf +
+    const safePhone = contact.telephone?.replace(/[^\d+]/g, '') || '';
+    const checkId = `${contactId}-${contact.nom}-${contact.prenom}-${safePhone}`;
 
     if (!force && lastCheckedId.current === checkId) {
       return;
@@ -153,34 +153,81 @@ export const ContactFiles: React.FC<ContactFilesProps> = ({ contactId, contact }
 
     lastCheckedId.current = checkId;
     setLoading(true);
+    console.log('[ContactFiles] Checking folder for:', { contactId, nom: contact.nom, prenom: contact.prenom, phone: contact.telephone, safePhone });
 
     try {
-      const linkedPath = localStorage.getItem(`contact_folder_${contactId}`);
+      // Priorité 1 : Vérifier la clé basée sur le numéro de téléphone (stable entre les vues)
+      let linkedPath = null;
+      if (safePhone) {
+        linkedPath = localStorage.getItem(`contact_folder_phone_${safePhone}`);
+        console.log('[ContactFiles] Phone key lookup:', `contact_folder_phone_${safePhone}`, '=', linkedPath);
+      }
+
+      // Priorité 2 : Fallback sur l'ID (pour compatibilité existante)
+      if (!linkedPath) {
+        linkedPath = localStorage.getItem(`contact_folder_${contactId}`);
+        console.log('[ContactFiles] ID key lookup:', `contact_folder_${contactId}`, '=', linkedPath);
+        // Si trouvé avec l'ID mais qu'on a un téléphone, on migre vers la nouvelle clé
+        if (linkedPath && safePhone) {
+          localStorage.setItem(`contact_folder_phone_${safePhone}`, linkedPath);
+          console.log('[ContactFiles] Migrated to phone key');
+        }
+      }
 
       if (linkedPath) {
+        console.log('[ContactFiles] Trying linked path:', linkedPath);
         const success = await loadDirectory(linkedPath, true);
         if (success) {
           setIsManuallyLinked(true);
           return;
         }
+        // Si le chemin ne marche plus, on nettoie
+        if (safePhone) localStorage.removeItem(`contact_folder_phone_${safePhone}`);
         localStorage.removeItem(`contact_folder_${contactId}`);
       }
 
+      // Priorité 3 : Essayer les chemins par défaut avec les deux ordres de noms
       const defaultRoot = localStorage.getItem('dimicall_root_path') || 'C:\\DimiCall';
-      const safeName = `${contact.nom || ''} ${contact.prenom || ''} - ${contact.telephone || ''}`
-        .replace(/[<>:"/\\|?*]/g, '')
-        .trim();
-      const defaultPath = `${defaultRoot}\\${safeName}`;
+      const phoneForPath = contact.telephone?.replace(/[<>:"/\\|?*]/g, '') || '';
 
-      const success = await loadDirectory(defaultPath, true);
+      // Ordre 1 : Nom Prénom
+      const safeName1 = `${contact.nom || ''} ${contact.prenom || ''} - ${phoneForPath}`.trim();
+      const defaultPath1 = `${defaultRoot}\\${safeName1}`;
+
+      // Ordre 2 : Prénom Nom
+      const safeName2 = `${contact.prenom || ''} ${contact.nom || ''} - ${phoneForPath}`.trim();
+      const defaultPath2 = `${defaultRoot}\\${safeName2}`;
+
+      console.log('[ContactFiles] Trying default path 1 (Nom Prénom):', defaultPath1);
+      let success = await loadDirectory(defaultPath1, true);
       if (success) {
         setIsManuallyLinked(false);
-      } else {
-        setCurrentPath(null);
-        setRootPath(null);
-        setFiles([]);
-        setIsManuallyLinked(false);
+        // Auto-save avec la clé téléphone pour synchronisation
+        if (safePhone) {
+          localStorage.setItem(`contact_folder_phone_${safePhone}`, defaultPath1);
+          console.log('[ContactFiles] Auto-saved phone key for path 1');
+        }
+        return;
       }
+
+      console.log('[ContactFiles] Trying default path 2 (Prénom Nom):', defaultPath2);
+      success = await loadDirectory(defaultPath2, true);
+      if (success) {
+        setIsManuallyLinked(false);
+        // Auto-save avec la clé téléphone pour synchronisation
+        if (safePhone) {
+          localStorage.setItem(`contact_folder_phone_${safePhone}`, defaultPath2);
+          console.log('[ContactFiles] Auto-saved phone key for path 2');
+        }
+        return;
+      }
+
+      // Aucun dossier trouvé
+      console.log('[ContactFiles] No folder found');
+      setCurrentPath(null);
+      setRootPath(null);
+      setFiles([]);
+      setIsManuallyLinked(false);
     } catch (err) {
       console.error("Error checking folder:", err);
       setCurrentPath(null);
@@ -304,6 +351,11 @@ export const ContactFiles: React.FC<ContactFilesProps> = ({ contactId, contact }
         toast.success(`Dossier créé : ${safeName}`);
         const newPath = `${parentPath}\\${safeName}`;
         localStorage.setItem(`contact_folder_${contactId}`, newPath);
+        // Sauvegarder aussi avec la clé téléphone pour la synchro
+        const safePhone = contact.telephone?.replace(/\s/g, '');
+        if (safePhone) {
+          localStorage.setItem(`contact_folder_phone_${safePhone}`, newPath);
+        }
         setIsManuallyLinked(true);
         lastCheckedId.current = '';
         await checkFolder(true);
@@ -323,6 +375,10 @@ export const ContactFiles: React.FC<ContactFilesProps> = ({ contactId, contact }
       const result = await window.electronAPI.pickFolder();
       if (result.success && result.path) {
         localStorage.setItem(`contact_folder_${contactId}`, result.path);
+        const safePhone = contact.telephone?.replace(/\s/g, '');
+        if (safePhone) {
+          localStorage.setItem(`contact_folder_phone_${safePhone}`, result.path);
+        }
         lastCheckedId.current = '';
         setIsManuallyLinked(true);
         await checkFolder(true);
@@ -335,6 +391,10 @@ export const ContactFiles: React.FC<ContactFilesProps> = ({ contactId, contact }
 
   const handleUnlinkFolder = async () => {
     localStorage.removeItem(`contact_folder_${contactId}`);
+    const safePhone = contact.telephone?.replace(/\s/g, '');
+    if (safePhone) {
+      localStorage.removeItem(`contact_folder_phone_${safePhone}`);
+    }
     toast.success("Dossier délié");
     lastCheckedId.current = '';
     setCurrentPath(null);
@@ -353,6 +413,10 @@ export const ContactFiles: React.FC<ContactFilesProps> = ({ contactId, contact }
       if (result.success) {
         toast.success("Dossier supprimé");
         localStorage.removeItem(`contact_folder_${contactId}`);
+        const safePhone = contact.telephone?.replace(/\s/g, '');
+        if (safePhone) {
+          localStorage.removeItem(`contact_folder_phone_${safePhone}`);
+        }
         setCurrentPath(null);
         setRootPath(null);
         setFiles([]);

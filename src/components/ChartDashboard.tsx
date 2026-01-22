@@ -60,10 +60,11 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
     return () => window.removeEventListener('dimicall-date-filter', handler as any);
   }, []);
   // Filtrer les événements pour ne garder que ceux des contacts présents
+  // FIX: On ne filtre plus par contacts pour que la page "Graphiques" soit un vrai Dashboard global
+  // et non juste une vue des contacts chargés actuellement.
   const filteredLocalEvents = useMemo(() => {
-    const contactIds = new Set(contacts.map(c => String(c.id)));
-    return localEvents.filter(ev => contactIds.has(String(ev.contact_id)));
-  }, [localEvents, contacts]);
+    return localEvents;
+  }, [localEvents]);
 
   // Répartition des statuts basée sur la base locale
   const radialData = useMemo(() => {
@@ -372,22 +373,72 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
   const selectedContacts = useMemo(() => {
     if (!selectedStatus) return [];
 
+    // Récupérer les contactIds correspondant au statut sélectionné
+    let targetContactIds: Set<string> | undefined;
+
     // Cherche d'abord dans radialData
     const radialMatch = radialData.find(d => d.label === selectedStatus);
     if (radialMatch && radialMatch.contactIds) {
-      const idSet = new Set(radialMatch.contactIds);
-      return contacts.filter(c => idSet.has(String(c.id)));
+      targetContactIds = new Set(radialMatch.contactIds);
+    } else {
+      // Sinon cherche dans funnelData
+      const funnelMatch = funnelData.find(d => d.category === selectedStatus);
+      if (funnelMatch && funnelMatch.contactIds) {
+        targetContactIds = new Set(funnelMatch.contactIds);
+      }
     }
 
-    // Sinon cherche dans funnelData
-    const funnelMatch = funnelData.find(d => d.category === selectedStatus);
-    if (funnelMatch && funnelMatch.contactIds) {
-      const idSet = new Set(funnelMatch.contactIds);
-      return contacts.filter(c => idSet.has(String(c.id)));
-    }
+    if (!targetContactIds || targetContactIds.size === 0) return [];
 
-    return [];
-  }, [selectedStatus, radialData, funnelData, contacts]);
+    // Stratégie hybride:
+    // 1. Chercher dans les contacts chargés (props.contacts)
+    // 2. Si pas trouvé, reconstruire un objet Contact minimal depuis les événements (snapshot)
+
+    const loadedContactsMap = new Map(contacts.map(c => [String(c.id), c]));
+    const result: Contact[] = [];
+
+    // Pour chaque ID trouvé dans les événements
+    targetContactIds.forEach(id => {
+      // Cas 1: Le contact est déjà chargé en mémoire
+      if (loadedContactsMap.has(id)) {
+        result.push(loadedContactsMap.get(id)!);
+      }
+      // Cas 2: Le contact n'est pas chargé (ex: ancien import), on reconstruit depuis l'historique
+      else {
+        // Retrouver le dernier événement pour ce contact pour avoir les infos les plus récentes
+        const eventsForContact = localEvents.filter(ev => String(ev.contact_id) === id);
+        // Trier par date décroissante (plus récent en premier)
+        eventsForContact.sort((a, b) => new Date(b.applied_at).getTime() - new Date(a.applied_at).getTime());
+
+        const latestEv = eventsForContact[0];
+        if (latestEv) {
+          // Reconstruction d'un objet Contact partiel mais suffisant pour l'affichage
+          const reconstructedContact: Contact = {
+            id,
+            prenom: latestEv.prenom || 'Inconnu',
+            nom: latestEv.nom || '',
+            telephone: latestEv.telephone || '',
+            email: latestEv.email || '',
+            statut: latestEv.statut || latestEv.new_status || 'Non défini',
+            commentaire: latestEv.commentaire || '',
+            // Champs optionnels qui peuvent être null
+            dateRappel: latestEv.dateRappel,
+            heureRappel: latestEv.heureRappel,
+            dateRDV: latestEv.dateRDV,
+            heureRDV: latestEv.heureRDV,
+            dateAppel: latestEv.dateAppel,
+            heureAppel: latestEv.heureAppel,
+            dureeAppel: latestEv.dureeAppel,
+            numeroLigne: latestEv.numeroLigne || 0,
+            source: latestEv.source || 'Historique'
+          } as Contact;
+          result.push(reconstructedContact);
+        }
+      }
+    });
+
+    return result;
+  }, [selectedStatus, radialData, funnelData, contacts, localEvents]);
 
   const handleDownloadLogs = () => {
     if (!selectedStatus) return;
@@ -453,6 +504,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
     URL.revokeObjectURL(url);
   };
 
+
   const total = contacts.length || 1;
 
   return (
@@ -468,7 +520,7 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
       <Card className="flex flex-col w-full" style={{ width: '100%' }}>
         <CardHeader className="items-center pb-0">
           <CardTitle>Répartition des statuts</CardTitle>
-          <CardDescription>Mise à jour sur la sélection actuelle</CardDescription>
+          <CardDescription>Basé sur la période sélectionnée</CardDescription>
         </CardHeader>
         <CardContent className="flex-1 pb-0 w-full" style={{ width: '100%' }}>
           <ChartContainer config={radialConfig as any} className="w-full h-[500px]" style={{ width: '100%' }}>
@@ -513,7 +565,10 @@ export const ChartDashboard: React.FC<ChartDashboardProps> = ({ contacts, initia
               </div>
             ))}
           </div>
-          <div className="mt-3 text-xs text-muted-foreground text-center">{contacts.length} contacts</div>
+          <div className="mt-3 text-xs text-muted-foreground text-center">
+            {/* Calcul du nombre de contacts uniques ayant eu une activité dans la période */}
+            {new Set(filteredLocalEvents.map(e => e.contact_id)).size} contacts actifs
+          </div>
         </CardContent>
       </Card>
 

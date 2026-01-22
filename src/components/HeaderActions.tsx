@@ -143,20 +143,20 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
     if (!updateBadgeLabel || !isElectron) return null
 
     const palette = {
-      ready: 'bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:text-emerald-100',
-      progress: 'bg-amber-500/10 text-amber-700 border-amber-200 dark:text-amber-100',
-      checking: 'bg-sky-500/10 text-sky-700 border-sky-200 dark:text-sky-100',
-      idle: 'bg-muted text-muted-foreground border-transparent',
+      ready: 'text-emerald-700 border-emerald-200/60 dark:text-emerald-400 dark:border-emerald-800/50',
+      progress: 'text-amber-700 border-amber-200/60 dark:text-amber-400 dark:border-amber-800/50',
+      checking: 'text-sky-700 border-sky-200/60 dark:text-sky-400 dark:border-sky-800/50',
+      idle: 'text-muted-foreground border-border/70 dark:border-border/60',
     } as const
 
     const intent = palette[updateBadgeIntent as keyof typeof palette]
     const iconColor =
       updateBadgeIntent === 'ready'
-        ? 'text-emerald-700 dark:text-emerald-200'
+        ? 'text-emerald-600 dark:text-emerald-400'
         : updateBadgeIntent === 'progress'
-          ? 'text-amber-700 dark:text-amber-200'
+          ? 'text-amber-600 dark:text-amber-400'
           : updateBadgeIntent === 'checking'
-            ? 'text-sky-700 dark:text-sky-200'
+            ? 'text-sky-600 dark:text-sky-400'
             : 'text-muted-foreground'
 
     return (
@@ -166,7 +166,7 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
         disabled={!canInteractWithUpdate}
         aria-label="Statut des mises à jour"
         className={cn(
-          'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-tight transition-colors focus-visible:outline-none disabled:opacity-60',
+          'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-tight transition-colors focus-visible:outline-none disabled:opacity-60 bg-white dark:bg-neutral-900 shadow-sm',
           intent
         )}
         title={
@@ -195,9 +195,9 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
   }
 
   const adbState = adbConnectionState
-  const adbPalette = adbState?.isConnected
-    ? 'bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:text-emerald-100'
-    : 'bg-rose-500/10 text-rose-700 border-rose-200 dark:text-rose-100'
+  const adbTextColor = adbState?.isConnected
+    ? 'text-emerald-700 dark:text-emerald-400'
+    : 'text-rose-700 dark:text-rose-400'
 
   const renderAdbBadge = () => {
     if (!adbState || !isElectron) return null
@@ -225,17 +225,17 @@ export const HeaderActions: React.FC<HeaderActionsProps> = ({
       >
         <span
           className={cn(
-            'inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors',
-            adbPalette,
+            'inline-flex items-center gap-2 rounded-full border border-border/70 px-3 py-1 text-[11px] font-semibold transition-colors shadow-sm bg-white dark:border-border/60 dark:bg-neutral-900',
+            adbTextColor,
             adbConnecting && 'animate-pulse'
           )}
         >
           {adbConnecting ? (
             <RefreshCcw className={cn('w-3.5 h-3.5', !adbState.isConnected && 'text-rose-600')} />
           ) : adbState.isConnected ? (
-            <Smartphone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-200" />
+            <Smartphone className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
           ) : (
-            <AlertCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-200" />
+            <AlertCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
           )}
           <span className="tracking-wide">{adbBadgeText}</span>
           {adbState.isConnected && typeof adbState.batteryLevel === 'number' && (

@@ -87,7 +87,40 @@ export const useSupabaseAuth = () => {
   useEffect(() => {
     setIsLoading(true);
     // 1. Récupérer la session initiale
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      // TENTATIVE DE RESTAURATION MANUELLE SI SESSION NULLE
+      if (!session) {
+        try {
+          const backupSessionStr = localStorage.getItem('dimicall_session_backup');
+          // Vérifier d'abord si "Se souvenir de moi" est actif
+          const rememberMePref = localStorage.getItem('dimicall_remember_me_pref');
+
+          if (backupSessionStr && rememberMePref !== 'false') {
+            console.log('[Auth] ⚠️ Session initialement nulle, tentative de restauration depuis backup...');
+            const backupSession = JSON.parse(backupSessionStr);
+
+            if (backupSession?.refresh_token && backupSession?.access_token) {
+              const { data, error } = await supabase.auth.setSession({
+                access_token: backupSession.access_token,
+                refresh_token: backupSession.refresh_token,
+              });
+
+              if (!error && data.session) {
+                console.log('[Auth] ✅ Session restaurée avec succès depuis le backup!');
+                session = data.session;
+                supabaseLogger.log('Session manually restored from backup', { userId: data.user?.id });
+              } else {
+                console.warn('[Auth] ❌ Échec de la restauration manuelle:', error);
+                // Nettoyer si invalide
+                localStorage.removeItem('dimicall_session_backup');
+              }
+            }
+          }
+        } catch (e) {
+          console.error('[Auth] Erreur lors de la tentative de restauration:', e);
+        }
+      }
+
       setSession(session);
       const currentUser = session?.user ?? null;
       setUser(currentUser);
@@ -138,6 +171,20 @@ export const useSupabaseAuth = () => {
         if (nextSession && currentUser) {
           lastGoodSessionRef.current = nextSession;
           lastGoodUserRef.current = currentUser;
+
+          // SAUVEGARDE DU BACKUP DE SESSION
+          try {
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+              const rememberMePref = localStorage.getItem('dimicall_remember_me_pref');
+              // On sauvegarde si la préférence n'est pas explicitement 'false' (donc true ou null par défaut)
+              if (rememberMePref !== 'false') {
+                localStorage.setItem('dimicall_session_backup', JSON.stringify(nextSession));
+              }
+            }
+          } catch (e) {
+            console.error('[Auth] Erreur sauvegarde backup session:', e);
+          }
+
           // Si on revient à un état normal, lever le maintien
           if (authHoldReason) {
             setAuthHoldReason(null);
@@ -390,6 +437,8 @@ export const useSupabaseAuth = () => {
       supabaseLogger.error('signOut error', error);
     } else {
       supabaseLogger.log('signOut success');
+      // Nettoyage complet
+      localStorage.removeItem('dimicall_session_backup');
       setDisconnectInfo(prev => prev ?? { reason: 'unknown', details: 'Déconnexion utilisateur' });
     }
     setIsLoading(false);

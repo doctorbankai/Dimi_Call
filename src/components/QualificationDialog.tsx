@@ -212,8 +212,10 @@ export const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen
         lines.push(`- Revenus Éligibles (Annuel): ${calculationResults.totalRevenusEligibles.toFixed(0)}€`);
         lines.push(`- Charges (Annuel): ${calculationResults.totalCharges.toFixed(0)}€`);
 
-        const tauxPercent = (calculationResults.tauxEndettement * 100).toFixed(2);
-        lines.push(`- Taux Endettement: ${tauxPercent}%`);
+        const tauxPercent = calculationResults.totalRevenusEligibles > 0
+            ? `${(calculationResults.tauxEndettement * 100).toFixed(2)}%`
+            : "Pas de revenus";
+        lines.push(`- Taux Endettement: ${tauxPercent}`);
         lines.push(`- Liquidités Dispo: ${calculationResults.totalLiquidites.toFixed(0)}€`);
 
         setCommentaireAuto(lines.join('\n'));
@@ -540,7 +542,10 @@ export const QualificationDialog: React.FC<QualificationDialogProps> = ({ isOpen
                                 </CardHeader>
                                 <CardContent>
                                     <div className="text-3xl font-bold">
-                                        {(calculationResults.tauxEndettement * 100).toFixed(1)}%
+                                        {calculationResults.totalRevenusEligibles > 0
+                                            ? `${(calculationResults.tauxEndettement * 100).toFixed(1)}%`
+                                            : <span className="text-xl">Pas de revenus</span>
+                                        }
                                     </div>
                                     <p className="text-sm text-muted-foreground mt-1">
                                         Seuil recommandé: 25%
