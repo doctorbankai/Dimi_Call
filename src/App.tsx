@@ -10,6 +10,7 @@ import { AppelsCardsView } from './components/AppelsCardsView';
 import { EmailDialog, RappelDialog, RendezVousDialog, QualificationDialog, GenericInfoDialog } from './components/Dialogs';
 import { SmsDialogImproved as SmsDialog } from './components/SmsDialogImproved';
 import Calendar2 from './pages/Calendar2';
+import { useTheme } from './components/theme-provider';
 
 
 import { TitleBar } from './components/TitleBar';
@@ -262,43 +263,31 @@ const App: React.FC = ({ appKey }: { appKey?: number } = {}) => {
 
   // Authentication states - removed isAuthModalOpen (now using full page)
 
-  // State declarations
-  const readSystemTheme = () => {
-    if (typeof window === 'undefined' || !window.matchMedia) {
-      return Theme.Light;
-    }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? Theme.Dark : Theme.Light;
-  };
+  /* Theme management via ThemeProvider */
+  const { theme, setTheme } = useTheme();
+  const [resolvedTheme, setResolvedTheme] = useState<Theme>(Theme.Light);
 
-  const [theme, setTheme] = useState<Theme>(() => {
-    try {
-      const saved = localStorage.getItem('dimicall-theme') as Theme | null;
-      if (saved === Theme.Light || saved === Theme.Dark || saved === Theme.System) {
-        return saved;
-      }
-    } catch {
-      // Ignore storage errors and fall back to system
-    }
-    return Theme.System;
-  });
-  const [systemTheme, setSystemTheme] = useState<Theme>(readSystemTheme);
   useEffect(() => {
-    try {
-      localStorage.setItem('dimicall-theme', theme);
-    } catch {
-      // Ignore storage write issues (private mode, etc.)
-    }
+    const root = window.document.documentElement;
+    const isDark = root.classList.contains('dark');
+    setResolvedTheme(isDark ? Theme.Dark : Theme.Light);
+
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.attributeName === 'class') {
+          const isDark = root.classList.contains('dark');
+          setResolvedTheme(isDark ? Theme.Dark : Theme.Light);
+        }
+      });
+    });
+
+    observer.observe(root, { attributes: true });
+    return () => observer.disconnect();
   }, [theme]);
 
-  const resolveThemeValue = useCallback(
-    (value: Theme) => (value === Theme.System ? systemTheme : value),
-    [systemTheme]
-  );
-  const resolvedTheme = resolveThemeValue(theme);
-  const handleToggleTheme = useCallback(
-    () => setTheme((current) => (resolveThemeValue(current) === Theme.Dark ? Theme.Light : Theme.Dark)),
-    [resolveThemeValue]
-  );
+  const handleToggleTheme = useCallback(() => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
+  }, [theme, setTheme]);
   const [activeMenuTab, setActiveMenuTab] = useState<'dimicall'>('dimicall');
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [callStates, setCallStates] = useState<CallStates>({});
@@ -3032,7 +3021,7 @@ Dimitri MOREL - Arcanis Conseil`;
 
           {/* Main content card (includes header) */}
           <div className="group-data-[variant=floating]:border group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:shadow-sm bg-card text-foreground border border-border rounded-lg shadow-sm mr-[2px] sm:mr-[4px] mt-[2px] sm:mt-[4px] mb-[2px] sm:mb-[4px] flex-1 flex flex-col min-h-0 overflow-hidden min-w-0">
-            {/* Header inside the white container */}
+            {/* Header inside the container */}
             <MainHeader
               theme={resolvedTheme}
               onToggleTheme={handleToggleTheme}
@@ -3305,7 +3294,7 @@ Dimitri MOREL - Arcanis Conseil`;
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    className="h-9 px-2 shrink-0 bg-white text-foreground dark:text-slate-900 dark:bg-white hover:bg-slate-50 dark:hover:bg-slate-100 border border-border"
+                                    className="h-9 px-2 shrink-0 bg-background text-foreground hover:bg-accent border border-border"
                                     title="Gestion des colonnes"
                                   >
                                     <Settings2 className="h-4 w-4" />

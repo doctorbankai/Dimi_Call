@@ -62,7 +62,7 @@ const clearSavedState = () => {
 
 export const PreQualificationPage: React.FC = () => {
   const savedState = loadSavedState();
-  
+
   // Restaurer les profils avec leurs statuts depuis les classifications sauvegardées
   const restoredProfiles = savedState?.profiles.map(profile => ({
     ...profile,
@@ -215,7 +215,7 @@ export const PreQualificationPage: React.FC = () => {
     <div className="flex h-full flex-col space-y-3 xs:space-y-4 md:space-y-6 px-2 xs:px-3 sm:px-4 md:px-6 lg:px-10 pb-4 sm:pb-6">
       <div className="w-full max-w-screen-2xl mx-auto space-y-4 sm:space-y-5 md:space-y-6">
         {/* Header Section */}
-        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-2 sm:px-4 md:px-6 pt-2 pb-2 min-w-0 bg-white dark:bg-background rounded-md transition-colors" role="toolbar" aria-label="Barre d'outils Pré-qualification">
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-2 sm:px-4 md:px-6 pt-2 pb-2 min-w-0 bg-background rounded-md transition-colors" role="toolbar" aria-label="Barre d'outils Pré-qualification">
           <div className="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0 flex-shrink-0">
             <div className="flex flex-col gap-0.5 min-w-0">
               <h1 className="text-lg sm:text-xl font-semibold text-foreground truncate">Pré-qualification</h1>
@@ -235,20 +235,20 @@ export const PreQualificationPage: React.FC = () => {
             <ButtonGroup className="shrink-0">
               {profiles.length > 0 && (
                 <>
-                  <Button 
+                  <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 px-2 shrink-0 bg-white dark:bg-card border-border/70 shadow-none"
+                    className="h-8 px-2 shrink-0 bg-background border-border/70 shadow-none"
                     onClick={triggerReplaceFile}
                     title="Importer un fichier CSV/Excel"
                   >
                     <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     <span className="hidden sm:inline">Importer</span>
                   </Button>
-                  <Button 
+                  <Button
                     size="sm"
                     variant="outline"
-                    className="h-8 px-2 shrink-0 bg-white dark:bg-card border-border/70 shadow-none"
+                    className="h-8 px-2 shrink-0 bg-background border-border/70 shadow-none"
                     onClick={exportToExcel}
                     disabled={profiles.length === 0}
                     title="Exporter"
@@ -261,7 +261,7 @@ export const PreQualificationPage: React.FC = () => {
               <Button
                 size="sm"
                 variant="outline"
-                className="h-8 px-2 shrink-0 bg-white dark:bg-card border-border/70 shadow-none"
+                className="h-8 px-2 shrink-0 bg-background border-border/70 shadow-none"
                 onClick={() => setCategoryNamesDialogOpen(true)}
                 title="Personnaliser"
               >
@@ -309,7 +309,7 @@ export const PreQualificationPage: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex-1 w-full max-w-screen-2xl mx-auto min-h-0 rounded-lg sm:rounded-xl border bg-background shadow-sm overflow-hidden">
         <div className={cn(
-          "h-full w-full overflow-y-auto bg-white dark:bg-background transition-colors",
+          "h-full w-full overflow-y-auto bg-background transition-colors",
           step === 'classify' ? "p-1 sm:p-2 md:p-3 lg:p-4 xl:p-6" : "p-2 sm:p-3 md:p-4 lg:p-6 xl:p-8 max-w-7xl mx-auto"
         )}>
           {step === 'upload' ? (

@@ -9,6 +9,7 @@ import './index.css'
 import './styles/table-interactions.css'
 import { ModeProvider } from './context/ModeContext'
 import './utils/disableLogs' // Désactiver tous les logs
+import { ThemeProvider } from './components/theme-provider'
 
 // Fonction pour masquer l'écran de chargement HTML initial
 const hideInitialLoadingScreen = () => {
@@ -60,9 +61,11 @@ const AppWithLoadingPage = () => {
 ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <ModeProvider>
-      <RootErrorBoundary>
-        <AppWithLoadingPage />
-      </RootErrorBoundary>
+      <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+        <RootErrorBoundary>
+          <AppWithLoadingPage />
+        </RootErrorBoundary>
+      </ThemeProvider>
     </ModeProvider>
   </React.StrictMode>
 )

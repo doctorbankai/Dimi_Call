@@ -82,13 +82,6 @@ const StatusSelect = React.memo<StatusSelectProps>(({
     <Select
       value={currentValue}
       onValueChange={handleChange}
-      onOpenChange={(open) => {
-        if (open) {
-          // ✅ Empêche sélection ligne lors ouverture
-          const event = new Event('click', { bubbles: true, cancelable: true });
-          event.stopPropagation();
-        }
-      }}
     >
       <SelectTrigger
         size={size}
@@ -104,7 +97,7 @@ const StatusSelect = React.memo<StatusSelectProps>(({
           'min-w-[160px]',
           triggerClassName
         )}
-        onClick={(e) => e.stopPropagation()} // ✅ Empêche sélection ligne
+        onPointerDown={(e) => e.stopPropagation()} // ✅ Empêche sélection ligne sans bloquer le dropdown
       >
         {currentValue ? (
           displayAsBadge
@@ -114,7 +107,11 @@ const StatusSelect = React.memo<StatusSelectProps>(({
           <span className="text-xs text-muted-foreground">{placeholder}</span>
         )}
       </SelectTrigger>
-      <SelectContent className={cn('text-xs', contentClassName)}>
+      <SelectContent
+        position="popper"
+        sideOffset={5}
+        className={cn('text-xs', contentClassName)}
+      >
         {statusOptions.map((status) => (
           <SelectItem key={status} value={status} className="text-xs">
             {renderStatusBadge(status)}

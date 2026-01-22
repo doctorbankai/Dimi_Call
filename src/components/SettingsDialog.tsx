@@ -1304,7 +1304,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             <div className="space-y-3">
               <Label className="text-sm font-medium">Préférences Beta</Label>
               {diagnosticInfo.betaPreferences && (
-                <div className="bg-white dark:bg-card p-3 rounded-md text-sm font-mono border shadow-none">
+                <div className="bg-card p-3 rounded-md text-sm font-mono border shadow-none">
                   <pre>{JSON.stringify(diagnosticInfo.betaPreferences, null, 2)}</pre>
                 </div>
               )}
@@ -1313,7 +1313,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             <div className="space-y-3">
               <Label className="text-sm font-medium">État des mises à jour</Label>
               {diagnosticInfo.updateStatus && (
-                <div className="bg-white dark:bg-card p-3 rounded-md text-sm font-mono border shadow-none">
+                <div className="bg-card p-3 rounded-md text-sm font-mono border shadow-none">
                   <pre>{JSON.stringify(diagnosticInfo.updateStatus, null, 2)}</pre>
                 </div>
               )}
@@ -1683,7 +1683,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               </div>
 
               {/* Variables Help */}
-              <div className="bg-white dark:bg-card p-4 rounded-lg border shadow-none">
+              <div className="bg-card p-4 rounded-lg border shadow-none">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Settings className="w-4 h-4 text-muted-foreground" />
@@ -1742,7 +1742,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
               {/* Aperçu avec exemple */}
               {currentTemplate.body && (
-                <div className="bg-white dark:bg-card rounded-lg p-4 border shadow-none">
+                <div className="bg-card rounded-lg p-4 border shadow-none">
                   <div className="flex items-center gap-2 mb-3">
                     <Mail className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Aperçu avec exemple</span>
@@ -1954,7 +1954,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
               </div>
 
               {/* Variables Help */}
-              <div className="bg-white dark:bg-card p-4 rounded-lg border shadow-none">
+              <div className="bg-card p-4 rounded-lg border shadow-none">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Settings className="w-4 h-4 text-muted-foreground" />
@@ -2017,7 +2017,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
               {/* Aperçu avec exemple */}
               {currentTemplate && (
-                <div className="bg-white dark:bg-card rounded-lg p-4 border shadow-none">
+                <div className="bg-card rounded-lg p-4 border shadow-none">
                   <div className="flex items-center gap-2 mb-3">
                     <MessageSquare className="w-4 h-4 text-muted-foreground" />
                     <span className="text-sm font-medium">Aperçu avec exemple</span>
@@ -2208,7 +2208,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           ref={setNodeRef}
           style={style}
           className={cn(
-            "flex items-center justify-between p-4 bg-white dark:bg-slate-900",
+            "flex items-center justify-between p-4 bg-background",
             isDragging && "ring-2 ring-primary/30 shadow-sm"
           )}
         >
@@ -2281,12 +2281,12 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                   value={columnSearch}
                   onChange={(e) => setColumnSearch(e.target.value)}
                   placeholder="Rechercher une colonne..."
-                  className="max-w-xs bg-white dark:bg-slate-900"
+                  className="max-w-xs bg-background"
                 />
                 <Button
                   variant="outline"
                   size="sm"
-                  className="bg-white dark:bg-slate-900"
+                  className="bg-background"
                   onClick={handleColumnConfigReset}
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
@@ -2304,7 +2304,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                       setColumnFormError(null);
                     }}
                     placeholder="Ex: Lien perso"
-                    className="bg-white dark:bg-slate-900"
+                    className="bg-background"
                   />
                 </div>
                 <div className="space-y-1">
@@ -2316,7 +2316,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                       setColumnFormError(null);
                     }}
                     placeholder="Ex: Lien personnalisé"
-                    className="bg-white dark:bg-slate-900"
+                    className="bg-background"
                   />
                 </div>
                 <div className="flex justify-end">
@@ -2580,7 +2580,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
             <Button
               variant="outline"
               size="sm"
-              className="bg-white dark:bg-slate-900"
+              className="bg-background"
               onClick={() => {
                 const reset = StatusConfigService.resetToDefaults(callMode);
                 setStatusConfig(reset.map);
@@ -2783,7 +2783,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           </DialogTitle>
           <div className="flex items-center gap-2 sm:gap-4">
             <div
-              className="relative flex items-center gap-2 rounded-full border border-border/70 bg-white px-3 py-1 shadow-sm dark:border-border/60 dark:bg-neutral-900"
+              className="relative flex items-center gap-2 rounded-full border border-border/70 bg-background px-3 py-1 shadow-sm dark:border-border/60"
               aria-label={`Mode actuel : ${callMode === CallMode.Apporteur ? 'Apporteur' : 'Client'}`}
             >
               <span className="text-xs sm:text-sm text-muted-foreground">Mode :</span>
@@ -2820,7 +2820,7 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
 
         <div className="flex flex-1 overflow-hidden min-h-0 bg-white dark:bg-background transition-colors">
           <SidebarProvider className="w-full h-full min-h-0">
-            <Sidebar collapsible="none" className="w-[--sidebar-width] border-r bg-white dark:bg-muted/20">
+            <Sidebar collapsible="none" className="w-[--sidebar-width] border-r bg-muted/20">
               <SidebarContent>
                 <SidebarGroup>
                   <SidebarGroupContent>

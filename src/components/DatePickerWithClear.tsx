@@ -32,7 +32,7 @@ export const DatePickerWithClear: React.FC<DatePickerWithClearProps> = ({
             <Button
               variant="outline"
               className={cn(
-                "flex-1 justify-start text-left font-normal bg-white dark:bg-input/30 border border-input hover:bg-white dark:hover:bg-input/50 shadow-none",
+                "flex-1 justify-start text-left font-normal bg-background border border-input hover:bg-accent shadow-none",
                 !value && "text-muted-foreground"
               )}
             >

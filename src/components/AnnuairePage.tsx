@@ -1608,7 +1608,7 @@ export function AnnuairePage({
   return (
     <div className="flex h-full flex-col gap-4 w-full overflow-hidden">
       {/* Navbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 bg-white dark:bg-background rounded-md transition-colors">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-3 bg-background rounded-md transition-colors">
         <div className="flex items-center gap-4">
           <div className="flex flex-col gap-0.5">
             <h1 className="text-xl font-semibold text-foreground">Annuaire</h1>
@@ -1629,7 +1629,7 @@ export function AnnuairePage({
             <Button
               variant="outline"
               size="sm"
-              className="h-8 px-2 shrink-0 shadow-none bg-white dark:bg-card border-border/70"
+              className="h-8 px-2 shrink-0 shadow-none bg-background border-border/70"
               onClick={() => dispatchLocalDbEvent('dimicall-db-import')}
               title="Importer un fichier CSV/Excel"
             >
@@ -1642,7 +1642,7 @@ export function AnnuairePage({
                   variant="outline"
                   size="sm"
                   disabled={contacts.length === 0}
-                  className="h-8 px-2 shrink-0 shadow-none bg-white dark:bg-card border-border/70"
+                  className="h-8 px-2 shrink-0 shadow-none bg-background border-border/70"
                   title="Exporter les données"
                 >
                   <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
@@ -1676,7 +1676,7 @@ export function AnnuairePage({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 px-2 shadow-none bg-white dark:bg-card border-border/70"
+                className="h-8 px-2 shadow-none bg-background border-border/70"
                 title="Supprimer la sélection"
                 disabled={!hasSelection}
               >

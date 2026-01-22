@@ -26,7 +26,7 @@ export function ViewSwitcher({ currentView, onViewChange, className }: ViewSwitc
         aria-pressed={currentView === 'cards'}
         className={cn(
           "h-9 px-3 shadow-none",
-          currentView !== 'cards' && "bg-white dark:bg-card border-border/70"
+          currentView !== 'cards' && "bg-card border-border/70"
         )}
       >
         <LayoutGrid className="h-4 w-4 mr-2" />
@@ -40,7 +40,7 @@ export function ViewSwitcher({ currentView, onViewChange, className }: ViewSwitc
         aria-pressed={currentView === 'table'}
         className={cn(
           "h-9 px-3 shadow-none",
-          currentView !== 'table' && "bg-white dark:bg-card border-border/70"
+          currentView !== 'table' && "bg-card border-border/70"
         )}
       >
         <Table2 className="h-4 w-4 mr-2" />

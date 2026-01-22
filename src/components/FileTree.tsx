@@ -197,9 +197,9 @@ export const FileTree: React.FC<FileTreeProps> = ({
   );
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-muted/30 transition-colors">
+    <div className="flex flex-col h-full bg-background transition-colors">
       {/* Header */}
-      <div className="p-3 border-b bg-white dark:bg-card/50 transition-colors">
+      <div className="p-3 border-b bg-muted/40 transition-colors">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Dossiers
@@ -211,7 +211,7 @@ export const FileTree: React.FC<FileTreeProps> = ({
             placeholder="Rechercher..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="h-8 pl-8 pr-2 text-xs bg-white dark:bg-background border-border/50 shadow-none"
+            className="h-8 pl-8 pr-2 text-xs bg-background border-border/50 shadow-none"
           />
         </div>
       </div>

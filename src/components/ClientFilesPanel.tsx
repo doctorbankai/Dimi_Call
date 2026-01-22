@@ -19,11 +19,11 @@ interface ContactInfoCardProps {
 
 const ContactInfoCard: React.FC<ContactInfoCardProps> = ({ contact, theme, activeCallContactId, callStartTime }) => {
   const [currentCallDuration, setCurrentCallDuration] = useState('00:00');
-  
+
   // 🔄 Timer pour l'appel en cours - AMÉLIORÉ
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
-    
+
     if (contact && activeCallContactId === (contact.UID || contact.id) && callStartTime) {
       // Démarrer immédiatement le timer
       const updateDuration = () => {
@@ -34,21 +34,21 @@ const ContactInfoCard: React.FC<ContactInfoCardProps> = ({ contact, theme, activ
         const durationStr = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
         setCurrentCallDuration(durationStr);
       };
-      
+
       // Mettre à jour immédiatement
       updateDuration();
-      
+
       // Puis toutes les secondes
       interval = setInterval(updateDuration, 1000);
     } else {
       setCurrentCallDuration('00:00');
     }
-    
+
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [contact, activeCallContactId, callStartTime]);
-  
+
   if (!contact) {
     return (
       <div className="h-full flex flex-col items-center justify-center p-8 text-center">
@@ -58,10 +58,10 @@ const ContactInfoCard: React.FC<ContactInfoCardProps> = ({ contact, theme, activ
           </div>
           <div className="absolute -inset-1 rounded-2xl bg-gradient-to-r from-blue-500/20 to-purple-500/20 blur opacity-50"></div>
         </div>
-        <h3 className="text-sm font-medium text-slate-900 dark:text-slate-100 mb-2">
+        <h3 className="text-sm font-medium text-foreground mb-2">
           Aucun contact sélectionné
         </h3>
-        <p className="text-xs text-slate-500 dark:text-slate-400 max-w-[200px]">
+        <p className="text-xs text-muted-foreground max-w-[200px]">
           Sélectionnez un contact dans la table pour afficher ses informations et gérer ses fichiers
         </p>
       </div>
@@ -83,8 +83,8 @@ const ContactInfoCard: React.FC<ContactInfoCardProps> = ({ contact, theme, activ
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return null;
-    return new Date(dateStr).toLocaleDateString('fr-FR', { 
-      day: 'numeric', 
+    return new Date(dateStr).toLocaleDateString('fr-FR', {
+      day: 'numeric',
       month: 'short',
       year: 'numeric'
     });
@@ -110,25 +110,25 @@ const ContactInfoCard: React.FC<ContactInfoCardProps> = ({ contact, theme, activ
   return (
     <div className="h-full">
       <ScrollArea className="h-full">
-        <div className="p-4 bg-transparent dark:bg-transparent border border-slate-200 dark:border-slate-700 rounded-lg">
-          
+        <div className="p-4 bg-transparent border border-border rounded-lg">
+
           {/* Header compact avec avatar et nom */}
           <div className="flex items-center gap-3 mb-4">
             <div className="relative flex-shrink-0">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold shadow-lg shadow-blue-500/25">
-              {contact.prenom?.charAt(0) || 'N'}{contact.nom?.charAt(0) || 'A'}
-            </div>
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold shadow-lg shadow-blue-500/25">
+                {contact.prenom?.charAt(0) || 'N'}{contact.nom?.charAt(0) || 'A'}
+              </div>
               <div className="absolute -inset-0.5 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 opacity-20 blur"></div>
             </div>
-            
+
             <div className="flex-1 min-w-0">
-              <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100 truncate">
+              <h2 className="text-base font-semibold text-foreground truncate">
                 {contact.prenom} {contact.nom}
                 {displayValue(contact.source) !== 'N/A' && (
-                  <span className="text-slate-500 dark:text-slate-400 font-normal"> • {contact.source}</span>
+                  <span className="text-muted-foreground font-normal"> • {contact.source}</span>
                 )}
               </h2>
-              <div className="text-xs text-slate-500 dark:text-slate-400 truncate">
+              <div className="text-xs text-muted-foreground truncate">
                 {displayValue(contact.mail || contact.email)} | {displayValue(contact.numero || contact.telephone)}
               </div>
               {isRecentCall(contact.date_appel_1 || contact.date_appel || contact.dateAppel) && (
@@ -197,12 +197,12 @@ const ContactInfoCard: React.FC<ContactInfoCardProps> = ({ contact, theme, activ
               const dateKey = `date_appel_${i}`;
               const statutKey = `statut_appel_${i}`;
               const commentaireKey = `commentaires_appel_${i}`;
-              
+
               // On considère qu'un appel existe s'il y a au moins une date ou un statut
               const dateAppel = (contact as any)[dateKey] || '';
               const statutAppel = (contact as any)[statutKey] || '';
               const commentaireAppel = (contact as any)[commentaireKey] || '';
-              
+
               if (dateAppel || statutAppel) {
                 callHistory.push({
                   numero: i,
@@ -212,7 +212,7 @@ const ContactInfoCard: React.FC<ContactInfoCardProps> = ({ contact, theme, activ
                 });
               }
             }
-            
+
             if (callHistory.length > 0) {
               return (
                 <div className="space-y-2">
@@ -259,7 +259,7 @@ const ContactInfoCard: React.FC<ContactInfoCardProps> = ({ contact, theme, activ
 
           {/* Autres informations si nécessaire */}
           <div className="space-y-3">
-            
+
 
 
 
@@ -295,9 +295,9 @@ const ClientFileDropZone: React.FC<ClientFileDropZoneProps> = ({ onFileDrop, the
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragOver(false);
-    
+
     if (disabled) return;
-    
+
     const files = e.dataTransfer.files;
     if (files.length > 0) {
       onFileDrop(files[0]);
@@ -319,7 +319,7 @@ const ClientFileDropZone: React.FC<ClientFileDropZoneProps> = ({ onFileDrop, the
 
   return (
     <Card className={`transition-all duration-200 ${isDragOver ? 'border-blue-400 bg-blue-50 dark:bg-blue-950/20' : 'border-dashed'} ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-950/10'}`}>
-      <CardContent 
+      <CardContent
         className="py-6"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -461,7 +461,7 @@ export const ClientFilesPanel: React.FC<ClientFilesPanelProps> = ({ contact, the
   const [files, setFiles] = useState<ClientFile[]>([]);
   const [uploadingFile, setUploadingFile] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  
+
   // 🔄 Effet pour charger les fichiers quand le contact change
   useEffect(() => {
     const contactUID = contact?.UID || contact?.id;
@@ -478,7 +478,7 @@ export const ClientFilesPanel: React.FC<ClientFilesPanelProps> = ({ contact, the
     setLoading(true);
     try {
       const result = await listFilesForUID(uid);
-      
+
       if (result.success) {
         // Convertir StorageFile vers ClientFile
         const clientFiles: ClientFile[] = result.files.map(storageFile => ({
@@ -488,7 +488,7 @@ export const ClientFilesPanel: React.FC<ClientFilesPanelProps> = ({ contact, the
           date: storageFile.date,
           type: storageFile.type
         }));
-        
+
         setFiles(clientFiles);
         console.log(`📁 ${clientFiles.length} fichier(s) chargé(s) pour ${uid}`);
       } else {
@@ -520,7 +520,7 @@ export const ClientFilesPanel: React.FC<ClientFilesPanelProps> = ({ contact, the
 
     try {
       const result = await uploadFileToStorage(file, contactUID);
-      
+
       if (result.success) {
         showNotification('success', result.message);
         // Recharger la liste des fichiers
@@ -545,7 +545,7 @@ export const ClientFilesPanel: React.FC<ClientFilesPanelProps> = ({ contact, the
 
     try {
       const result = await deleteFileFromStorage(file.name, contactUID);
-      
+
       if (result.success) {
         showNotification('success', result.message);
         // Recharger la liste des fichiers
@@ -566,7 +566,7 @@ export const ClientFilesPanel: React.FC<ClientFilesPanelProps> = ({ contact, the
 
     try {
       const result = await getDownloadUrl(file.name, contactUID);
-      
+
       if (result.success && result.url) {
         // Ouvrir l'URL dans un nouvel onglet pour télécharger
         window.open(result.url, '_blank');
@@ -589,9 +589,9 @@ export const ClientFilesPanel: React.FC<ClientFilesPanelProps> = ({ contact, the
 
       {/* Zone de drop */}
       <div className="shrink-0 p-4 border-b">
-        <ClientFileDropZone 
-          onFileDrop={handleFileDrop} 
-          theme={theme} 
+        <ClientFileDropZone
+          onFileDrop={handleFileDrop}
+          theme={theme}
           disabled={!contact || !!uploadingFile}
         />
         {uploadingFile && (
@@ -614,11 +614,11 @@ export const ClientFilesPanel: React.FC<ClientFilesPanelProps> = ({ contact, the
           </div>
         </div>
         <ScrollArea className="flex-1 p-4">
-          <FileListWidget 
-            files={files} 
-            onDeleteFile={handleDeleteFile} 
-            onDownloadFile={handleDownloadFile} 
-            theme={theme} 
+          <FileListWidget
+            files={files}
+            onDeleteFile={handleDeleteFile}
+            onDownloadFile={handleDownloadFile}
+            theme={theme}
           />
         </ScrollArea>
       </div>

@@ -70,8 +70,11 @@ export function AppSidebar({
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <span className="font-extrabold text-[16px] leading-none">D</span>
+              <div
+                className="flex aspect-square size-8 items-center justify-center rounded-lg"
+                style={{ backgroundColor: 'var(--chart-1)', color: '#ffffff' }}
+              >
+                <span className="font-extrabold text-[16px] leading-none" style={{ color: 'inherit' }}>D</span>
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">DimiCall</span>
@@ -161,19 +164,17 @@ export function AppSidebar({
       </SidebarContent>
 
       <SidebarFooter>
-        <SidebarGroup>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                onClick={onSettingsClick}
-                tooltip="Réglages"
-              >
-                <Settings />
-                <span>Réglages</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={onSettingsClick}
+              tooltip="Réglages"
+            >
+              <Settings />
+              <span>Réglages</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>
