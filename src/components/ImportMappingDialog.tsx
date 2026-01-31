@@ -65,9 +65,20 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
   const [statusMessage, setStatusMessage] = useState<string>('')
   const dialogContentRef = React.useRef<HTMLDivElement>(null)
 
+  // Stabiliser les props pour éviter les boucles infinies
+  const stablePreviewRows = useMemo(() => previewRows || [], [JSON.stringify(previewRows)])
+  const stableHeaders = useMemo(() => detectedHeaders || [], [JSON.stringify(detectedHeaders)])
+  const stableExpectedTargets = useMemo(() => expectedTargets || [], [JSON.stringify(expectedTargets)])
+
   const requiredSet = useMemo(() => new Set(requiredTargets), [requiredTargets])
 
-  const headers = detectedHeaders || []
+  // Stabiliser existingContacts qui est probablement recréé à chaque rendu du parent
+  // On utilise JSON.stringify car c'est un tableau d'objets (Contact[])
+  // Attention à la performance si le tableau est très grand, mais pour des contacts chargés en mémoire ça devrait aller
+  // TODO: Optimiser si le nombre de contacts devient trop important (plusieurs milliers)
+  const stableExistingContacts = useMemo(() => existingContacts || [], [JSON.stringify(existingContacts)])
+
+  const headers = stableHeaders
   const rows = preview
 
   const assignedTargets = useMemo(() => new Set(Object.values(mapping).filter(Boolean)), [mapping])
@@ -86,11 +97,11 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
     const m: Record<string, string> = {}
     headers.forEach((h) => {
       const norm = normalizeHeader(h || '')
-      const match = expectedTargets.find((opt) => opt.value === norm)
+      const match = stableExpectedTargets.find((opt) => opt.value === norm)
       if (match) m[h] = match.value
     })
     return m
-  }, [headers, expectedTargets])
+  }, [headers, stableExpectedTargets])
 
   useEffect(() => {
     setMapping((prev) => {
@@ -105,17 +116,17 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
   }, [headers, suggestions])
 
   useEffect(() => {
-    setPreview(previewRows || [])
-    setOriginalPreview(previewRows || [])
+    setPreview(stablePreviewRows)
+    setOriginalPreview(stablePreviewRows)
     setFilterMode('none')
     setRemovedPhones([])
     setStatusMessage('')
-    onPreviewUpdate?.(previewRows || [])
+    onPreviewUpdate?.(stablePreviewRows)
     onRemovedPhonesChange?.([])
-  }, [previewRows])
+  }, [stablePreviewRows])
 
   useEffect(() => {
-    if (!previewRows.length) {
+    if (!stablePreviewRows.length) {
       setPhoneWarnings({ shared: 0, blacklist: 0, local: 0, normalized: [], details: [] })
       return
     }
@@ -125,14 +136,14 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
       return
     }
     const phoneIndex = headers.indexOf(phoneColumn)
-    const importedPhones = previewRows
+    const importedPhones = stablePreviewRows
       .map((row) => extractPhoneCandidates(row?.[phoneIndex]))
       .flat()
       .map(normalizePhoneNumber)
       .filter(Boolean) as string[]
 
     console.log('[ImportMappingDialog] 🔍 Vérification Supabase', {
-      previewRowsCount: previewRows.length,
+      previewRowsCount: stablePreviewRows.length,
       phoneColumn,
       phoneIndex,
       importedPhonesCount: importedPhones.length,
@@ -159,11 +170,11 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
           const details: { phone: string; source: 'shared' | 'blacklist' | 'local'; rows: number[]; prenom?: string; nom?: string }[] = []
 
           // Vérification locale d'abord
-          if (existingContacts && existingContacts.length > 0) {
-            console.log('[ImportMappingDialog] 🔍 Vérification locale sur', existingContacts.length, 'contacts')
+          if (stableExistingContacts && stableExistingContacts.length > 0) {
+            console.log('[ImportMappingDialog] 🔍 Vérification locale sur', stableExistingContacts.length, 'contacts')
             // Créer une Map pour un accès rapide aux contacts existants par numéro normalisé
             const localMap = new Map<string, Contact>();
-            existingContacts.forEach(c => {
+            stableExistingContacts.forEach(c => {
               if (c.telephone) {
                 const norm = normalizePhoneNumber(c.telephone);
                 if (norm) localMap.set(norm, c);
@@ -290,7 +301,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
         }
       })()
     return () => { abort = true }
-  }, [previewRows, headers, mapping, suggestions, state.supabaseReady, existingContacts])
+  }, [stablePreviewRows, headers, mapping, suggestions, state.supabaseReady, stableExistingContacts])
 
   const applyFilter = (mode: 'remove' | 'isolate') => {
     console.log('[ImportMappingDialog] 🔘 Action sur les lignes détectées', { mode, lignesInitiales: previewRows.length, numerosDetectes: phoneWarnings.normalized })
@@ -384,7 +395,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
     }))
   }, [phoneWarnings.details])
 
-  const supabaseMatchesSet = useMemo(() => new Set(phoneWarnings.normalized), [phoneWarnings.normalized])
+  // const supabaseMatchesSet = useMemo(() => new Set(phoneWarnings.normalized), [phoneWarnings.normalized])
 
   const unmappedCount = useMemo(() => headers.filter((h) => !mapping[h]).length, [headers, mapping])
   const ignoredCount = useMemo(() => Object.values(mapping).filter(target => target === 'no-mapping').length, [mapping])
@@ -604,7 +615,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                             className="h-7 px-1.5 sm:px-2 text-[10px] sm:text-xs text-red-600 hover:text-red-700"
                             onClick={() => {
                               const newMapping = { ...mapping }
-                              Object.entries(conflictingMappings).forEach(([target, headers]) => {
+                              Object.entries(conflictingMappings).forEach(([_, headers]) => {
                                 // Garder seulement la première colonne, ignorer les autres
                                 headers.slice(1).forEach(header => {
                                   newMapping[header] = 'no-mapping'
@@ -665,7 +676,7 @@ export const ImportMappingDialog: React.FC<ImportMappingDialogProps> = ({
                                 <SelectTrigger className="h-8 sm:h-9 text-xs sm:text-sm w-full max-w-full sm:max-w-md">
                                   <SelectValue placeholder="Choisir un champ" />
                                 </SelectTrigger>
-                                <SelectContent container={dialogContentRef.current}>
+                                <SelectContent>
                                   <SelectItem value="no-mapping">(Ignorer)</SelectItem>
                                   {expectedTargets.map((opt) => {
                                     const isAlreadyAssigned = assignedTargets.has(opt.value) && mapping[h] !== opt.value
@@ -849,8 +860,6 @@ function chunk<T>(array: T[], size: number): T[][] {
   return chunks
 }
 
-function filterRowsByPhones(normalizedPhones: string[], mode: 'remove' | 'isolate') {
-  window.dispatchEvent(new CustomEvent('dimicall-import-filter-phones', { detail: { normalizedPhones, mode } }))
-}
+
 
 

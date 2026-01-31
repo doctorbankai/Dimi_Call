@@ -52,6 +52,10 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
       },
+      screens: {
+        xs: "480px",
+        "3xl": "1920px",
+      },
       boxShadow: {
         sm: "none",
         DEFAULT: "none",

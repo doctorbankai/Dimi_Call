@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +21,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
@@ -1351,25 +1353,30 @@ export function AnnuairePage({
               </button>
             )}
           </div>
-          <Select
-            value={statusCategory}
-            onValueChange={(value) => setStatusCategory(value as StatusCategory)}
-          >
-            <SelectTrigger
-              aria-label={statusCategoryLabel}
-              className="h-8 w-10 px-0 justify-center"
-            >
-              <Filter className="h-4 w-4" aria-hidden="true" />
-              <span className="sr-only">{statusCategoryLabel}</span>
-            </SelectTrigger>
-            <SelectContent align="start">
-              {statusCategoryOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 w-10 px-0 justify-center shadow-none bg-background border-border/70"
+                aria-label={statusCategoryLabel}
+              >
+                <Filter className="h-4 w-4" aria-hidden="true" />
+                <span className="sr-only">{statusCategoryLabel}</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuLabel>Filtrer par catégorie</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuRadioGroup value={statusCategory} onValueChange={(value) => setStatusCategory(value as StatusCategory)}>
+                {statusCategoryOptions.map((option) => (
+                  <DropdownMenuRadioItem key={option.value} value={option.value}>
+                    {option.label}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <DropdownMenu open={isDatePickerOpen} onOpenChange={setIsDatePickerOpen} modal={false}>
             <DropdownMenuTrigger asChild>
               <Button

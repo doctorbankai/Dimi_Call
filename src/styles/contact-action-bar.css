@@ -7,16 +7,16 @@
   @apply flex items-center bg-card rounded-lg shadow-sm border;
   @apply w-full mx-auto;
   @apply p-2 gap-1.5;
-  
+
   /* Optimisations de performance */
   contain: layout style paint;
-  
+
   /* Responsive breakpoints */
-  @screen sm {
+  @media (width >=640px) {
     @apply p-2.5 gap-2;
   }
-  
-  @screen md {
+
+  @media (width >=768px) {
     @apply p-3 gap-3;
   }
 }
@@ -26,20 +26,20 @@
   @apply flex items-center gap-1.5;
   @apply overflow-x-auto overflow-y-hidden;
   @apply scroll-smooth;
-  
+
   /* Optimisations GPU */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   will-change: scroll-position;
-  
+
   /* Responsive gaps */
-  @screen sm {
+  @media (width >=640px) {
     @apply gap-2;
   }
-  
-  @screen md {
+
+  @media (width >=768px) {
     @apply gap-3;
   }
 }
@@ -47,12 +47,12 @@
 /* Section informations du contact */
 .contact-info-section {
   @apply flex items-center gap-1.5 flex-shrink-0;
-  
-  @screen sm {
+
+  @media (width >=640px) {
     @apply gap-2;
   }
-  
-  @screen md {
+
+  @media (width >=768px) {
     @apply gap-3;
   }
 }
@@ -61,12 +61,12 @@
 .contact-avatar {
   @apply size-8 flex-shrink-0 rounded-full;
   @apply overflow-hidden;
-  
-  @screen sm {
+
+  @media (width >=640px) {
     @apply size-9;
   }
-  
-  @screen md {
+
+  @media (width >=768px) {
     @apply size-10;
   }
 }
@@ -75,8 +75,8 @@
 .contact-avatar-fallback {
   @apply bg-muted flex size-full items-center justify-center;
   @apply text-xs font-medium;
-  
-  @screen sm {
+
+  @media (width >=640px) {
     @apply text-sm;
   }
 }
@@ -90,20 +90,20 @@
 .contact-name {
   @apply text-xs font-medium whitespace-nowrap truncate;
   @apply max-w-[100px];
-  
-  @screen xs {
+
+  @media (width >=480px) {
     @apply max-w-[120px];
   }
-  
-  @screen sm {
+
+  @media (width >=640px) {
     @apply text-sm max-w-[150px];
   }
-  
-  @screen md {
+
+  @media (width >=768px) {
     @apply max-w-[200px];
   }
-  
-  @screen lg {
+
+  @media (width >=1024px) {
     @apply max-w-none;
   }
 }
@@ -112,12 +112,12 @@
 .contact-phone {
   @apply text-[10px] text-muted-foreground whitespace-nowrap truncate;
   @apply hidden;
-  
-  @screen xs {
+
+  @media (width >=480px) {
     @apply block;
   }
-  
-  @screen sm {
+
+  @media (width >=640px) {
     @apply text-xs;
   }
 }
@@ -126,8 +126,8 @@
 .action-bar-separator {
   @apply text-muted-foreground/50 text-sm;
   @apply hidden;
-  
-  @screen xs {
+
+  @media (width >=480px) {
     @apply block;
   }
 }
@@ -135,8 +135,8 @@
 /* Section du sélecteur de statut */
 .status-selector-section {
   @apply flex items-center gap-1.5 flex-shrink-0;
-  
-  @screen sm {
+
+  @media (width >=640px) {
     @apply gap-2;
   }
 }
@@ -145,8 +145,8 @@
 .status-label {
   @apply text-xs text-muted-foreground whitespace-nowrap;
   @apply hidden;
-  
-  @screen sm {
+
+  @media (width >=640px) {
     @apply block;
   }
 }
@@ -155,12 +155,12 @@
 .status-selector {
   @apply w-[100px];
   @apply text-[10px];
-  
-  @screen sm {
+
+  @media (width >=640px) {
     @apply w-[120px] text-xs;
   }
-  
-  @screen md {
+
+  @media (width >=768px) {
     @apply w-[140px];
   }
 }
@@ -168,12 +168,12 @@
 /* Section des boutons d'action */
 .action-buttons-section {
   @apply flex items-center gap-1.5 flex-shrink-0;
-  
-  @screen sm {
+
+  @media (width >=640px) {
     @apply gap-2;
   }
-  
-  @screen md {
+
+  @media (width >=768px) {
     @apply gap-3;
   }
 }
@@ -184,15 +184,15 @@
   @apply transition-all duration-200;
   @apply flex-shrink-0;
   @apply inline-flex items-center justify-center;
-  
+
   /* Effet hover */
   @apply hover:scale-105;
-  
-  @screen sm {
+
+  @media (width >=640px) {
     @apply size-9;
   }
-  
-  @screen md {
+
+  @media (width >=768px) {
     @apply size-10;
   }
 }
@@ -214,20 +214,21 @@
 /* Icônes dans les boutons - responsive */
 .action-button-icon {
   @apply h-3.5 w-3.5;
-  
-  @screen sm {
+
+  @media (width >=640px) {
     @apply h-4 w-4;
   }
 }
 
 /* Support du prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
+
   .action-bar-scroll,
   .action-button {
     @apply transition-none;
     scroll-behavior: auto;
   }
-  
+
   .action-bar-scroll {
     will-change: auto;
   }
@@ -255,7 +256,7 @@
   .xs\:block {
     display: block;
   }
-  
+
   .xs\:max-w-\[120px\] {
     max-width: 120px;
   }
