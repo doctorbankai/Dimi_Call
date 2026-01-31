@@ -120,8 +120,9 @@ export const normalizeIsoDate = (raw: unknown): string | null => {
       month = part1
       day = part2
     } else {
-      month = part1
-      day = part2
+      // Cas ambigu (les deux <= 12) : on privilégie le format français JJ/MM
+      day = part1
+      month = part2
     }
 
     const iso = buildIsoDate(year, month, day)
