@@ -67,6 +67,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { DatePickerWithClear } from "./DatePickerWithClear"
 import { TimePickerWithClear } from "./TimePickerWithClear"
+import StatusSelect from "./StatusSelect"
 import { ZapWidget } from "./ZapWidget"
 import { DropZoneOverlay } from "./DropZoneOverlay"
 import { ImportProgressBar } from "./ImportProgressBar"
@@ -156,6 +157,7 @@ type FormState = Pick<
   | "heureAppel"
   | "dureeAppel"
   | "source"
+  | "type"
 >
 
 const getInitialFormState = (contact: Contact | null): FormState => ({
@@ -172,6 +174,7 @@ const getInitialFormState = (contact: Contact | null): FormState => ({
   heureAppel: contact?.heureAppel ?? "",
   dureeAppel: contact?.dureeAppel ?? "",
   source: contact?.source ?? "",
+  type: contact?.type ?? "",
 })
 
 const formatDisplayDate = (value?: string) => {
@@ -1456,20 +1459,23 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                             <Badge
                                               variant="secondary"
                                               className={cn(
-                                                iconBadgeClass,
-                                                "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200",
-                                                "[&>svg]:!h-[9px] [&>svg]:!w-[9px] sm:[&>svg]:!h-[10px] sm:[&>svg]:!w-[10px]"
+                                                "w-fit whitespace-nowrap [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden [a&]:hover:bg-secondary/90 inline-flex items-center justify-center rounded-full border px-1.5 sm:px-2 py-0 text-[9px] sm:text-[10px] font-medium leading-none h-[22px] sm:h-[24px] shrink-0 capitalize",
+                                                "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800/30",
                                               )}
                                               aria-label={`Rappel ${formatDisplayDateTime(contact.dateRappel, contact.heureRappel)}`}
                                             >
-                                              <Bell className="h-[9px] w-[9px] sm:h-[10px] sm:w-[10px]" />
+                                              <Bell className="h-3 w-3" />
+                                              <span>
+                                                {format(new Date(contact.dateRappel), "dd/MM", { locale: fr })}
+                                                {contact.heureRappel && ` ${contact.heureRappel}`}
+                                              </span>
                                             </Badge>
                                           </TooltipTrigger>
                                           <TooltipContent
                                             side="top"
                                             className="bg-primary text-primary-foreground animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit origin-[--radix-tooltip-content-transform-origin] rounded-md px-3 py-1.5 text-xs text-balance shadow-md"
                                           >
-                                            {formatDisplayDate(contact.dateRappel)}
+                                            {formatDisplayDateTime(contact.dateRappel, contact.heureRappel)}
                                           </TooltipContent>
                                         </Tooltip>
                                       )}
@@ -1573,14 +1579,18 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             <h2 className="text-xl font-semibold leading-tight text-foreground">
                               {[selectedContact.prenom, selectedContact.nom].filter(Boolean).join(" ") || "Sans nom"}
                             </h2>
-                            <div
-                              className={cn(
-                                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors",
-                                selectedStatusBadge.color,
-                              )}
-                            >
-                              <div className={cn("w-1.5 h-1.5 rounded-full", selectedStatusBadge.dot)} />
-                              {selectedStatusBadge.label}
+                            <div className="flex items-center">
+                              <StatusSelect
+                                value={selectedContact.statut}
+                                onChange={(newStatus) => {
+                                  onUpdateContact({
+                                    id: selectedContact.id,
+                                    statut: newStatus,
+                                  })
+                                }}
+                                displayAsBadge={true}
+                                triggerClassName="!min-w-0 w-auto hover:opacity-80 transition-opacity"
+                              />
                             </div>
                           </div>
                           <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
@@ -1727,6 +1737,14 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                     id="contact-source"
                                     value={formState.source}
                                     onChange={(event) => handleFormChange("source", event.target.value)}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="contact-type">Type</Label>
+                                  <Input
+                                    id="contact-type"
+                                    value={formState.type}
+                                    onChange={(event) => handleFormChange("type", event.target.value)}
                                   />
                                 </div>
                                 <div className="space-y-2">

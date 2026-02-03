@@ -15,7 +15,7 @@ export const TimePickerWithClear: React.FC<TimePickerWithClearProps> = ({
   value,
   onChange,
   onClear,
-  stepMinutes = 15,
+  stepMinutes = 5,
 }) => {
   return (
     <div className="space-y-2">
