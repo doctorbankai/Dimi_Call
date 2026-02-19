@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -14,8 +14,11 @@ import {
   FieldLabel,
 } from '@/components/ui/field';
 import { useSupabaseAuth } from '../lib/auth-client';
-import { Eye, EyeOff, Lock, Mail, Loader2, X } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, Loader2, X, Download, RefreshCw, AlertCircle } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { useAutoUpdate } from '@/hooks/useAutoUpdate';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -26,6 +29,12 @@ export const LoginPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const { signInWithPassword } = useSupabaseAuth();
+  const { updateState, checkForUpdates, installUpdate } = useAutoUpdate();
+
+  // Vérifier les mises à jour au chargement
+  useEffect(() => {
+    checkForUpdates();
+  }, [checkForUpdates]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,6 +122,46 @@ export const LoginPage: React.FC = () => {
           </div>
           <span className="text-xl font-bold">DimiCall</span>
         </a>
+
+        {/* Banner de mise à jour */}
+        {updateState.available && !updateState.downloaded && (
+          <Alert className="bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800">
+            <RefreshCw className="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" />
+            <AlertTitle className="text-blue-800 dark:text-blue-300">Mise à jour disponible</AlertTitle>
+            <AlertDescription className="text-blue-700 dark:text-blue-400 text-xs">
+              Téléchargement en cours... {updateState.progress}%
+              <Progress value={updateState.progress} className="h-1 mt-2 bg-blue-200 dark:bg-blue-900" />
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {updateState.downloaded && (
+          <Alert className="bg-green-50 border-green-200 dark:bg-green-950 dark:border-green-800">
+            <Download className="h-4 w-4 text-green-600 dark:text-green-400" />
+            <AlertTitle className="text-green-800 dark:text-green-300">Mise à jour prête</AlertTitle>
+            <AlertDescription className="text-green-700 dark:text-green-400 text-xs flex flex-col gap-2">
+              <span>Une nouvelle version est prête à être installée.</span>
+              <Button
+                size="sm"
+                variant="default"
+                className="bg-green-600 hover:bg-green-700 text-white w-full"
+                onClick={() => installUpdate()}
+              >
+                Installer et redémarrer
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {updateState.error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Erreur de mise à jour</AlertTitle>
+            <AlertDescription>
+              {updateState.error}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Card>
           <CardHeader className="text-center">
