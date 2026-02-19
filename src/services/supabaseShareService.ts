@@ -19,6 +19,7 @@ export interface ShareTargetState {
     processed: number
     shared: number
     filtered: number
+    skipped?: boolean
   }
 }
 
@@ -41,6 +42,7 @@ type Listener = (state: SupabaseShareState) => void
 interface RuntimeTargetState {
   inFlight: boolean
   pendingResync: boolean
+  lastSyncedHash: string | null
 }
 
 const STORAGE_KEY = 'dimicall_supabase_share_preferences'
@@ -60,10 +62,10 @@ const state: SupabaseShareState = {
 }
 
 const runtimeState: Record<SyncTarget, RuntimeTargetState> = {
-  phone: { inFlight: false, pendingResync: false },
-  blacklist: { inFlight: false, pendingResync: false },
-  calls: { inFlight: false, pendingResync: false },
-  statusEvents: { inFlight: false, pendingResync: false },
+  phone: { inFlight: false, pendingResync: false, lastSyncedHash: null },
+  blacklist: { inFlight: false, pendingResync: false, lastSyncedHash: null },
+  calls: { inFlight: false, pendingResync: false, lastSyncedHash: null },
+  statusEvents: { inFlight: false, pendingResync: false, lastSyncedHash: null },
 }
 
 const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
@@ -132,6 +134,14 @@ function loadPreferences() {
     if (typeof parsed.blacklist === 'boolean') state.blacklist.enabled = parsed.blacklist
     if (typeof parsed.calls === 'boolean') state.calls.enabled = parsed.calls
     if (typeof parsed.statusEvents === 'boolean') state.statusEvents.enabled = parsed.statusEvents
+
+    if ((parsed as any).hashes) {
+      const hashes = (parsed as any).hashes
+      if (hashes.phone) runtimeState.phone.lastSyncedHash = hashes.phone
+      if (hashes.blacklist) runtimeState.blacklist.lastSyncedHash = hashes.blacklist
+      if (hashes.calls) runtimeState.calls.lastSyncedHash = hashes.calls
+      if (hashes.statusEvents) runtimeState.statusEvents.lastSyncedHash = hashes.statusEvents
+    }
   } catch (error) {
     supabaseLogger.warn('[share] Lecture préférences Supabase échouée', error)
   }
@@ -145,6 +155,12 @@ function savePreferences() {
       blacklist: state.blacklist.enabled,
       calls: state.calls.enabled,
       statusEvents: state.statusEvents.enabled,
+      hashes: {
+        phone: runtimeState.phone.lastSyncedHash,
+        blacklist: runtimeState.blacklist.lastSyncedHash,
+        calls: runtimeState.calls.lastSyncedHash,
+        statusEvents: runtimeState.statusEvents.lastSyncedHash,
+      }
     }
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
   } catch (error) {
@@ -215,7 +231,7 @@ function scheduleSync(target: SyncTarget, reason: string) {
   debounceTimers[target] = window.setTimeout(() => {
     debounceTimers[target] = undefined
     void runSync(target, reason)
-  }, reason === 'resume' ? 250 : 750)
+  }, reason === 'resume' ? 250 : 30000)
 }
 
 async function ensureSupabaseReady(): Promise<boolean> {
@@ -311,7 +327,7 @@ async function runSync(target: SyncTarget, reason: string) {
   }
 }
 
-async function performSync(target: SyncTarget): Promise<{ processed: number; shared: number; filtered: number; withMetadata?: number }> {
+async function performSync(target: SyncTarget): Promise<{ processed: number; shared: number; filtered: number; withMetadata?: number; skipped?: boolean }> {
   const events = await fetchLocalEvents()
   if (target === 'phone') {
     return syncSharedPhoneNumbers(events)
@@ -338,7 +354,7 @@ async function fetchLocalEvents(): Promise<any[]> {
   return Array.isArray(result.data) ? result.data : []
 }
 
-async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number }> {
+async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number; skipped?: boolean }> {
   const client = supabaseService.getClient()
   const authIdentity = await getCurrentAuthIdentity()
   if (!authIdentity.id || !authIdentity.email) {
@@ -406,7 +422,22 @@ async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: numbe
     source: entry.sample.source || 'Données',
   }))
 
+  /* Hashing & Deduplication */
+  const currentHash = computeHash(payload)
+  if (currentHash === runtimeState.phone.lastSyncedHash) {
+    console.log('[share] Phone sync skipped (no changes)')
+    const withMetadata = payload.filter(entry => entry.prenom && entry.nom && entry.source).length
+    return {
+      processed: events.length,
+      shared: 0,
+      filtered,
+      withMetadata,
+      skipped: true
+    }
+  }
+
   await chunkedUpsert(client, 'shared_phone_numbers', payload, 'normalized_phone')
+  runtimeState.phone.lastSyncedHash = currentHash
 
   const withMetadata = payload.filter(entry => entry.prenom && entry.nom && entry.source).length
 
@@ -418,7 +449,7 @@ async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: numbe
   }
 }
 
-async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number }> {
+async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number; skipped?: boolean }> {
   const client = supabaseService.getClient()
   const authIdentity = await getCurrentAuthIdentity()
   if (!authIdentity.id || !authIdentity.email) {
@@ -499,7 +530,22 @@ async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: n
     source: entry.sample.source || 'Données',
   }))
 
+  /* Hashing & Deduplication */
+  const currentHash = computeHash(payload)
+  if (currentHash === runtimeState.blacklist.lastSyncedHash) {
+    console.log('[share] Blacklist sync skipped (no changes)')
+    const withMetadata = payload.filter(entry => entry.prenom && entry.nom && entry.source).length
+    return {
+      processed,
+      shared: 0,
+      filtered,
+      withMetadata,
+      skipped: true
+    }
+  }
+
   await chunkedUpsert(client, 'shared_blacklist_numbers', payload, 'normalized_phone')
+  runtimeState.blacklist.lastSyncedHash = currentHash
 
   const withMetadata = payload.filter(entry => entry.prenom && entry.nom && entry.source).length
 
@@ -511,7 +557,7 @@ async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: n
   }
 }
 
-async function syncCallEvents(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number }> {
+async function syncCallEvents(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number; skipped?: boolean }> {
   const client = supabaseService.getClient()
   const contacts = loadContactsSnapshot()
   const contactsMap = new Map<string, Contact>()
@@ -550,7 +596,21 @@ async function syncCallEvents(events: any[]): Promise<{ processed: number; share
     }
   }
 
+  /* Hashing & Deduplication */
+  const currentHash = computeHash(payload)
+  if (currentHash === runtimeState.calls.lastSyncedHash) {
+    console.log('[share] Calls sync skipped (no changes)')
+    return {
+      processed: events.length,
+      shared: 0,
+      filtered,
+      withMetadata: enriched,
+      skipped: true
+    }
+  }
+
   await chunkedUpsert(client, 'call_data_events', payload, 'user_uid,local_event_id')
+  runtimeState.calls.lastSyncedHash = currentHash
 
   return {
     processed: events.length,
@@ -560,7 +620,7 @@ async function syncCallEvents(events: any[]): Promise<{ processed: number; share
   }
 }
 
-async function syncStatusEventsMirror(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number }> {
+async function syncStatusEventsMirror(events: any[]): Promise<{ processed: number; shared: number; filtered: number; withMetadata: number; skipped?: boolean }> {
   const client = supabaseService.getClient()
   const authIdentity = await getCurrentAuthIdentity()
   if (!authIdentity.id || !authIdentity.email) {
@@ -588,7 +648,21 @@ async function syncStatusEventsMirror(events: any[]): Promise<{ processed: numbe
     }
   }
 
+  /* Hashing & Deduplication */
+  const currentHash = computeHash(payload)
+  if (currentHash === runtimeState.statusEvents.lastSyncedHash) {
+    console.log('[share] StatusEvents sync skipped (no changes)')
+    return {
+      processed: events.length,
+      shared: 0,
+      filtered,
+      withMetadata: 0,
+      skipped: true
+    }
+  }
+
   await chunkedUpsert(client, 'dimicall_status_events', payload, 'user_uid,local_event_id')
+  runtimeState.statusEvents.lastSyncedHash = currentHash
 
   return {
     processed: events.length,
@@ -866,7 +940,7 @@ function normalizeNumericId(value: unknown): number | null {
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 async function chunkedUpsert(client: any, table: string, records: any[], conflictTarget: string) {
-  const chunkSize = 50
+  const chunkSize = 25 // Réduction de 50 à 25 pour stabilité
   for (let i = 0; i < records.length; i += chunkSize) {
     const chunk = records.slice(i, i + chunkSize)
     if (chunk.length === 0) continue
@@ -874,11 +948,12 @@ async function chunkedUpsert(client: any, table: string, records: any[], conflic
       onConflict: conflictTarget,
     })
     if (error) {
+      console.error(`[share] Erreur chunkedUpsert table=${table}`, error)
       throw new Error(error.message || `Erreur Supabase (${table})`)
     }
-    // Petite pause pour laisser respirer la base
+    // Pause plus longue pour laisser respirer la base (200ms au lieu de 50ms)
     if (i + chunkSize < records.length) {
-      await delay(50)
+      await delay(200)
     }
   }
 }
@@ -986,5 +1061,14 @@ export const supabaseShareManager = {
 }
 
 export type SupabaseShareManager = typeof supabaseShareManager
-
+function computeHash(data: any): string {
+  const str = JSON.stringify(data)
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i)
+    hash = (hash << 5) - hash + char
+    hash = hash & hash // Convert to 32bit integer
+  }
+  return hash.toString()
+}
 

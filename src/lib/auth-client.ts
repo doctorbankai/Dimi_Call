@@ -31,58 +31,7 @@ export const useSupabaseAuth = () => {
     }
   };
 
-  // Fonction pour vérifier si l'utilisateur existe encore dans Supabase
-  const verifyUserStillExists = async (currentUser: AuthUser): Promise<boolean> => {
-    if (!currentUser) return false;
 
-    try {
-      // Tenter de récupérer les informations utilisateur depuis Supabase
-      const { data, error } = await supabase.auth.getUser();
-
-      if (error) {
-        // Tolérer les erreurs réseau/temporaires
-        const status = (error as any)?.status ?? (error as any)?.cause?.status;
-        const name = (error as any)?.name;
-        const isNetworkTransient = status === 0 || name === 'AuthRetryableFetchError';
-        if (isNetworkTransient) {
-          console.warn('[Auth] Vérification utilisateur: erreur réseau transitoire, on réessaiera plus tard');
-          supabaseLogger.warn('auth.getUser transient network error', { name, status, message: (error as any)?.message });
-          return true; // ne pas déclencher de sign-out
-        }
-        console.warn('[Auth] Erreur vérification utilisateur non transitoire:', {
-          name: (error as any)?.name,
-          status: (error as any)?.status,
-          message: (error as any)?.message
-        });
-        supabaseLogger.error('auth.getUser non-transient error', { name: (error as any)?.name, status: (error as any)?.status, message: (error as any)?.message });
-        return false;
-      }
-
-      // Si pas d'utilisateur retourné, l'utilisateur a été supprimé
-      if (!data.user) {
-        console.log('[Auth] ⚠️ Utilisateur supprimé détecté - session invalide');
-        return false;
-      }
-
-      return true;
-    } catch (error: any) {
-      const status = error?.status ?? error?.cause?.status;
-      const name = error?.name;
-      const isNetworkTransient = status === 0 || name === 'AuthRetryableFetchError';
-      if (isNetworkTransient) {
-        console.warn('[Auth] Vérification utilisateur (catch): erreur réseau transitoire, on réessaiera plus tard');
-        supabaseLogger.warn('auth.getUser catch transient network error', { name, status, message: error?.message });
-        return true;
-      }
-      console.error('[Auth] Erreur lors de la vérification utilisateur:', {
-        name: error?.name,
-        status: status,
-        message: error?.message
-      });
-      supabaseLogger.error('auth.getUser unexpected error', { name: error?.name, status, message: error?.message });
-      return false;
-    }
-  };
 
   useEffect(() => {
     setIsLoading(true);
@@ -202,63 +151,9 @@ export const useSupabaseAuth = () => {
       }
     );
 
-    // 3. Vérification périodique de l'existence de l'utilisateur et des sessions (toutes les 30 secondes)
-    const userVerificationInterval = setInterval(async () => {
-      // Ne pas faire de vérification pendant un appel ou hors-ligne
-      if (isOffline() || isCallInProgress()) {
-        return;
-      }
+    // 3. Vérification périodique supprimée pour réduire la charge DB
+    // L'utilisateur sera déconnecté naturellement à l'expiration du token ou via onAuthStateChange
 
-      const currentSession = await supabase.auth.getSession();
-      const currentUser = currentSession.data.session?.user ?? null;
-
-      if (currentUser) {
-        // Vérifier si l'utilisateur existe toujours
-        const userStillExists = await verifyUserStillExists(currentUser);
-        if (!userStillExists) {
-          console.log('[Auth] 🚨 Utilisateur supprimé - déconnexion forcée');
-          // Forcer la déconnexion seulement si pas d'appel
-          if (!isCallInProgress()) {
-            await supabase.auth.signOut();
-            window.location.reload();
-            setDisconnectInfo({ reason: 'user_deleted', details: 'Utilisateur inexistant dans Supabase.' });
-            supabaseLogger.warn('Force sign-out due to user deletion');
-          } else {
-            // Maintenir l'état jusqu'à la fin de l'appel
-            setAuthHoldReason('in_call');
-            setShadowSession(lastGoodSessionRef.current);
-            setShadowUser(lastGoodUserRef.current);
-            supabaseLogger.warn('User deleted but sign-out deferred (call in progress)');
-          }
-        }
-
-        // Vérifier les sessions concurrentes (backup de la surveillance temps réel)
-        try {
-          const { data: sessions, error } = await supabase
-            .from('active_sessions')
-            .select('session_id, created_at')
-            .eq('user_id', currentUser.id)
-            .order('created_at', { ascending: false });
-
-          if (!error && sessions && sessions.length > 1) {
-            // Plus d'une session active détectée
-            const currentSessionId = (currentSession.data.session as any)?.access_token?.substring(0, 20);
-            const isCurrentSessionNewest = sessions[0]?.session_id === currentSessionId;
-
-            if (!isCurrentSessionNewest) {
-              console.warn('[Auth] 🚨 Session plus récente détectée - déconnexion');
-              supabaseLogger.warn('Newer session detected, signing out');
-              await supabase.auth.signOut();
-              if (typeof window !== 'undefined') {
-                alert('Votre compte a été connecté depuis un autre appareil. Vous avez été déconnecté.');
-              }
-            }
-          }
-        } catch (error) {
-          console.warn('[Auth] Erreur lors de la vérification des sessions:', error);
-        }
-      }
-    }, 30 * 1000); // Vérification toutes les 30 secondes (plus fréquent pour détecter rapidement)
 
     // Écouter les changements réseau et de stockage pour relâcher le maintien
     const handleOnline = async () => {
@@ -300,7 +195,7 @@ export const useSupabaseAuth = () => {
 
     return () => {
       authListener.subscription.unsubscribe();
-      clearInterval(userVerificationInterval);
+      // clearInterval(userVerificationInterval); // Supprimé
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('storage', handleStorage);
     };
