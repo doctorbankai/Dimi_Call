@@ -1942,9 +1942,9 @@ export const buildReminderDescription = (contact: Contact): string => {
 // ===== GOOGLE CALENDAR EXPORT MAIN FUNCTION =====
 
 /**
- * Exporte les rappels de contacts vers un fichier CSV compatible Google Calendar
+ * Exporte les rappels de contacts vers un fichier ICS compatible Google Calendar
  */
-export const exportGoogleCalendarCSV = (contacts: Contact[]): void => {
+export const exportGoogleCalendarICS = (contacts: Contact[]): void => {
   // Filtrer les contacts ayant des dates de rappel définies
   const contactsWithReminders = contacts.filter(contact =>
     contact.dateRappel && contact.dateRappel.trim() !== ''
@@ -1954,39 +1954,66 @@ export const exportGoogleCalendarCSV = (contacts: Contact[]): void => {
     throw new Error('Aucun rappel à exporter');
   }
 
-  // Mapping vers le format Google Calendar
-  const calendarEvents = contactsWithReminders.map(contact => {
+  let icsContent = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Dimi Call//FR',
+    'CALSCALE:GREGORIAN'
+  ].join('\r\n') + '\r\n';
+
+  contactsWithReminders.forEach(contact => {
     try {
-      const startDate = formatDateForGoogleCalendar(contact.dateRappel);
-      const startTime = contact.heureRappel ? formatTimeForGoogleCalendar(contact.heureRappel) : '';
-      const endTime = contact.heureRappel ? calculateEndTime(contact.heureRappel) : '';
+      const dateParts = contact.dateRappel.split('-');
+      if (dateParts.length !== 3 || dateParts[0].length !== 4) {
+        throw new Error('Format de date invalide');
+      }
+      const icsDate = contact.dateRappel.replace(/-/g, '');
+
       const isAllDay = !contact.heureRappel || contact.heureRappel.trim() === '';
 
-      return {
-        'Subject': `Rappel: ${contact.prenom} ${contact.nom}`,
-        'Start Date': startDate,
-        'Start Time': startTime,
-        'End Date': startDate,
-        'End Time': endTime,
-        'All Day Event': isAllDay ? 'True' : 'False',
-        'Description': buildReminderDescription(contact),
-        'Location': '',
-        'Private': 'False'
-      };
+      icsContent += 'BEGIN:VEVENT\r\n';
+      icsContent += `UID:${uuidv4()}@dimicall.fr\r\n`;
+
+      const now = new Date();
+      const dtstamp = now.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+      icsContent += `DTSTAMP:${dtstamp}\r\n`;
+
+      if (isAllDay) {
+        icsContent += `DTSTART;VALUE=DATE:${icsDate}\r\n`;
+        const nextDay = new Date(contact.dateRappel);
+        nextDay.setDate(nextDay.getDate() + 1);
+        const nextDayStr = nextDay.toISOString().split('T')[0].replace(/-/g, '');
+        icsContent += `DTEND;VALUE=DATE:${nextDayStr}\r\n`;
+      } else {
+        const timeParts = contact.heureRappel.split(':');
+        if (timeParts.length !== 2) throw new Error("Format d'heure invalide");
+
+        // Use floating time (without Z) so Google Calendar applies the user's local timezone
+        const icsTime = `${icsDate}T${timeParts[0]}${timeParts[1]}00`;
+        icsContent += `DTSTART:${icsTime}\r\n`;
+        icsContent += `DTEND:${icsTime}\r\n`;
+      }
+
+      icsContent += `SUMMARY:Rappel: ${contact.prenom} ${contact.nom}\r\n`;
+
+      const description = buildReminderDescription(contact).replace(/\n/g, '\\n');
+      icsContent += `DESCRIPTION:${description}\r\n`;
+
+      icsContent += 'TRANSP:TRANSPARENT\r\n';
+      icsContent += 'END:VEVENT\r\n';
+
     } catch (error) {
       console.error(`Erreur lors du formatage du contact ${contact.prenom} ${contact.nom}:`, error);
-      throw new Error(`Erreur de formatage pour le contact ${contact.prenom} ${contact.nom}: ${error instanceof Error ? error.message : 'Erreur inconnue'}`);
+      throw new Error(`Erreur de formatage pour le contact ${contact.prenom} ${contact.nom}`);
     }
   });
 
-  // Génération du CSV avec encodage UTF-8 BOM
-  const csvContent = Papa.unparse(calendarEvents);
-  const bom = '\uFEFF'; // UTF-8 BOM pour la compatibilité Google Calendar
-  const blob = new Blob([bom + csvContent], {
-    type: 'text/csv;charset=utf-8;'
+  icsContent += 'END:VCALENDAR\r\n';
+
+  const blob = new Blob([icsContent], {
+    type: 'text/calendar;charset=utf-8;'
   });
 
-  // Generate filename with format: google-calendar-export-YYYY-MM-DD-HH-MM-SS
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -1995,9 +2022,8 @@ export const exportGoogleCalendarCSV = (contacts: Contact[]): void => {
   const minutes = String(now.getMinutes()).padStart(2, '0');
   const seconds = String(now.getSeconds()).padStart(2, '0');
   const timestamp = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}`;
-  const filename = `google-calendar-export-${timestamp}.csv`;
+  const filename = `google-calendar-export-${timestamp}.ics`;
 
-  // Téléchargement automatique du fichier
   const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
   link.setAttribute('href', url);
@@ -2006,8 +2032,6 @@ export const exportGoogleCalendarCSV = (contacts: Contact[]): void => {
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-
-  // Nettoyer l'URL pour libérer la mémoire
   URL.revokeObjectURL(url);
 };
 

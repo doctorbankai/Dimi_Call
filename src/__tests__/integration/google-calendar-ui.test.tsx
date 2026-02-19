@@ -12,7 +12,7 @@ jest.mock('../../services/dataService', () => ({
   saveContacts: jest.fn(),
   loadCallStates: jest.fn(),
   saveCallStates: jest.fn(),
-  exportGoogleCalendarCSV: jest.fn(),
+  exportGoogleCalendarICS: jest.fn(),
   hasImportedTable: jest.fn(() => false),
 }));
 
@@ -179,7 +179,7 @@ describe('Google Calendar Export UI Integration', () => {
 
   test('should trigger export when Agenda button is clicked', async () => {
     (dataService.loadContacts as jest.Mock).mockReturnValue(mockContactsWithReminders);
-    (dataService.exportGoogleCalendarCSV as jest.Mock).mockImplementation(() => {});
+    (dataService.exportGoogleCalendarICS as jest.Mock).mockImplementation(() => {});
 
     render(<App />);
 
@@ -188,7 +188,7 @@ describe('Google Calendar Export UI Integration', () => {
       fireEvent.click(agendaButton);
     });
 
-    expect(dataService.exportGoogleCalendarCSV).toHaveBeenCalledWith(mockContactsWithReminders);
+    expect(dataService.exportGoogleCalendarICS).toHaveBeenCalledWith(mockContactsWithReminders);
   });
 
   test('should not trigger export when Agenda button is disabled', async () => {
@@ -201,7 +201,7 @@ describe('Google Calendar Export UI Integration', () => {
       fireEvent.click(agendaButton);
     });
 
-    expect(dataService.exportGoogleCalendarCSV).not.toHaveBeenCalled();
+    expect(dataService.exportGoogleCalendarICS).not.toHaveBeenCalled();
   });
 
   test('should update badge count when contacts change', async () => {
@@ -230,7 +230,7 @@ describe('Google Calendar Export UI Integration', () => {
 
   test('should handle export errors gracefully', async () => {
     (dataService.loadContacts as jest.Mock).mockReturnValue(mockContactsWithReminders);
-    (dataService.exportGoogleCalendarCSV as jest.Mock).mockImplementation(() => {
+    (dataService.exportGoogleCalendarICS as jest.Mock).mockImplementation(() => {
       throw new Error('Export failed');
     });
 
@@ -244,7 +244,7 @@ describe('Google Calendar Export UI Integration', () => {
       fireEvent.click(agendaButton);
     });
 
-    expect(dataService.exportGoogleCalendarCSV).toHaveBeenCalled();
+    expect(dataService.exportGoogleCalendarICS).toHaveBeenCalled();
     expect(consoleSpy).toHaveBeenCalledWith('Erreur lors de l\'export Google Calendar:', expect.any(Error));
 
     consoleSpy.mockRestore();

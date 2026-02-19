@@ -84,7 +84,7 @@ import {
 import { Command, CommandInput, CommandList, CommandGroup, CommandItem, CommandEmpty } from "@/components/ui/command"
 import { Progress } from "@/components/ui/progress"
 import { shortcutService } from '../services/shortcutService'
-import { exportContactsToFile, exportGoogleContactsCSV, exportGoogleCalendarCSV, importContactsFromFile } from '../services/dataService'
+import { exportContactsToFile, exportGoogleContactsCSV, exportGoogleCalendarICS, importContactsFromFile } from '../services/dataService'
 import { ViewSwitcher, ViewMode } from '@/components/ViewSwitcher'
 import { PaginatedContactTable } from '@/components/PaginatedContactTable'
 import type { ContactTableRef } from '@/components/ContactTable'
@@ -474,7 +474,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
         if (calendarRemindersCount === 0) {
           toast.info('Aucun rappel à exporter vers Google Agenda');
         } else {
-          exportGoogleCalendarCSV(contacts);
+          exportGoogleCalendarICS(contacts);
           exportCount++;
         }
       } catch (error) {

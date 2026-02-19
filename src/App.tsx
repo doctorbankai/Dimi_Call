@@ -38,7 +38,7 @@ import {
   generateGmailComposeUrl,
   generateSmsMessage,
   exportGoogleContactsCSV,
-  exportGoogleCalendarCSV,
+  exportGoogleCalendarICS,
   reorderContactsColumns
 } from './services/dataService';
 import { localDbService } from './services/localDbService';
@@ -1760,7 +1760,7 @@ Dimitri MOREL - Arcanis Conseil`;
         if (calendarRemindersCount === 0) {
           showNotification('info', 'Aucun rappel à exporter vers Google Agenda');
         } else {
-          exportGoogleCalendarCSV(contacts);
+          exportGoogleCalendarICS(contacts);
           exportCount++;
         }
       } catch (error) {
