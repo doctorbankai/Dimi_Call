@@ -62,21 +62,21 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ them
       'FCP': 'First Contentful Paint - Temps du premier contenu affiché',
       'TTFB': 'Time to First Byte - Temps de réponse du serveur',
     };
-    
+
     if (name.startsWith('custom-')) {
       return `Action personnalisée: ${name.replace('custom-', '')}`;
     }
-    
+
     return descriptions[name] || name;
   };
 
   const exportReport = () => {
     const report = getReport();
     const dataStr = JSON.stringify(report, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
+    const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+
     const exportFileDefaultName = `performance-report-${new Date().toISOString().split('T')[0]}.json`;
-    
+
     const linkElement = document.createElement('a');
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
@@ -98,7 +98,7 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ them
             </p>
           </div>
         </div>
-        
+
         <div className="flex space-x-2">
           <Button
             onClick={() => setShowDetails(!showDetails)}
@@ -113,7 +113,7 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ them
             size="sm"
             disabled={metrics.length === 0}
           >
-            📥 Exporter
+            📤 Exporter
           </Button>
         </div>
       </div>
@@ -149,7 +149,7 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ them
             {Object.entries(performanceSummary.averageValues).map(([metricType, avgValue]) => {
               const latestMetric = metrics.filter(m => m.name === metricType).slice(-1)[0];
               const rating = latestMetric?.rating || 'good';
-              
+
               return (
                 <div key={metricType} className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
@@ -183,7 +183,7 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ them
           <p className={`text-xs ${textDimColor} mb-3`}>
             {getMetricDescription(selectedMetricType)}
           </p>
-          
+
           <div className="space-y-2 max-h-40 overflow-y-auto">
             {getMetricsByType(selectedMetricType).slice(-5).map((metric, index) => (
               <div key={`${metric.timestamp}-${index}`} className="flex items-center justify-between text-xs">

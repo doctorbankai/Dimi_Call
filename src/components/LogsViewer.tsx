@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { FileText, Copy, Trash2, Download, Filter, Search, ChevronDown, CheckCircle } from 'lucide-react';
+import { FileText, Copy, Trash2, Upload, Filter, Search, ChevronDown, CheckCircle } from 'lucide-react';
 import { LogsService, LogEntry, LogsFilter, LogLevel } from '../services/logsService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,7 +39,7 @@ export const LogsViewer: React.FC<LogsViewerProps> = () => {
   );
   const [copySuccess, setCopySuccess] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
-  
+
   const logsContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -162,7 +162,7 @@ export const LogsViewer: React.FC<LogsViewerProps> = () => {
                 </CardDescription>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -174,7 +174,7 @@ export const LogsViewer: React.FC<LogsViewerProps> = () => {
                 Filtres
                 <ChevronDown className={cn("w-4 h-4 transition-transform", showFilters && "rotate-180")} />
               </Button>
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -194,7 +194,7 @@ export const LogsViewer: React.FC<LogsViewerProps> = () => {
                   </>
                 )}
               </Button>
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -202,10 +202,10 @@ export const LogsViewer: React.FC<LogsViewerProps> = () => {
                 className="gap-1.5"
                 disabled={logs.length === 0}
               >
-                <Download className="w-4 h-4" />
+                <Upload className="w-4 h-4" />
                 Exporter
               </Button>
-              
+
               <Button
                 variant="outline"
                 size="sm"
@@ -248,7 +248,7 @@ export const LogsViewer: React.FC<LogsViewerProps> = () => {
                       onClick={() => handleLevelToggle(level)}
                       className={cn(
                         "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border transition-colors",
-                        selectedLevels.has(level) 
+                        selectedLevels.has(level)
                           ? LOG_LEVEL_COLORS[level]
                           : "bg-muted text-muted-foreground border-transparent hover:bg-muted/80"
                       )}
@@ -294,18 +294,18 @@ export const LogsViewer: React.FC<LogsViewerProps> = () => {
                     <div className="flex-shrink-0 text-xs text-muted-foreground min-w-[80px]">
                       {formatTimestamp(log.timestamp)}
                     </div>
-                    
+
                     <Badge
                       variant="outline"
                       className={cn("flex-shrink-0 text-xs", LOG_LEVEL_COLORS[log.level])}
                     >
                       {log.level.toUpperCase()}
                     </Badge>
-                    
+
                     <div className="flex-shrink-0 text-xs text-muted-foreground min-w-[80px]">
                       {log.source}
                     </div>
-                    
+
                     <div className="flex-1 break-words">
                       <div>{log.message}</div>
                       {log.stack && (
@@ -339,8 +339,8 @@ export const LogsViewer: React.FC<LogsViewerProps> = () => {
               onClick={() => setIsAutoScroll(!isAutoScroll)}
               className={cn(
                 "px-2 py-1 rounded text-xs",
-                isAutoScroll 
-                  ? "bg-green-500/10 text-green-500" 
+                isAutoScroll
+                  ? "bg-green-500/10 text-green-500"
                   : "bg-muted text-muted-foreground"
               )}
             >
@@ -348,7 +348,7 @@ export const LogsViewer: React.FC<LogsViewerProps> = () => {
             </button>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-2">
           {Object.entries(logCounts).map(([level, count]) => (
             <div key={level} className="flex items-center gap-1">

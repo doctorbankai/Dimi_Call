@@ -2,18 +2,18 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
-import { 
-  FileSpreadsheet, 
-  Upload, 
-  Settings, 
+import {
+  FileSpreadsheet,
+  Upload,
+  Settings,
   Eye,
   Download
 } from 'lucide-react';
@@ -86,7 +86,7 @@ export const ColumnTypesDemo: React.FC = () => {
                             <div className="text-sm font-medium text-center">
                               {column.label}
                             </div>
-                            
+
                             {/* Sélecteur de type */}
                             <ColumnTypeSelector
                               columnId={column.id}
@@ -158,7 +158,7 @@ export const ColumnTypesDemo: React.FC = () => {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Upload className="w-5 h-5" />
+                <Download className="w-5 h-5" />
                 Processus d'Import
               </CardTitle>
               <CardDescription>
@@ -170,7 +170,7 @@ export const ColumnTypesDemo: React.FC = () => {
                 {/* Étapes d'import */}
                 <div className="space-y-4">
                   <h4 className="text-lg font-medium">Étapes d'import :</h4>
-                  
+
                   <div className="grid gap-4 md:grid-cols-2">
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
@@ -225,12 +225,12 @@ export const ColumnTypesDemo: React.FC = () => {
                 {/* Boutons d'action */}
                 <div className="flex gap-3 pt-4">
                   <Button className="flex items-center gap-2">
-                    <Upload className="w-4 h-4" />
+                    <Download className="w-4 h-4" />
                     Importer un fichier
                   </Button>
-                  
+
                   <Button variant="outline" className="flex items-center gap-2">
-                    <Download className="w-4 h-4" />
+                    <Upload className="w-4 h-4" />
                     Télécharger un modèle
                   </Button>
                 </div>
