@@ -390,11 +390,11 @@ export default function PaginatedEventTable() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8" title="Exporter">
-                  <Download className="h-4 w-4" />
+                  <Upload className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-40">
-                <DropdownMenuLabel className="flex items-center gap-2"><Download className="w-4 h-4" />Export</DropdownMenuLabel>
+                <DropdownMenuLabel className="flex items-center gap-2"><Upload className="w-4 h-4" />Export</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
                   <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent('dimicall-db-export'))}>
@@ -413,7 +413,7 @@ export default function PaginatedEventTable() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8" title="Importer">
-                  <Upload className="h-4 w-4" />
+                  <Download className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-44">

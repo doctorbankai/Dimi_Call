@@ -1105,7 +1105,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
               }}
               title="Importer un fichier CSV/Excel"
             >
-              <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+              <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">Importer</span>
             </Button>
             <DropdownMenu>
@@ -1117,13 +1117,13 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                   className="h-8 px-2 shrink-0 shadow-none bg-white dark:bg-card"
                   title="Exporter les données"
                 >
-                  <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   <span className="hidden sm:inline">Exporter</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-56 border shadow-none bg-popover text-popover-foreground z-50">
                 <DropdownMenuLabel className="flex items-center gap-2">
-                  <Download className="w-4 h-4" />
+                  <Upload className="w-4 h-4" />
                   Options d'export
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />

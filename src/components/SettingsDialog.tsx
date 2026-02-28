@@ -470,6 +470,210 @@ const TemplateTextarea: React.FC<TemplateTextareaProps> = ({
   );
 };
 
+interface SortableColumnRowProps {
+  columnName: string;
+  isEssential: boolean;
+  label: string;
+  canRemove: boolean;
+  onEssentialChange: (columnName: string, checked: boolean) => void;
+  onRemove: (columnName: string) => void;
+}
+
+const SortableColumnRow = React.memo(({
+  columnName,
+  isEssential,
+  label,
+  canRemove,
+  onEssentialChange,
+  onRemove
+}: SortableColumnRowProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: columnName });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.7 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center justify-between p-4 bg-background",
+        isDragging && "ring-2 ring-primary/30 shadow-sm"
+      )}
+    >
+      <div className="flex items-center gap-3 flex-1 min-w-0">
+        <button
+          className="p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
+          aria-label="Déplacer"
+          {...attributes}
+          {...listeners}
+        >
+          <span className="sr-only">Déplacer</span>
+          <GripVertical className="w-4 h-4" />
+        </button>
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-2 h-2 rounded-full bg-primary"></div>
+          <div className="min-w-0">
+            <div className="font-medium truncate">{columnName}</div>
+            <div className="text-sm text-muted-foreground truncate">{label}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="flex items-center space-x-2">
+          <Switch
+            id={`column-${columnName}`}
+            checked={isEssential}
+            onCheckedChange={(checked) => onEssentialChange(columnName, checked)}
+          />
+          <Label htmlFor={`column-${columnName}`} className="text-sm">
+            {isEssential ? (
+              <Badge variant="default" className="text-xs">Essentielle</Badge>
+            ) : (
+              <Badge variant="secondary" className="text-xs">Optionnelle</Badge>
+            )}
+          </Label>
+        </div>
+        {canRemove && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onRemove(columnName)}
+            aria-label={`Supprimer ${columnName}`}
+            className="h-8 w-8"
+          >
+            <Trash2 className="w-4 h-4 text-destructive" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+});
+SortableColumnRow.displayName = 'SortableColumnRow';
+
+const COLOR_PRESETS = [
+  { key: 'gray', name: 'Gris', badgeClass: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200', dotClass: 'bg-gray-500' },
+  { key: 'red', name: 'Rouge', badgeClass: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-200', dotClass: 'bg-red-500' },
+  { key: 'orange', name: 'Orange', badgeClass: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-200', dotClass: 'bg-orange-500' },
+  { key: 'yellow', name: 'Jaune', badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-200', dotClass: 'bg-yellow-500' },
+  { key: 'blue', name: 'Bleu', badgeClass: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-200', dotClass: 'bg-blue-500' },
+  { key: 'purple', name: 'Violet', badgeClass: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-200', dotClass: 'bg-purple-500' },
+  { key: 'indigo', name: 'Indigo', badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-200', dotClass: 'bg-indigo-500' },
+  { key: 'emerald', name: 'Émeraude', badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200', dotClass: 'bg-emerald-500' },
+  { key: 'green', name: 'Vert', badgeClass: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-200', dotClass: 'bg-green-500' },
+] as const;
+
+const isDefaultStatus = (status: string) =>
+  Object.values(ContactStatus).includes(status as ContactStatus);
+
+interface SortableStatusRowProps {
+  status: string;
+  presetKey: string;
+  preset: typeof COLOR_PRESETS[0];
+  label: string;
+  visible: boolean;
+  isDefault: boolean;
+  onLabelChange: (status: string, label: string) => void;
+  onPresetChange: (status: string, val: string) => void;
+  onVisibilityToggle: (status: string, checked: boolean) => void;
+  onRemove: (status: string) => void;
+}
+
+const SortableStatusRow = React.memo(({
+  status,
+  presetKey,
+  preset,
+  label,
+  visible,
+  isDefault,
+  onLabelChange,
+  onPresetChange,
+  onVisibilityToggle,
+  onRemove
+}: SortableStatusRowProps) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: status });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="p-3 grid grid-cols-1 md:grid-cols-[1.2fr_1.6fr_1.4fr_auto] gap-3 items-center"
+    >
+      <div className="flex items-center gap-2">
+        <button
+          className="p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
+          aria-label="Déplacer"
+          {...attributes}
+          {...listeners}
+        >
+          <span className="sr-only">Déplacer</span>
+          <GripVertical className="w-4 h-4" />
+        </button>
+        <div>
+          <div className="text-sm font-medium">{status}</div>
+          {isDefault && (
+            <div className="text-[11px] text-muted-foreground">Statut natif</div>
+          )}
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-xs">Libellé</Label>
+        <Input value={label} onChange={(e) => onLabelChange(status, e.target.value)} />
+      </div>
+
+      <div>
+        <Label className="text-xs">Couleur</Label>
+        <Select value={presetKey} onValueChange={(val) => onPresetChange(status, val)}>
+          <SelectTrigger>
+            <SelectValue>
+              <div className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border', preset.badgeClass)}>
+                <div className={cn('w-1.5 h-1.5 rounded-full', preset.dotClass)} />
+                {label}
+              </div>
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {COLOR_PRESETS.map((p) => (
+              <SelectItem key={p.key} value={p.key}>
+                <div className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border', p.badgeClass)}>
+                  <div className={cn('w-1.5 h-1.5 rounded-full', p.dotClass)} />
+                  {p.name}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Switch checked={visible} onCheckedChange={(checked) => onVisibilityToggle(status, checked)} />
+          <span className="text-xs">Visible</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onRemove(status)}
+            aria-label={`Supprimer ${status}`}
+            className="h-8 w-8"
+          >
+            <Trash2 className="w-4 h-4 text-destructive" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+});
+SortableStatusRow.displayName = 'SortableStatusRow';
+
 export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   isOpen,
   onClose,
@@ -2191,76 +2395,6 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   };
 
   const renderColumnSettings = () => {
-    const SortableColumnRow: React.FC<{ columnName: string }> = ({ columnName }) => {
-      const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: columnName });
-      const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.7 : 1,
-      };
-      const config = DEFAULT_COLUMN_CONFIG[columnName as keyof typeof DEFAULT_COLUMN_CONFIG];
-      const isEssential = columnConfig[columnName] ?? config?.isEssential ?? false;
-      const label = columnLabels[columnName] || config?.label || columnName;
-      const canRemove = !config?.isEssential;
-
-      return (
-        <div
-          ref={setNodeRef}
-          style={style}
-          className={cn(
-            "flex items-center justify-between p-4 bg-background",
-            isDragging && "ring-2 ring-primary/30 shadow-sm"
-          )}
-        >
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <button
-              className="p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
-              aria-label="Déplacer"
-              {...attributes}
-              {...listeners}
-            >
-              <span className="sr-only">Déplacer</span>
-              <GripVertical className="w-4 h-4" />
-            </button>
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-2 h-2 rounded-full bg-primary"></div>
-              <div className="min-w-0">
-                <div className="font-medium truncate">{columnName}</div>
-                <div className="text-sm text-muted-foreground truncate">{label}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center space-x-2">
-              <Switch
-                id={`column-${columnName}`}
-                checked={isEssential}
-                onCheckedChange={(checked) => handleColumnEssentialChange(columnName, checked)}
-              />
-              <Label htmlFor={`column-${columnName}`} className="text-sm">
-                {isEssential ? (
-                  <Badge variant="default" className="text-xs">Essentielle</Badge>
-                ) : (
-                  <Badge variant="secondary" className="text-xs">Optionnelle</Badge>
-                )}
-              </Label>
-            </div>
-            {canRemove && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleRemoveColumn(columnName)}
-                aria-label={`Supprimer ${columnName}`}
-                className="h-8 w-8"
-              >
-                <Trash2 className="w-4 h-4 text-destructive" />
-              </Button>
-            )}
-          </div>
-        </div>
-      );
-    };
 
     return (
       <div className="space-y-6">
@@ -2356,9 +2490,24 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
                   <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleColumnOrderDragEnd}>
                     <SortableContext items={filteredColumns} strategy={verticalListSortingStrategy}>
                       <div className="border rounded-md divide-y">
-                        {filteredColumns.map((columnName) => (
-                          <SortableColumnRow key={columnName} columnName={columnName} />
-                        ))}
+                        {filteredColumns.map((columnName) => {
+                          const config = DEFAULT_COLUMN_CONFIG[columnName as keyof typeof DEFAULT_COLUMN_CONFIG];
+                          const isEssential = columnConfig[columnName] ?? config?.isEssential ?? false;
+                          const label = columnLabels[columnName] || config?.label || columnName;
+                          const canRemove = !config?.isEssential;
+
+                          return (
+                            <SortableColumnRow
+                              key={columnName}
+                              columnName={columnName}
+                              isEssential={isEssential}
+                              label={label}
+                              canRemove={canRemove}
+                              onEssentialChange={handleColumnEssentialChange}
+                              onRemove={handleRemoveColumn}
+                            />
+                          );
+                        })}
                       </div>
                     </SortableContext>
                   </DndContext>
@@ -2377,21 +2526,6 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
   };
 
   const renderStatusEditor = () => {
-    // Presets de couleurs (shadcn/tailwind) simplifiés
-    const COLOR_PRESETS = [
-      { key: 'gray', name: 'Gris', badgeClass: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-200', dotClass: 'bg-gray-500' },
-      { key: 'red', name: 'Rouge', badgeClass: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-200', dotClass: 'bg-red-500' },
-      { key: 'orange', name: 'Orange', badgeClass: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/30 dark:text-orange-200', dotClass: 'bg-orange-500' },
-      { key: 'yellow', name: 'Jaune', badgeClass: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/30 dark:text-yellow-200', dotClass: 'bg-yellow-500' },
-      { key: 'blue', name: 'Bleu', badgeClass: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/30 dark:text-blue-200', dotClass: 'bg-blue-500' },
-      { key: 'purple', name: 'Violet', badgeClass: 'bg-purple-100 text-purple-800 border-purple-200 dark:bg-purple-900/30 dark:text-purple-200', dotClass: 'bg-purple-500' },
-      { key: 'indigo', name: 'Indigo', badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-200', dotClass: 'bg-indigo-500' },
-      { key: 'emerald', name: 'Émeraude', badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-200', dotClass: 'bg-emerald-500' },
-      { key: 'green', name: 'Vert', badgeClass: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/30 dark:text-green-200', dotClass: 'bg-green-500' },
-    ] as const;
-
-    const isDefaultStatus = (status: string) =>
-      Object.values(ContactStatus).includes(status as ContactStatus);
 
     const displayedStatuses = statusOrder.filter((status) => statusConfig[status]);
 
@@ -2484,90 +2618,6 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
       setHasChanges(true);
     };
 
-    const SortableStatusRow: React.FC<{ status: string }> = ({ status }) => {
-      const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: status });
-      const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.6 : 1,
-      };
-
-      const presetKey = getPresetKeyFor(status);
-      const preset = COLOR_PRESETS.find((p) => p.key === presetKey) || COLOR_PRESETS[0];
-      const label = statusConfig[status]?.label || status;
-      const visible = statusConfig[status]?.visible !== false;
-
-      return (
-        <div
-          ref={setNodeRef}
-          style={style}
-          className="p-3 grid grid-cols-1 md:grid-cols-[1.2fr_1.6fr_1.4fr_auto] gap-3 items-center"
-        >
-          <div className="flex items-center gap-2">
-            <button
-              className="p-1 text-muted-foreground hover:text-foreground cursor-grab active:cursor-grabbing"
-              aria-label="Déplacer"
-              {...attributes}
-              {...listeners}
-            >
-              <span className="sr-only">Déplacer</span>
-              <GripVertical className="w-4 h-4" />
-            </button>
-            <div>
-              <div className="text-sm font-medium">{status}</div>
-              {isDefaultStatus(status) && (
-                <div className="text-[11px] text-muted-foreground">Statut natif</div>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <Label className="text-xs">Libellé</Label>
-            <Input value={label} onChange={(e) => handleLabelChange(status, e.target.value)} />
-          </div>
-
-          <div>
-            <Label className="text-xs">Couleur</Label>
-            <Select value={presetKey} onValueChange={(val) => applyPreset(status, val)}>
-              <SelectTrigger>
-                <SelectValue>
-                  <div className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border', preset.badgeClass)}>
-                    <div className={cn('w-1.5 h-1.5 rounded-full', preset.dotClass)} />
-                    {label}
-                  </div>
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {COLOR_PRESETS.map((p) => (
-                  <SelectItem key={p.key} value={p.key}>
-                    <div className={cn('inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border', p.badgeClass)}>
-                      <div className={cn('w-1.5 h-1.5 rounded-full', p.dotClass)} />
-                      {p.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Switch checked={visible} onCheckedChange={(checked) => handleVisibilityToggle(status, checked)} />
-              <span className="text-xs">Visible</span>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleRemoveStatus(status)}
-                aria-label={`Supprimer ${status}`}
-                className="h-8 w-8"
-              >
-                <Trash2 className="w-4 h-4 text-destructive" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      );
-    };
 
     return (
       <Card>
@@ -2642,9 +2692,28 @@ export const SettingsDialog: React.FC<SettingsDialogProps> = ({
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={displayedStatuses} strategy={verticalListSortingStrategy}>
               <div className="divide-y border rounded-md">
-                {displayedStatuses.map((status) => (
-                  <SortableStatusRow key={status} status={status} />
-                ))}
+                {displayedStatuses.map((status) => {
+                  const presetKey = getPresetKeyFor(status);
+                  const preset = COLOR_PRESETS.find((p) => p.key === presetKey) || COLOR_PRESETS[0];
+                  const label = statusConfig[status]?.label || status;
+                  const visible = statusConfig[status]?.visible !== false;
+
+                  return (
+                    <SortableStatusRow
+                      key={status}
+                      status={status}
+                      presetKey={presetKey}
+                      preset={preset}
+                      label={label}
+                      visible={visible}
+                      isDefault={isDefaultStatus(status)}
+                      onLabelChange={handleLabelChange}
+                      onPresetChange={applyPreset}
+                      onVisibilityToggle={handleVisibilityToggle}
+                      onRemove={handleRemoveStatus}
+                    />
+                  );
+                })}
               </div>
             </SortableContext>
           </DndContext>

@@ -3471,7 +3471,7 @@ Dimitri MOREL - Arcanis Conseil`;
                                 className="h-9 px-2"
                                 title="Importer un fichier CSV/Excel"
                               >
-                                <Upload className="h-4 w-4" />
+                                <Download className="h-4 w-4" />
                               </Button>
                               <input
                                 type="file"
@@ -3503,7 +3503,7 @@ Dimitri MOREL - Arcanis Conseil`;
                                     className="h-9 px-2 shrink-0"
                                     title="Exporter les données"
                                   >
-                                    <Download className="h-4 w-4" />
+                                    <Upload className="h-4 w-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent
@@ -3511,7 +3511,7 @@ Dimitri MOREL - Arcanis Conseil`;
                                   align="start"
                                 >
                                   <DropdownMenuLabel className="flex items-center gap-2">
-                                    <Download className="w-4 h-4" />
+                                    <Upload className="w-4 h-4" />
                                     Options d'export
                                   </DropdownMenuLabel>
                                   <DropdownMenuSeparator />
@@ -3583,7 +3583,7 @@ Dimitri MOREL - Arcanis Conseil`;
                                     className="cursor-pointer bg-primary/10 hover:bg-primary/20"
                                     disabled={Object.values(exportOptions).every(option => !option)}
                                   >
-                                    <Download className="mr-2 h-4 w-4" />
+                                    <Upload className="mr-2 h-4 w-4" />
                                     <span className="font-medium">Exporter la sélection</span>
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>

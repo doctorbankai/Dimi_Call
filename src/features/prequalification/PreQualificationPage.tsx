@@ -242,7 +242,7 @@ export const PreQualificationPage: React.FC = () => {
                     onClick={triggerReplaceFile}
                     title="Importer un fichier CSV/Excel"
                   >
-                    <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     <span className="hidden sm:inline">Importer</span>
                   </Button>
                   <Button
@@ -253,7 +253,7 @@ export const PreQualificationPage: React.FC = () => {
                     disabled={profiles.length === 0}
                     title="Exporter"
                   >
-                    <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                     <span className="hidden sm:inline">Exporter</span>
                   </Button>
                 </>
