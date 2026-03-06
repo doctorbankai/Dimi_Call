@@ -99,6 +99,13 @@ export const formatPhoneNumber = (phoneStr: string): string => {
     cleaned = '+' + cleaned;
   }
 
+  // Pattern 6b: 330XXXXXXXXX (33 + 0 + 9 digits = 12 digits) — strip the 0 after 33
+  const match330 = cleaned.match(/^330(\d{9})$/);
+  if (match330) {
+    const num = match330[1];
+    return `+33 ${num[0]} ${num.slice(1, 3)} ${num.slice(3, 5)} ${num.slice(5, 7)} ${num.slice(7, 9)}`;
+  }
+
   // Pattern 7: Already correct +33 format with 9 digits
   const matchCorrectPlus33 = cleaned.match(/^\+33(\d{9})$/);
   if (matchCorrectPlus33) {

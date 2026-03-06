@@ -35,10 +35,10 @@ export const extractPhoneCandidates = (value: unknown): string[] => {
  */
 export const normalizePhoneNumber = (phoneStr: string | undefined | null): string => {
   if (!phoneStr || typeof phoneStr !== 'string') return '';
-  
+
   // Nettoyer tous les caractères sauf les chiffres et le +
   let cleaned = phoneStr.replace(/[^\d+]/g, '');
-  
+
   if (!cleaned) return '';
 
   // Cas 1: Commence par +33 (déjà au bon format de base)
@@ -52,7 +52,11 @@ export const normalizePhoneNumber = (phoneStr: string | undefined | null): strin
 
   // Cas 2: Commence par 33 (sans +)
   if (cleaned.startsWith('33') && cleaned.length >= 11) {
-    const digits = cleaned.substring(2);
+    let digits = cleaned.substring(2);
+    // Strip the leading 0 if present (330XXXXXXXXX → 33 + 0 + 9 digits)
+    if (digits.startsWith('0') && digits.length === 10) {
+      digits = digits.substring(1);
+    }
     // Prendre les 9 premiers chiffres après 33
     const match = digits.match(/^(\d{9})/);
     return match ? `+33${match[1]}` : '';
