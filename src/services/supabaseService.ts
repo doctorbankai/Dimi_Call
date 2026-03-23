@@ -111,7 +111,7 @@ class SupabaseService {
         console.log(`🔄 Test avec table ${table.name}...`);
         const { data, error, count } = await this.client
           .from(table.name)
-          .select('*', { count: 'exact' })
+          .select('*', { count: 'estimated' })
           .limit(1);
 
         if (error) {
@@ -278,7 +278,7 @@ class SupabaseService {
       // Récupérer les données avec pagination
       const { data, error, count } = await this.client
         .from(tableName)
-        .select('*', { count: 'exact' })
+        .select('*', { count: 'estimated' })
         .range(from, to);
 
       if (error) {
@@ -350,7 +350,7 @@ class SupabaseService {
       console.log('📡 Exécution de la requête principale avec range...');
       const { data, error, count } = await this.client
         .from(tableName)
-        .select('*', { count: 'exact' })
+        .select('*', { count: 'estimated' })
         .range(startRange, endRange);
 
       console.log(`📊 getRawSupabaseData: Résultat Supabase:`, {
@@ -768,7 +768,7 @@ class SupabaseService {
       const endRange = startRange + pageSize - 1;
       const sanitizedQuery = query.trim();
 
-      let queryBuilder = this.client.from(tableName).select('*', { count: 'exact' });
+      let queryBuilder = this.client.from(tableName).select('*', { count: 'estimated' });
 
       if (searchColumn === 'all') {
         // Colonnes de texte recherchables (exclut les UUIDs et autres types non-textuels)

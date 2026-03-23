@@ -168,6 +168,29 @@ function savePreferences() {
   }
 }
 
+function getHashStorageKey(target: SyncTarget) {
+  return `dimicall_share_hashes_${target}`
+}
+
+function loadRowHashes(target: SyncTarget): Record<string, string> {
+  if (!hasWindow) return {}
+  try {
+    const raw = window.localStorage.getItem(getHashStorageKey(target))
+    return raw ? JSON.parse(raw) : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveRowHashes(target: SyncTarget, hashes: Record<string, string>) {
+  if (!hasWindow) return
+  try {
+    window.localStorage.setItem(getHashStorageKey(target), JSON.stringify(hashes))
+  } catch (error) {
+    supabaseLogger.warn(`[share] Sauvegarde des hashes pour ${target} échouée`, error)
+  }
+}
+
 function autoResumeEnabledTargets() {
   for (const target of SYNC_TARGETS) {
     if (state[target].enabled) {
@@ -422,9 +445,23 @@ async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: numbe
     source: entry.sample.source || 'Données',
   }))
 
-  /* Hashing & Deduplication */
-  const currentHash = computeHash(payload)
-  if (currentHash === runtimeState.phone.lastSyncedHash) {
+  /* Delta Sync: Hashing & Deduplication par ligne */
+  const rowHashes = loadRowHashes('phone')
+  let hasChanges = false
+  const deltaPayload: any[] = []
+
+  for (const record of payload) {
+    const key = record.normalized_phone
+    const hash = computeHash(record)
+    if (rowHashes[key] !== hash) {
+      rowHashes[key] = hash
+      deltaPayload.push(record)
+      hasChanges = true
+    }
+  }
+
+  const currentHash = computeHash(deltaPayload.length === 0 ? 'empty' : payload)
+  if (!hasChanges && currentHash === runtimeState.phone.lastSyncedHash) {
     console.log('[share] Phone sync skipped (no changes)')
     const withMetadata = payload.filter(entry => entry.prenom && entry.nom && entry.source).length
     return {
@@ -436,7 +473,12 @@ async function syncSharedPhoneNumbers(events: any[]): Promise<{ processed: numbe
     }
   }
 
-  await chunkedUpsert(client, 'shared_phone_numbers', payload, 'normalized_phone')
+  if (deltaPayload.length > 0) {
+    console.log(`[share] Phone sync: envoi de ${deltaPayload.length} lignes (delta) au lieu de ${payload.length}`)
+    await chunkedUpsert(client, 'shared_phone_numbers', deltaPayload, 'normalized_phone')
+    saveRowHashes('phone', rowHashes)
+  }
+
   runtimeState.phone.lastSyncedHash = currentHash
 
   const withMetadata = payload.filter(entry => entry.prenom && entry.nom && entry.source).length
@@ -530,9 +572,23 @@ async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: n
     source: entry.sample.source || 'Données',
   }))
 
-  /* Hashing & Deduplication */
-  const currentHash = computeHash(payload)
-  if (currentHash === runtimeState.blacklist.lastSyncedHash) {
+  /* Delta Sync: Hashing & Deduplication par ligne */
+  const rowHashes = loadRowHashes('blacklist')
+  let hasChanges = false
+  const deltaPayload: any[] = []
+
+  for (const record of payload) {
+    const key = record.normalized_phone
+    const hash = computeHash(record)
+    if (rowHashes[key] !== hash) {
+      rowHashes[key] = hash
+      deltaPayload.push(record)
+      hasChanges = true
+    }
+  }
+
+  const currentHash = computeHash(deltaPayload.length === 0 ? 'empty' : payload)
+  if (!hasChanges && currentHash === runtimeState.blacklist.lastSyncedHash) {
     console.log('[share] Blacklist sync skipped (no changes)')
     const withMetadata = payload.filter(entry => entry.prenom && entry.nom && entry.source).length
     return {
@@ -544,7 +600,12 @@ async function syncSharedBlacklistNumbers(events: any[]): Promise<{ processed: n
     }
   }
 
-  await chunkedUpsert(client, 'shared_blacklist_numbers', payload, 'normalized_phone')
+  if (deltaPayload.length > 0) {
+    console.log(`[share] Blacklist sync: envoi de ${deltaPayload.length} lignes (delta) au lieu de ${payload.length}`)
+    await chunkedUpsert(client, 'shared_blacklist_numbers', deltaPayload, 'normalized_phone')
+    saveRowHashes('blacklist', rowHashes)
+  }
+
   runtimeState.blacklist.lastSyncedHash = currentHash
 
   const withMetadata = payload.filter(entry => entry.prenom && entry.nom && entry.source).length
@@ -596,9 +657,23 @@ async function syncCallEvents(events: any[]): Promise<{ processed: number; share
     }
   }
 
-  /* Hashing & Deduplication */
-  const currentHash = computeHash(payload)
-  if (currentHash === runtimeState.calls.lastSyncedHash) {
+  /* Delta Sync: Hashing & Deduplication par ligne */
+  const rowHashes = loadRowHashes('calls')
+  let hasChanges = false
+  const deltaPayload: any[] = []
+
+  for (const record of payload) {
+    const key = `${record.user_uid}_${record.local_event_id}`
+    const hash = computeHash(record)
+    if (rowHashes[key] !== hash) {
+      rowHashes[key] = hash
+      deltaPayload.push(record)
+      hasChanges = true
+    }
+  }
+
+  const currentHash = computeHash(deltaPayload.length === 0 ? 'empty' : payload)
+  if (!hasChanges && currentHash === runtimeState.calls.lastSyncedHash) {
     console.log('[share] Calls sync skipped (no changes)')
     return {
       processed: events.length,
@@ -609,7 +684,12 @@ async function syncCallEvents(events: any[]): Promise<{ processed: number; share
     }
   }
 
-  await chunkedUpsert(client, 'call_data_events', payload, 'user_uid,local_event_id')
+  if (deltaPayload.length > 0) {
+    console.log(`[share] Calls sync: envoi de ${deltaPayload.length} lignes (delta) au lieu de ${payload.length}`)
+    await chunkedUpsert(client, 'call_data_events', deltaPayload, 'user_uid,local_event_id')
+    saveRowHashes('calls', rowHashes)
+  }
+
   runtimeState.calls.lastSyncedHash = currentHash
 
   return {
@@ -648,9 +728,23 @@ async function syncStatusEventsMirror(events: any[]): Promise<{ processed: numbe
     }
   }
 
-  /* Hashing & Deduplication */
-  const currentHash = computeHash(payload)
-  if (currentHash === runtimeState.statusEvents.lastSyncedHash) {
+  /* Delta Sync: Hashing & Deduplication par ligne */
+  const rowHashes = loadRowHashes('statusEvents')
+  let hasChanges = false
+  const deltaPayload: any[] = []
+
+  for (const record of payload) {
+    const key = `${record.user_uid}_${record.local_event_id}`
+    const hash = computeHash(record)
+    if (rowHashes[key] !== hash) {
+      rowHashes[key] = hash
+      deltaPayload.push(record)
+      hasChanges = true
+    }
+  }
+
+  const currentHash = computeHash(deltaPayload.length === 0 ? 'empty' : payload)
+  if (!hasChanges && currentHash === runtimeState.statusEvents.lastSyncedHash) {
     console.log('[share] StatusEvents sync skipped (no changes)')
     return {
       processed: events.length,
@@ -661,7 +755,12 @@ async function syncStatusEventsMirror(events: any[]): Promise<{ processed: numbe
     }
   }
 
-  await chunkedUpsert(client, 'dimicall_status_events', payload, 'user_uid,local_event_id')
+  if (deltaPayload.length > 0) {
+    console.log(`[share] StatusEvents sync: envoi de ${deltaPayload.length} lignes (delta) au lieu de ${payload.length}`)
+    await chunkedUpsert(client, 'dimicall_status_events', deltaPayload, 'user_uid,local_event_id')
+    saveRowHashes('statusEvents', rowHashes)
+  }
+
   runtimeState.statusEvents.lastSyncedHash = currentHash
 
   return {
