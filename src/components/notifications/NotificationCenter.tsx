@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from "react"
 import type { ReactNode } from "react"
-import { AlertTriangle, Bell, BellOff, CalendarDays, Clock, ExternalLink, Phone, RefreshCcw, Smartphone, X } from "lucide-react"
+import { AlertTriangle, Bell, BellOff, CalendarDays, Clock, ExternalLink, Phone, RefreshCcw, Smartphone, Trash2, X } from "lucide-react"
 import { format, formatDistanceToNow, parseISO } from "date-fns"
 import { fr } from "date-fns/locale"
 
@@ -10,6 +10,17 @@ import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -387,14 +398,33 @@ export const NotificationCenterButton = ({
   }
   const canOpenAnnuaire = Boolean(onNavigateToAnnuaire)
 
+  const handleClearAll = async (entries: NotificationEntry[]) => {
+    const ids = entries.map((e) => e.id)
+    dismissEntries(ids)
+    markAsRead(ids)
+    for (const entry of entries) {
+      await updateEventInDb(entry)
+      window.dispatchEvent(
+        new CustomEvent("notifications-dimicall-dismiss", {
+          detail: {
+            recordId: entry.event.metadata?.recordId ?? entry.event.metadata?.source?.id,
+            eventId: entry.event.id,
+          },
+        })
+      )
+    }
+  }
+
   const renderCardList = (
     entries: NotificationEntry[],
     {
       emptyState,
       renderItem,
+      clearLabel,
     }: {
-      emptyState: JSX.Element
-      renderItem: (entry: NotificationEntry) => JSX.Element
+      emptyState: ReactNode
+      renderItem: (entry: NotificationEntry) => ReactNode
+      clearLabel: string
     }
   ) => {
     if (isInitialLoading) {
@@ -410,11 +440,45 @@ export const NotificationCenterButton = ({
     }
 
     return (
-      <ScrollArea style={{ maxHeight: listMaxHeight }} className="pr-2">
-        <div className="space-y-3 p-3">
-          {entries.map((entry) => renderItem(entry))}
+      <>
+        <div className="flex items-center justify-end border-b px-3 py-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1.5 text-xs text-muted-foreground hover:text-destructive"
+              >
+                <Trash2 className="size-3.5" />
+                Tout supprimer
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Supprimer toutes les notifications ?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Vous êtes sur le point de supprimer les {entries.length} notification{entries.length > 1 ? "s" : ""}{" "}
+                  de la catégorie <span className="font-semibold">{clearLabel}</span>. Cette action est irréversible.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={() => handleClearAll(entries)}
+                >
+                  Tout supprimer
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
-      </ScrollArea>
+        <ScrollArea style={{ maxHeight: listMaxHeight }} className="pr-2">
+          <div className="space-y-3 p-3">
+            {entries.map((entry) => renderItem(entry))}
+          </div>
+        </ScrollArea>
+      </>
     )
   }
 
@@ -505,6 +569,7 @@ export const NotificationCenterButton = ({
               <TabsContent value="rappels" className="flex-1">
                 <div className="rounded-xl border bg-background/60 dark:bg-background/20 overflow-hidden">
                   {renderCardList(rappelEntries, {
+                    clearLabel: "Rappels",
                     emptyState: (
                       <EmptyState
                         icon={<Bell className="size-5 text-muted-foreground" />}
@@ -527,6 +592,7 @@ export const NotificationCenterButton = ({
               <TabsContent value="rdv" className="flex-1">
                 <div className="rounded-xl border bg-background/60 dark:bg-background/20 overflow-hidden">
                   {renderCardList(rdvEntries, {
+                    clearLabel: "RDV",
                     emptyState: (
                       <EmptyState
                         icon={<CalendarDays className="size-5 text-muted-foreground" />}
@@ -549,6 +615,7 @@ export const NotificationCenterButton = ({
               <TabsContent value="overdue" className="flex-1">
                 <div className="rounded-xl border bg-background/60 dark:bg-background/20 overflow-hidden">
                   {renderCardList(overdueEntries, {
+                    clearLabel: "Retards",
                     emptyState: (
                       <EmptyState
                         icon={<AlertTriangle className="size-5 text-muted-foreground" />}
