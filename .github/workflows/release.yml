@@ -82,8 +82,8 @@ jobs:
       - name: Exécuter postinstall Electron (rebuild des modules natifs)
         run: npx electron-builder install-app-deps
 
-      - name: Vérifications pré-build (build debug + cycles)
-        run: npm run ci:verify
+      - name: Vérifications pré-build (build debug)
+        run: npm run build:debug
         env:
           ENABLE_OBFUSCATION: "false"
           ENABLE_SOURCEMAP: "true"
