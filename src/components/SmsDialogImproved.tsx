@@ -139,7 +139,7 @@ export const SmsDialogImproved: React.FC<SmsDialogImprovedProps> = ({
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Civilité" />
                   </SelectTrigger>
-                  <SelectContent className="z-[20001]">
+                  <SelectContent className="z-[100002]">
                     {civilityOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
@@ -155,7 +155,7 @@ export const SmsDialogImproved: React.FC<SmsDialogImprovedProps> = ({
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Type de SMS" />
                   </SelectTrigger>
-                  <SelectContent className="z-[20001]">
+                  <SelectContent className="z-[100002]">
                     {smsTypeOptions.map((option) => (
                       <SelectItem key={option.value} value={option.value}>
                         {option.label}
@@ -192,7 +192,7 @@ export const SmsDialogImproved: React.FC<SmsDialogImprovedProps> = ({
                           {selectedDate ? format(selectedDate, 'PPP', { locale: fr }) : <span>Sélectionner</span>}
                         </ShadcnButton>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0 z-[20001]">
+                      <PopoverContent className="w-auto p-0 z-[100002]">
                         <Calendar
                           mode="single"
                           selected={selectedDate}

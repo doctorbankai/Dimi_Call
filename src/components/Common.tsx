@@ -9,7 +9,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '../lib/utils';
 import { Upload, CheckCircle, AlertCircle, X } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Dialog, DialogHeader, DialogTitle, DialogClose, DialogOverlay, DialogPortal } from '@/components/ui/dialog';
 
 // Types pour les composants
 interface ButtonProps {
@@ -399,10 +400,18 @@ export const Modal: React.FC<ModalProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }} modal={false}>
       <DialogPortal>
-        <DialogOverlay className="z-[100000] pointer-events-none" />
-        <DialogContent className={cn(sizeClasses[size], 'z-[100001] pointer-events-auto', className)} showCloseButton={false}>
+        <DialogOverlay className="z-[100000]" />
+        <DialogPrimitive.Content
+          data-slot="dialog-content"
+          className={cn(
+            "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 outline-none",
+            sizeClasses[size],
+            'z-[100001]',
+            className
+          )}
+        >
           {title && (
             <DialogHeader>
               <DialogTitle>{title}</DialogTitle>
@@ -415,7 +424,7 @@ export const Modal: React.FC<ModalProps> = ({
               <span className="sr-only">Fermer</span>
             </button>
           </DialogClose>
-        </DialogContent>
+        </DialogPrimitive.Content>
       </DialogPortal>
     </Dialog>
   );
