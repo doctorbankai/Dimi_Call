@@ -1728,18 +1728,97 @@ table {
   overflow: hidden !important;
 }
 
-/* ---- Pragmatic UI helpers for Appels (cards view) ---- */
+/* ---- Modern Appels page styles (Linear/Vercel inspired) ---- */
+
+/* Contact cards - subtle hover effects */
 .contact-card-hover {
   transition: all 0.15s ease-out;
 }
 
 .contact-card-hover:hover {
-  background-color: hsl(var(--muted) / 0.3);
-  transform: translateX(4px);
+  background-color: hsl(var(--accent) / 0.5);
 }
 
+/* Section cards with modern glass effect */
 .section-card {
-  background: hsl(var(--card) / 0.6);
-  border: 1px solid hsl(var(--border) / 0.3);
-  border-radius: var(--radius);
+  background: hsl(var(--muted) / 0.1);
+  border: 1px solid hsl(var(--border) / 0.4);
+  border-radius: 0.75rem;
+}
+
+/* Modern input focus states */
+input:focus,
+textarea:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px hsl(var(--ring) / 0.2);
+}
+
+/* Smooth badge transitions */
+[data-slot="badge"] {
+  transition: all 0.15s ease-out;
+}
+
+/* Modern dropdown animations */
+[data-radix-popper-content-wrapper] {
+  animation: slideUpAndFade 0.15s ease-out;
+}
+
+@keyframes slideUpAndFade {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Subtle hover states for buttons */
+button:not(:disabled):hover {
+  transition: all 0.15s ease-out;
+}
+
+/* Modern scrollbar for panels */
+.modern-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;
+}
+
+.modern-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.modern-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 3px;
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.3);
+}
+
+/* Tab indicator animations */
+[role="tablist"] [data-state="active"] {
+  transition: all 0.2s ease-out;
+}
+
+/* Resizable panel handle - minimal style */
+[data-resize-handle] {
+  background: transparent !important;
+  border: none !important;
+}
+
+[data-resize-handle]:hover {
+  background: hsl(var(--border) / 0.5) !important;
+}
+
+[data-resize-handle]::after {
+  background: hsl(var(--border) / 0.8) !important;
+  border-radius: 2px;
 }

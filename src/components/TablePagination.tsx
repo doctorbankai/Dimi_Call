@@ -83,22 +83,22 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
     };
 
     return (
-        <div className={`relative flex items-center justify-between px-3 py-1.5 min-h-[48px] ${className}`}>
+        <div className={`relative flex items-center justify-between px-4 py-2.5 border-t border-border/40 ${className}`}>
             {/* Conteneur principal avec grille à 3 colonnes pour centrer la pagination */}
             <div className="flex-1 grid grid-cols-[1fr_auto_1fr] items-center">
                 {/* Sélecteur de taille de page - à gauche */}
-                <div className="flex items-center space-x-2.5 flex-shrink-0 justify-self-start">
-                    <p className="text-xs text-muted-foreground whitespace-nowrap">
-                        Lignes par page:
-                    </p>
+                <div className="flex items-center gap-2 flex-shrink-0 justify-self-start">
+                    <span className="text-xs text-muted-foreground/70 whitespace-nowrap">
+                        Lignes
+                    </span>
                     <Select
                         value={itemsPerPage.toString()}
                         onValueChange={(value) => onItemsPerPageChange(Number(value))}
                     >
-                        <SelectTrigger className="h-7 w-[50px] text-xs">
+                        <SelectTrigger className="h-7 w-[52px] text-xs border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors">
                             <SelectValue />
                         </SelectTrigger>
-                        <SelectContent side="top">
+                        <SelectContent side="top" className="rounded-lg border-border/50">
                             {pageSizeOptions.map((size) => (
                                 <SelectItem key={size} value={size.toString()}>
                                     {size}
@@ -111,18 +111,18 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
                 {/* Navigation de pagination - centrée */}
                 {totalPages > 1 && (
                     <Pagination className="mx-auto w-auto justify-self-center">
-                        <PaginationContent className="gap-1.5">
+                        <PaginationContent className="gap-1">
                             {/* Bouton première page */}
                             {showFirstLast && (
                                 <PaginationItem>
                                     <Button
-                                        variant="outline"
+                                        variant="ghost"
                                         size="icon"
-                                        className="h-7 w-7"
+                                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-accent/50 disabled:opacity-40 transition-colors"
                                         onClick={() => handlePageClick(1)}
                                         disabled={currentPage === 1}
                                     >
-                                        <ChevronFirst className="h-3 w-3" />
+                                        <ChevronFirst className="h-3.5 w-3.5" />
                                         <span className="sr-only">Première page</span>
                                     </Button>
                                 </PaginationItem>
@@ -131,13 +131,13 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
                             {/* Bouton précédent */}
                             <PaginationItem>
                                 <Button
-                                    variant="outline"
+                                    variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-accent/50 disabled:opacity-40 transition-colors"
                                     onClick={() => handlePageClick(currentPage - 1)}
                                     disabled={currentPage === 1}
                                 >
-                                    <ChevronLeft className="h-3 w-3" />
+                                    <ChevronLeft className="h-3.5 w-3.5" />
                                     <span className="sr-only">Page précédente</span>
                                 </Button>
                             </PaginationItem>
@@ -146,13 +146,17 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
                             {visiblePages.map((page, index) => (
                                 <PaginationItem key={index}>
                                     {page === '...' ? (
-                                        <PaginationEllipsis />
+                                        <PaginationEllipsis className="text-muted-foreground/50" />
                                     ) : (
                                         <PaginationLink
                                             size="default"
                                             onClick={() => handlePageClick(page)}
                                             isActive={page === currentPage}
-                                            className="cursor-pointer h-7 w-7 text-xs"
+                                            className={`cursor-pointer h-7 w-7 text-xs rounded-md transition-colors ${
+                                                page === currentPage 
+                                                    ? 'bg-foreground text-background font-medium' 
+                                                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                                            }`}
                                         >
                                             {page}
                                         </PaginationLink>
@@ -163,13 +167,13 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
                             {/* Bouton suivant */}
                             <PaginationItem>
                                 <Button
-                                    variant="outline"
+                                    variant="ghost"
                                     size="icon"
-                                    className="h-7 w-7"
+                                    className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-accent/50 disabled:opacity-40 transition-colors"
                                     onClick={() => handlePageClick(currentPage + 1)}
                                     disabled={currentPage === totalPages}
                                 >
-                                    <ChevronRight className="h-3 w-3" />
+                                    <ChevronRight className="h-3.5 w-3.5" />
                                     <span className="sr-only">Page suivante</span>
                                 </Button>
                             </PaginationItem>
@@ -178,13 +182,13 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
                             {showFirstLast && (
                                 <PaginationItem>
                                     <Button
-                                        variant="outline"
+                                        variant="ghost"
                                         size="icon"
-                                        className="h-7 w-7"
+                                        className="h-7 w-7 text-muted-foreground hover:text-foreground hover:bg-accent/50 disabled:opacity-40 transition-colors"
                                         onClick={() => handlePageClick(totalPages)}
                                         disabled={currentPage === totalPages}
                                     >
-                                        <ChevronLast className="h-3 w-3" />
+                                        <ChevronLast className="h-3.5 w-3.5" />
                                         <span className="sr-only">Dernière page</span>
                                     </Button>
                                 </PaginationItem>
@@ -197,16 +201,16 @@ export const TablePagination: React.FC<TablePaginationProps> = ({
                 <div></div>
             </div>
 
-            {/* Section droite avec informations, colonnes et graphique */}
+            {/* Section droite avec informations */}
             {showPageInfo && (
                 <div className="flex items-center gap-3 flex-shrink-0">
-                    <div className="text-xs text-muted-foreground whitespace-nowrap">
+                    <span className="text-xs text-muted-foreground/70 whitespace-nowrap tabular-nums">
                         {totalItems === 0 ? (
                             'Aucun résultat'
                         ) : (
-                            `${startItem}-${endItem} sur ${totalItems}`
+                            <><span className="text-foreground font-medium">{startItem}-{endItem}</span> sur {totalItems}</>
                         )}
-                    </div>
+                    </span>
                 </div>
             )}
         </div>

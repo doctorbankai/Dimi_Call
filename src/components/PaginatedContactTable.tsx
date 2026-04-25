@@ -349,7 +349,7 @@ export const PaginatedContactTable = forwardRef<ContactTableRef, PaginatedContac
   };
 
   const paginationNode = (
-    <div className="px-3 py-1.5 min-h-[48px] bg-card">
+    <div className="bg-card/80">
       <TablePagination
         className="w-full"
         currentPage={currentPage}

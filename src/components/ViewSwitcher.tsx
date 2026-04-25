@@ -1,4 +1,3 @@
-import { ButtonGroup } from '@/components/ui/button-group';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, Table2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -13,39 +12,43 @@ interface ViewSwitcherProps {
 
 export function ViewSwitcher({ currentView, onViewChange, className }: ViewSwitcherProps) {
   return (
-    <ButtonGroup
-      className={cn('inline-flex', className)}
+    <div
+      className={cn('inline-flex items-center p-0.5 rounded-lg bg-muted/40', className)}
       role="group"
       aria-label="Sélectionner le mode d'affichage"
     >
       <Button
-        variant={currentView === 'cards' ? 'default' : 'outline'}
+        variant="ghost"
         size="sm"
         onClick={() => onViewChange('cards')}
         aria-label="Vue en cartes"
         aria-pressed={currentView === 'cards'}
         className={cn(
-          "h-9 px-3 shadow-none",
-          currentView !== 'cards' && "bg-card border-border/70"
+          "h-7 px-2.5 text-xs rounded-md transition-all",
+          currentView === 'cards' 
+            ? "bg-background shadow-sm text-foreground" 
+            : "text-muted-foreground hover:text-foreground hover:bg-transparent"
         )}
       >
-        <LayoutGrid className="h-4 w-4 mr-2" />
-        <span className="hidden sm:inline">Cards</span>
+        <LayoutGrid className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline ml-1.5">Cards</span>
       </Button>
       <Button
-        variant={currentView === 'table' ? 'default' : 'outline'}
+        variant="ghost"
         size="sm"
         onClick={() => onViewChange('table')}
         aria-label="Vue en tableau"
         aria-pressed={currentView === 'table'}
         className={cn(
-          "h-9 px-3 shadow-none",
-          currentView !== 'table' && "bg-card border-border/70"
+          "h-7 px-2.5 text-xs rounded-md transition-all",
+          currentView === 'table' 
+            ? "bg-background shadow-sm text-foreground" 
+            : "text-muted-foreground hover:text-foreground hover:bg-transparent"
         )}
       >
-        <Table2 className="h-4 w-4 mr-2" />
-        <span className="hidden sm:inline">Table</span>
+        <Table2 className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline ml-1.5">Table</span>
       </Button>
-    </ButtonGroup>
+    </div>
   );
 }

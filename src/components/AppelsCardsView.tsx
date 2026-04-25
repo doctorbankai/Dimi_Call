@@ -992,30 +992,29 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       onDrop={handleDrop}
     >
       <DropZoneOverlay isVisible={isDragOver} isDragActive={isDragActive} />
-      <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-2 sm:px-4 md:px-6 pt-2 pb-2 min-w-0 bg-white dark:bg-background rounded-md transition-colors" role="toolbar" aria-label="Barre d'outils Appels">
-        <div className="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0 flex-shrink-0">
-          <div className="flex flex-col gap-0.5 min-w-0">
-            <h1 className="text-lg sm:text-xl font-semibold text-foreground truncate">Appels</h1>
-          </div>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-6 py-3 min-w-0 border-b border-border/40 bg-background/80 backdrop-blur-sm transition-colors" role="toolbar" aria-label="Barre d'outils Appels">
+        <div className="flex items-center gap-4 min-w-0 flex-shrink-0">
+          <h1 className="text-base font-medium text-foreground tracking-tight">Appels</h1>
+          <div className="h-4 w-px bg-border/60" />
           <ViewSwitcher
             currentView={viewMode}
             onViewChange={setViewMode}
           />
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 w-full md:w-auto order-3 md:order-none justify-end flex-wrap">
+        <div className="flex items-center gap-2 min-w-0 w-full md:w-auto order-3 md:order-none justify-end">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="h-8 px-2 sm:px-3 shrink-0 text-xs sm:text-sm gap-2 shadow-none bg-white dark:bg-card"
+                className="h-8 px-2.5 shrink-0 text-sm gap-2 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
                 title="Réglages"
               >
                 <Settings2 className="h-4 w-4" />
                 <span className="hidden sm:inline">Réglages</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="bottom" sideOffset={6} className="w-72 shadow-none">
+            <DropdownMenuContent align="end" side="bottom" sideOffset={8} className="w-64 rounded-xl border-border/50 bg-popover/95 backdrop-blur-sm">
               <DropdownMenuLabel>Réglages rapides</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -1085,12 +1084,12 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Boutons principaux toujours visibles - Importer, Exporter, Supprimer */}
-          <ButtonGroup className="shrink-0">
+          {/* Boutons principaux - style minimaliste */}
+          <div className="flex items-center gap-1">
             <Button
               size="sm"
-              variant="outline"
-              className="h-8 px-2 shrink-0 shadow-none bg-white dark:bg-card"
+              variant="ghost"
+              className="h-8 px-2.5 shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
               onClick={() => {
                 const input = document.createElement('input')
                 input.type = 'file'
@@ -1105,23 +1104,23 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
               }}
               title="Importer un fichier CSV/Excel"
             >
-              <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-              <span className="hidden sm:inline">Importer</span>
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline ml-1.5">Importer</span>
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   size="sm"
                   disabled={contacts.length === 0}
-                  variant="outline"
-                  className="h-8 px-2 shrink-0 shadow-none bg-white dark:bg-card"
+                  variant="ghost"
+                  className="h-8 px-2.5 shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors disabled:opacity-40"
                   title="Exporter les données"
                 >
-                  <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Exporter</span>
+                  <Upload className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-1.5">Exporter</span>
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-56 border shadow-none bg-popover text-popover-foreground z-50">
+              <DropdownMenuContent align="end" className="w-56 rounded-xl border-border/50 bg-popover/95 backdrop-blur-sm z-50">
                 <DropdownMenuLabel className="flex items-center gap-2">
                   <Upload className="w-4 h-4" />
                   Options d'export
@@ -1201,12 +1200,11 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
             <AlertDialogTrigger asChild>
               <Button
                 size="sm"
-                variant="destructive"
-                className="h-8 px-2 shrink-0"
+                variant="ghost"
+                className="h-8 px-2.5 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
                 title="Supprimer les contacts de l'onglet actif"
               >
-                <Trash2 className="mr-1 sm:mr-2 h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">Supprimer</span>
+                <Trash2 className="h-4 w-4" />
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -1228,29 +1226,29 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-          {/* Progression globale déplacée dans l'en-tête du rail gauche */}
-          {viewMode === 'cards' && null}
+          </div>
         </div>
       </div>
-      {/* Contact Action Bar - Table View - Centered Below Title */}
+      {/* Contact Action Bar - Table View */}
       {viewMode === 'table' && (
-        <div className="flex justify-center px-2 sm:px-4 md:px-6 py-2 min-w-0 w-full">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3 rounded-lg border bg-card p-2 sm:p-3 shadow-none min-w-0 w-full md:w-auto max-w-full">
-            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0 min-w-0">
-              <span data-slot="avatar" className="relative flex size-8 shrink-0 overflow-hidden rounded-full h-8 w-8 flex-shrink-0">
-                <span data-slot="avatar-fallback" className="bg-muted flex size-full items-center justify-center rounded-full">
+        <div className="flex justify-center px-4 md:px-6 py-2 min-w-0 w-full">
+          <div className="flex items-center gap-4 rounded-xl border border-border/40 bg-card px-4 py-2.5 min-w-0 w-full md:w-auto max-w-full">
+            <div className="flex items-center gap-3 flex-shrink-0 min-w-0">
+              <span className="relative flex size-9 shrink-0 overflow-hidden rounded-full ring-2 ring-border/20">
+                <span className="bg-muted/60 text-muted-foreground flex size-full items-center justify-center rounded-full text-sm font-medium">
                   {selectedContact ? (selectedContact.prenom?.[0] || selectedContact.nom?.[0] || '?') : '?'}
                 </span>
               </span>
               <div className="flex flex-col min-w-0">
-                <span className="text-sm font-medium truncate max-w-[120px] sm:max-w-none" title={selectedContact ? `${selectedContact.prenom || ''} ${selectedContact.nom || ''}`.trim() : 'Aucun contact sélectionné'}>
+                <span className="text-sm font-medium truncate max-w-[140px] sm:max-w-none" title={selectedContact ? `${selectedContact.prenom || ''} ${selectedContact.nom || ''}`.trim() : 'Aucun contact sélectionné'}>
                   {selectedContact ? (`${selectedContact.prenom || ''} ${selectedContact.nom || ''}`.trim() || 'Sans nom') : 'Aucun contact sélectionné'}
                 </span>
-                <span className="text-xs text-muted-foreground truncate max-w-[120px] sm:max-w-none" title={selectedContact?.telephone || '-'}>
+                <span className="text-xs text-muted-foreground/70 truncate max-w-[140px] sm:max-w-none tabular-nums" title={selectedContact?.telephone || '-'}>
                   {selectedContact?.telephone || '-'}
                 </span>
               </div>
             </div>
+            <div className="h-6 w-px bg-border/40 hidden md:block" />
             <div className="flex items-center flex-1 md:flex-initial justify-start md:justify-end">
               <CallControl
                 contact={selectedContact}
@@ -1275,23 +1273,23 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
       {viewMode === 'cards' ? (
         <ResizablePanelGroup direction="horizontal" className="h-full min-h-0 @container">
           <ResizablePanel defaultSize={32} minSize={20} maxSize={50} className="relative z-10 min-h-0 flex flex-col overflow-hidden">
-            <div className="m-1 sm:m-2 flex h-full flex-col rounded-lg border bg-card/40 overflow-hidden min-w-0">
-              <div className="px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 space-y-2 border-b">
+            <div className="m-2 flex h-full flex-col rounded-xl border border-border/40 bg-card overflow-hidden min-w-0">
+              <div className="px-3 py-3 space-y-2 border-b border-border/40">
                 <div className="flex items-center justify-between gap-2 flex-nowrap min-w-0">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
-                        variant="outline"
-                        className="flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 md:px-3 py-1.5 h-7 sm:h-8 text-xs sm:text-sm shrink-0 min-w-0 shadow-none bg-white dark:bg-card border-border/70"
+                        variant="ghost"
+                        className="flex items-center gap-2 px-2.5 h-8 text-sm shrink-0 min-w-0 hover:bg-accent/50 transition-colors"
                       >
-                        <span className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full shrink-0" style={{ backgroundColor: tableTabs.find(t => t.id === activeTableTabId)?.color || 'var(--primary)' }}></span>
-                        <span className="truncate max-w-[60px] xs:max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">
+                        <span className="inline-block w-2 h-2 rounded-full shrink-0 ring-2 ring-background" style={{ backgroundColor: tableTabs.find(t => t.id === activeTableTabId)?.color || 'var(--primary)' }}></span>
+                        <span className="truncate max-w-[120px] font-medium">
                           {tableTabs.find(t => t.id === activeTableTabId)?.name || 'Onglets'}
                         </span>
-                        <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
+                        <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start" className="w-64 shadow-none">
+                    <DropdownMenuContent align="start" className="w-60 rounded-xl border-border/50 bg-popover/95 backdrop-blur-sm">
                       <DropdownMenuLabel className="flex items-center gap-2">
                         Onglets
                       </DropdownMenuLabel>
@@ -1360,17 +1358,17 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-                    <p className="text-[10px] xs:text-xs text-muted-foreground/70 whitespace-nowrap">
-                      {contacts.length} prospect{contacts.length > 1 ? "s" : ""}
-                    </p>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {contacts.length}
+                    </span>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
-                            size="sm"
-                            className="h-8 gap-1.5 px-2 sm:px-3 shrink-0"
+                            size="icon"
+                            className="h-7 w-7 shrink-0 text-muted-foreground hover:text-foreground"
                             aria-label="Premier sans statut"
                             onClick={() => {
                               const firstWithoutStatus = filteredContacts.find(c => !c.statut || c.statut === ContactStatus.NonDefini)
@@ -1385,11 +1383,10 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             disabled={!filteredContacts.some(c => !c.statut || c.statut === ContactStatus.NonDefini)}
                           >
                             <ChevronUp className="h-4 w-4" />
-                            <span className="sr-only">Premier sans statut</span>
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p>Revenir au premier contact sans statut</p>
+                        <TooltipContent side="bottom" className="text-xs">
+                          Premier sans statut
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -1397,14 +1394,19 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                 </div>
                 {/* Search moved below inside Command with list */}
               </div>
-              <div className="flex-1 min-h-0 h-0 flex flex-col px-0 pt-0 pb-1.5 sm:pb-2">
-                <Command className="h-full flex flex-col bg-transparent rounded-none border-0 shadow-none">
-                  <CommandInput
-                    placeholder="Rechercher..."
-                    value={searchQuery}
-                    onValueChange={onSearch}
-                    className="h-8 sm:h-9 text-xs sm:text-sm"
-                  />
+              <div className="flex-1 min-h-0 h-0 flex flex-col">
+                <Command className="h-full flex flex-col bg-transparent rounded-none border-0">
+                  <div className="px-3 pb-2">
+                    <div className="relative">
+                      <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground/60" />
+                      <CommandInput
+                        placeholder="Rechercher..."
+                        value={searchQuery}
+                        onValueChange={onSearch}
+                        className="h-8 pl-8 text-sm bg-muted/30 border-0 rounded-lg placeholder:text-muted-foreground/50"
+                      />
+                    </div>
+                  </div>
                   <ScrollArea className="h-[calc(100%-40px)]" viewportRef={scrollRef}>
                     <CommandList className="max-h-none">
                       <CommandEmpty>Aucun contact trouvé.</CommandEmpty>
@@ -1420,8 +1422,9 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                               data-contact-card={contact.id}
                               value={`${contact.prenom} ${contact.nom} ${contact.telephone} ${contact.email}`}
                               className={cn(
-                                "px-2 sm:px-3 py-2 sm:py-3 cursor-pointer hover:bg-muted/50 data-[selected=true]:bg-transparent data-[selected=true]:text-foreground",
-                                isSelected && "bg-accent",
+                                "mx-2 mb-1 px-3 py-2.5 cursor-pointer rounded-lg transition-all duration-150",
+                                "hover:bg-accent/50 data-[selected=true]:bg-transparent data-[selected=true]:text-foreground",
+                                isSelected && "bg-accent ring-1 ring-border/60",
                               )}
                               aria-selected={isSelected}
                               onSelect={() => {
@@ -1430,51 +1433,37 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                               }}
                             >
                               <>
-                                <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
-                                  <Avatar className="h-7 w-7 sm:h-9 sm:w-9 border shrink-0">
-                                    <AvatarFallback className="text-[10px] sm:text-xs">
+                                <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                                  <Avatar className="h-8 w-8 shrink-0 ring-1 ring-border/30">
+                                    <AvatarFallback className="text-xs font-medium bg-muted/50 text-muted-foreground">
                                       {(contact.prenom?.[0] ?? "").toUpperCase()
                                         .concat(contact.nom?.[0] ?? "")
                                         .slice(0, 2) || "?"}
                                     </AvatarFallback>
                                   </Avatar>
-                                  <div className="flex min-w-0 flex-1 flex-col min-w-0">
-                                    <div className="truncate text-xs sm:text-sm font-semibold text-foreground leading-tight">
+                                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                                    <div className="truncate text-sm font-medium text-foreground">
                                       {[contact.prenom, contact.nom].filter(Boolean).join(" ") || "Sans nom"}
                                     </div>
-                                    <div className="flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] text-muted-foreground">
-                                      <span className="flex items-center gap-0.5 truncate min-w-0">
-                                        <Phone className="h-2 w-2 sm:h-2.5 sm:w-2.5 shrink-0" />
-                                        <span className="truncate">{contact.telephone || "-"}</span>
-                                      </span>
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
+                                      <span className="truncate tabular-nums">{contact.telephone || "-"}</span>
                                     </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-1 sm:gap-2 flex-nowrap shrink-0">
+                                <div className="flex items-center gap-1.5 flex-nowrap shrink-0">
                                   <TooltipProvider delayDuration={120}>
-                                    <div className="flex items-center gap-1 sm:gap-1.5">
+                                    <div className="flex items-center gap-1">
                                       {contact.dateRappel && (
                                         <Tooltip>
                                           <TooltipTrigger asChild>
-                                            <Badge
-                                              variant="secondary"
-                                              className={cn(
-                                                "w-fit whitespace-nowrap [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive transition-[color,box-shadow] overflow-hidden [a&]:hover:bg-secondary/90 inline-flex items-center justify-center rounded-full border px-1.5 sm:px-2 py-0 text-[9px] sm:text-[10px] font-medium leading-none h-[22px] sm:h-[24px] shrink-0 capitalize",
-                                                "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-900/30 dark:text-amber-200 dark:border-amber-800/30",
-                                              )}
-                                              aria-label={`Rappel ${formatDisplayDateTime(contact.dateRappel, contact.heureRappel)}`}
-                                            >
+                                            <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
                                               <Bell className="h-3 w-3" />
-                                              <span>
+                                              <span className="text-[10px] font-medium tabular-nums">
                                                 {format(new Date(contact.dateRappel), "dd/MM", { locale: fr })}
-                                                {contact.heureRappel && ` ${contact.heureRappel}`}
                                               </span>
-                                            </Badge>
+                                            </div>
                                           </TooltipTrigger>
-                                          <TooltipContent
-                                            side="top"
-                                            className="bg-primary text-primary-foreground animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit origin-[--radix-tooltip-content-transform-origin] rounded-md px-3 py-1.5 text-xs text-balance shadow-md"
-                                          >
+                                          <TooltipContent side="top" className="text-xs">
                                             {formatDisplayDateTime(contact.dateRappel, contact.heureRappel)}
                                           </TooltipContent>
                                         </Tooltip>
@@ -1482,22 +1471,11 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                       {contact.dateRDV && (
                                         <Tooltip>
                                           <TooltipTrigger asChild>
-                                            <Badge
-                                              variant="secondary"
-                                              className={cn(
-                                                iconBadgeClass,
-                                                "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200",
-                                                "[&>svg]:!h-[9px] [&>svg]:!w-[9px] sm:[&>svg]:!h-[10px] sm:[&>svg]:!w-[10px]"
-                                              )}
-                                              aria-label={`RDV ${formatDisplayDateTime(contact.dateRDV, contact.heureRDV)}`}
-                                            >
-                                              <Calendar className="h-[9px] w-[9px] sm:h-[10px] sm:w-[10px]" />
-                                            </Badge>
+                                            <div className="flex items-center justify-center w-5 h-5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                                              <Calendar className="h-3 w-3" />
+                                            </div>
                                           </TooltipTrigger>
-                                          <TooltipContent
-                                            side="top"
-                                            className="bg-primary text-primary-foreground animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-50 w-fit origin-[--radix-tooltip-content-transform-origin] rounded-md px-3 py-1.5 text-xs text-balance shadow-md"
-                                          >
+                                          <TooltipContent side="top" className="text-xs">
                                             {formatDisplayDate(contact.dateRDV)}
                                           </TooltipContent>
                                         </Tooltip>
@@ -1507,8 +1485,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                   <Badge
                                     variant="secondary"
                                     className={cn(
-                                      contactBadgeClass,
-                                      "capitalize",
+                                      "h-5 px-1.5 text-[10px] font-medium rounded-md border-0",
                                       statusColor.color,
                                     )}
                                   >
@@ -1540,14 +1517,14 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                     </CommandList>
                   </ScrollArea>
                   {/* Section Statut des appels en bas */}
-                  <div className="border-t p-2 sm:p-3 space-y-1.5 sm:space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs sm:text-sm text-muted-foreground">Statut des appels</span>
-                      <span className="text-xs sm:text-sm font-medium text-foreground">{Math.max(0, Math.min(100, Math.round(completionPercent)))}%</span>
+                  <div className="border-t border-border/40 px-3 py-2.5">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs text-muted-foreground/70">Progression</span>
+                      <span className="text-xs font-medium text-foreground tabular-nums">{Math.max(0, Math.min(100, Math.round(completionPercent)))}%</span>
                     </div>
                     <Progress
                       value={Math.max(0, Math.min(100, Math.round(completionPercent)))}
-                      className="h-1"
+                      className="h-1 bg-muted/50"
                     />
                   </div>
                 </Command>
@@ -1556,51 +1533,48 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
           </ResizablePanel>
 
           <ResizablePanel defaultSize={68} minSize={50} maxSize={80} className="relative z-10 min-h-0 flex flex-col overflow-hidden">
-            <div className="m-1 sm:m-2 flex h-full flex-col rounded-lg border bg-card overflow-hidden min-w-0">
+            <div className="m-2 flex h-full flex-col rounded-xl border border-border/40 bg-card overflow-hidden min-w-0">
               {selectedContact ? (
                 <div className="flex h-full flex-col">
                   <div
-                    className="relative w-full bg-card rounded-t-lg"
+                    className="relative w-full bg-card"
                     role="region"
                     aria-label="En-tête du contact sélectionné"
                   >
-                    <Separator className="absolute inset-x-0 bottom-0" />
-                    <div className="px-6 py-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <div className="px-5 py-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-border/40">
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-12 w-12 border">
-                          <AvatarFallback>
+                        <Avatar className="h-11 w-11 ring-2 ring-border/20">
+                          <AvatarFallback className="text-sm font-medium bg-muted/60 text-muted-foreground">
                             {(selectedContact.prenom?.[0] ?? "").toUpperCase()
                               .concat(selectedContact.nom?.[0] ?? "")
                               .slice(0, 2) || "?"}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col gap-0.5">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h2 className="text-xl font-semibold leading-tight text-foreground">
+                            <h2 className="text-lg font-semibold leading-tight text-foreground tracking-tight">
                               {[selectedContact.prenom, selectedContact.nom].filter(Boolean).join(" ") || "Sans nom"}
                             </h2>
-                            <div className="flex items-center">
-                              <StatusSelect
-                                value={selectedContact.statut}
-                                onChange={(newStatus) => {
-                                  onUpdateContact({
-                                    id: selectedContact.id,
-                                    statut: newStatus,
-                                  })
-                                }}
-                                displayAsBadge={true}
-                                triggerClassName="!min-w-0 w-auto hover:opacity-80 transition-opacity"
-                              />
-                            </div>
+                            <StatusSelect
+                              value={selectedContact.statut}
+                              onChange={(newStatus) => {
+                                onUpdateContact({
+                                  id: selectedContact.id,
+                                  statut: newStatus,
+                                })
+                              }}
+                              displayAsBadge={true}
+                              triggerClassName="!min-w-0 w-auto hover:opacity-80 transition-opacity"
+                            />
                           </div>
-                          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground/70">
+                            {selectedContact.telephone && <span className="tabular-nums">{selectedContact.telephone}</span>}
+                            {selectedContact.email && selectedContact.telephone && <span className="text-muted-foreground/30">·</span>}
                             {selectedContact.email && <span>{selectedContact.email}</span>}
-                            {selectedContact.email && selectedContact.telephone && <span className="text-muted-foreground/50">•</span>}
-                            {selectedContact.telephone && <span>{selectedContact.telephone}</span>}
                           </div>
                         </div>
                       </div>
-                      <div className="flex flex-wrap items-center justify-end gap-3">
+                      <div className="flex flex-wrap items-center justify-end gap-2">
                         <CallControl
                           contact={selectedContact}
                           isCalling={Boolean(activeCallContactId && selectedContact && activeCallContactId === selectedContact.id)}
@@ -1621,142 +1595,135 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       </div>
                     </div>
                   </div>
-                  <div className="relative bg-card/60" role="toolbar" aria-label="Actions de recherche">
-                    <Separator className="absolute inset-x-0 bottom-0" />
-                    <div className="px-6 py-2.5 flex items-center gap-2 flex-nowrap">
-                      <TooltipProvider>
+                  <div className="relative bg-muted/20" role="toolbar" aria-label="Actions de recherche">
+                    <div className="px-5 py-2 flex items-center gap-1 flex-nowrap border-b border-border/40">
+                      <TooltipProvider delayDuration={200}>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 sm:px-3 shrink-0" onClick={() => onLinkedInSearch('name')} aria-label="LinkedIn">
-                              <Linkedin className="h-4 w-4 text-blue-600" />
-                              <span className="hidden sm:inline">LinkedIn</span>
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-blue-600 hover:bg-blue-500/10 transition-colors" onClick={() => onLinkedInSearch('name')}>
+                              <Linkedin className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline ml-1.5 text-xs">LinkedIn</span>
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>
-                            <p>LinkedIn</p>
-                          </TooltipContent>
+                          <TooltipContent side="bottom" className="text-xs">LinkedIn</TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      <TooltipProvider>
+                      <TooltipProvider delayDuration={200}>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 sm:px-3 shrink-0" onClick={() => onLinkedInSearch('name-type')} aria-label="LinkedIn+">
-                              <Linkedin className="h-4 w-4 text-[#D4AF37]" />
-                              <span className="hidden sm:inline">LinkedIn+</span>
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-amber-600 hover:bg-amber-500/10 transition-colors" onClick={() => onLinkedInSearch('name-type')}>
+                              <Linkedin className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline ml-1.5 text-xs">LinkedIn+</span>
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>
-                            <p>LinkedIn+</p>
-                          </TooltipContent>
+                          <TooltipContent side="bottom" className="text-xs">LinkedIn + Type</TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      <TooltipProvider>
+                      <TooltipProvider delayDuration={200}>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 sm:px-3 shrink-0" onClick={onGoogleSearch} aria-label="Google">
-                              <Globe className="h-4 w-4 text-green-600" />
-                              <span className="hidden sm:inline">Google</span>
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-green-600 hover:bg-green-500/10 transition-colors" onClick={onGoogleSearch}>
+                              <Globe className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline ml-1.5 text-xs">Google</span>
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Google</p>
-                          </TooltipContent>
+                          <TooltipContent side="bottom" className="text-xs">Google</TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
-                      <TooltipProvider>
+                      <TooltipProvider delayDuration={200}>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 sm:px-3 shrink-0" onClick={onDirectLink} disabled={!selectedContact.lien} aria-label="Lien direct">
-                              <Eye className="h-4 w-4" />
-                              <span className="hidden sm:inline">Lien direct</span>
+                            <Button variant="ghost" size="sm" className="h-7 px-2 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors disabled:opacity-40" onClick={onDirectLink} disabled={!selectedContact.lien}>
+                              <Eye className="h-3.5 w-3.5" />
+                              <span className="hidden sm:inline ml-1.5 text-xs">Lien</span>
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Lien direct</p>
-                          </TooltipContent>
+                          <TooltipContent side="bottom" className="text-xs">Lien direct</TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
                     </div>
                   </div>
 
                   <ScrollArea className="flex-1 min-h-0 h-0">
-                    <div className="px-6 py-6">
+                    <div className="px-5 py-5">
                       <Tabs defaultValue="informations" className="w-full">
-                        <TabsList className="w-full justify-start">
-                          <TabsTrigger value="informations">Informations principales</TabsTrigger>
-                          <TabsTrigger value="historique">Historique</TabsTrigger>
-                          <TabsTrigger value="fichiers">Fichiers</TabsTrigger>
+                        <TabsList className="h-9 p-1 bg-muted/40 rounded-lg w-fit">
+                          <TabsTrigger value="informations" className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">Informations</TabsTrigger>
+                          <TabsTrigger value="historique" className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">Historique</TabsTrigger>
+                          <TabsTrigger value="fichiers" className="text-xs px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">Fichiers</TabsTrigger>
                         </TabsList>
-                        <TabsContent value="informations" className="mt-4 sm:mt-6 space-y-4 sm:space-y-6">
-                          <div className="section-card p-3 sm:p-4 space-y-3 sm:space-y-4">
-                            <div className="grid gap-4 sm:gap-6">
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                                <div className="space-y-2">
-                                  <Label htmlFor="contact-firstname">Prénom</Label>
+                        <TabsContent value="informations" className="mt-5 space-y-5">
+                          <div className="space-y-4">
+                            <div className="grid gap-5">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                  <Label htmlFor="contact-firstname" className="text-xs text-muted-foreground">Prénom</Label>
                                   <Input
                                     id="contact-firstname"
                                     value={formState.prenom}
                                     onChange={(event) => handleFormChange("prenom", event.target.value)}
-                                    className="text-sm"
+                                    className="h-9 text-sm bg-muted/30 border-border/50 focus:bg-background transition-colors"
                                   />
                                 </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="contact-lastname">Nom</Label>
+                                <div className="space-y-1.5">
+                                  <Label htmlFor="contact-lastname" className="text-xs text-muted-foreground">Nom</Label>
                                   <Input
                                     id="contact-lastname"
                                     value={formState.nom}
                                     onChange={(event) => handleFormChange("nom", event.target.value)}
-                                    className="text-sm"
+                                    className="h-9 text-sm bg-muted/30 border-border/50 focus:bg-background transition-colors"
                                   />
                                 </div>
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                                <div className="space-y-2">
-                                  <Label htmlFor="contact-phone">Téléphone</Label>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                  <Label htmlFor="contact-phone" className="text-xs text-muted-foreground">Téléphone</Label>
                                   <Input
                                     id="contact-phone"
                                     value={formState.telephone}
                                     onChange={(event) => handleFormChange("telephone", event.target.value)}
-                                    className="text-sm"
+                                    className="h-9 text-sm bg-muted/30 border-border/50 focus:bg-background transition-colors tabular-nums"
                                   />
                                 </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="contact-email">Email</Label>
+                                <div className="space-y-1.5">
+                                  <Label htmlFor="contact-email" className="text-xs text-muted-foreground">Email</Label>
                                   <Input
                                     id="contact-email"
                                     value={formState.email}
                                     onChange={(event) => handleFormChange("email", event.target.value)}
-                                    className="text-sm"
+                                    className="h-9 text-sm bg-muted/30 border-border/50 focus:bg-background transition-colors"
                                   />
                                 </div>
                               </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                                <div className="space-y-2">
-                                  <Label htmlFor="contact-source">Source</Label>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="space-y-1.5">
+                                  <Label htmlFor="contact-source" className="text-xs text-muted-foreground">Source</Label>
                                   <Input
                                     id="contact-source"
                                     value={formState.source}
                                     onChange={(event) => handleFormChange("source", event.target.value)}
+                                    className="h-9 text-sm bg-muted/30 border-border/50 focus:bg-background transition-colors"
                                   />
                                 </div>
-                                <div className="space-y-2">
-                                  <Label htmlFor="contact-type">Type</Label>
+                                <div className="space-y-1.5">
+                                  <Label htmlFor="contact-type" className="text-xs text-muted-foreground">Type</Label>
                                   <Input
                                     id="contact-type"
                                     value={formState.type}
                                     onChange={(event) => handleFormChange("type", event.target.value)}
+                                    className="h-9 text-sm bg-muted/30 border-border/50 focus:bg-background transition-colors"
                                   />
                                 </div>
-                                <div className="space-y-2">
-                                  <Label>Statut</Label>
+                                <div className="space-y-1.5">
+                                  <Label className="text-xs text-muted-foreground">Statut</Label>
                                   <Select
                                     value={selectedStatus}
                                     onValueChange={(value: string) => setSelectedStatus(value)}
                                   >
-                                    <SelectTrigger className="justify-between">
+                                    <SelectTrigger className="h-9 justify-between bg-muted/30 border-border/50">
                                       <SelectValue />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent className="rounded-xl border-border/50">
                                       {statusOptions
                                         .filter((status) => !(status === ContactStatus.A0 && mode !== CallMode.Apporteur))
                                         .map((status) => (
@@ -1768,30 +1735,29 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                   </Select>
                                 </div>
                               </div>
-                              <div className="space-y-2">
-                                <Label htmlFor="contact-comment">Notes</Label>
+                              <div className="space-y-1.5">
+                                <Label htmlFor="contact-comment" className="text-xs text-muted-foreground">Notes</Label>
                                 <ZapWidget
                                   value={noteDraft}
                                   onChange={setNoteDraft}
                                   quickComments={QUICK_COMMENTS}
-                                  rows={4}
+                                  rows={3}
                                 />
                               </div>
                             </div>
                           </div>
 
-                          <div className="section-card p-4 space-y-4">
-                            <h3 className="text-sm font-medium text-muted-foreground">Rappels & Rendez-vous</h3>
-                            <Separator className="my-2 opacity-30" />
+                          <div className="rounded-xl border border-border/40 bg-muted/10 p-4 space-y-4">
+                            <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Rappels & Rendez-vous</h3>
                             <Tabs defaultValue="rappel" className="w-full">
-                              <TabsList className="w-full justify-start">
-                                <TabsTrigger value="rappel">Rappel</TabsTrigger>
-                                <TabsTrigger value="rdv">RDV</TabsTrigger>
-                                <TabsTrigger value="appel">Appel</TabsTrigger>
+                              <TabsList className="h-8 p-0.5 bg-muted/50 rounded-lg w-fit">
+                                <TabsTrigger value="rappel" className="text-xs h-7 px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">Rappel</TabsTrigger>
+                                <TabsTrigger value="rdv" className="text-xs h-7 px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">RDV</TabsTrigger>
+                                <TabsTrigger value="appel" className="text-xs h-7 px-3 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">Appel</TabsTrigger>
                               </TabsList>
-                              <div className="mt-4 space-y-4">
+                              <div className="mt-4">
                                 <TabsContent value="rappel">
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <DatePickerWithClear
                                       label="Date de rappel"
                                       value={formState.dateRappel}
@@ -1807,7 +1773,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                   </div>
                                 </TabsContent>
                                 <TabsContent value="rdv">
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <DatePickerWithClear
                                       label="Date de RDV"
                                       value={formState.dateRDV}
@@ -1823,7 +1789,7 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                   </div>
                                 </TabsContent>
                                 <TabsContent value="appel">
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <DatePickerWithClear
                                       label="Date d'appel"
                                       value={formState.dateAppel}
@@ -1837,13 +1803,14 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                       onClear={() => handleFormChange("heureAppel", "")}
                                     />
                                   </div>
-                                  <div className="mt-4 space-y-2">
-                                    <Label htmlFor="call-duration">Durée d'appel</Label>
+                                  <div className="mt-4 space-y-1.5">
+                                    <Label htmlFor="call-duration" className="text-xs text-muted-foreground">Durée d&apos;appel</Label>
                                     <Input
                                       id="call-duration"
                                       value={formState.dureeAppel}
                                       placeholder="mm:ss"
                                       onChange={(event) => handleFormChange("dureeAppel", event.target.value)}
+                                      className="h-9 text-sm bg-muted/30 border-border/50 focus:bg-background transition-colors tabular-nums"
                                     />
                                   </div>
                                 </TabsContent>
@@ -1851,8 +1818,8 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                             </Tabs>
                           </div>
                         </TabsContent>
-                        <TabsContent value="historique" className="mt-6">
-                          <div className="section-card p-4 space-y-4">
+                        <TabsContent value="historique" className="mt-5">
+                          <div className="rounded-xl border border-border/40 bg-muted/10 p-4">
                             <ContactHistory history={realContactHistory} />
                           </div>
                         </TabsContent>
@@ -1871,46 +1838,48 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                 </div>
               ) : (
                 <div
-                  className="flex h-full flex-1 flex-col items-center justify-center gap-3 rounded-xl border border-dashed bg-muted/15 text-muted-foreground"
+                  className="flex h-full flex-1 flex-col items-center justify-center gap-4 text-muted-foreground/60"
                   style={{ pointerEvents: 'none' }}
                 >
-                  <div className="rounded-full border bg-background p-3 shadow-none">
+                  <div className="rounded-xl bg-muted/30 p-4">
                     <Phone className="h-6 w-6" />
                   </div>
-                  <div className="text-sm font-medium">Sélectionnez un prospect dans la colonne de gauche</div>
-                  <p className="text-xs text-muted-foreground/80">Les informations détaillées s’afficheront ici.</p>
+                  <div className="text-center space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">Aucun contact sélectionné</p>
+                    <p className="text-xs text-muted-foreground/60">Sélectionnez un prospect pour voir ses détails</p>
+                  </div>
                 </div>
               )}
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>
       ) : (
-        <div className="flex-1 flex flex-col p-1 md:p-1 space-y-0.5 md:space-y-1 overflow-hidden w-full min-h-0">
+        <div className="flex-1 flex flex-col p-2 overflow-hidden w-full min-h-0">
           {/* Table Container */}
-          <div className="flex-1 flex overflow-hidden min-h-0">
+          <div className="flex-1 flex overflow-hidden min-h-0 rounded-xl border border-border/40 bg-card">
             <div className="flex-1 flex flex-col overflow-hidden min-h-0 min-w-0">
-              <div className="flex-1 bg-transparent rounded-none border-0 shadow-none overflow-hidden">
-                <div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="gap-2 flex h-full flex-col">
-                  {/* Table Controls Bar - Fully Responsive */}
-                  <div className="flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 py-1.5 bg-card w-full max-w-[95%] mx-auto px-1.5">
-                    {/* Groupe gauche : colonnes, recherche manuelle & champ de recherche */}
-                    <div className="flex flex-1 flex-wrap items-center gap-1.5 sm:gap-2 min-w-0">
-                      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              <div className="flex-1 bg-transparent overflow-hidden">
+                <div dir="ltr" data-orientation="horizontal" data-slot="tabs" className="flex h-full flex-col">
+                  {/* Table Controls Bar */}
+                  <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-border/40">
+                    {/* Groupe gauche */}
+                    <div className="flex flex-1 items-center gap-3 min-w-0">
+                      <div className="flex items-center gap-2 shrink-0">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
-                              className="h-8 px-1.5 sm:px-2 shrink-0 shadow-none bg-background text-foreground hover:bg-accent border border-border"
+                              className="h-8 px-2 shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
                               title="Gestion des colonnes"
                             >
                               <Settings2 className="h-4 w-4" />
-                              <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs hidden sm:inline-flex">
+                              <span className="ml-1.5 text-xs tabular-nums hidden sm:inline">
                                 {Object.values(visibleColumns).filter(Boolean).length}
-                              </Badge>
+                              </span>
                             </Button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="start" side="bottom" sideOffset={5} className="w-64">
+                          <DropdownMenuContent align="start" side="bottom" sideOffset={8} className="w-60 rounded-xl border-border/50 bg-popover/95 backdrop-blur-sm">
                             <DropdownMenuLabel className="flex items-center gap-2">
                               <Eye className="h-4 w-4" />
                               Gestion des colonnes
@@ -2002,45 +1971,42 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                           </TabsList>
                         </Tabs>
                       </div>
-                      <div className="relative flex-1 min-w-[160px] sm:min-w-[200px] max-w-[360px]">
-                        <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <div className="relative flex-1 min-w-[180px] max-w-[320px]">
+                        <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/60" />
                         <Input
                           placeholder="Rechercher..."
                           value={searchQuery}
                           onChange={(e) => onSearch(e.target.value)}
-                          className="pl-8 h-8 text-sm"
+                          className="pl-8 h-8 text-sm bg-muted/30 border-0 rounded-lg placeholder:text-muted-foreground/50 focus:bg-background transition-colors"
                         />
                       </div>
-                      <div className="flex flex-col justify-center min-w-[140px] px-2 gap-1 hidden sm:flex">
-                        <div className="flex items-center justify-between text-[10px] leading-none">
-                          <span className="text-muted-foreground">Statut des appels</span>
-                          <span className="font-medium text-foreground">{Math.max(0, Math.min(100, Math.round(completionPercent)))}%</span>
+                      <div className="h-4 w-px bg-border/60 hidden sm:block" />
+                      <div className="flex items-center gap-2 hidden sm:flex">
+                        <span className="text-xs text-muted-foreground/70">Progression</span>
+                        <div className="flex items-center gap-2">
+                          <Progress
+                            value={Math.max(0, Math.min(100, Math.round(completionPercent)))}
+                            className="h-1.5 w-20 bg-muted/50"
+                          />
+                          <span className="text-xs font-medium text-foreground tabular-nums">{Math.max(0, Math.min(100, Math.round(completionPercent)))}%</span>
                         </div>
-                        <Progress
-                          value={Math.max(0, Math.min(100, Math.round(completionPercent)))}
-                          className="h-1.5 w-full"
-                        />
                       </div>
                     </div>
-                    {/* Groupe droite : actions contextuelles */}
-                    <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap shrink-0">
-                      {/* Bouton pour revenir au premier contact sans statut */}
-                      <TooltipProvider>
+                    {/* Groupe droite */}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <TooltipProvider delayDuration={200}>
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
-                              variant="outline"
-                              size="sm"
+                              variant="ghost"
+                              size="icon"
                               onClick={() => {
-                                // Trouver le premier contact sans statut ou avec statut "Non défini"
                                 const firstWithoutStatus = filteredContacts.find(c =>
                                   !c.statut || c.statut === ContactStatus.NonDefini
                                 );
 
                                 if (firstWithoutStatus) {
-                                  // Sélectionner le contact
                                   onSelectContact(firstWithoutStatus);
-                                  // Utiliser la méthode scrollToContact de ContactTable via la ref
                                   setTimeout(() => {
                                     contactTableRef.current?.scrollToContact(firstWithoutStatus.id);
                                   }, 150);
@@ -2049,15 +2015,14 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                                   toast.info('Aucun contact sans statut trouvé');
                                 }
                               }}
-                              className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 h-8 text-sm shrink-0 shadow-none bg-background text-foreground hover:bg-accent border border-border"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors disabled:opacity-40"
                               disabled={!filteredContacts.some(c => !c.statut || c.statut === ContactStatus.NonDefini)}
                             >
                               <ChevronUp className="h-4 w-4" />
-                              <span className="sr-only">Premier sans statut</span>
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            <p>Revenir au premier contact sans statut</p>
+                          <TooltipContent side="bottom" className="text-xs">
+                            Premier sans statut
                           </TooltipContent>
                         </Tooltip>
                       </TooltipProvider>
@@ -2065,17 +2030,17 @@ export const AppelsCardsView: React.FC<AppelsCardsViewProps> = ({
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button
-                            variant="outline"
-                            className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 h-8 text-sm shrink-0 shadow-none bg-background text-foreground hover:bg-accent border border-border"
+                            variant="ghost"
+                            className="flex items-center gap-2 px-2.5 h-8 text-sm shrink-0 text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
                           >
-                            <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: tableTabs.find(t => t.id === activeTableTabId)?.color || 'var(--primary)' }}></span>
-                            <span className="truncate max-w-[80px] sm:max-w-[120px] md:max-w-[200px]">
+                            <span className="inline-block w-2 h-2 rounded-full shrink-0 ring-2 ring-background" style={{ backgroundColor: tableTabs.find(t => t.id === activeTableTabId)?.color || 'var(--primary)' }}></span>
+                            <span className="truncate max-w-[100px] font-medium">
                               {tableTabs.find(t => t.id === activeTableTabId)?.name || 'Contacts'}
                             </span>
-                            <ChevronDown className="h-4 w-4 shrink-0" />
+                            <ChevronDown className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-64">
+                        <DropdownMenuContent align="end" className="w-56 rounded-xl border-border/50 bg-popover/95 backdrop-blur-sm">
                           <DropdownMenuLabel className="flex items-center gap-2">
                             Onglets
                           </DropdownMenuLabel>
