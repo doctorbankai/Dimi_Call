@@ -450,7 +450,7 @@ const DateTimeCell = React.memo<DateTimeCellProps>(({ value, type, onChange, the
             align="center"
             side="bottom"
             sticky="always"
-            avoidCollisions={false}
+            collisionPadding={20}
           >
             <Calendar
               mode="single"

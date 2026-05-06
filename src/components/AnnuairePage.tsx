@@ -1393,7 +1393,7 @@ export function AnnuairePage({
               align="start"
               side="bottom"
               sideOffset={4}
-              avoidCollisions={false}
+              collisionPadding={20}
               className="w-fit max-w-[min(100vw-32px,520px)] p-0 overflow-y-auto overflow-x-hidden"
               style={{ maxHeight: 'min(80vh, 560px)' }}
             >
